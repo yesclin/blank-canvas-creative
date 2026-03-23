@@ -3,6 +3,7 @@ import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import type { ProductMarginItem, ProductMarginSummary } from '@/hooks/useProductMarginReport';
 import type { ProductMarginFilters } from '@/types/productMarginReport';
+import { escapeHtml } from '@/lib/htmlEscape';
 
 interface ExportData {
   items: ProductMarginItem[];
@@ -293,8 +294,8 @@ export function exportProductMarginPDF({ items, summary, filters }: ExportData):
               
               return `
                 <tr>
-                  <td>${item.productName}</td>
-                  <td>${item.category || '-'}</td>
+                  <td>${escapeHtml(item.productName)}</td>
+                  <td>${escapeHtml(item.category) || '-'}</td>
                   <td class="text-right">${item.quantitySold}</td>
                   <td class="text-right text-green">${formatCurrency(item.totalRevenue)}</td>
                   <td class="text-right text-red">${formatCurrency(item.totalCost)}</td>
