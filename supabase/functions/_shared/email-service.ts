@@ -5,7 +5,7 @@
  * Handles all email operations with proper error handling and logging.
  */
 
-import { Resend } from "npm:resend@2.0.0";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 
 // Email configuration
 const EMAIL_CONFIG = {
