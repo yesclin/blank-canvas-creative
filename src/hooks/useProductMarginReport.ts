@@ -138,7 +138,7 @@ export function useProductMarginReport(filters: ProductMarginFilters) {
           productMap.set(item.product_id, {
             productId: item.product_id,
             productName: item.product_name,
-            category: productCategoryMap.get(item.product_id) || null,
+            category: (productCategoryMap.get(item.product_id) as string) || null,
             quantitySold: quantity,
             totalRevenue: revenue,
             totalCost: cost,

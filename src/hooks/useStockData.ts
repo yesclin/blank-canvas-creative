@@ -277,7 +277,7 @@ export function useRecentStockMovements(limit = 50) {
             return {
               ...m,
               patient_name: (apt as any)?.patients?.full_name || null,
-              patient_id: apt?.patient_id || null,
+              patient_id: (apt as any)?.patient_id || null,
             };
           }
           return m;
