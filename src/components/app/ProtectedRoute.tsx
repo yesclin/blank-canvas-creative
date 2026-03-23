@@ -45,12 +45,21 @@ export function ProtectedRoute({
           .from("profiles")
           .select("is_active")
           .eq("user_id", user.id)
-          .single();
+          .maybeSingle();
 
-        setIsActive(profile?.is_active ?? false);
+        // CRITICAL: If profile doesn't exist yet (race condition during signup),
+        // treat as active — the handle_new_user trigger will create it shortly.
+        // Only show "Conta Desativada" when profile EXISTS and is_active is explicitly false.
+        if (!profile) {
+          // Profile not found — new user, treat as active
+          setIsActive(true);
+        } else {
+          setIsActive(profile.is_active ?? true);
+        }
       } catch (error) {
         console.error("Error checking user status:", error);
-        setIsActive(false);
+        // On error, don't block the user — default to active
+        setIsActive(true);
       } finally {
         setCheckingActive(false);
       }
