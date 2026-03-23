@@ -3,6 +3,7 @@ import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import type { SaleReportItem, SalesReportSummary } from '@/types/relatorios';
 import type { SalesReportFilters } from '@/types/salesReport';
+import { escapeHtml } from '@/lib/htmlEscape';
 
 interface ExportData {
   salesList: SaleReportItem[];
@@ -290,10 +291,10 @@ export function exportSalesPDF({ salesList, summary, filters }: ExportData): voi
                     ${getStatusLabel(sale.status)}
                   </span>
                 </td>
-                <td>${sale.patientName || 'Sem paciente'}</td>
+                <td>${escapeHtml(sale.patientName) || 'Sem paciente'}</td>
                 <td class="text-right">${formatCurrency(sale.totalAmount)}</td>
                 <td>${formatPaymentMethod(sale.paymentMethod)}</td>
-                <td>${sale.createdByName || '-'}</td>
+                <td>${escapeHtml(sale.createdByName) || '-'}</td>
               </tr>
             `).join('')}
           </tbody>

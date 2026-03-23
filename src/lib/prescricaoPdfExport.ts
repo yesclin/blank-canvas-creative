@@ -1,6 +1,7 @@
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Prescricao } from '@/hooks/prontuario/clinica-geral/usePrescricoesData';
+import { escapeHtml } from './htmlEscape';
 
 interface PdfOptions {
   patientName?: string;
@@ -54,29 +55,29 @@ export function generatePrescricaoPDF(
   // Build medication items HTML
   const medicamentosHtml = prescricao.itens
     .map((item, idx) => {
-      const concentracao = item.medicamento_concentracao ? ` ${item.medicamento_concentracao}` : '';
-      const forma = item.medicamento_forma_farmaceutica ? ` - ${item.medicamento_forma_farmaceutica}` : '';
+      const concentracao = item.medicamento_concentracao ? ` ${escapeHtml(item.medicamento_concentracao)}` : '';
+      const forma = item.medicamento_forma_farmaceutica ? ` - ${escapeHtml(item.medicamento_forma_farmaceutica)}` : '';
       const via = viaAdministracaoLabels[item.via_administracao] || '';
       const usoContinuo = item.uso_continuo ? ' <span class="uso-continuo">(Uso Contínuo)</span>' : '';
       const duracao = item.duracao_dias ? ` por ${item.duracao_dias} dias` : '';
       const instrucoes = item.instrucoes_especiais 
-        ? `<div class="instrucoes">${item.instrucoes_especiais}</div>` 
+        ? `<div class="instrucoes">${escapeHtml(item.instrucoes_especiais)}</div>` 
         : '';
 
       return `
         <div class="medicamento">
           <div class="medicamento-header">
             <span class="numero">${idx + 1}.</span>
-            <span class="nome">${item.medicamento_nome}${concentracao}${forma}</span>
+            <span class="nome">${escapeHtml(item.medicamento_nome)}${concentracao}${forma}</span>
             ${usoContinuo}
           </div>
           <div class="posologia">
-            <strong>Dose:</strong> ${item.dose} ${item.unidade_dose || ''} - ${via}
+            <strong>Dose:</strong> ${escapeHtml(item.dose)} ${escapeHtml(item.unidade_dose) || ''} - ${via}
           </div>
           <div class="posologia">
-            <strong>Posologia:</strong> ${item.posologia}${duracao}
+            <strong>Posologia:</strong> ${escapeHtml(item.posologia)}${duracao}
           </div>
-          ${item.frequencia ? `<div class="posologia"><strong>Frequência:</strong> ${item.frequencia}</div>` : ''}
+          ${item.frequencia ? `<div class="posologia"><strong>Frequência:</strong> ${escapeHtml(item.frequencia)}</div>` : ''}
           ${instrucoes}
         </div>
       `;
@@ -89,7 +90,7 @@ export function generatePrescricaoPDF(
     <html lang="pt-BR">
     <head>
       <meta charset="UTF-8">
-      <title>Receita - ${patientName}</title>
+      <title>Receita - ${escapeHtml(patientName)}</title>
       <style>
         * {
           margin: 0;
@@ -248,14 +249,14 @@ export function generatePrescricaoPDF(
     </head>
     <body>
       <div class="header">
-        <div class="clinic-name">${clinicName}</div>
-        ${clinicAddress ? `<div class="clinic-address">${clinicAddress}</div>` : ''}
+        <div class="clinic-name">${escapeHtml(clinicName)}</div>
+        ${clinicAddress ? `<div class="clinic-address">${escapeHtml(clinicAddress)}</div>` : ''}
       </div>
       
-      <div class="tipo-receita">${tipoReceita}</div>
+      <div class="tipo-receita">${escapeHtml(tipoReceita)}</div>
       
       <div class="patient-info">
-        <div class="patient-name">Paciente: ${patientName}</div>
+        <div class="patient-name">Paciente: ${escapeHtml(patientName)}</div>
         <div class="date">${dataPrescricao}</div>
       </div>
       
@@ -266,13 +267,13 @@ export function generatePrescricaoPDF(
       ${prescricao.observacoes ? `
         <div class="observacoes">
           <div class="observacoes-title">Observações:</div>
-          <div>${prescricao.observacoes}</div>
+          <div>${escapeHtml(prescricao.observacoes)}</div>
         </div>
       ` : ''}
       
       <div class="footer">
         <div class="assinatura">
-          <div class="profissional">${prescricao.profissional_nome}</div>
+          <div class="profissional">${escapeHtml(prescricao.profissional_nome)}</div>
           <div>Profissional Responsável</div>
         </div>
         

@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { FacialMapApplication, FacialMap } from './types';
 import { PROCEDURE_TYPE_LABELS, FACIAL_MUSCLES, VIEW_TYPE_LABELS } from './types';
+import { escapeHtml } from '@/lib/htmlEscape';
 
 interface UseFacialMapPdfParams {
   patientName?: string;
@@ -60,7 +61,7 @@ export function useFacialMapPdf({
       <html>
       <head>
         <meta charset="utf-8">
-        <title>Mapa Facial - ${patientName || 'Paciente'}</title>
+        <title>Mapa Facial - ${escapeHtml(patientName) || 'Paciente'}</title>
         <style>
           @media print {
             @page { margin: 15mm; size: A4; }
@@ -185,7 +186,7 @@ export function useFacialMapPdf({
         <div class="header">
           <div>
             <h1>Mapa Facial - Harmonização</h1>
-            <div class="subtitle">${patientName || 'Paciente'}</div>
+            <div class="subtitle">${escapeHtml(patientName) || 'Paciente'}</div>
           </div>
           <div class="date">
             Gerado em ${dateStr}<br>
@@ -222,16 +223,16 @@ export function useFacialMapPdf({
             <tbody>
               ${applications.map(app => `
                 <tr>
-                  <td><strong>${getMuscleName(app.muscle || 'outros')}</strong></td>
+                  <td><strong>${escapeHtml(getMuscleName(app.muscle || 'outros'))}</strong></td>
                   <td>
-                    <span class="badge badge-${app.procedure_type}">
-                      ${PROCEDURE_TYPE_LABELS[app.procedure_type]}
+                    <span class="badge badge-${escapeHtml(app.procedure_type)}">
+                      ${escapeHtml(PROCEDURE_TYPE_LABELS[app.procedure_type])}
                     </span>
                   </td>
-                  <td>${app.product_name}</td>
-                  <td><strong>${app.quantity}</strong> ${app.unit}</td>
-                  <td>${VIEW_TYPE_LABELS[app.view_type] || app.view_type}</td>
-                  <td>${app.notes || '-'}</td>
+                  <td>${escapeHtml(app.product_name)}</td>
+                  <td><strong>${app.quantity}</strong> ${escapeHtml(app.unit)}</td>
+                  <td>${escapeHtml(VIEW_TYPE_LABELS[app.view_type] || app.view_type)}</td>
+                  <td>${escapeHtml(app.notes) || '-'}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -241,7 +242,7 @@ export function useFacialMapPdf({
         ${facialMap?.general_notes ? `
           <div class="notes-section">
             <h4>Observações Clínicas</h4>
-            <p>${facialMap.general_notes}</p>
+            <p>${escapeHtml(facialMap.general_notes)}</p>
           </div>
         ` : ''}
         
