@@ -39,7 +39,7 @@ export function useProductMarginReportOptions() {
         new Set((data || []).map((p) => p.category).filter(Boolean))
       ).sort();
       
-      return uniqueCategories.map((cat) => ({ id: cat, name: getCategoryLabel(cat as string) }));
+      return uniqueCategories.map((cat) => ({ id: cat as string, name: getCategoryLabel(cat as string) }));
     },
     staleTime: 1000 * 60 * 5,
   });

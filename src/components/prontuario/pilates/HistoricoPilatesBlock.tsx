@@ -320,7 +320,7 @@ export function HistoricoPilatesBlock({
   const filteredGrouped = filterType === 'all'
     ? groupedByMonth
     : Object.entries(groupedByMonth).reduce((acc, [month, items]) => {
-        const filtered = items.filter(item => item.type === filterType);
+        const filtered = (items as TimelineItem[]).filter(item => item.type === filterType);
         if (filtered.length > 0) {
           acc[month] = filtered;
         }
@@ -437,10 +437,10 @@ export function HistoricoPilatesBlock({
                 return (
                   <div key={monthYear}>
                     <h3 className="text-sm font-semibold text-muted-foreground mb-3 capitalize">
-                      {monthLabel} ({items.length})
+                      {monthLabel} ({(items as TimelineItem[]).length})
                     </h3>
                     <div className="space-y-0">
-                      {items.map((item) => (
+                      {(items as TimelineItem[]).map((item) => (
                         <TimelineItemCard key={item.id} item={item} />
                       ))}
                     </div>

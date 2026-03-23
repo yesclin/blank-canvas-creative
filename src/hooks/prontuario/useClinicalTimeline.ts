@@ -137,7 +137,7 @@ export function useClinicalTimeline(patientId: string | null) {
       .select('user_id, full_name')
       .in('user_id', userIds);
 
-    return new Map((data || []).map(p => [p.user_id, p.full_name || 'Usuário']));
+    return new Map<string, string>((data || []).map((p: any) => [p.user_id, p.full_name || 'Usuário']));
   }, []);
 
   // Transform medical record entries to timeline events

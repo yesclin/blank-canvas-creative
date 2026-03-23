@@ -141,8 +141,8 @@ export default function Financas() {
   });
   
   // Create a map of transaction_id -> sale for quick lookup
-  const saleByTransactionId = new Map(
-    linkedSales.map((s) => [s.transaction_id, s])
+  const saleByTransactionId = new Map<string, any>(
+    linkedSales.map((s: any) => [s.transaction_id, s])
   );
   
   const handleViewSale = (saleId: string) => {
