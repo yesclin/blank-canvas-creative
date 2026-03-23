@@ -1,0 +1,1 @@
+ALTER TABLE public.patient_guardians ADD COLUMN rg text;

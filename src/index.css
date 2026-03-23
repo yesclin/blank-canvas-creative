@@ -1,0 +1,377 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Yesclin Design System - Healthcare SaaS
+   Colors: Teal primary (trust, health), warm coral accent (action)
+   Typography: Plus Jakarta Sans (headings), Inter (body)
+*/
+
+@layer base {
+  :root {
+    /* Brand Colors - Mint Green from logo */
+    --brand-50: 168 70% 97%;
+    --brand-100: 168 65% 92%;
+    --brand-200: 168 60% 82%;
+    --brand-300: 168 58% 68%;
+    --brand-400: 168 62% 55%;
+    --brand-500: 168 70% 45%;
+    --brand-600: 168 75% 38%;
+    --brand-700: 168 70% 32%;
+    --brand-800: 168 65% 26%;
+    --brand-900: 168 60% 20%;
+
+    /* Accent Colors - Purple/Indigo from logo */
+    --accent-warm: 253 40% 59%;
+    --accent-warm-hover: 253 45% 50%;
+    --accent-warm-foreground: 0 0% 100%;
+
+    /* Semantic Colors */
+    --background: 168 15% 99%;
+    --foreground: 250 25% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 250 25% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 250 25% 15%;
+
+    --primary: 168 70% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 253 25% 95%;
+    --secondary-foreground: 253 30% 25%;
+
+    --muted: 250 12% 94%;
+    --muted-foreground: 250 15% 45%;
+
+    --accent: 253 40% 59%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 72% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 250 15% 90%;
+    --input: 250 15% 90%;
+    --ring: 168 70% 45%;
+
+    --radius: 0.75rem;
+
+    /* Sidebar */
+    --sidebar-background: 250 15% 98%;
+    --sidebar-foreground: 250 25% 25%;
+    --sidebar-primary: 168 70% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 253 20% 94%;
+    --sidebar-accent-foreground: 253 30% 25%;
+    --sidebar-border: 250 15% 90%;
+    --sidebar-ring: 168 70% 45%;
+
+    /* Gradients */
+    --gradient-brand: linear-gradient(135deg, hsl(168 70% 45%) 0%, hsl(200 60% 50%) 50%, hsl(253 40% 59%) 100%);
+    --gradient-hero: linear-gradient(180deg, hsl(168 15% 99%) 0%, hsl(168 25% 96%) 100%);
+    --gradient-card: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(250 15% 98%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(253 40% 59%) 0%, hsl(230 50% 55%) 100%);
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(250 25% 15% / 0.03);
+    --shadow-md: 0 4px 6px -1px hsl(250 25% 15% / 0.05), 0 2px 4px -2px hsl(250 25% 15% / 0.05);
+    --shadow-lg: 0 10px 15px -3px hsl(250 25% 15% / 0.08), 0 4px 6px -4px hsl(250 25% 15% / 0.08);
+    --shadow-xl: 0 20px 25px -5px hsl(250 25% 15% / 0.08), 0 8px 10px -6px hsl(250 25% 15% / 0.08);
+    --shadow-brand: 0 4px 14px 0 hsl(168 70% 45% / 0.25);
+    --shadow-accent: 0 4px 14px 0 hsl(253 40% 59% / 0.35);
+  }
+
+  .dark {
+    --background: 250 25% 8%;
+    --foreground: 250 15% 95%;
+
+    --card: 250 22% 11%;
+    --card-foreground: 250 15% 95%;
+
+    --popover: 250 22% 11%;
+    --popover-foreground: 250 15% 95%;
+
+    --primary: 168 65% 50%;
+    --primary-foreground: 250 25% 8%;
+
+    --secondary: 253 20% 15%;
+    --secondary-foreground: 250 15% 90%;
+
+    --muted: 250 18% 18%;
+    --muted-foreground: 250 12% 60%;
+
+    --accent: 253 35% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 70% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 250 18% 18%;
+    --input: 250 18% 18%;
+    --ring: 168 65% 50%;
+
+    --sidebar-background: 250 22% 9%;
+    --sidebar-foreground: 250 15% 90%;
+    --sidebar-primary: 168 65% 50%;
+    --sidebar-primary-foreground: 250 25% 8%;
+    --sidebar-accent: 253 18% 15%;
+    --sidebar-accent-foreground: 250 15% 90%;
+    --sidebar-border: 250 18% 18%;
+    --sidebar-ring: 168 65% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    @apply font-bold tracking-tight;
+  }
+}
+
+@layer components {
+  /* Hero section gradient background */
+  .hero-gradient {
+    background: var(--gradient-hero);
+  }
+
+  /* Brand gradient text */
+  .text-gradient-brand {
+    background: var(--gradient-brand);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Card with subtle gradient */
+  .card-gradient {
+    background: var(--gradient-card);
+  }
+
+  /* Brand shadow for elevated elements */
+  .shadow-brand {
+    box-shadow: var(--shadow-brand);
+  }
+
+  /* Accent shadow for CTA buttons */
+  .shadow-accent {
+    box-shadow: var(--shadow-accent);
+  }
+
+  /* Glass morphism effect */
+  .glass {
+    @apply bg-white/80 backdrop-blur-lg;
+  }
+
+  /* Subtle pattern overlay */
+  .pattern-grid {
+    background-image: 
+      linear-gradient(to right, hsl(168 70% 45% / 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(168 70% 45% / 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* Feature card hover effect */
+  .feature-card {
+    @apply bg-card rounded-2xl p-6 border border-border/50 transition-all duration-300;
+  }
+
+  .feature-card:hover {
+    @apply border-primary/20 -translate-y-1;
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* Specialty badge */
+  .specialty-badge {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200;
+    @apply bg-secondary text-secondary-foreground hover:bg-primary/10 hover:text-primary;
+  }
+
+  /* Section container */
+  .section-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Animated underline */
+  .underline-animated {
+    @apply relative;
+  }
+
+  .underline-animated::after {
+    content: '';
+    @apply absolute bottom-0 left-0 w-0 h-0.5 bg-primary transition-all duration-300;
+  }
+
+  .underline-animated:hover::after {
+    @apply w-full;
+  }
+}
+
+/* Custom animations */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 3s ease-in-out infinite;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.6s ease-out forwards;
+}
+
+/* Driver.js custom styles for Yesclin Tour */
+.driver-popover {
+  background: hsl(var(--card)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+}
+
+.driver-popover-title {
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 1.1rem !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.driver-popover-description {
+  font-family: 'Inter', sans-serif !important;
+  color: hsl(var(--muted-foreground)) !important;
+  line-height: 1.6 !important;
+}
+
+.driver-popover-progress-text {
+  color: hsl(var(--muted-foreground)) !important;
+  font-size: 0.75rem !important;
+}
+
+.driver-popover-navigation-btns {
+  gap: 8px !important;
+}
+
+.driver-popover-prev-btn,
+.driver-popover-next-btn {
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 500 !important;
+  padding: 8px 16px !important;
+  border-radius: 8px !important;
+  transition: all 0.2s !important;
+}
+
+.driver-popover-prev-btn {
+  background: transparent !important;
+  color: hsl(var(--foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+.driver-popover-prev-btn:hover {
+  background: hsl(var(--muted)) !important;
+}
+
+.driver-popover-next-btn {
+  background: hsl(168 70% 45%) !important;
+  color: white !important;
+  border: none !important;
+}
+
+.driver-popover-next-btn:hover {
+  background: hsl(168 75% 38%) !important;
+}
+
+.driver-popover-close-btn {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.driver-popover-close-btn:hover {
+  color: hsl(var(--foreground)) !important;
+}
+
+.driver-popover-arrow-side-left.driver-popover-arrow,
+.driver-popover-arrow-side-right.driver-popover-arrow,
+.driver-popover-arrow-side-top.driver-popover-arrow,
+.driver-popover-arrow-side-bottom.driver-popover-arrow {
+  border-color: hsl(var(--card)) !important;
+}
+
+/* Print styles - hide everything except #print-area */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #print-area,
+  #print-area * {
+    visibility: visible;
+  }
+
+  #print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    overflow: visible;
+  }
+
+  /* Hide non-content elements */
+  nav,
+  aside,
+  header,
+  footer,
+  button,
+  .sidebar,
+  .navigation,
+  [role="navigation"],
+  [role="banner"],
+  [data-no-print] {
+    display: none !important;
+  }
+}
