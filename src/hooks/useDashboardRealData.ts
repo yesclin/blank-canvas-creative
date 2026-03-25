@@ -238,8 +238,9 @@ function useDashboardFinance(clinicId: string | null, period: DashboardPeriod) {
         .select('amount')
         .eq('clinic_id', clinicId)
         .eq('type', 'entrada')
-        .gte('transaction_date', startDate)
-        .lte('transaction_date', endDate);
+        .eq('status', 'pago')
+        .gte('paid_at', `${startDate}T00:00:00`)
+        .lte('paid_at', `${endDate}T23:59:59`);
       
       // Buscar transações do mês (acumulado)
       const { data: monthTransactions } = await supabase
@@ -247,8 +248,9 @@ function useDashboardFinance(clinicId: string | null, period: DashboardPeriod) {
         .select('amount')
         .eq('clinic_id', clinicId)
         .eq('type', 'entrada')
-        .gte('transaction_date', monthStart)
-        .lte('transaction_date', monthEnd);
+        .eq('status', 'pago')
+        .gte('paid_at', `${monthStart}T00:00:00`)
+        .lte('paid_at', `${monthEnd}T23:59:59`);
       
       // Buscar atendimentos finalizados do mês para distribuição particular/convênio
       const { data: monthAppointments } = await supabase
