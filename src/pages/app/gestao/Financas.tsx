@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import { DollarSign, Plus, Search, TrendingUp, TrendingDown, Wallet, Package, ArrowUpCircle, ArrowDownCircle, Edit, Calendar, CreditCard, Users, Loader2, ExternalLink, User } from "lucide-react";
+import { DollarSign, Plus, Search, TrendingUp, TrendingDown, Wallet, Package, ArrowUpCircle, ArrowDownCircle, Edit, Calendar, CreditCard, Users, Loader2, ExternalLink, User, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,9 +50,15 @@ import {
   useFinanceCategories, 
   useFinanceStats,
   useCreateTransaction,
+  useUpdateTransaction,
+  useMarkTransactionPaid,
+  useTreatmentPackages,
+  useCreateTreatmentPackage,
   type TransactionType,
+  type FinanceTransaction,
 } from "@/hooks/useFinanceTransactions";
-import { transactionTypeLabels, paymentMethods, transactionOrigins, packageStatusLabels, packageStatusColors } from "@/types/gestao";
+import { paymentMethods, transactionOrigins, packageStatusLabels, packageStatusColors } from "@/types/gestao";
+import { getTypeLabel } from "@/utils/financeEnumMapper";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MarginAlertSettings } from "@/components/config/MarginAlertSettings";
@@ -64,13 +70,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { usePatients } from "@/hooks/usePatients";
 import { cn } from "@/lib/utils";
+import type { PackageStatus } from "@/types/gestao";
 
 export default function Financas() {
   const { data: transactions = [], isLoading } = useTodayTransactions();
   const { data: categories = [] } = useFinanceCategories();
   const { data: stats = { todayRevenue: 0, todayExpenses: 0, todayBalance: 0, transactionCount: 0 } } = useFinanceStats();
   const createTransaction = useCreateTransaction();
+  const updateTransaction = useUpdateTransaction();
+  const markPaid = useMarkTransactionPaid();
   const createSale = useCreateSale();
+  const { data: packages = [] } = useTreatmentPackages();
+  const createPackage = useCreateTreatmentPackage();
 
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -80,6 +91,15 @@ export default function Financas() {
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
   const [isPackageDialogOpen, setIsPackageDialogOpen] = useState(false);
   const [transactionType, setTransactionType] = useState<TransactionType>("entrada");
+  
+  // Edit state
+  const [editingTransaction, setEditingTransaction] = useState<FinanceTransaction | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  
+  // Payment dialog state
+  const [payingTransaction, setPayingTransaction] = useState<FinanceTransaction | null>(null);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("");
   
   // Sale details dialog state
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
@@ -95,6 +115,31 @@ export default function Financas() {
     origin: "",
     notes: "",
   });
+  
+  // Edit form state
+  const [editFormData, setEditFormData] = useState({
+    description: "",
+    amount: "",
+    date: "",
+    category_id: "",
+    payment_method: "",
+    origin: "",
+    notes: "",
+  });
+
+  // Package form state
+  const [packageForm, setPackageForm] = useState({
+    patient_id: "",
+    name: "",
+    total_sessions: "",
+    total_amount: "",
+    paid_amount: "0",
+    payment_method: "",
+    valid_until: "",
+    notes: "",
+  });
+  const [packagePatientOpen, setPackagePatientOpen] = useState(false);
+  const [packagePatientSearch, setPackagePatientSearch] = useState("");
 
   // Product sale state
   const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
@@ -120,6 +165,18 @@ export default function Financas() {
   const selectedPatient = useMemo(() => 
     patients.find(p => p.id === selectedPatientId),
     [patients, selectedPatientId]
+  );
+
+  // Package patient filtering
+  const filteredPackagePatients = useMemo(() => {
+    if (!packagePatientSearch) return patients.slice(0, 50);
+    const q = packagePatientSearch.toLowerCase();
+    return patients.filter(p => p.full_name.toLowerCase().includes(q)).slice(0, 50);
+  }, [patients, packagePatientSearch]);
+
+  const selectedPackagePatient = useMemo(() => 
+    patients.find(p => p.id === packageForm.patient_id),
+    [patients, packageForm.patient_id]
   );
   
   // Fetch sales linked to current transactions
@@ -172,20 +229,70 @@ export default function Financas() {
 
   const filteredTransactions = transactions.filter((transaction) => {
     const matchesSearch = transaction.description.toLowerCase().includes(search.toLowerCase());
-    const matchesType = typeFilter === "all" || transaction.type === typeFilter;
+    const matchesType = typeFilter === "all" || transaction.uiType === typeFilter;
     const matchesPatient = !patientFilter || transaction.patient_id === patientFilter;
     return matchesSearch && matchesType && matchesPatient;
   });
 
+  // --- Edit handlers ---
+  const handleEditTransaction = (transaction: FinanceTransaction) => {
+    setEditingTransaction(transaction);
+    setEditFormData({
+      description: transaction.description,
+      amount: String(transaction.amount),
+      date: transaction.transaction_date,
+      category_id: transaction.category_id || "",
+      payment_method: transaction.payment_method || "",
+      origin: transaction.origin || "",
+      notes: transaction.notes || "",
+    });
+    setTransactionType(transaction.uiType);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingTransaction) return;
+    await updateTransaction.mutateAsync({
+      id: editingTransaction.id,
+      data: {
+        type: transactionType,
+        description: editFormData.description,
+        amount: parseFloat(editFormData.amount),
+        transaction_date: editFormData.date,
+        category_id: editFormData.category_id || undefined,
+        payment_method: editFormData.payment_method || undefined,
+        origin: editFormData.origin || undefined,
+        notes: editFormData.notes || undefined,
+      },
+    });
+    setIsEditDialogOpen(false);
+    setEditingTransaction(null);
+  };
+
+  // --- Payment/baixa handlers ---
+  const handleOpenPayment = (transaction: FinanceTransaction) => {
+    setPayingTransaction(transaction);
+    setPaymentMethod(transaction.payment_method || "");
+    setIsPaymentDialogOpen(true);
+  };
+
+  const handleConfirmPayment = async () => {
+    if (!payingTransaction) return;
+    await markPaid.mutateAsync({
+      id: payingTransaction.id,
+      payment_method: paymentMethod || undefined,
+    });
+    setIsPaymentDialogOpen(false);
+    setPayingTransaction(null);
+    setPaymentMethod("");
+  };
+
   const handleSubmitTransaction = async () => {
     const isProductSale = transactionType === 'entrada' && formData.origin === 'produto';
     
-    // For product sales, require selected products
     if (isProductSale) {
       if (selectedProducts.length === 0) return;
       
-      // Create sale with products (this handles stock updates and transaction creation)
-      // Patient and appointment are optional for manual sales
       await createSale.mutateAsync({
         sale_date: formData.date,
         patient_id: selectedPatientId || undefined,
@@ -201,7 +308,6 @@ export default function Financas() {
         })),
       });
     } else {
-      // Regular transaction
       if (!formData.description || !formData.amount) return;
       
       await createTransaction.mutateAsync({
@@ -216,9 +322,36 @@ export default function Financas() {
       });
     }
 
-    // Reset form
     resetTransactionForm();
     setIsTransactionDialogOpen(false);
+  };
+
+  // --- Package handlers ---
+  const handleSubmitPackage = async () => {
+    if (!packageForm.patient_id || !packageForm.name || !packageForm.total_sessions || !packageForm.total_amount) return;
+    
+    await createPackage.mutateAsync({
+      patient_id: packageForm.patient_id,
+      name: packageForm.name,
+      total_sessions: parseInt(packageForm.total_sessions),
+      total_amount: parseFloat(packageForm.total_amount),
+      paid_amount: parseFloat(packageForm.paid_amount) || 0,
+      payment_method: packageForm.payment_method || undefined,
+      valid_until: packageForm.valid_until || undefined,
+      notes: packageForm.notes || undefined,
+    });
+    
+    setPackageForm({
+      patient_id: "",
+      name: "",
+      total_sessions: "",
+      total_amount: "",
+      paid_amount: "0",
+      payment_method: "",
+      valid_until: "",
+      notes: "",
+    });
+    setIsPackageDialogOpen(false);
   };
 
   const resetTransactionForm = () => {
@@ -447,7 +580,7 @@ export default function Financas() {
                         <Label htmlFor="description">Descrição *</Label>
                         <Input 
                           id="description" 
-                          placeholder="Ex: Consulta - Maria Silva"
+                          placeholder="Ex: Consulta particular"
                           value={formData.description}
                           onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                         />
@@ -501,7 +634,7 @@ export default function Financas() {
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent>
-                          {categories.filter(c => c.type === transactionType).map((cat) => (
+                          {categories.filter(c => c.uiType === transactionType).map((cat) => (
                             <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                           ))}
                         </SelectContent>
@@ -531,7 +664,6 @@ export default function Financas() {
                         value={formData.origin}
                         onValueChange={(value) => {
                           setFormData(prev => ({ ...prev, origin: value }));
-                          // Reset product, patient, and appointment selection when origin changes
                           if (value !== 'produto') {
                             setSelectedProducts([]);
                             setProductSaleTotal(0);
@@ -604,7 +736,6 @@ export default function Financas() {
                                     key={patient.id}
                                     value={patient.id}
                                     onSelect={() => {
-                                      // Clear appointment when patient changes
                                       if (selectedPatientId !== patient.id) {
                                         setSelectedAppointmentId(null);
                                       }
@@ -639,7 +770,7 @@ export default function Financas() {
                     </div>
                   )}
                   
-                  {/* Appointment Selector for Product Sales (only shows when patient is selected) */}
+                  {/* Appointment Selector for Product Sales */}
                   {transactionType === 'entrada' && formData.origin === 'produto' && (
                     <AppointmentSaleSelector
                       patientId={selectedPatientId}
@@ -700,6 +831,7 @@ export default function Financas() {
                     <TableHead>Descrição</TableHead>
                     <TableHead>Paciente</TableHead>
                     <TableHead>Tipo</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Pagamento</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
@@ -708,7 +840,7 @@ export default function Financas() {
                 <TableBody>
                   {filteredTransactions.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                         Nenhuma transação encontrada
                       </TableCell>
                     </TableRow>
@@ -749,11 +881,16 @@ export default function Financas() {
                           </TableCell>
                           <TableCell>
                             <Badge 
-                              variant={transaction.type === 'entrada' ? 'default' : 'destructive'}
+                              variant={transaction.uiType === 'entrada' ? 'default' : 'destructive'}
                             >
-                              {transaction.type === 'entrada' && <ArrowDownCircle className="h-3 w-3 mr-1" />}
-                              {transaction.type === 'saida' && <ArrowUpCircle className="h-3 w-3 mr-1" />}
-                              {transactionTypeLabels[transaction.type]}
+                              {transaction.uiType === 'entrada' && <ArrowDownCircle className="h-3 w-3 mr-1" />}
+                              {transaction.uiType === 'saida' && <ArrowUpCircle className="h-3 w-3 mr-1" />}
+                              {getTypeLabel(transaction.type)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={transaction.status === 'pago' ? 'default' : 'secondary'}>
+                              {transaction.status === 'pago' ? 'Pago' : transaction.status === 'pendente' ? 'Pendente' : transaction.status}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -762,14 +899,31 @@ export default function Financas() {
                               {getPaymentMethodLabel(transaction.payment_method)}
                             </div>
                           </TableCell>
-                          <TableCell className={`text-right font-medium ${transaction.type === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
-                            {transaction.type === 'saida' ? '- ' : '+ '}
+                          <TableCell className={`text-right font-medium ${transaction.uiType === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
+                            {transaction.uiType === 'saida' ? '- ' : '+ '}
                             {formatCurrency(transaction.amount)}
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button variant="ghost" size="icon">
-                              <Edit className="h-4 w-4" />
-                            </Button>
+                            <div className="flex items-center justify-end gap-1">
+                              {transaction.status === 'pendente' && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  title="Marcar como pago"
+                                  onClick={() => handleOpenPayment(transaction)}
+                                >
+                                  <CheckCircle className="h-4 w-4 text-green-600" />
+                                </Button>
+                              )}
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                title="Editar transação"
+                                onClick={() => handleEditTransaction(transaction)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
@@ -800,45 +954,115 @@ export default function Financas() {
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="patient">Paciente *</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o paciente" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">Maria Silva</SelectItem>
-                        <SelectItem value="2">João Santos</SelectItem>
-                        <SelectItem value="3">Ana Costa</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label>Paciente *</Label>
+                    <Popover open={packagePatientOpen} onOpenChange={setPackagePatientOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between font-normal"
+                        >
+                          {selectedPackagePatient ? (
+                            <span className="flex items-center gap-2">
+                              <User className="h-4 w-4 text-muted-foreground" />
+                              {selectedPackagePatient.full_name}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">Selecionar paciente...</span>
+                          )}
+                          <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[400px] p-0" align="start">
+                        <Command shouldFilter={false}>
+                          <CommandInput
+                            placeholder="Buscar paciente..."
+                            value={packagePatientSearch}
+                            onValueChange={setPackagePatientSearch}
+                          />
+                          <CommandList>
+                            <CommandEmpty>Nenhum paciente encontrado.</CommandEmpty>
+                            <CommandGroup>
+                              {filteredPackagePatients.map((patient) => (
+                                <CommandItem
+                                  key={patient.id}
+                                  value={patient.id}
+                                  onSelect={() => {
+                                    setPackageForm(prev => ({ ...prev, patient_id: patient.id }));
+                                    setPackagePatientOpen(false);
+                                    setPackagePatientSearch("");
+                                  }}
+                                >
+                                  <User className="h-4 w-4 mr-2 text-muted-foreground" />
+                                  {patient.full_name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="package_name">Nome do Pacote *</Label>
-                    <Input id="package_name" placeholder="Ex: Pacote 10 sessões de Limpeza" />
+                    <Input 
+                      id="package_name" 
+                      placeholder="Ex: Pacote 10 sessões de Limpeza"
+                      value={packageForm.name}
+                      onChange={(e) => setPackageForm(prev => ({ ...prev, name: e.target.value }))}
+                    />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="total_sessions">Total de Sessões *</Label>
-                      <Input id="total_sessions" type="number" min="1" />
+                      <Input 
+                        id="total_sessions" 
+                        type="number" 
+                        min="1"
+                        value={packageForm.total_sessions}
+                        onChange={(e) => setPackageForm(prev => ({ ...prev, total_sessions: e.target.value }))}
+                      />
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="total_amount">Valor Total (R$) *</Label>
-                      <Input id="total_amount" type="number" min="0" step="0.01" />
+                      <Input 
+                        id="total_amount" 
+                        type="number" 
+                        min="0" 
+                        step="0.01"
+                        value={packageForm.total_amount}
+                        onChange={(e) => setPackageForm(prev => ({ ...prev, total_amount: e.target.value }))}
+                      />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="paid_amount">Valor Pago (R$)</Label>
-                      <Input id="paid_amount" type="number" min="0" step="0.01" defaultValue="0" />
+                      <Input 
+                        id="paid_amount" 
+                        type="number" 
+                        min="0" 
+                        step="0.01"
+                        value={packageForm.paid_amount}
+                        onChange={(e) => setPackageForm(prev => ({ ...prev, paid_amount: e.target.value }))}
+                      />
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="valid_until">Validade</Label>
-                      <Input id="valid_until" type="date" />
+                      <Input 
+                        id="valid_until" 
+                        type="date"
+                        value={packageForm.valid_until}
+                        onChange={(e) => setPackageForm(prev => ({ ...prev, valid_until: e.target.value }))}
+                      />
                     </div>
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="pkg_payment_method">Forma de Pagamento</Label>
-                    <Select>
+                    <Label>Forma de Pagamento</Label>
+                    <Select
+                      value={packageForm.payment_method}
+                      onValueChange={(value) => setPackageForm(prev => ({ ...prev, payment_method: value }))}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
@@ -850,15 +1074,23 @@ export default function Financas() {
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="pkg_notes">Observações</Label>
-                    <Textarea id="pkg_notes" placeholder="Observações adicionais..." />
+                    <Label>Observações</Label>
+                    <Textarea 
+                      placeholder="Observações adicionais..."
+                      value={packageForm.notes}
+                      onChange={(e) => setPackageForm(prev => ({ ...prev, notes: e.target.value }))}
+                    />
                   </div>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setIsPackageDialogOpen(false)}>
                     Cancelar
                   </Button>
-                  <Button onClick={() => setIsPackageDialogOpen(false)}>
+                  <Button 
+                    onClick={handleSubmitPackage}
+                    disabled={createPackage.isPending || !packageForm.patient_id || !packageForm.name || !packageForm.total_sessions || !packageForm.total_amount}
+                  >
+                    {createPackage.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Salvar
                   </Button>
                 </DialogFooter>
@@ -866,11 +1098,62 @@ export default function Financas() {
             </Dialog>
           </div>
 
-          <div className="text-center py-12 text-muted-foreground">
-            <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Funcionalidade de pacotes em desenvolvimento</p>
-            <p className="text-sm mt-2">Em breve você poderá criar pacotes de sessões para seus pacientes.</p>
-          </div>
+          {/* Package list from real data */}
+          {packages.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Nenhum pacote cadastrado</p>
+              <p className="text-sm mt-2">Crie pacotes de sessões para seus pacientes.</p>
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="pt-6">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Paciente</TableHead>
+                      <TableHead>Pacote</TableHead>
+                      <TableHead>Sessões</TableHead>
+                      <TableHead>Valor</TableHead>
+                      <TableHead>Pago</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Validade</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {packages.map((pkg: any) => {
+                      const progress = pkg.total_sessions > 0 ? (pkg.used_sessions / pkg.total_sessions) * 100 : 0;
+                      const status = (pkg.status || 'ativo') as PackageStatus;
+                      return (
+                        <TableRow key={pkg.id}>
+                          <TableCell className="font-medium">
+                            {pkg.patients?.full_name || '-'}
+                          </TableCell>
+                          <TableCell>{pkg.name}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm">{pkg.used_sessions}/{pkg.total_sessions}</span>
+                              <Progress value={progress} className="w-16 h-2" />
+                            </div>
+                          </TableCell>
+                          <TableCell>{formatCurrency(pkg.total_amount)}</TableCell>
+                          <TableCell>{formatCurrency(pkg.paid_amount)}</TableCell>
+                          <TableCell>
+                            <Badge className={packageStatusColors[status] || ''}>
+                              {packageStatusLabels[status] || status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {pkg.valid_until ? format(new Date(pkg.valid_until), "dd/MM/yyyy") : '-'}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Categories Tab */}
@@ -899,7 +1182,7 @@ export default function Financas() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {categories.filter(c => c.type === 'entrada').map((category) => (
+                    {categories.filter(c => c.uiType === 'entrada').map((category) => (
                       <TableRow key={category.id}>
                         <TableCell className="font-medium">{category.name}</TableCell>
                         <TableCell>
@@ -936,7 +1219,7 @@ export default function Financas() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {categories.filter(c => c.type === 'saida').map((category) => (
+                    {categories.filter(c => c.uiType === 'saida').map((category) => (
                       <TableRow key={category.id}>
                         <TableCell className="font-medium">{category.name}</TableCell>
                         <TableCell>
@@ -963,6 +1246,162 @@ export default function Financas() {
           <MarginAlertSettings />
         </TabsContent>
       </Tabs>
+
+      {/* Edit Transaction Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Editar Transação</DialogTitle>
+            <DialogDescription>Altere os dados da transação</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Tipo</Label>
+              <div className="flex gap-2">
+                <Button 
+                  type="button"
+                  variant={transactionType === 'entrada' ? 'default' : 'outline'}
+                  className="flex-1"
+                  onClick={() => setTransactionType('entrada')}
+                >
+                  <ArrowDownCircle className="h-4 w-4 mr-2" />
+                  Entrada
+                </Button>
+                <Button 
+                  type="button"
+                  variant={transactionType === 'saida' ? 'default' : 'outline'}
+                  className="flex-1"
+                  onClick={() => setTransactionType('saida')}
+                >
+                  <ArrowUpCircle className="h-4 w-4 mr-2" />
+                  Saída
+                </Button>
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label>Descrição *</Label>
+              <Input 
+                value={editFormData.description}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, description: e.target.value }))}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Valor (R$) *</Label>
+                <Input 
+                  type="number" 
+                  min="0" 
+                  step="0.01"
+                  value={editFormData.amount}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, amount: e.target.value }))}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Data *</Label>
+                <Input 
+                  type="date" 
+                  value={editFormData.date}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, date: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Categoria</Label>
+                <Select 
+                  value={editFormData.category_id}
+                  onValueChange={(value) => setEditFormData(prev => ({ ...prev, category_id: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.filter(c => c.uiType === transactionType).map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Forma de Pagamento</Label>
+                <Select
+                  value={editFormData.payment_method}
+                  onValueChange={(value) => setEditFormData(prev => ({ ...prev, payment_method: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {paymentMethods.map((method) => (
+                      <SelectItem key={method.value} value={method.value}>{method.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label>Observações</Label>
+              <Textarea 
+                value={editFormData.notes}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, notes: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancelar</Button>
+            <Button 
+              onClick={handleSaveEdit}
+              disabled={updateTransaction.isPending || !editFormData.description || !editFormData.amount}
+            >
+              {updateTransaction.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Dialog */}
+      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Registrar Pagamento</DialogTitle>
+            <DialogDescription>
+              Marcar transação como paga
+              {payingTransaction && (
+                <span className="block mt-1 font-medium text-foreground">
+                  {payingTransaction.description} — {formatCurrency(payingTransaction.amount)}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Forma de Pagamento</Label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {paymentMethods.map((method) => (
+                    <SelectItem key={method.value} value={method.value}>{method.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPaymentDialogOpen(false)}>Cancelar</Button>
+            <Button 
+              onClick={handleConfirmPayment}
+              disabled={markPaid.isPending}
+            >
+              {markPaid.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Confirmar Pagamento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       {/* Sale Details Dialog */}
       <SaleDetailsDialog

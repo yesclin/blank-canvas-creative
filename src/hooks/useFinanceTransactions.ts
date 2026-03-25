@@ -2,13 +2,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { toDbType, toUiType, isRevenue, isExpense, type UiTransactionType } from "@/utils/financeEnumMapper";
 
-export type TransactionType = "entrada" | "saida";
+// Re-export for backward compatibility
+export type TransactionType = UiTransactionType;
 
 export interface FinanceTransaction {
   id: string;
   clinic_id: string;
-  type: TransactionType;
+  type: string; // raw DB value (receita/despesa)
+  uiType: UiTransactionType; // mapped UI value (entrada/saida)
   status: string;
   description: string;
   amount: number;
@@ -37,12 +40,13 @@ export interface FinanceCategory {
   id: string;
   clinic_id: string;
   name: string;
-  type: TransactionType;
+  type: string; // raw DB value
+  uiType: UiTransactionType; // mapped
   is_active: boolean;
 }
 
 export interface TransactionFormData {
-  type: TransactionType;
+  type: UiTransactionType; // UI sends entrada/saida
   description: string;
   amount: number;
   transaction_date: string;
@@ -69,11 +73,25 @@ async function getClinicId(): Promise<string> {
   return profile.clinic_id;
 }
 
+function mapTransaction(raw: any): FinanceTransaction {
+  return {
+    ...raw,
+    uiType: toUiType(raw.type),
+  };
+}
+
+function mapCategory(raw: any): FinanceCategory {
+  return {
+    ...raw,
+    uiType: toUiType(raw.type),
+  };
+}
+
 // Fetch transactions with filters
 export function useTransactions(filters?: {
   startDate?: string;
   endDate?: string;
-  type?: TransactionType;
+  type?: UiTransactionType;
 }) {
   const today = format(new Date(), "yyyy-MM-dd");
   const startDate = filters?.startDate || today;
@@ -96,13 +114,14 @@ export function useTransactions(filters?: {
         .order("created_at", { ascending: false });
       
       if (filters?.type) {
-        query = query.eq("type", filters.type);
+        // Convert UI type to DB enum for filtering
+        query = query.eq("type", toDbType(filters.type));
       }
       
       const { data, error } = await query;
       
       if (error) throw error;
-      return data as FinanceTransaction[];
+      return (data || []).map(mapTransaction) as FinanceTransaction[];
     },
   });
 }
@@ -135,7 +154,7 @@ export function useCreateTransaction() {
         .from("finance_transactions")
         .insert({
           clinic_id: clinicId,
-          type: data.type,
+          type: toDbType(data.type), // Convert UI → DB enum
           description: data.description,
           amount: data.amount,
           transaction_date: data.transaction_date,
@@ -171,13 +190,29 @@ export function useUpdateTransaction() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<TransactionFormData> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<TransactionFormData> & { status?: string; paid_at?: string | null } }) => {
+      const updatePayload: any = {
+        updated_at: new Date().toISOString(),
+      };
+      
+      // Map UI type to DB enum if provided
+      if (data.type) updatePayload.type = toDbType(data.type);
+      if (data.description !== undefined) updatePayload.description = data.description;
+      if (data.amount !== undefined) updatePayload.amount = data.amount;
+      if (data.transaction_date !== undefined) updatePayload.transaction_date = data.transaction_date;
+      if (data.payment_method !== undefined) updatePayload.payment_method = data.payment_method || null;
+      if (data.category_id !== undefined) updatePayload.category_id = data.category_id || null;
+      if (data.patient_id !== undefined) updatePayload.patient_id = data.patient_id || null;
+      if (data.professional_id !== undefined) updatePayload.professional_id = data.professional_id || null;
+      if (data.appointment_id !== undefined) updatePayload.appointment_id = data.appointment_id || null;
+      if (data.origin !== undefined) updatePayload.origin = data.origin || null;
+      if (data.notes !== undefined) updatePayload.notes = data.notes || null;
+      if (data.status !== undefined) updatePayload.status = data.status;
+      if (data.paid_at !== undefined) updatePayload.paid_at = data.paid_at;
+      
       const { error } = await supabase
         .from("finance_transactions")
-        .update({
-          ...data,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq("id", id);
       
       if (error) throw error;
@@ -190,6 +225,38 @@ export function useUpdateTransaction() {
     },
     onError: (error: Error) => {
       toast.error("Erro ao atualizar transação: " + error.message);
+    },
+  });
+}
+
+// Mark transaction as paid (baixa)
+export function useMarkTransactionPaid() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, payment_method }: { id: string; payment_method?: string }) => {
+      const updatePayload: any = {
+        status: "pago",
+        paid_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      if (payment_method) updatePayload.payment_method = payment_method;
+      
+      const { error } = await supabase
+        .from("finance_transactions")
+        .update(updatePayload)
+        .eq("id", id);
+      
+      if (error) throw error;
+      return { id };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["finance-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["finance-stats"] });
+      toast.success("Transação marcada como paga!");
+    },
+    onError: (error: Error) => {
+      toast.error("Erro ao registrar pagamento: " + error.message);
     },
   });
 }
@@ -231,7 +298,7 @@ export function useFinanceCategories() {
         .order("name");
       
       if (error) throw error;
-      return data as FinanceCategory[];
+      return (data || []).map(mapCategory) as FinanceCategory[];
     },
   });
 }
@@ -241,7 +308,7 @@ export function useCreateFinanceCategory() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ name, type }: { name: string; type: TransactionType }) => {
+    mutationFn: async ({ name, type }: { name: string; type: UiTransactionType }) => {
       const clinicId = await getClinicId();
       
       const { data, error } = await supabase
@@ -249,7 +316,7 @@ export function useCreateFinanceCategory() {
         .insert({
           clinic_id: clinicId,
           name,
-          type,
+          type: toDbType(type), // Convert UI → DB enum
         })
         .select()
         .single();
@@ -282,11 +349,11 @@ export function useFinanceStats(date?: Date) {
       if (error) throw error;
       
       const todayRevenue = data
-        .filter((t: any) => t.type === "entrada" || t.type === "receita")
+        .filter((t: any) => isRevenue(t.type))
         .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
       
       const todayExpenses = data
-        .filter((t: any) => t.type === "saida" || t.type === "despesa")
+        .filter((t: any) => isExpense(t.type))
         .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
       
       return {
@@ -317,11 +384,11 @@ export function useMonthlyFinanceStats() {
       if (error) throw error;
       
       const monthRevenue = data
-        .filter((t: any) => t.type === "entrada" || t.type === "receita")
+        .filter((t: any) => isRevenue(t.type))
         .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
       
       const monthExpenses = data
-        .filter((t: any) => t.type === "saida" || t.type === "despesa")
+        .filter((t: any) => isExpense(t.type))
         .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
       
       return {
@@ -330,6 +397,74 @@ export function useMonthlyFinanceStats() {
         monthBalance: monthRevenue - monthExpenses,
         transactionCount: data.length,
       };
+    },
+  });
+}
+
+// Fetch treatment packages
+export function useTreatmentPackages() {
+  return useQuery({
+    queryKey: ["treatment-packages"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("treatment_packages")
+        .select(`
+          *,
+          patients(id, full_name)
+        `)
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+  });
+}
+
+// Create treatment package
+export function useCreateTreatmentPackage() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (data: {
+      patient_id: string;
+      name: string;
+      total_sessions: number;
+      total_amount: number;
+      paid_amount?: number;
+      payment_method?: string;
+      valid_until?: string;
+      notes?: string;
+    }) => {
+      const clinicId = await getClinicId();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { data: pkg, error } = await supabase
+        .from("treatment_packages")
+        .insert({
+          clinic_id: clinicId,
+          patient_id: data.patient_id,
+          name: data.name,
+          total_sessions: data.total_sessions,
+          total_amount: data.total_amount,
+          paid_amount: data.paid_amount || 0,
+          payment_method: data.payment_method || null,
+          valid_until: data.valid_until || null,
+          notes: data.notes || null,
+          created_by: user?.id || null,
+          status: "ativo",
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return pkg;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["treatment-packages"] });
+      toast.success("Pacote criado com sucesso!");
+    },
+    onError: (error: Error) => {
+      toast.error("Erro ao criar pacote: " + error.message);
     },
   });
 }
