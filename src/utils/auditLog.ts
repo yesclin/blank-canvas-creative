@@ -10,6 +10,7 @@ export interface AuditLogParams {
 
 /**
  * Log an audit event. Fails silently to never disrupt user flows.
+ * Maps to audit_logs table: table_name = entityType, record_id = entityId, new_data = metadata
  */
 export async function logAudit(params: AuditLogParams): Promise<void> {
   try {
@@ -20,11 +21,10 @@ export async function logAudit(params: AuditLogParams): Promise<void> {
       clinic_id: params.clinicId,
       user_id: user.id,
       action: params.action,
-      entity_type: params.entityType,
-      entity_id: params.entityId || null,
-      metadata: params.metadata || {},
-      user_agent: navigator.userAgent,
-    } as any);
+      table_name: params.entityType,
+      record_id: params.entityId || null,
+      new_data: params.metadata || {},
+    });
   } catch (err) {
     console.error('Audit log error (non-blocking):', err);
   }
