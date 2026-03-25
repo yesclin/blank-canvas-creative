@@ -62,7 +62,7 @@ export function ProductSaleSelector({
     // Validate stock for all selected products
     const errors: StockValidationError[] = [];
     const updatedProducts = selectedProducts.map((item) => {
-      const available = item.product.stock_quantity;
+      const available = item.product.current_stock;
       if (item.quantity > available && !allowNegativeStock) {
         const error: StockValidationError = {
           productId: item.product.id,
@@ -108,7 +108,7 @@ export function ProductSaleSelector({
       // Update quantity of existing product
       const newProducts = [...selectedProducts];
       const newQty = newProducts[existingIndex].quantity + quantity;
-      const maxQty = allowNegativeStock ? Infinity : product.stock_quantity;
+      const maxQty = allowNegativeStock ? Infinity : product.current_stock;
       newProducts[existingIndex].quantity = Math.min(newQty, maxQty);
       onProductsChange(newProducts);
     } else {
@@ -131,7 +131,7 @@ export function ProductSaleSelector({
     const product = selectedProducts.find((sp) => sp.product.id === productId);
     if (!product) return;
 
-    const maxAllowed = allowNegativeStock ? Infinity : product.product.stock_quantity;
+    const maxAllowed = allowNegativeStock ? Infinity : product.product.current_stock;
     const finalQuantity = Math.min(newQuantity, maxAllowed);
 
     onProductsChange(
@@ -142,7 +142,7 @@ export function ProductSaleSelector({
   }, [selectedProducts, allowNegativeStock, onProductsChange]);
 
   const selectedProduct = products.find((p) => p.id === selectedProductId);
-  const maxQuantity = selectedProduct?.stock_quantity || 0;
+  const maxQuantity = selectedProduct?.current_stock || 0;
   const canAddMore = selectedProduct && quantity <= maxQuantity;
 
   return (

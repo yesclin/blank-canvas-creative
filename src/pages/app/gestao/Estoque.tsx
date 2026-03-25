@@ -545,7 +545,7 @@ export default function Estoque() {
                       if (isProcedureUse) {
                         return 'Uso em Procedimento';
                       }
-                      return movement.reason;
+                      return movement.notes || '-';
                     };
                     
                     return (

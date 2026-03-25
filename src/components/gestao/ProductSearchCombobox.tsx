@@ -45,7 +45,6 @@ export function ProductSearchCombobox({
       (p) =>
         p.name.toLowerCase().includes(searchLower) ||
         p.sku?.toLowerCase().includes(searchLower) ||
-        p.barcode?.toLowerCase().includes(searchLower) ||
         p.category?.toLowerCase().includes(searchLower)
     );
   }, [products, search]);
@@ -82,12 +81,12 @@ export function ProductSearchCombobox({
                   <span>{formatCurrency(selectedProduct.sale_price)}</span>
                   <Badge
                     variant={getStockBadgeVariant(
-                      selectedProduct.stock_quantity,
-                      selectedProduct.min_stock_quantity
+                      selectedProduct.current_stock,
+                      selectedProduct.min_stock
                     )}
                     className="text-xs h-5"
                   >
-                    {selectedProduct.stock_quantity} em estoque
+                    {selectedProduct.current_stock} em estoque
                   </Badge>
                 </div>
               </div>
@@ -95,7 +94,7 @@ export function ProductSearchCombobox({
           ) : (
             <span className="text-muted-foreground flex items-center gap-2">
               <Search className="h-4 w-4" />
-              Buscar produto por nome, SKU ou código...
+              Buscar produto por nome, SKU ou categoria...
             </span>
           )}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -118,7 +117,7 @@ export function ProductSearchCombobox({
             </CommandEmpty>
             <CommandGroup>
               {filteredProducts.map((product) => {
-                const isOutOfStock = product.stock_quantity === 0;
+                const isOutOfStock = product.current_stock === 0;
                 return (
                   <CommandItem
                     key={product.id}
@@ -156,12 +155,12 @@ export function ProductSearchCombobox({
                       )}
                       <Badge
                         variant={getStockBadgeVariant(
-                          product.stock_quantity,
-                          product.min_stock_quantity
+                          product.current_stock,
+                          product.min_stock
                         )}
                         className="text-xs"
                       >
-                        {isOutOfStock ? "Sem estoque" : `${product.stock_quantity} disponível`}
+                        {isOutOfStock ? "Sem estoque" : `${product.current_stock} disponível`}
                       </Badge>
                     </div>
                   </CommandItem>
