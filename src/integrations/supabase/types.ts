@@ -4160,6 +4160,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_clinical_content: {
+        Args: { _user_id?: string }
+        Returns: boolean
+      }
       clinic_specialty_summary: { Args: { _clinic_id: string }; Returns: Json }
       deactivate_specialty: {
         Args: { _clinic_id: string; _specialty_slug: string }
@@ -4184,6 +4188,7 @@ export type Database = {
         Args: { _clinic_id: string; _user_id: string }
         Returns: boolean
       }
+      is_recepcionista: { Args: { _user_id?: string }; Returns: boolean }
       provision_specialty: {
         Args: { _clinic_id: string; _specialty_slug: string }
         Returns: Json
