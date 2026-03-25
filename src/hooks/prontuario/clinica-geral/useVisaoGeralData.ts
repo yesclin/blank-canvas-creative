@@ -146,9 +146,9 @@ export function useVisaoGeralData(patientId: string | null): UseVisaoGeralDataRe
       const totalEvolutions = evolutionsData?.length ?? 0;
       const lastEvolutionDate = evolutionsData?.[0]?.created_at ?? null;
 
-      // Fetch medical record files count (exams/documents)
+      // Fetch clinical media count (exams/documents)
       const { count: examsCount, error: examsError } = await supabase
-        .from('medical_record_files')
+        .from('clinical_media')
         .select('id', { count: 'exact', head: true })
         .eq('patient_id', patientId)
         .eq('clinic_id', clinic.id);

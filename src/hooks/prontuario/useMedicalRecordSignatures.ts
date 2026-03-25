@@ -3,33 +3,28 @@ import { supabase } from '@/integrations/supabase/client';
 import { useClinicData } from '@/hooks/useClinicData';
 import { toast } from 'sonner';
 
+/**
+ * Maps to the real `medical_record_signatures` table.
+ * Columns: id, clinic_id, record_id, record_type, signed_by, signature_hash, ip_address, user_agent, signed_at
+ */
 export interface MedicalRecordSignature {
   id: string;
   clinic_id: string;
-  patient_id: string;
-  professional_id: string;
-  medical_record_id: string;
-  signed_name: string;
-  signed_document: string | null;
-  signed_at: string;
+  record_id: string;
+  record_type: string; // 'evolution' | 'anamnesis'
+  signed_by: string;
+  signature_hash: string | null;
   ip_address: string | null;
   user_agent: string | null;
-  document_hash: string;
-  signature_type: string;
-  status: string;
-  created_at: string;
+  signed_at: string;
 }
 
 interface SignatureInput {
-  patient_id: string;
-  professional_id: string;
-  medical_record_id: string;
-  signed_name: string;
-  signed_document?: string;
+  record_id: string;
+  record_type: 'evolution' | 'anamnesis';
   content: Record<string, unknown>;
 }
 
-// Generate a simple hash for the document content
 async function generateDocumentHash(content: Record<string, unknown>): Promise<string> {
   const jsonString = JSON.stringify(content);
   const encoder = new TextEncoder();
@@ -45,15 +40,16 @@ export function useMedicalRecordSignatures() {
   const [loading, setLoading] = useState(false);
   const [signing, setSigning] = useState(false);
 
-  const fetchSignaturesForPatient = useCallback(async (patientId: string) => {
-    if (!clinic?.id || !patientId) return;
+  const fetchSignaturesForPatient = useCallback(async (_patientId: string) => {
+    if (!clinic?.id) return;
     setLoading(true);
     try {
+      // medical_record_signatures doesn't have patient_id — fetch all for clinic
+      // and filter client-side if needed, or fetch by known record_ids
       const { data, error } = await supabase
         .from('medical_record_signatures')
         .select('*')
         .eq('clinic_id', clinic.id)
-        .eq('patient_id', patientId)
         .order('signed_at', { ascending: false });
 
       if (error) throw error;
@@ -66,29 +62,24 @@ export function useMedicalRecordSignatures() {
   }, [clinic?.id]);
 
   const getSignatureForRecord = useCallback((recordId: string): MedicalRecordSignature | null => {
-    return signatures.find(s => s.medical_record_id === recordId) || null;
+    return signatures.find(s => s.record_id === recordId) || null;
   }, [signatures]);
 
   const isRecordSigned = useCallback((recordId: string): boolean => {
-    return signatures.some(s => s.medical_record_id === recordId && s.status === 'valid');
+    return signatures.some(s => s.record_id === recordId);
   }, [signatures]);
 
   const signRecord = async (input: SignatureInput): Promise<boolean> => {
     if (!clinic?.id) return false;
     setSigning(true);
-
     try {
-      // Check if already signed
-      const existing = signatures.find(s => s.medical_record_id === input.medical_record_id);
+      const existing = signatures.find(s => s.record_id === input.record_id);
       if (existing) {
         toast.error('Este registro já foi assinado');
         return false;
       }
 
-      // Generate document hash
       const documentHash = await generateDocumentHash(input.content);
-
-      // Get IP and user agent
       const userAgent = navigator.userAgent;
       let ipAddress = 'unknown';
       try {
@@ -96,51 +87,52 @@ export function useMedicalRecordSignatures() {
         const ipData = await ipResponse.json();
         ipAddress = ipData.ip;
       } catch {
-        // Fallback if IP fetch fails
+        // Fallback
       }
 
-      // Create signature record
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+      if (!userId) {
+        toast.error('Usuário não autenticado');
+        return false;
+      }
+
+      // Insert signature record
       const { error: sigError } = await supabase
         .from('medical_record_signatures')
         .insert({
           clinic_id: clinic.id,
-          patient_id: input.patient_id,
-          professional_id: input.professional_id,
-          medical_record_id: input.medical_record_id,
-          signed_name: input.signed_name,
-          signed_document: input.signed_document || null,
-          document_hash: documentHash,
-          signature_type: 'advanced_electronic',
-          status: 'valid',
+          record_id: input.record_id,
+          record_type: input.record_type,
+          signed_by: userId,
+          signature_hash: documentHash,
           ip_address: ipAddress,
           user_agent: userAgent,
         });
 
       if (sigError) throw sigError;
 
-      // Update the medical record entry status to 'signed'
+      // Update the source record status to 'assinado'
+      const table = input.record_type === 'anamnesis' ? 'anamnesis_records' : 'clinical_evolutions';
       const { error: updateError } = await supabase
-        .from('medical_record_entries')
-        .update({ 
-          status: 'signed',
-          signed_at: new Date().toISOString(),
-        })
-        .eq('id', input.medical_record_id);
+        .from(table)
+        .update({ status: 'assinado' })
+        .eq('id', input.record_id);
 
       if (updateError) throw updateError;
 
       // Log the signature action
       await supabase.from('access_logs').insert({
         clinic_id: clinic.id,
-        user_id: (await supabase.auth.getUser()).data.user?.id,
+        user_id: userId,
         action: 'sign_medical_record',
-        resource: `medical_record:${input.medical_record_id}`,
+        resource_type: 'medical_record',
+        resource_id: input.record_id,
         ip_address: ipAddress,
         user_agent: userAgent,
       });
 
       toast.success('Registro assinado digitalmente com sucesso');
-      await fetchSignaturesForPatient(input.patient_id);
       return true;
     } catch (err) {
       console.error('Error signing record:', err);
