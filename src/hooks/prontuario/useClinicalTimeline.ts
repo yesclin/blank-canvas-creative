@@ -464,18 +464,32 @@ export function useClinicalTimeline(patientId: string | null) {
         salesRes,
         stockMovementsRes,
       ] = await Promise.all([
-        // Medical record entries
-        supabase
-          .from('medical_record_entries')
-          .select('id, patient_id, entry_type, content, created_at, created_by, status')
-          .eq('clinic_id', clinic.id)
-          .eq('patient_id', patientId)
-          .order('created_at', { ascending: false }),
+        // Clinical evolutions + anamnesis records (merged as "entries")
+        Promise.all([
+          supabase
+            .from('clinical_evolutions')
+            .select('id, patient_id, content, created_at, status, professional_id')
+            .eq('clinic_id', clinic.id)
+            .eq('patient_id', patientId)
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('anamnesis_records')
+            .select('id, patient_id, data, created_at, status, professional_id')
+            .eq('clinic_id', clinic.id)
+            .eq('patient_id', patientId)
+            .order('created_at', { ascending: false }),
+        ]).then(([evol, anam]) => ({
+          data: [
+            ...(evol.data || []).map(e => ({ id: e.id, patient_id: e.patient_id, entry_type: 'evolution', content: e.content, created_at: e.created_at, created_by: e.professional_id, status: e.status })),
+            ...(anam.data || []).map(a => ({ id: a.id, patient_id: a.patient_id, entry_type: 'anamnesis', content: a.data, created_at: a.created_at, created_by: a.professional_id, status: a.status })),
+          ],
+          error: evol.error || anam.error,
+        })),
 
-        // Files
+        // Clinical media (files)
         supabase
-          .from('medical_record_files')
-          .select('id, patient_id, file_name, category, created_at, created_by')
+          .from('clinical_media')
+          .select('id, patient_id, file_name, category, created_at, professional_id')
           .eq('clinic_id', clinic.id)
           .eq('patient_id', patientId)
           .order('created_at', { ascending: false }),
@@ -483,9 +497,8 @@ export function useClinicalTimeline(patientId: string | null) {
         // Signatures
         supabase
           .from('medical_record_signatures')
-          .select('id, patient_id, medical_record_id, signed_name, signed_at')
+          .select('id, record_id, record_type, signed_by, signed_at')
           .eq('clinic_id', clinic.id)
-          .eq('patient_id', patientId)
           .order('signed_at', { ascending: false }),
 
         // Consents
