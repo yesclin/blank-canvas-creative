@@ -4072,6 +4072,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      user_professional_id: { Args: { _user_id: string }; Returns: string }
     }
     Enums: {
       app_action: "view" | "create" | "edit" | "delete" | "export"
