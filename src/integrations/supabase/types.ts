@@ -427,6 +427,7 @@ export type Database = {
           created_by: string | null
           duration_minutes: number
           end_time: string
+          expected_value: number | null
           finished_at: string | null
           has_pending_payment: boolean
           id: string
@@ -437,6 +438,7 @@ export type Database = {
           notes: string | null
           patient_id: string
           payment_type: string | null
+          procedure_cost: number | null
           procedure_id: string | null
           professional_id: string
           room_id: string | null
@@ -456,6 +458,7 @@ export type Database = {
           created_by?: string | null
           duration_minutes?: number
           end_time: string
+          expected_value?: number | null
           finished_at?: string | null
           has_pending_payment?: boolean
           id?: string
@@ -466,6 +469,7 @@ export type Database = {
           notes?: string | null
           patient_id: string
           payment_type?: string | null
+          procedure_cost?: number | null
           procedure_id?: string | null
           professional_id: string
           room_id?: string | null
@@ -485,6 +489,7 @@ export type Database = {
           created_by?: string | null
           duration_minutes?: number
           end_time?: string
+          expected_value?: number | null
           finished_at?: string | null
           has_pending_payment?: boolean
           id?: string
@@ -495,6 +500,7 @@ export type Database = {
           notes?: string | null
           patient_id?: string
           payment_type?: string | null
+          procedure_cost?: number | null
           procedure_id?: string | null
           professional_id?: string
           room_id?: string | null
@@ -3102,6 +3108,54 @@ export type Database = {
           },
         ]
       }
+      professional_schedule_config: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          default_duration_minutes: number
+          id: string
+          professional_id: string
+          updated_at: string
+          use_clinic_default: boolean
+          working_days: Json
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          default_duration_minutes?: number
+          id?: string
+          professional_id: string
+          updated_at?: string
+          use_clinic_default?: boolean
+          working_days?: Json
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          default_duration_minutes?: number
+          id?: string
+          professional_id?: string
+          updated_at?: string
+          use_clinic_default?: boolean
+          working_days?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_schedule_config_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_schedule_config_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professional_schedules: {
         Row: {
           clinic_id: string
@@ -3608,6 +3662,7 @@ export type Database = {
           end_date: string
           end_time: string | null
           id: string
+          professional_id: string | null
           reason: string | null
           start_date: string
           start_time: string | null
@@ -3621,6 +3676,7 @@ export type Database = {
           end_date: string
           end_time?: string | null
           id?: string
+          professional_id?: string | null
           reason?: string | null
           start_date: string
           start_time?: string | null
@@ -3634,6 +3690,7 @@ export type Database = {
           end_date?: string
           end_time?: string | null
           id?: string
+          professional_id?: string | null
           reason?: string | null
           start_date?: string
           start_time?: string | null
@@ -3646,6 +3703,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_blocks_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
         ]
