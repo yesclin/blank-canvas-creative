@@ -2273,15 +2273,12 @@ export default function Prontuario() {
     setSignatureDialogOpen(true);
   };
 
-  const handleSignRecord = async (signedName: string, signedDocument?: string): Promise<boolean> => {
+  const handleSignRecord = async (_signedName: string, _signedDocument?: string): Promise<boolean> => {
     if (!selectedEntryForSignature || !patientId) return false;
     
     const success = await signRecord({
-      patient_id: patientId,
-      professional_id: selectedEntryForSignature.professional_id,
-      medical_record_id: selectedEntryForSignature.id,
-      signed_name: signedName,
-      signed_document: signedDocument,
+      record_id: selectedEntryForSignature.id,
+      record_type: selectedEntryForSignature.entry_type as 'evolution' | 'anamnesis',
       content: selectedEntryForSignature.content,
     });
 
