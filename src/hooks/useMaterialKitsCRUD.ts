@@ -107,6 +107,7 @@ export function useMaterialKitItems(kitId: string | null) {
         material_name: item.products?.name || 'Produto',
         material_category: item.products?.category || undefined,
         quantity: Number(item.quantity),
+        unit: item.products?.unit || 'un',
         material_unit_cost: Number(item.products?.cost_price) || 0,
         created_at: item.created_at,
       }));
