@@ -84,6 +84,7 @@ export function TissGuideGenerationDialog({
   onSkip,
 }: TissGuideGenerationDialogProps) {
   const navigate = useNavigate();
+  const { data: coveredProcedures = [] } = useInsuranceProcedures(appointment?.insurance_id);
   
   const [guideType, setGuideType] = useState<TissGuideType>('consulta');
   const [authorizationNumber, setAuthorizationNumber] = useState('');
