@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, MessageSquare, Zap, Megaphone, History } from "lucide-react";
-import { useComunicacaoMockData } from "@/hooks/useComunicacaoMockData";
+import { Users, MessageSquare, Zap, Megaphone, History, Loader2 } from "lucide-react";
+import { useComunicacaoRealData } from "@/hooks/useComunicacaoRealData";
 import { CRMPipeline } from "@/components/comunicacao/CRMPipeline";
 import { CRMPatientList } from "@/components/comunicacao/CRMPatientList";
 import { TemplatesList } from "@/components/comunicacao/TemplatesList";
@@ -10,15 +10,29 @@ import { CampaignsList } from "@/components/comunicacao/CampaignsList";
 import { MessageHistory } from "@/components/comunicacao/MessageHistory";
 import { CommunicationStats } from "@/components/comunicacao/CommunicationStats";
 import { WhatsAppStatus } from "@/components/comunicacao/WhatsAppStatus";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { CRMStatus } from "@/types/comunicacao";
 
 export default function Comunicacao() {
   const {
     crmPatients, templates, automations, campaigns, messageLogs,
-    settings, pipelineStats, messageStats, toggleAutomation,
-  } = useComunicacaoMockData();
+    pipelineStats, messageStats, toggleAutomation, isLoading,
+  } = useComunicacaoRealData();
 
   const [selectedStatus, setSelectedStatus] = useState<CRMStatus | null>(null);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Marketing</h1>
+          <p className="text-muted-foreground">Carregando dados...</p>
+        </div>
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
