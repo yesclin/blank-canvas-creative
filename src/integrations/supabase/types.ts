@@ -2443,6 +2443,7 @@ export type Database = {
           clinic_id: string
           created_at: string
           granted_at: string | null
+          granted_by: string | null
           id: string
           ip_address: string | null
           patient_id: string
@@ -2450,11 +2451,14 @@ export type Database = {
           signature_data: string | null
           status: Database["public"]["Enums"]["consent_status"]
           term_id: string
+          term_version: number | null
+          user_agent: string | null
         }
         Insert: {
           clinic_id: string
           created_at?: string
           granted_at?: string | null
+          granted_by?: string | null
           id?: string
           ip_address?: string | null
           patient_id: string
@@ -2462,11 +2466,14 @@ export type Database = {
           signature_data?: string | null
           status?: Database["public"]["Enums"]["consent_status"]
           term_id: string
+          term_version?: number | null
+          user_agent?: string | null
         }
         Update: {
           clinic_id?: string
           created_at?: string
           granted_at?: string | null
+          granted_by?: string | null
           id?: string
           ip_address?: string | null
           patient_id?: string
@@ -2474,6 +2481,8 @@ export type Database = {
           signature_data?: string | null
           status?: Database["public"]["Enums"]["consent_status"]
           term_id?: string
+          term_version?: number | null
+          user_agent?: string | null
         }
         Relationships: [
           {
@@ -3678,6 +3687,50 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_security_settings: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          enable_access_logging: boolean
+          enable_digital_signature: boolean
+          enable_tab_permissions: boolean
+          enforce_consent_before_care: boolean
+          id: string
+          lock_record_without_consent: boolean
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          enable_access_logging?: boolean
+          enable_digital_signature?: boolean
+          enable_tab_permissions?: boolean
+          enforce_consent_before_care?: boolean
+          id?: string
+          lock_record_without_consent?: boolean
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          enable_access_logging?: boolean
+          enable_digital_signature?: boolean
+          enable_tab_permissions?: boolean
+          enforce_consent_before_care?: boolean
+          id?: string
+          lock_record_without_consent?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_security_settings_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
