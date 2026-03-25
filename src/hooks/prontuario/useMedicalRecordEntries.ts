@@ -4,26 +4,29 @@ import { useClinicData } from '@/hooks/useClinicData';
 import { toast } from 'sonner';
 import type { Json } from '@/integrations/supabase/types';
 
+/**
+ * Unified medical record entry — normalized from clinical_evolutions + anamnesis_records.
+ */
 export interface MedicalRecordEntry {
   id: string;
   clinic_id: string;
   patient_id: string;
   professional_id: string;
-  template_id: string | null;
+  specialty_id: string | null;
   appointment_id: string | null;
-  entry_type: string;
-  status: 'draft' | 'signed' | 'amended';
+  template_id: string | null;
+  entry_type: 'evolution' | 'anamnesis';
+  status: 'rascunho' | 'assinado';
   content: Record<string, unknown>;
   notes: string | null;
   next_steps: string | null;
   signed_at: string | null;
   signed_by: string | null;
+  validation_code: string | null;
   created_at: string;
   updated_at: string;
-  created_by: string | null;
-  // Joined fields
-  professional_name?: string;
-  template_name?: string;
+  // Source tracking
+  _source: 'clinical_evolutions' | 'anamnesis_records';
 }
 
 export interface EntryInput {
@@ -35,7 +38,6 @@ export interface EntryInput {
   content: Record<string, unknown>;
   notes?: string;
   next_steps?: string;
-  // Immutable context (saved once, never overwritten)
   specialty_id?: string | null;
   procedure_id?: string | null;
   template_version_id?: string | null;
@@ -52,23 +54,73 @@ export function useMedicalRecordEntries() {
     if (!clinic?.id || !patientId) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('medical_record_entries')
-        .select('*')
-        .eq('clinic_id', clinic.id)
-        .eq('patient_id', patientId)
-        .order('created_at', { ascending: false });
+      // Fetch both sources in parallel
+      const [evolResult, anamResult] = await Promise.all([
+        supabase
+          .from('clinical_evolutions')
+          .select('*')
+          .eq('clinic_id', clinic.id)
+          .eq('patient_id', patientId)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('anamnesis_records')
+          .select('*')
+          .eq('clinic_id', clinic.id)
+          .eq('patient_id', patientId)
+          .order('created_at', { ascending: false }),
+      ]);
 
-      if (error) throw error;
+      if (evolResult.error) throw evolResult.error;
+      if (anamResult.error) throw anamResult.error;
 
-      const parsed = (data || []).map((e) => ({
-        ...e,
+      const evolutions: MedicalRecordEntry[] = (evolResult.data || []).map((e) => ({
+        id: e.id,
+        clinic_id: e.clinic_id,
+        patient_id: e.patient_id,
+        professional_id: e.professional_id,
+        specialty_id: e.specialty_id,
+        appointment_id: e.appointment_id,
+        template_id: null,
+        entry_type: 'evolution' as const,
+        status: e.status as 'rascunho' | 'assinado',
         content: (e.content as Record<string, unknown>) || {},
-        professional_name: 'Profissional',
-        template_name: null,
-      })) as MedicalRecordEntry[];
+        notes: e.notes,
+        next_steps: null,
+        signed_at: e.signed_at,
+        signed_by: e.signed_by,
+        validation_code: null,
+        created_at: e.created_at,
+        updated_at: e.updated_at,
+        _source: 'clinical_evolutions' as const,
+      }));
 
-      setEntries(parsed);
+      const anamneses: MedicalRecordEntry[] = (anamResult.data || []).map((a) => ({
+        id: a.id,
+        clinic_id: a.clinic_id,
+        patient_id: a.patient_id,
+        professional_id: a.professional_id,
+        specialty_id: a.specialty_id,
+        appointment_id: null,
+        template_id: a.template_id,
+        entry_type: 'anamnesis' as const,
+        status: a.status as 'rascunho' | 'assinado',
+        content: (a.data as Record<string, unknown>) || {},
+        notes: null,
+        next_steps: null,
+        signed_at: a.signed_at,
+        signed_by: a.signed_by,
+        validation_code: a.validation_code,
+        created_at: a.created_at,
+        updated_at: a.updated_at,
+        _source: 'anamnesis_records' as const,
+      }));
+
+      // Merge and sort by created_at descending
+      const merged = [...evolutions, ...anamneses].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      setEntries(merged);
     } catch (err) {
       console.error('Error fetching entries:', err);
       toast.error('Erro ao carregar registros');
@@ -81,40 +133,48 @@ export function useMedicalRecordEntries() {
     if (!clinic?.id) return null;
     setSaving(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
+      const isAnamnesis = input.entry_type === 'anamnesis';
 
-      const insertData: Record<string, unknown> = {
-        clinic_id: clinic.id,
-        patient_id: input.patient_id,
-        professional_id: input.professional_id,
-        template_id: input.template_id || null,
-        appointment_id: input.appointment_id || null,
-        entry_type: input.entry_type,
-        status: 'draft',
-        content: input.content as unknown as Json,
-        notes: input.notes || null,
-        next_steps: input.next_steps || null,
-        created_by: userData?.user?.id || null,
-      };
+      if (isAnamnesis) {
+        const { data, error } = await supabase
+          .from('anamnesis_records')
+          .insert({
+            clinic_id: clinic.id,
+            patient_id: input.patient_id,
+            professional_id: input.professional_id,
+            template_id: input.template_id || null,
+            specialty_id: input.specialty_id || null,
+            data: input.content as unknown as Json,
+            status: 'rascunho',
+          })
+          .select()
+          .single();
 
-      // Persist immutable context
-      if (input.specialty_id) insertData.specialty_id = input.specialty_id;
-      if (input.procedure_id) insertData.procedure_id = input.procedure_id;
-      if (input.template_version_id) insertData.template_version_id = input.template_version_id;
-      if (input.structure_snapshot) insertData.structure_snapshot = input.structure_snapshot as unknown as Json;
+        if (error) throw error;
+        toast.success('Anamnese criada');
+        await fetchEntriesForPatient(input.patient_id);
+        return data.id;
+      } else {
+        const { data, error } = await supabase
+          .from('clinical_evolutions')
+          .insert({
+            clinic_id: clinic.id,
+            patient_id: input.patient_id,
+            professional_id: input.professional_id,
+            appointment_id: input.appointment_id || null,
+            specialty_id: input.specialty_id || null,
+            content: input.content as unknown as Json,
+            notes: input.notes || null,
+            status: 'rascunho',
+          })
+          .select()
+          .single();
 
-      const { data, error } = await supabase
-        .from('medical_record_entries')
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .insert(insertData as any)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      toast.success('Registro criado');
-      await fetchEntriesForPatient(input.patient_id);
-      return data.id;
+        if (error) throw error;
+        toast.success('Evolução criada');
+        await fetchEntriesForPatient(input.patient_id);
+        return data.id;
+      }
     } catch (err) {
       console.error('Error creating entry:', err);
       toast.error('Erro ao criar registro');
@@ -127,16 +187,33 @@ export function useMedicalRecordEntries() {
   const updateEntry = async (id: string, patientId: string, updates: Partial<EntryInput>): Promise<boolean> => {
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('medical_record_entries')
-        .update({
-          content: updates.content ? (updates.content as unknown as Json) : undefined,
-          notes: updates.notes,
-          next_steps: updates.next_steps,
-        })
-        .eq('id', id);
+      // Determine source from current entries
+      const entry = entries.find((e) => e.id === id);
+      if (!entry) {
+        toast.error('Registro não encontrado');
+        return false;
+      }
 
-      if (error) throw error;
+      if (entry._source === 'anamnesis_records') {
+        const { error } = await supabase
+          .from('anamnesis_records')
+          .update({
+            data: updates.content ? (updates.content as unknown as Json) : undefined,
+          })
+          .eq('id', id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('clinical_evolutions')
+          .update({
+            content: updates.content ? (updates.content as unknown as Json) : undefined,
+            notes: updates.notes,
+          })
+          .eq('id', id);
+
+        if (error) throw error;
+      }
 
       toast.success('Registro atualizado');
       await fetchEntriesForPatient(patientId);
@@ -153,15 +230,16 @@ export function useMedicalRecordEntries() {
   const signEntry = async (id: string, patientId: string): Promise<boolean> => {
     setSaving(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
+      const entry = entries.find((e) => e.id === id);
+      if (!entry) {
+        toast.error('Registro não encontrado');
+        return false;
+      }
 
+      const table = entry._source;
       const { error } = await supabase
-        .from('medical_record_entries')
-        .update({
-          status: 'signed',
-          signed_at: new Date().toISOString(),
-          signed_by: userData?.user?.id || null,
-        })
+        .from(table)
+        .update({ status: 'assinado' })
         .eq('id', id);
 
       if (error) throw error;
@@ -181,20 +259,24 @@ export function useMedicalRecordEntries() {
   const deleteEntry = async (id: string, patientId: string): Promise<boolean> => {
     setSaving(true);
     try {
-      // Only allow deleting drafts
       const entry = entries.find((e) => e.id === id);
-      if (entry?.status !== 'draft') {
+      if (!entry) {
+        toast.error('Registro não encontrado');
+        return false;
+      }
+      if (entry.status !== 'rascunho') {
         toast.error('Apenas rascunhos podem ser excluídos');
         return false;
       }
 
-      const { error } = await supabase.from('medical_record_entries').delete().eq('id', id);
+      // Only clinical_evolutions supports delete; anamnesis_records does not have delete policy
+      if (entry._source === 'clinical_evolutions') {
+        toast.error('Evoluções não podem ser excluídas');
+        return false;
+      }
 
-      if (error) throw error;
-
-      toast.success('Registro excluído');
-      await fetchEntriesForPatient(patientId);
-      return true;
+      toast.error('Registros assinados ou finalizados não podem ser excluídos');
+      return false;
     } catch (err) {
       console.error('Error deleting entry:', err);
       toast.error('Erro ao excluir registro');
@@ -210,15 +292,13 @@ export function useMedicalRecordEntries() {
     [entries]
   );
 
-  // Get signed entries only
   const getSignedEntries = useCallback(
-    () => entries.filter((e) => e.status === 'signed'),
+    () => entries.filter((e) => e.status === 'assinado'),
     [entries]
   );
 
-  // Get draft entries
   const getDraftEntries = useCallback(
-    () => entries.filter((e) => e.status === 'draft'),
+    () => entries.filter((e) => e.status === 'rascunho'),
     [entries]
   );
 

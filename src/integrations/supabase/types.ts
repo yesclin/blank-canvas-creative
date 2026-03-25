@@ -2387,6 +2387,63 @@ export type Database = {
           },
         ]
       }
+      patient_clinical_data: {
+        Row: {
+          allergies: string[]
+          blood_type: string | null
+          chronic_diseases: string[]
+          clinic_id: string
+          clinical_restrictions: string | null
+          created_at: string
+          current_medications: string[]
+          family_history: string | null
+          id: string
+          patient_id: string
+          updated_at: string
+        }
+        Insert: {
+          allergies?: string[]
+          blood_type?: string | null
+          chronic_diseases?: string[]
+          clinic_id: string
+          clinical_restrictions?: string | null
+          created_at?: string
+          current_medications?: string[]
+          family_history?: string | null
+          id?: string
+          patient_id: string
+          updated_at?: string
+        }
+        Update: {
+          allergies?: string[]
+          blood_type?: string | null
+          chronic_diseases?: string[]
+          clinic_id?: string
+          clinical_restrictions?: string | null
+          created_at?: string
+          current_medications?: string[]
+          family_history?: string | null
+          id?: string
+          patient_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_clinical_data_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_clinical_data_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patient_clinical_flags: {
         Row: {
           clinic_id: string
