@@ -8,14 +8,14 @@ export interface Product {
   name: string;
   description?: string | null;
   sku?: string | null;
-  barcode?: string | null;
+  product_type: string;
   category?: string | null;
   unit: string;
-  stock_quantity: number;
-  min_stock_quantity: number;
+  current_stock: number;
+  min_stock: number;
+  max_stock?: number | null;
   cost_price: number;
   sale_price: number;
-  supplier?: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -25,14 +25,14 @@ export interface ProductFormData {
   name: string;
   description?: string;
   sku?: string;
-  barcode?: string;
+  product_type?: string;
   category?: string;
   unit: string;
-  stock_quantity?: number;
-  min_stock_quantity?: number;
+  current_stock?: number;
+  min_stock?: number;
+  max_stock?: number;
   cost_price?: number;
   sale_price: number;
-  supplier?: string;
   is_active?: boolean;
 }
 
@@ -44,18 +44,18 @@ export interface StockMovement {
   product_id: string;
   movement_type: StockMovementType;
   quantity: number;
-  previous_quantity?: number | null;
-  new_quantity?: number | null;
   unit_cost?: number | null;
-  total_cost?: number | null;
-  reason: string;
   reference_type?: string | null;
   reference_id?: string | null;
   notes?: string | null;
-  created_by?: string | null;
+  performed_by?: string | null;
   created_at: string;
   // Relations
   product?: Product;
+  products?: { id: string; name: string; unit: string };
+  // Enriched fields (added client-side)
+  patient_name?: string | null;
+  patient_id?: string | null;
 }
 
 export interface StockMovementFormData {
@@ -63,10 +63,9 @@ export interface StockMovementFormData {
   movement_type: StockMovementType;
   quantity: number;
   unit_cost?: number;
-  reason: string;
+  notes?: string;
   reference_type?: string;
   reference_id?: string;
-  notes?: string;
 }
 
 export type PaymentStatus = 'pendente' | 'pago' | 'parcial' | 'cancelado';

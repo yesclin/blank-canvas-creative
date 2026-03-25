@@ -1,10 +1,9 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Product, StockMovement } from "@/types/inventory";
-import { format, subDays } from "date-fns";
 
 // =============================================
-// STOCK CATEGORIES
+// STOCK CATEGORIES (derived from products.category)
 // =============================================
 
 export interface StockCategory {
@@ -24,14 +23,13 @@ export function useStockCategories() {
       
       if (error) throw error;
       
-      // Aggregate categories
       const categoryMap = new Map<string, number>();
-      data.forEach(p => {
+      data.forEach((p: any) => {
         const cat = p.category || "Sem categoria";
         categoryMap.set(cat, (categoryMap.get(cat) || 0) + 1);
       });
       
-      return Array.from(categoryMap.entries()).map(([name, count], idx) => ({
+      return Array.from(categoryMap.entries()).map(([name, count]) => ({
         id: name,
         name,
         product_count: count,
@@ -41,14 +39,23 @@ export function useStockCategories() {
 }
 
 // =============================================
-// STOCK PRODUCTS WITH ALERTS
+// STOCK PRODUCTS - compatibility wrapper
 // =============================================
 
 export interface StockProduct extends Product {
-  // Alias for compatibility with existing component
+  // Aliases for backward compatibility with components
   current_quantity: number;
   min_quantity: number;
   avg_cost: number;
+}
+
+function mapToStockProduct(p: Product): StockProduct {
+  return {
+    ...p,
+    current_quantity: p.current_stock,
+    min_quantity: p.min_stock,
+    avg_cost: p.cost_price,
+  };
 }
 
 export function useStockProducts(filters?: {
@@ -59,29 +66,15 @@ export function useStockProducts(filters?: {
   return useQuery({
     queryKey: ["stock-products", filters?.category, filters?.status, filters?.search],
     queryFn: async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from("products")
         .select("*")
         .order("name");
       
-      // Only filter by is_active if not looking at inactive
-      if (filters?.status !== 'inactive') {
-        // Don't filter here - we'll do client-side for stock-based filters
-      }
-      
-      const { data, error } = await query;
-      
       if (error) throw error;
       
-      // Map to StockProduct interface
-      let products = (data as Product[]).map(p => ({
-        ...p,
-        current_quantity: p.stock_quantity,
-        min_quantity: p.min_stock_quantity,
-        avg_cost: p.cost_price,
-      })) as StockProduct[];
+      let products = (data as Product[]).map(mapToStockProduct);
       
-      // Apply filters
       if (filters?.category && filters.category !== 'all') {
         products = products.filter(p => p.category === filters.category);
       }
@@ -96,13 +89,11 @@ export function useStockProducts(filters?: {
             break;
           case 'low':
             products = products.filter(p => 
-              p.is_active && 
-              p.current_quantity <= p.min_quantity && 
-              p.current_quantity > 0
+              p.is_active && p.current_stock <= p.min_stock && p.current_stock > 0
             );
             break;
           case 'out':
-            products = products.filter(p => p.is_active && p.current_quantity === 0);
+            products = products.filter(p => p.is_active && p.current_stock === 0);
             break;
         }
       }
@@ -111,8 +102,7 @@ export function useStockProducts(filters?: {
         const searchLower = filters.search.toLowerCase();
         products = products.filter(p => 
           p.name.toLowerCase().includes(searchLower) ||
-          p.sku?.toLowerCase().includes(searchLower) ||
-          p.barcode?.toLowerCase().includes(searchLower)
+          p.sku?.toLowerCase().includes(searchLower)
         );
       }
       
@@ -122,7 +112,7 @@ export function useStockProducts(filters?: {
 }
 
 // =============================================
-// STOCK ALERTS - Low & Out of Stock
+// STOCK ALERTS
 // =============================================
 
 export function useLowStockAlerts() {
@@ -136,17 +126,10 @@ export function useLowStockAlerts() {
       
       if (error) throw error;
       
-      // Filter: stock at or below minimum but not zero
       return (data as Product[])
-        .filter(p => p.stock_quantity <= p.min_stock_quantity && p.stock_quantity > 0)
-        .map(p => ({
-          ...p,
-          current_quantity: p.stock_quantity,
-          min_quantity: p.min_stock_quantity,
-          avg_cost: p.cost_price,
-        })) as StockProduct[];
+        .filter(p => p.current_stock <= p.min_stock && p.current_stock > 0)
+        .map(mapToStockProduct);
     },
-    // Refetch every 30 seconds to catch updates
     refetchInterval: 30000,
   });
 }
@@ -159,31 +142,21 @@ export function useOutOfStockAlerts() {
         .from("products")
         .select("*")
         .eq("is_active", true)
-        .eq("stock_quantity", 0);
+        .eq("current_stock", 0);
       
       if (error) throw error;
       
-      return (data as Product[]).map(p => ({
-        ...p,
-        current_quantity: p.stock_quantity,
-        min_quantity: p.min_stock_quantity,
-        avg_cost: p.cost_price,
-      })) as StockProduct[];
+      return (data as Product[]).map(mapToStockProduct);
     },
     refetchInterval: 30000,
   });
 }
 
-// =============================================
-// EXPIRING PRODUCTS
-// =============================================
-
 export function useExpiringProducts(daysThreshold = 30) {
   return useQuery({
     queryKey: ["stock-alerts", "expiring", daysThreshold],
     queryFn: async () => {
-      // Products table doesn't have expiration_date currently
-      // Return empty for now - can be extended when field is added
+      // Products table doesn't have expiration_date yet
       return [] as StockProduct[];
     },
   });
@@ -207,18 +180,18 @@ export function useStockStats() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("stock_quantity, min_stock_quantity, cost_price, is_active");
+        .select("current_stock, min_stock, cost_price, is_active");
       
       if (error) throw error;
       
-      const active = data.filter(p => p.is_active);
+      const active = data.filter((p: any) => p.is_active);
       const lowStock = active.filter(
-        p => p.stock_quantity <= p.min_stock_quantity && p.stock_quantity > 0
+        (p: any) => p.current_stock <= p.min_stock && p.current_stock > 0
       );
-      const outOfStock = active.filter(p => p.stock_quantity === 0);
+      const outOfStock = active.filter((p: any) => p.current_stock === 0);
       
       const totalValue = active.reduce(
-        (sum, p) => sum + (p.stock_quantity * (p.cost_price || 0)), 
+        (sum: number, p: any) => sum + (p.current_stock * (p.cost_price || 0)), 
         0
       );
       
@@ -226,7 +199,7 @@ export function useStockStats() {
         totalProducts: active.length,
         lowStock: lowStock.length,
         outOfStock: outOfStock.length,
-        expiringSoon: 0, // Extend when expiration tracking is added
+        expiringSoon: 0,
         totalValue,
       } as StockStats;
     },
@@ -255,11 +228,11 @@ export function useRecentStockMovements(limit = 50) {
 
       // Enrich procedure execution movements with patient info
       const procedureMovements = (data || []).filter(
-        m => m.reference_type === 'procedure_execution' && m.reference_id
+        (m: any) => m.reference_type === 'procedure_execution' && m.reference_id
       );
       
       if (procedureMovements.length > 0) {
-        const appointmentIds = procedureMovements.map(m => m.reference_id);
+        const appointmentIds = procedureMovements.map((m: any) => m.reference_id);
         
         const { data: appointments } = await supabase
           .from('appointments')
@@ -267,10 +240,9 @@ export function useRecentStockMovements(limit = 50) {
           .in('id', appointmentIds);
         
         const appointmentMap = new Map(
-          (appointments || []).map(a => [a.id, a])
+          (appointments || []).map((a: any) => [a.id, a])
         );
         
-        // Attach patient info to movements
         return (data as StockMovement[]).map(m => {
           if (m.reference_type === 'procedure_execution' && m.reference_id) {
             const apt = appointmentMap.get(m.reference_id);
