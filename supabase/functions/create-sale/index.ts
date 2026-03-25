@@ -221,7 +221,7 @@ serve(async (req) => {
         throw new Error(`Erro ao criar itens da venda: ${itemsError.message}`);
       }
 
-      // STEP 3: Create finance_transactions record (type = entrada/income)
+      // STEP 3: Create finance_transactions record (type = receita)
       if (totalAmount > 0) {
         const transactionDate = input.sale_date 
           ? input.sale_date.split("T")[0] 
@@ -231,7 +231,7 @@ serve(async (req) => {
           .from("finance_transactions")
           .insert({
             clinic_id: clinicId,
-            type: "entrada", // INCOME
+            type: "receita", // DB enum: receita/despesa
             description: `Venda ${saleNumber}`,
             amount: totalAmount,
             transaction_date: transactionDate,
