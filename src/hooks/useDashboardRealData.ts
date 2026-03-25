@@ -237,7 +237,7 @@ function useDashboardFinance(clinicId: string | null, period: DashboardPeriod) {
         .from('finance_transactions')
         .select('amount')
         .eq('clinic_id', clinicId)
-        .eq('type', 'entrada')
+        .eq('type', 'receita')
         .eq('status', 'pago')
         .gte('paid_at', `${startDate}T00:00:00`)
         .lte('paid_at', `${endDate}T23:59:59`);
@@ -247,7 +247,7 @@ function useDashboardFinance(clinicId: string | null, period: DashboardPeriod) {
         .from('finance_transactions')
         .select('amount')
         .eq('clinic_id', clinicId)
-        .eq('type', 'entrada')
+        .eq('type', 'receita')
         .eq('status', 'pago')
         .gte('paid_at', `${monthStart}T00:00:00`)
         .lte('paid_at', `${monthEnd}T23:59:59`);
