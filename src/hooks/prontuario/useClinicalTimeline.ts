@@ -554,7 +554,7 @@ export function useClinicalTimeline(patientId: string | null) {
       const allUserIds = new Set<string>();
       
       (entriesRes.data || []).forEach(e => e.created_by && allUserIds.add(e.created_by));
-      (filesRes.data || []).forEach(f => f.created_by && allUserIds.add(f.created_by));
+      (filesRes.data || []).forEach((f: Record<string, unknown>) => { const by = (f as { professional_id?: string }).professional_id; if (by) allUserIds.add(by); });
       (consentsRes.data || []).forEach(c => c.granted_by && allUserIds.add(c.granted_by));
       (accessLogsRes.data || []).forEach(l => l.user_id && allUserIds.add(l.user_id));
       (appointmentsRes.data || []).forEach(a => a.created_by && allUserIds.add(a.created_by));
