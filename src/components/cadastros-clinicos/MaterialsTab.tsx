@@ -74,7 +74,7 @@ export function MaterialsTab() {
     if (!confirmToggle) return;
     await toggleStatusMutation.mutateAsync({
       id: confirmToggle.id,
-      isActive: confirmToggle.is_active,
+      is_active: confirmToggle.is_active,
     });
     setConfirmToggle(null);
   };

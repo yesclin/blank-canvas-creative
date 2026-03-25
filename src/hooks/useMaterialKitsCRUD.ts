@@ -105,9 +105,10 @@ export function useMaterialKitItems(kitId: string | null) {
         kit_id: item.kit_id,
         material_id: item.product_id,
         material_name: item.products?.name || 'Produto',
-        material_unit: item.products?.unit || 'un',
+        material_category: item.products?.category || undefined,
         quantity: Number(item.quantity),
-        unit_cost: Number(item.products?.cost_price) || 0,
+        unit: item.products?.unit || 'un',
+        material_unit_cost: Number(item.products?.cost_price) || 0,
         created_at: item.created_at,
       }));
     },
@@ -306,6 +307,7 @@ export function useMaterialKitForm(initialData?: MaterialKit | null) {
 const defaultItemFormData: MaterialKitItemFormData = {
   material_id: '',
   quantity: 1,
+  unit: 'un',
 };
 
 export function useMaterialKitItemForm() {

@@ -82,7 +82,7 @@ export function SelectedProductsList({
                     className="h-8 w-8 rounded-l-none"
                     onClick={() => onQuantityChange(item.product.id, item.quantity + 1)}
                     disabled={
-                      !allowNegativeStock && item.quantity >= item.product.stock_quantity
+                      !allowNegativeStock && item.quantity >= item.product.current_stock
                     }
                   >
                     <Plus className="h-3 w-3" />
