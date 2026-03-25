@@ -1413,6 +1413,7 @@ export type Database = {
           due_date: string | null
           id: string
           notes: string | null
+          origin: string | null
           paid_at: string | null
           patient_id: string | null
           payment_method: string | null
@@ -1420,6 +1421,7 @@ export type Database = {
           reference_id: string | null
           reference_type: string | null
           status: Database["public"]["Enums"]["transaction_status"]
+          transaction_date: string
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at: string
         }
@@ -1434,6 +1436,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           notes?: string | null
+          origin?: string | null
           paid_at?: string | null
           patient_id?: string | null
           payment_method?: string | null
@@ -1441,6 +1444,7 @@ export type Database = {
           reference_id?: string | null
           reference_type?: string | null
           status?: Database["public"]["Enums"]["transaction_status"]
+          transaction_date?: string
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
         }
@@ -1455,6 +1459,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           notes?: string | null
+          origin?: string | null
           paid_at?: string | null
           patient_id?: string | null
           payment_method?: string | null
@@ -1462,6 +1467,7 @@ export type Database = {
           reference_id?: string | null
           reference_type?: string | null
           status?: Database["public"]["Enums"]["transaction_status"]
+          transaction_date?: string
           type?: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
         }
@@ -1626,9 +1632,15 @@ export type Database = {
           clinic_id: string
           created_at: string
           gloss_amount: number | null
+          gross_value: number | null
           id: string
           insurance_id: string
+          patient_id: string | null
+          payment_date: string | null
           procedure_id: string | null
+          professional_fee: number | null
+          professional_id: string | null
+          service_date: string | null
           status: string
         }
         Insert: {
@@ -1638,9 +1650,15 @@ export type Database = {
           clinic_id: string
           created_at?: string
           gloss_amount?: number | null
+          gross_value?: number | null
           id?: string
           insurance_id: string
+          patient_id?: string | null
+          payment_date?: string | null
           procedure_id?: string | null
+          professional_fee?: number | null
+          professional_id?: string | null
+          service_date?: string | null
           status?: string
         }
         Update: {
@@ -1650,9 +1668,15 @@ export type Database = {
           clinic_id?: string
           created_at?: string
           gloss_amount?: number | null
+          gross_value?: number | null
           id?: string
           insurance_id?: string
+          patient_id?: string | null
+          payment_date?: string | null
           procedure_id?: string | null
+          professional_fee?: number | null
+          professional_id?: string | null
+          service_date?: string | null
           status?: string
         }
         Relationships: [
@@ -1678,10 +1702,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "insurance_fee_calculations_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "insurance_fee_calculations_procedure_id_fkey"
             columns: ["procedure_id"]
             isOneToOne: false
             referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insurance_fee_calculations_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
         ]
@@ -3540,35 +3578,56 @@ export type Database = {
       }
       sale_items: {
         Row: {
+          cost_price: number | null
           created_at: string
+          discount_amount: number | null
           id: string
           item_type: string
+          margin_percent: number | null
+          notes: string | null
           procedure_id: string | null
           product_id: string | null
+          product_name: string | null
+          profit: number | null
           quantity: number
           sale_id: string
+          total_cost: number | null
           total_price: number
           unit_price: number
         }
         Insert: {
+          cost_price?: number | null
           created_at?: string
+          discount_amount?: number | null
           id?: string
           item_type?: string
+          margin_percent?: number | null
+          notes?: string | null
           procedure_id?: string | null
           product_id?: string | null
+          product_name?: string | null
+          profit?: number | null
           quantity?: number
           sale_id: string
+          total_cost?: number | null
           total_price: number
           unit_price: number
         }
         Update: {
+          cost_price?: number | null
           created_at?: string
+          discount_amount?: number | null
           id?: string
           item_type?: string
+          margin_percent?: number | null
+          notes?: string | null
           procedure_id?: string | null
           product_id?: string | null
+          product_name?: string | null
+          profit?: number | null
           quantity?: number
           sale_id?: string
+          total_cost?: number | null
           total_price?: number
           unit_price?: number
         }
@@ -3598,48 +3657,75 @@ export type Database = {
       }
       sales: {
         Row: {
+          canceled_at: string | null
+          canceled_by: string | null
           clinic_id: string
           created_at: string
+          created_by: string | null
           discount_amount: number
+          discount_percent: number | null
           final_amount: number
           id: string
           notes: string | null
           patient_id: string | null
           payment_method: string | null
+          payment_status: string | null
           professional_id: string | null
+          sale_date: string | null
+          sale_number: string | null
           sold_by: string | null
           status: string
+          subtotal: number | null
           total_amount: number
+          transaction_id: string | null
           updated_at: string
         }
         Insert: {
+          canceled_at?: string | null
+          canceled_by?: string | null
           clinic_id: string
           created_at?: string
+          created_by?: string | null
           discount_amount?: number
+          discount_percent?: number | null
           final_amount?: number
           id?: string
           notes?: string | null
           patient_id?: string | null
           payment_method?: string | null
+          payment_status?: string | null
           professional_id?: string | null
+          sale_date?: string | null
+          sale_number?: string | null
           sold_by?: string | null
           status?: string
+          subtotal?: number | null
           total_amount?: number
+          transaction_id?: string | null
           updated_at?: string
         }
         Update: {
+          canceled_at?: string | null
+          canceled_by?: string | null
           clinic_id?: string
           created_at?: string
+          created_by?: string | null
           discount_amount?: number
+          discount_percent?: number | null
           final_amount?: number
           id?: string
           notes?: string | null
           patient_id?: string | null
           payment_method?: string | null
+          payment_status?: string | null
           professional_id?: string | null
+          sale_date?: string | null
+          sale_number?: string | null
           sold_by?: string | null
           status?: string
+          subtotal?: number | null
           total_amount?: number
+          transaction_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -3662,6 +3748,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "finance_transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -4096,41 +4189,59 @@ export type Database = {
         Row: {
           clinic_id: string
           created_at: string
+          created_by: string | null
           id: string
           name: string
+          notes: string | null
           paid_amount: number
           patient_id: string
+          payment_method: string | null
+          procedure_id: string | null
+          professional_id: string | null
           status: string
           total_amount: number
           total_sessions: number
           updated_at: string
           used_sessions: number
+          valid_until: string | null
         }
         Insert: {
           clinic_id: string
           created_at?: string
+          created_by?: string | null
           id?: string
           name: string
+          notes?: string | null
           paid_amount?: number
           patient_id: string
+          payment_method?: string | null
+          procedure_id?: string | null
+          professional_id?: string | null
           status?: string
           total_amount: number
           total_sessions?: number
           updated_at?: string
           used_sessions?: number
+          valid_until?: string | null
         }
         Update: {
           clinic_id?: string
           created_at?: string
+          created_by?: string | null
           id?: string
           name?: string
+          notes?: string | null
           paid_amount?: number
           patient_id?: string
+          payment_method?: string | null
+          procedure_id?: string | null
+          professional_id?: string | null
           status?: string
           total_amount?: number
           total_sessions?: number
           updated_at?: string
           used_sessions?: number
+          valid_until?: string | null
         }
         Relationships: [
           {
@@ -4145,6 +4256,20 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treatment_packages_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treatment_packages_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
         ]

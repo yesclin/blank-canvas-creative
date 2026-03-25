@@ -9,6 +9,7 @@ export interface FinanceTransaction {
   id: string;
   clinic_id: string;
   type: TransactionType;
+  status: string;
   description: string;
   amount: number;
   transaction_date: string;
@@ -16,9 +17,12 @@ export interface FinanceTransaction {
   category_id: string | null;
   patient_id: string | null;
   professional_id: string | null;
-  insurance_id: string | null;
   appointment_id: string | null;
   origin: string | null;
+  reference_type: string | null;
+  reference_id: string | null;
+  due_date: string | null;
+  paid_at: string | null;
   notes: string | null;
   created_by: string | null;
   created_at: string;
@@ -46,7 +50,7 @@ export interface TransactionFormData {
   category_id?: string;
   patient_id?: string;
   professional_id?: string;
-  insurance_id?: string;
+  appointment_id?: string;
   origin?: string;
   notes?: string;
 }
@@ -139,7 +143,7 @@ export function useCreateTransaction() {
           category_id: data.category_id || null,
           patient_id: data.patient_id || null,
           professional_id: data.professional_id || null,
-          insurance_id: data.insurance_id || null,
+          appointment_id: data.appointment_id || null,
           origin: data.origin || null,
           notes: data.notes || null,
           created_by: user?.id || null,
@@ -278,12 +282,12 @@ export function useFinanceStats(date?: Date) {
       if (error) throw error;
       
       const todayRevenue = data
-        .filter(t => t.type === "entrada")
-        .reduce((sum, t) => sum + Number(t.amount), 0);
+        .filter((t: any) => t.type === "entrada" || t.type === "receita")
+        .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
       
       const todayExpenses = data
-        .filter(t => t.type === "saida")
-        .reduce((sum, t) => sum + Number(t.amount), 0);
+        .filter((t: any) => t.type === "saida" || t.type === "despesa")
+        .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
       
       return {
         todayRevenue,
@@ -313,12 +317,12 @@ export function useMonthlyFinanceStats() {
       if (error) throw error;
       
       const monthRevenue = data
-        .filter(t => t.type === "entrada")
-        .reduce((sum, t) => sum + Number(t.amount), 0);
+        .filter((t: any) => t.type === "entrada" || t.type === "receita")
+        .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
       
       const monthExpenses = data
-        .filter(t => t.type === "saida")
-        .reduce((sum, t) => sum + Number(t.amount), 0);
+        .filter((t: any) => t.type === "saida" || t.type === "despesa")
+        .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
       
       return {
         monthRevenue,
