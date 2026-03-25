@@ -31,7 +31,15 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import type { InsuranceProcedure, Insurance } from "@/types/convenios";
-import { mockProcedures } from "@/hooks/useConveniosMockData";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+const useProcedureOptions = () => useQuery({
+  queryKey: ["procedures-options"],
+  queryFn: async () => {
+    const { data } = await supabase.from("procedures").select("id, name").eq("is_active", true).order("name");
+    return (data || []).map(p => ({ id: p.id, name: p.name, code: "", price: 0 }));
+  },
+});
 import { toast } from "sonner";
 
 interface InsuranceProceduresListProps {

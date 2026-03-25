@@ -31,7 +31,22 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import type { InsuranceFeeRule, Insurance } from "@/types/convenios";
 import { feeTypeLabels } from "@/types/convenios";
-import { mockProcedures, mockProfessionals } from "@/hooks/useConveniosMockData";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+const useProcedureOptions = () => useQuery({
+  queryKey: ["procedures-options"],
+  queryFn: async () => {
+    const { data } = await supabase.from("procedures").select("id, name").eq("is_active", true).order("name");
+    return (data || []).map(p => ({ id: p.id, name: p.name, code: "", price: 0 }));
+  },
+});
+const useProfessionalOptions = () => useQuery({
+  queryKey: ["professionals-options"],
+  queryFn: async () => {
+    const { data } = await supabase.from("professionals").select("id, full_name").eq("is_active", true).order("full_name");
+    return (data || []).map(p => ({ id: p.id, name: p.full_name, specialty: "" }));
+  },
+});
 import { toast } from "sonner";
 
 interface FeeRulesListProps {

@@ -32,7 +32,15 @@ import {
 import { Separator } from "@/components/ui/separator";
 import type { TissGuide, Insurance, TissGuideType } from "@/types/convenios";
 import { guideTypeLabels, guideStatusLabels, guideStatusColors } from "@/types/convenios";
-import { mockProcedures } from "@/hooks/useConveniosMockData";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+const useProcedureOptions = () => useQuery({
+  queryKey: ["procedures-options"],
+  queryFn: async () => {
+    const { data } = await supabase.from("procedures").select("id, name, price").eq("is_active", true).order("name");
+    return (data || []).map(p => ({ id: p.id, name: p.name, code: "", price: p.price || 0 }));
+  },
+});
 import { DocumentHeader } from "@/components/documents/DocumentHeader";
 import { toast } from "sonner";
 

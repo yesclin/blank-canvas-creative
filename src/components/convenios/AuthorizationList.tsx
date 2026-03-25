@@ -31,7 +31,15 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import type { InsuranceAuthorization, AuthorizationStatus, Insurance } from "@/types/convenios";
 import { authorizationStatusLabels, authorizationStatusColors } from "@/types/convenios";
-import { mockProcedures } from "@/hooks/useConveniosMockData";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+const useProcedureOptions = () => useQuery({
+  queryKey: ["procedures-options"],
+  queryFn: async () => {
+    const { data } = await supabase.from("procedures").select("id, name").eq("is_active", true).order("name");
+    return (data || []).map(p => ({ id: p.id, name: p.name, code: "", price: 0 }));
+  },
+});
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
