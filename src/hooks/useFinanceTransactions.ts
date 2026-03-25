@@ -282,11 +282,11 @@ export function useFinanceStats(date?: Date) {
       if (error) throw error;
       
       const todayRevenue = data
-        .filter((t: any) => t.type === "receita")
+        .filter((t: any) => t.type === "entrada" || t.type === "receita")
         .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
       
       const todayExpenses = data
-        .filter((t: any) => t.type === "despesa")
+        .filter((t: any) => t.type === "saida" || t.type === "despesa")
         .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
       
       return {
@@ -317,11 +317,11 @@ export function useMonthlyFinanceStats() {
       if (error) throw error;
       
       const monthRevenue = data
-        .filter((t: any) => t.type === "receita")
+        .filter((t: any) => t.type === "entrada" || t.type === "receita")
         .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
       
       const monthExpenses = data
-        .filter((t: any) => t.type === "despesa")
+        .filter((t: any) => t.type === "saida" || t.type === "despesa")
         .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
       
       return {
