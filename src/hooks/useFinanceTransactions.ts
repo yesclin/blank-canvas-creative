@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
-export type TransactionType = "receita" | "despesa";
+export type TransactionType = "entrada" | "saida";
 
 export interface FinanceTransaction {
   id: string;
