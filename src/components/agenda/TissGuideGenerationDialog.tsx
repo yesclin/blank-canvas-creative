@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { FileText, CheckCircle, AlertTriangle, Building2, User, Stethoscope } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -52,12 +54,27 @@ export interface GeneratedGuideData {
   auto_calculate_fee: boolean;
 }
 
-// Mock para procedimentos cobertos pelo convênio
-const mockCoveredProcedures = [
-  { id: '1', code: '10101012', name: 'Consulta em consultório', price: 150 },
-  { id: '2', code: '20101015', name: 'Retorno de consulta', price: 100 },
-  { id: '3', code: '30101010', name: 'Avaliação clínica geral', price: 200 },
-];
+// Hook to fetch real insurance procedures
+function useInsuranceProcedures(insuranceId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["insurance-procedures", insuranceId],
+    queryFn: async () => {
+      if (!insuranceId) return [];
+      const { data, error } = await supabase
+        .from("insurance_procedures")
+        .select("id, tuss_code, authorized_price, procedures(id, name)")
+        .eq("insurance_id", insuranceId);
+      if (error) throw error;
+      return (data || []).map(ip => ({
+        id: ip.id,
+        code: ip.tuss_code || "",
+        name: (ip.procedures as any)?.name || "Procedimento",
+        price: ip.authorized_price || 0,
+      }));
+    },
+    enabled: !!insuranceId,
+  });
+}
 
 export function TissGuideGenerationDialog({
   open,
@@ -67,6 +84,7 @@ export function TissGuideGenerationDialog({
   onSkip,
 }: TissGuideGenerationDialogProps) {
   const navigate = useNavigate();
+  const { data: coveredProcedures = [] } = useInsuranceProcedures(appointment?.insurance_id);
   
   const [guideType, setGuideType] = useState<TissGuideType>('consulta');
   const [authorizationNumber, setAuthorizationNumber] = useState('');
@@ -106,7 +124,7 @@ export function TissGuideGenerationDialog({
       guide_type: guideType,
       service_date: appointment.scheduled_date,
       procedure_name: appointment.appointment_type === 'procedimento' 
-        ? mockCoveredProcedures.find(p => p.id === selectedProcedure)?.name 
+        ? coveredProcedures.find(p => p.id === selectedProcedure)?.name 
         : undefined,
       authorization_number: authorizationNumber || undefined,
       card_number: cardNumber || undefined,
@@ -243,7 +261,7 @@ export function TissGuideGenerationDialog({
                   <SelectValue placeholder="Selecione o procedimento" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockCoveredProcedures.map((proc) => (
+                  {coveredProcedures.map((proc) => (
                     <SelectItem key={proc.id} value={proc.id}>
                       {proc.code} - {proc.name} ({formatCurrency(proc.price)})
                     </SelectItem>
