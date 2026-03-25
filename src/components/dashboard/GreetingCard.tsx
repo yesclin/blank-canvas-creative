@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Sparkles } from 'lucide-react';
-import { getGreetingEmoji } from '@/hooks/useDashboardData';
+import { getGreetingEmoji } from '@/hooks/useDashboardRealData';
 
 interface GreetingCardProps {
   text: string;

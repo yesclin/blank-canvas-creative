@@ -1249,6 +1249,10 @@ export type Database = {
           email: string | null
           id: string
           logo_url: string | null
+          margin_alert_enabled: boolean | null
+          margin_alert_min_percent: number | null
+          margin_alert_period_days: number | null
+          monthly_goal: number | null
           name: string
           opening_hours: Json | null
           phone: string | null
@@ -1268,6 +1272,10 @@ export type Database = {
           email?: string | null
           id?: string
           logo_url?: string | null
+          margin_alert_enabled?: boolean | null
+          margin_alert_min_percent?: number | null
+          margin_alert_period_days?: number | null
+          monthly_goal?: number | null
           name: string
           opening_hours?: Json | null
           phone?: string | null
@@ -1287,6 +1295,10 @@ export type Database = {
           email?: string | null
           id?: string
           logo_url?: string | null
+          margin_alert_enabled?: boolean | null
+          margin_alert_min_percent?: number | null
+          margin_alert_period_days?: number | null
+          monthly_goal?: number | null
           name?: string
           opening_hours?: Json | null
           phone?: string | null
