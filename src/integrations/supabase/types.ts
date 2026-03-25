@@ -4063,6 +4063,10 @@ export type Database = {
         Args: { _clinic_id: string; _user_id: string }
         Returns: boolean
       }
+      provision_specialty: {
+        Args: { _clinic_id: string; _specialty_slug: string }
+        Returns: Json
+      }
       user_clinic_id: { Args: { _user_id: string }; Returns: string }
       user_has_module_permission: {
         Args: {
