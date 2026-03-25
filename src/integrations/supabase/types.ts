@@ -4097,6 +4097,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      deactivate_specialty: {
+        Args: { _clinic_id: string; _specialty_slug: string }
+        Returns: Json
+      }
       get_user_all_permissions: {
         Args: { _user_id: string }
         Returns: {
