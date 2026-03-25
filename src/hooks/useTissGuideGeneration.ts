@@ -99,7 +99,7 @@ export function useTissGuideGeneration(): UseTissGuideGenerationReturn {
     const grossValue = defaultPrices[data.guide_type];
 
     // Fetch real fee rule
-    let feeRule = { type: 'percentage' as const, value: 40 };
+    let feeRule: { type: 'percentage' | 'fixed'; value: number } = { type: 'percentage', value: 40 };
     try {
       const { data: rules } = await supabase
         .from('insurance_fee_rules')
