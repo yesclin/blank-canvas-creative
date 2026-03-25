@@ -48,6 +48,7 @@ interface InsuranceProceduresListProps {
 }
 
 export function InsuranceProceduresList({ insuranceProcedures, insurances }: InsuranceProceduresListProps) {
+  const { data: mockProcedures = [] } = useProcedureOptions();
   const [search, setSearch] = useState("");
   const [insuranceFilter, setInsuranceFilter] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);

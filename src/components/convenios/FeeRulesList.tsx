@@ -55,6 +55,8 @@ interface FeeRulesListProps {
 }
 
 export function FeeRulesList({ feeRules, insurances }: FeeRulesListProps) {
+  const { data: mockProcedures = [] } = useProcedureOptions();
+  const { data: mockProfessionals = [] } = useProfessionalOptions();
   const [search, setSearch] = useState("");
   const [insuranceFilter, setInsuranceFilter] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);

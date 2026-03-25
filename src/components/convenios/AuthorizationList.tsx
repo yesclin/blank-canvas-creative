@@ -51,6 +51,7 @@ interface AuthorizationListProps {
 }
 
 export function AuthorizationList({ authorizations, insurances, patients }: AuthorizationListProps) {
+  const { data: mockProcedures = [] } = useProcedureOptions();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);

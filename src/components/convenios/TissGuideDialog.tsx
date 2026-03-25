@@ -71,6 +71,7 @@ export function TissGuideDialog({
   patients,
   professionals 
 }: TissGuideDialogProps) {
+  const { data: mockProcedures = [] } = useProcedureOptions();
   const isNew = !guide;
   const isEditable = !guide || ['rascunho', 'aberta'].includes(guide.status);
 
