@@ -1,12 +1,9 @@
 import { useState, useMemo } from "react";
 import { useClinicData } from "@/hooks/useClinicData";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useCustomSpecialties, useCreateSpecialty, useUpdateSpecialty, useToggleSpecialty } from "@/hooks/useEnabledSpecialties";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { SPECIALTY_CAPABILITIES } from "@/hooks/prontuario/specialtyCapabilities";
-import type { SpecialtyKey } from "@/hooks/prontuario/useActiveSpecialty";
-import { getDefaultAnamnesisStructure } from "@/constants/defaultAnamnesisStructures";
+import { OFFICIAL_SPECIALTIES } from "@/constants/officialSpecialties";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -15,174 +12,90 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Stethoscope,
-  Plus,
-  Pencil,
-  Loader2,
-  AlertCircle,
-  Globe,
-  Building,
-  Search,
-  Brain,
-  Apple,
-  Activity,
-  Smile,
-  Scissors,
-  Baby,
-  Heart,
-  Check,
+  Stethoscope, Plus, Pencil, Loader2, AlertCircle, Globe, Building,
+  Search, Brain, Apple, Activity, Smile, Scissors, Baby, Heart, Check,
+  Sparkles,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
-
-/** Maps YESCLIN_SPECIALTIES.key → SpecialtyKey in SPECIALTY_CAPABILITIES */
-const CAPABILITY_KEY_MAP: Record<string, SpecialtyKey> = {
-  "clinica-geral": "geral",
-  "psicologia": "psicologia",
-  "nutricao": "nutricao",
-  "fisioterapia": "fisioterapia",
-  "pilates": "pilates",
-  "estetica": "estetica",
-  "odontologia": "odontologia",
-  "dermatologia": "dermatologia",
-  "pediatria": "pediatria",
+// Icon map for official specialties
+const SPECIALTY_ICONS: Record<string, React.ElementType> = {
+  geral: Stethoscope,
+  psicologia: Brain,
+  nutricao: Apple,
+  fisioterapia: Activity,
+  pilates: Activity,
+  estetica: Scissors,
+  odontologia: Smile,
+  dermatologia: Heart,
+  pediatria: Baby,
 };
 
-// Curated list of Yesclin-supported specialties
-const YESCLIN_SPECIALTIES = [
-  {
-    key: "clinica-geral",
-    name: "Clínica Geral",
-    description: "Atendimento médico generalista",
-    icon: Stethoscope,
-    color: "bg-blue-500",
-  },
-  {
-    key: "psicologia",
-    name: "Psicologia",
-    description: "Saúde mental e terapia",
-    icon: Brain,
-    color: "bg-purple-500",
-  },
-  {
-    key: "nutricao",
-    name: "Nutrição",
-    description: "Alimentação e dieta",
-    icon: Apple,
-    color: "bg-green-500",
-  },
-  {
-    key: "fisioterapia",
-    name: "Fisioterapia",
-    description: "Reabilitação e movimento",
-    icon: Activity,
-    color: "bg-orange-500",
-  },
-  {
-    key: "pilates",
-    name: "Pilates",
-    description: "Exercícios terapêuticos",
-    icon: Activity,
-    color: "bg-teal-500",
-  },
-  {
-    key: "estetica",
-    name: "Estética / Harmonização Facial",
-    description: "Procedimentos estéticos",
-    icon: Scissors,
-    color: "bg-pink-500",
-  },
-  {
-    key: "odontologia",
-    name: "Odontologia",
-    description: "Saúde bucal com odontograma digital",
-    icon: Smile,
-    color: "bg-cyan-500",
-  },
-  {
-    key: "dermatologia",
-    name: "Dermatologia",
-    description: "Cuidados com a pele",
-    icon: Heart,
-    color: "bg-rose-500",
-  },
-  {
-    key: "pediatria",
-    name: "Pediatria",
-    description: "Atendimento infantil",
-    icon: Baby,
-    color: "bg-amber-500",
-  },
-];
+const SPECIALTY_COLORS: Record<string, string> = {
+  geral: "bg-blue-500",
+  psicologia: "bg-purple-500",
+  nutricao: "bg-green-500",
+  fisioterapia: "bg-orange-500",
+  pilates: "bg-teal-500",
+  estetica: "bg-pink-500",
+  odontologia: "bg-cyan-500",
+  dermatologia: "bg-rose-500",
+  pediatria: "bg-amber-500",
+};
+
+const SPECIALTY_DESCRIPTIONS: Record<string, string> = {
+  geral: "Atendimento médico generalista",
+  psicologia: "Saúde mental e terapia",
+  nutricao: "Alimentação e dieta",
+  fisioterapia: "Reabilitação e movimento",
+  pilates: "Exercícios terapêuticos",
+  estetica: "Procedimentos estéticos",
+  odontologia: "Saúde bucal com odontograma digital",
+  dermatologia: "Cuidados com a pele",
+  pediatria: "Atendimento infantil",
+};
 
 interface ClinicSpecialty {
   id: string;
   name: string;
+  slug: string | null;
   description: string | null;
   is_active: boolean;
-  specialty_type: 'padrao' | 'personalizada';
+  specialty_type: string | null;
 }
 
 export function SpecialtiesSection() {
   const { clinic } = useClinicData();
   const { isOwner } = usePermissions();
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState<'padrao' | 'personalizada'>('padrao');
+  const [activeTab, setActiveTab] = useState<"padrao" | "personalizada">("padrao");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingSpecialty, setEditingSpecialty] = useState<ClinicSpecialty | null>(null);
   const [confirmDeactivate, setConfirmDeactivate] = useState<ClinicSpecialty | null>(null);
   const [newName, setNewName] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [togglingSlug, setTogglingSlug] = useState<string | null>(null);
+  const [provisionResult, setProvisionResult] = useState<Record<string, unknown> | null>(null);
 
-  // Fetch clinic's enabled standard specialties
-  const { data: clinicStandardSpecialties = [], isLoading: loadingStandard } = useQuery({
-    queryKey: ["clinic-standard-specialties", clinic?.id],
+  // Fetch clinic specialties
+  const { data: clinicSpecialties = [], isLoading } = useQuery({
+    queryKey: ["clinic-specialties", clinic?.id],
     queryFn: async () => {
       if (!clinic?.id) return [];
       const { data, error } = await supabase
         .from("specialties")
-        .select("id, name, description, is_active, specialty_type")
+        .select("id, name, slug, description, is_active, specialty_type")
         .eq("clinic_id", clinic.id)
-        .eq("specialty_type", "padrao");
-      if (error) throw error;
-      return data as ClinicSpecialty[];
-    },
-    enabled: !!clinic?.id,
-  });
-
-  // Fetch clinic's custom specialties
-  const { data: customSpecialties = [], isLoading: loadingCustom } = useQuery({
-    queryKey: ["clinic-custom-specialties", clinic?.id],
-    queryFn: async () => {
-      if (!clinic?.id) return [];
-      const { data, error } = await supabase
-        .from("specialties")
-        .select("id, name, description, is_active, specialty_type")
-        .eq("clinic_id", clinic.id)
-        .eq("specialty_type", "personalizada")
         .order("name");
       if (error) throw error;
       return data as ClinicSpecialty[];
@@ -190,489 +103,170 @@ export function SpecialtiesSection() {
     enabled: !!clinic?.id,
   });
 
-  // Map of enabled standard specialties by name — prioritize active records when duplicates exist
-  const enabledStandardMap = useMemo(() => {
+  // Separate standard vs custom
+  const standardSpecialties = clinicSpecialties.filter(s => s.specialty_type === "padrao");
+  const customSpecialties = clinicSpecialties.filter(s => s.specialty_type === "personalizada");
+
+  // Map by slug for quick lookup
+  const enabledBySlug = useMemo(() => {
     const map: Record<string, ClinicSpecialty> = {};
-    clinicStandardSpecialties.forEach((s) => {
-      const existing = map[s.name];
-      // Keep active record over inactive when duplicates exist
-      if (!existing || (s.is_active && !existing.is_active)) {
-        map[s.name] = s;
+    standardSpecialties.forEach(s => {
+      if (s.slug) {
+        const existing = map[s.slug];
+        if (!existing || (s.is_active && !existing.is_active)) {
+          map[s.slug] = s;
+        }
       }
     });
     return map;
-  }, [clinicStandardSpecialties]);
+  }, [standardSpecialties]);
 
-  // Filter curated specialties by search
-  const filteredYesclinSpecialties = YESCLIN_SPECIALTIES.filter(
-    (s) =>
-      s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.description.toLowerCase().includes(searchTerm.toLowerCase())
+  // Filter by search
+  const filteredOfficial = OFFICIAL_SPECIALTIES.filter(s =>
+    s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    SPECIALTY_DESCRIPTIONS[s.slug]?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Filter custom specialties by search
-  const filteredCustom = customSpecialties.filter((s) =>
+  const filteredCustom = customSpecialties.filter(s =>
     s.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const activeCustom = filteredCustom.filter((s) => s.is_active);
-  const inactiveCustom = filteredCustom.filter((s) => !s.is_active);
+  const enabledCount = OFFICIAL_SPECIALTIES.filter(s => enabledBySlug[s.slug]?.is_active).length;
 
-  /**
-   * Provision all default modules for a specialty based on SPECIALTY_CAPABILITIES.
-   * Uses the capability key to get the correct module list from the central matrix.
-   */
-  const provisionSpecialtyModules = async (specialtyId: string, capabilityKey: SpecialtyKey) => {
-    if (!clinic?.id) return;
-    try {
-      const capability = SPECIALTY_CAPABILITIES[capabilityKey];
-      if (!capability) {
-        console.warn(`No capability found for key: ${capabilityKey}`);
-        return;
-      }
-
-      const moduleKeys = capability.defaultModules;
-      if (moduleKeys.length === 0) return;
-
-      // Fetch all matching module IDs from DB
-      const { data: modules } = await supabase
-        .from("clinical_modules")
-        .select("id, key")
-        .in("key", moduleKeys);
-
-      if (modules && modules.length > 0) {
-        const moduleInserts = modules.map((m) => ({
-          clinic_id: clinic.id,
-          specialty_id: specialtyId,
-          module_id: m.id,
-          is_enabled: true,
-        }));
-
-        await supabase
-          .from("clinic_specialty_modules")
-          .upsert(moduleInserts, { onConflict: "clinic_id,specialty_id,module_id" });
-        
-        console.log(`[SpecialtiesSection] Provisioned ${modules.length} modules for ${capability.label}: ${modules.map(m => m.key).join(', ')}`);
-      }
-    } catch (err) {
-      console.error("Error provisioning specialty modules:", err);
-    }
-  };
-
-  /**
-   * Auto-create default Prontuário and Anamnese templates for a specialty.
-   * Rules:
-   * - Creates "Modelo de Prontuário - {Especialidade}" (medical_record_templates)
-   * - Creates "Anamnese Padrão - {Especialidade} (YesClin)" (anamnesis_templates)
-   * - Both are is_system=true, is_default=true (cannot be permanently deleted)
-   * - Skips creation if a default template already exists for that specialty
-   * - On deactivation: templates become hidden (is_active=false), never deleted
-   */
-  const provisionDefaultTemplates = async (specialtyId: string, specialtyName: string, capabilityKey: SpecialtyKey) => {
-    if (!clinic?.id) return;
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      const userId = userData?.user?.id || null;
-
-      // 1. Auto-create Prontuário template (medical_record_templates)
-      const { data: existingProntuario } = await supabase
-        .from("medical_record_templates")
-        .select("id")
-        .eq("clinic_id", clinic.id)
-        .eq("specialty_id", specialtyId)
-        .eq("is_system", true)
-        .limit(1);
-
-      if (!existingProntuario || existingProntuario.length === 0) {
-        await supabase
-          .from("medical_record_templates")
-          .insert({
-            clinic_id: clinic.id,
-            name: `Modelo de Prontuário - ${specialtyName}`,
-            type: "evolution",
-            scope: "specialty",
-            specialty_id: specialtyId,
-            description: `Modelo padrão de prontuário para ${specialtyName}`,
-            is_default: true,
-            is_active: true,
-            is_system: true,
-          });
-        console.log(`[SpecialtiesSection] Created default Prontuário template for ${specialtyName}`);
-      } else {
-        // Reactivate existing
-        await supabase
-          .from("medical_record_templates")
-          .update({ is_active: true })
-          .eq("id", existingProntuario[0].id);
-      }
-
-      // 2. Auto-create Anamnese template (anamnesis_templates)
-      const { data: existingAnamnese } = await supabase
-        .from("anamnesis_templates")
-        .select("id")
-        .eq("clinic_id", clinic.id)
-        .eq("specialty_id", specialtyId)
-        .eq("is_system", true)
-        .limit(1);
-
-      if (!existingAnamnese || existingAnamnese.length === 0) {
-        const capability = SPECIALTY_CAPABILITIES[capabilityKey];
-        const slug = capability?.anamnesisSlug || capabilityKey;
-
-        // Get default structure for this specialty (if available)
-        const defaultStructure = getDefaultAnamnesisStructure(slug);
-
-        const { data: newTemplate } = await supabase
-          .from("anamnesis_templates")
-          .insert({
-            clinic_id: clinic.id,
-            name: slug === 'clinica-geral' || slug === 'geral'
-              ? 'Anamnese Padrão – Clínica Geral (YesClin)'
-              : `Anamnese Padrão - ${specialtyName} (YesClin)`,
-            template_type: "anamnese",
-            specialty: slug,
-            specialty_id: specialtyId,
-            description: slug === 'clinica-geral' || slug === 'geral'
-              ? 'Modelo padrão completo com 10 seções clínicas estruturadas. Editável e versionado.'
-              : `Modelo padrão de anamnese para ${specialtyName}`,
-            campos: defaultStructure as any,
-            is_default: true,
-            is_active: true,
-            is_system: true,
-            created_by: userId,
-          })
-          .select("id")
-          .single();
-
-        // Create version 1 with the full structure
-        if (newTemplate?.id && defaultStructure.length > 0) {
-          const { data: ver } = await supabase
-            .from("anamnesis_template_versions")
-            .insert({
-              template_id: newTemplate.id,
-              version_number: 1,
-              structure: defaultStructure as any,
-              created_by: userId,
-            })
-            .select("id")
-            .single();
-
-          // Link version to template
-          if (ver?.id) {
-            await supabase
-              .from("anamnesis_templates")
-              .update({ current_version_id: ver.id } as any)
-              .eq("id", newTemplate.id);
-          }
-        }
-
-        console.log(`[SpecialtiesSection] Created default Anamnese template for ${specialtyName} with ${defaultStructure.length} sections`);
-      } else {
-        // Reactivate existing
-        await supabase
-          .from("anamnesis_templates")
-          .update({ is_active: true, archived: false })
-          .eq("id", existingAnamnese[0].id);
-      }
-    } catch (err) {
-      console.error("Error provisioning default templates:", err);
-    }
-  };
-
-  /**
-   * Activate anamnesis templates matching the specialty when it's enabled.
-   * Matches by slug OR specialty_id, and links the template to the specialty.
-   */
-  const activateSpecialtyTemplates = async (specialtyId: string, capabilityKey: SpecialtyKey) => {
-    if (!clinic?.id) return;
-    try {
-      const capability = SPECIALTY_CAPABILITIES[capabilityKey];
-      if (!capability) return;
-
-      const slugVariants = [
-        capabilityKey,
-        capability.anamnesisSlug,
-        capability.anamnesisSlug.replace(/-/g, '_'),
-      ];
-      const uniqueSlugs = [...new Set(slugVariants)];
-
-      // Match templates by slug (for this clinic) OR by specialty_id
-      const { data: templates } = await supabase
-        .from("anamnesis_templates")
-        .select("id, name, specialty, is_active, specialty_id")
-        .eq("clinic_id", clinic.id)
-        .in("specialty", uniqueSlugs);
-
-      if (templates && templates.length > 0) {
-        for (const tpl of templates) {
-          await supabase
-            .from("anamnesis_templates")
-            .update({ is_active: true, specialty_id: specialtyId, archived: false })
-            .eq("id", tpl.id);
-        }
-        console.log(`[SpecialtiesSection] Activated ${templates.length} template(s) for ${capability.label}`);
-      }
-
-      // Also reactivate medical_record_templates for this specialty
-      await supabase
-        .from("medical_record_templates")
-        .update({ is_active: true })
-        .eq("clinic_id", clinic.id)
-        .eq("specialty_id", specialtyId);
-
-    } catch (err) {
-      console.error("Error activating specialty templates:", err);
-    }
-  };
-
-  /**
-   * Deactivate anamnesis templates when a specialty is disabled.
-   * Matches by specialty_id AND by slug to catch unlinked templates.
-   */
-  const deactivateSpecialtyTemplates = async (specialtyId: string, capabilityKey?: SpecialtyKey) => {
-    if (!clinic?.id) return;
-    try {
-      // Deactivate anamnesis_templates by specialty_id
-      await supabase
-        .from("anamnesis_templates")
-        .update({ is_active: false })
-        .eq("clinic_id", clinic.id)
-        .eq("specialty_id", specialtyId);
-
-      // Also deactivate by slug match (for templates not yet linked)
-      if (capabilityKey) {
-        const capability = SPECIALTY_CAPABILITIES[capabilityKey];
-        if (capability) {
-          const slugVariants = [
-            capabilityKey,
-            capability.anamnesisSlug,
-            capability.anamnesisSlug.replace(/-/g, '_'),
-          ];
-          const uniqueSlugs = [...new Set(slugVariants)];
-          await supabase
-            .from("anamnesis_templates")
-            .update({ is_active: false })
-            .eq("clinic_id", clinic.id)
-            .in("specialty", uniqueSlugs);
-        }
-      }
-
-      // Deactivate medical_record_templates (never delete)
-      await supabase
-        .from("medical_record_templates")
-        .update({ is_active: false })
-        .eq("clinic_id", clinic.id)
-        .eq("specialty_id", specialtyId);
-
-    } catch (err) {
-      console.error("Error deactivating specialty templates:", err);
-    }
-  };
-
-  /** Invalidate all specialty-related caches for full sync */
-  const invalidateAllSpecialtyCaches = () => {
-    if (!clinic?.id) return;
-    queryClient.invalidateQueries({ queryKey: ["clinic-standard-specialties", clinic.id] });
-    queryClient.invalidateQueries({ queryKey: ["clinic-custom-specialties", clinic.id] });
-    queryClient.invalidateQueries({ queryKey: ["enabled-specialties", clinic.id] });
-    queryClient.invalidateQueries({ queryKey: ["specialties", clinic.id] });
-    queryClient.invalidateQueries({ queryKey: ["all-specialties", clinic.id] });
-    queryClient.invalidateQueries({ queryKey: ["custom-specialties", clinic.id] });
-    queryClient.invalidateQueries({ queryKey: ["specialties-management", clinic.id] });
-    queryClient.invalidateQueries({ queryKey: ["standard-specialties"] });
-    queryClient.invalidateQueries({ queryKey: ["anamnesis-templates"] });
-    queryClient.invalidateQueries({ queryKey: ["anamnesis_templates"] });
-  };
-
-  const handleToggleStandard = async (yesclinSpecialty: typeof YESCLIN_SPECIALTIES[0]) => {
+  /** Activate a standard specialty using the provision_specialty RPC */
+  const handleActivateStandard = async (slug: string, name: string) => {
     if (!clinic?.id || !isOwner) return;
-
-    const existing = enabledStandardMap[yesclinSpecialty.name];
-    const capabilityKey = CAPABILITY_KEY_MAP[yesclinSpecialty.key] || 'geral';
-    setTogglingId(yesclinSpecialty.key);
+    setTogglingSlug(slug);
 
     try {
-      if (existing) {
-        // Toggle existing
-        const newActiveState = !existing.is_active;
-        if (!newActiveState) {
-          // Show confirmation for deactivation
-          setConfirmDeactivate(existing);
-          setTogglingId(null);
-          return;
-        }
-        await supabase
-          .from("specialties")
-          .update({ is_active: true })
-          .eq("id", existing.id);
-        
-        // Re-provision modules, templates and default models on reactivation
-        await provisionSpecialtyModules(existing.id, capabilityKey);
-        await provisionDefaultTemplates(existing.id, yesclinSpecialty.name, capabilityKey);
-        await activateSpecialtyTemplates(existing.id, capabilityKey);
-      } else {
-        // Create new clinic-specific specialty
-        const { data: created, error } = await supabase
-          .from("specialties")
-          .insert({
-            name: yesclinSpecialty.name,
-            description: yesclinSpecialty.description,
-            area: "Padrão",
-            clinic_id: clinic.id,
-            specialty_type: "padrao",
-            is_active: true,
-          })
-          .select("id")
-          .single();
-
-        if (error) throw error;
-        if (created) {
-          await provisionSpecialtyModules(created.id, capabilityKey);
-          await provisionDefaultTemplates(created.id, yesclinSpecialty.name, capabilityKey);
-          await activateSpecialtyTemplates(created.id, capabilityKey);
-        }
-      }
-
-      toast({
-        title: existing ? "Especialidade reativada!" : "Especialidade habilitada!",
-        description: `"${yesclinSpecialty.name}" está disponível para uso na agenda, prontuário e procedimentos.`,
+      const { data, error } = await supabase.rpc("provision_specialty", {
+        _clinic_id: clinic.id,
+        _specialty_slug: slug,
       });
 
-      invalidateAllSpecialtyCaches();
-    } catch (err) {
-      console.error("Error toggling specialty:", err);
-      toast({
-        title: "Erro",
-        description: "Não foi possível alterar a especialidade.",
-        variant: "destructive",
+      if (error) throw error;
+
+      setProvisionResult(data as Record<string, unknown>);
+      toast.success(`"${name}" ativada com sucesso!`, {
+        description: `Abas de prontuário e templates provisionados automaticamente.`,
       });
+
+      invalidateAll();
+    } catch (err: any) {
+      console.error("Error activating specialty:", err);
+      toast.error("Erro ao ativar especialidade", { description: err.message });
     } finally {
-      setTogglingId(null);
+      setTogglingSlug(null);
     }
   };
 
+  /** Deactivate a specialty (soft: is_active = false) */
   const handleDeactivateConfirm = async () => {
     if (!confirmDeactivate || !clinic?.id) return;
+    setTogglingSlug(confirmDeactivate.slug || confirmDeactivate.id);
 
-    setTogglingId(confirmDeactivate.id);
     try {
       await supabase
         .from("specialties")
         .update({ is_active: false })
         .eq("id", confirmDeactivate.id);
 
-      // Deactivate associated templates (resolve capability key from name)
-      const yesclinMatch = YESCLIN_SPECIALTIES.find(ys => ys.name === confirmDeactivate.name);
-      const capKey = yesclinMatch ? (CAPABILITY_KEY_MAP[yesclinMatch.key] || 'geral') : undefined;
-      await deactivateSpecialtyTemplates(confirmDeactivate.id, capKey);
+      // Deactivate associated medical_record_tabs
+      await supabase
+        .from("medical_record_tabs")
+        .update({ is_active: false })
+        .eq("clinic_id", clinic.id)
+        .eq("specialty_id", confirmDeactivate.id);
 
-      toast({
-        title: "Especialidade desabilitada",
-        description: `"${confirmDeactivate.name}" e seus modelos de prontuário foram desativados.`,
+      // Deactivate associated anamnesis_templates
+      await supabase
+        .from("anamnesis_templates")
+        .update({ is_active: false })
+        .eq("clinic_id", clinic.id)
+        .eq("specialty_id", confirmDeactivate.id);
+
+      toast.success(`"${confirmDeactivate.name}" desativada`, {
+        description: "Registros existentes foram mantidos.",
       });
 
-      invalidateAllSpecialtyCaches();
-    } catch (err) {
+      invalidateAll();
+    } catch (err: any) {
       console.error("Error deactivating:", err);
-      toast({
-        title: "Erro",
-        description: "Não foi possível desabilitar.",
-        variant: "destructive",
-      });
+      toast.error("Erro ao desativar", { description: err.message });
     } finally {
-      setTogglingId(null);
+      setTogglingSlug(null);
       setConfirmDeactivate(null);
     }
   };
 
+  /** Toggle handler for standard specialties */
+  const handleToggleStandard = (slug: string, name: string) => {
+    const existing = enabledBySlug[slug];
+    if (existing?.is_active) {
+      setConfirmDeactivate(existing);
+    } else {
+      handleActivateStandard(slug, name);
+    }
+  };
+
+  /** Create custom specialty */
   const handleCreateCustom = async () => {
     if (!clinic?.id || !newName.trim()) return;
 
-    // Check duplicates
     const isDuplicate =
-      YESCLIN_SPECIALTIES.some((s) => s.name.toLowerCase() === newName.trim().toLowerCase()) ||
-      customSpecialties.some((s) => s.name.toLowerCase() === newName.trim().toLowerCase());
+      OFFICIAL_SPECIALTIES.some(s => s.name.toLowerCase() === newName.trim().toLowerCase()) ||
+      customSpecialties.some(s => s.name.toLowerCase() === newName.trim().toLowerCase());
 
     if (isDuplicate) {
-      toast({
-        title: "Nome já existe",
-        description: "Escolha um nome diferente para a especialidade.",
-        variant: "destructive",
-      });
+      toast.error("Nome já existe");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const { data: created, error } = await supabase
-        .from("specialties")
-        .insert({
-          name: newName.trim(),
-          description: newDescription.trim() || null,
-          area: "Personalizada",
-          clinic_id: clinic.id,
-          specialty_type: "personalizada",
-          is_active: true,
-        })
-        .select("id")
-        .single();
+      const slug = newName.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+
+      const { error } = await supabase.from("specialties").insert({
+        name: newName.trim(),
+        slug,
+        description: newDescription.trim() || null,
+        clinic_id: clinic.id,
+        specialty_type: "personalizada",
+        is_active: true,
+      });
 
       if (error) throw error;
 
-      if (created) {
-        await provisionSpecialtyModules(created.id, 'custom');
-        await provisionDefaultTemplates(created.id, newName.trim(), 'custom');
-      }
-
-      toast({
-        title: "Especialidade criada!",
-        description: `"${newName}" está disponível para uso.`,
-      });
-
+      toast.success(`"${newName}" criada com sucesso!`);
       setNewName("");
       setNewDescription("");
       setIsCreateDialogOpen(false);
-      invalidateAllSpecialtyCaches();
-    } catch (err) {
+      invalidateAll();
+    } catch (err: any) {
       console.error("Error creating custom specialty:", err);
-      toast({
-        title: "Erro ao criar",
-        description: "Tente novamente.",
-        variant: "destructive",
-      });
+      toast.error("Erro ao criar", { description: err.message });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  /** Edit custom specialty */
   const handleEditCustom = async () => {
     if (!editingSpecialty || !clinic?.id || !newName.trim()) return;
-
     setIsSubmitting(true);
     try {
       await supabase
         .from("specialties")
-        .update({
-          name: newName.trim(),
-          description: newDescription.trim() || null,
-        })
+        .update({ name: newName.trim(), description: newDescription.trim() || null })
         .eq("id", editingSpecialty.id);
 
-      toast({
-        title: "Especialidade atualizada!",
-      });
-
+      toast.success("Especialidade atualizada!");
       setEditingSpecialty(null);
       setNewName("");
       setNewDescription("");
-      queryClient.invalidateQueries({ queryKey: ["clinic-custom-specialties", clinic.id] });
-      queryClient.invalidateQueries({ queryKey: ["specialties", clinic.id] });
-    } catch (err) {
-      console.error("Error updating specialty:", err);
-      toast({
-        title: "Erro ao atualizar",
-        variant: "destructive",
-      });
+      invalidateAll();
+    } catch (err: any) {
+      toast.error("Erro ao atualizar", { description: err.message });
     } finally {
       setIsSubmitting(false);
     }
@@ -688,21 +282,25 @@ export function SpecialtiesSection() {
 
   const handleReactivateCustom = async (specialty: ClinicSpecialty) => {
     if (!clinic?.id) return;
-    setTogglingId(specialty.id);
+    setTogglingSlug(specialty.id);
     try {
-      await supabase
-        .from("specialties")
-        .update({ is_active: true })
-        .eq("id", specialty.id);
-
-      toast({ title: "Especialidade reativada!" });
-      queryClient.invalidateQueries({ queryKey: ["clinic-custom-specialties", clinic.id] });
-      queryClient.invalidateQueries({ queryKey: ["specialties", clinic.id] });
-    } catch (err) {
-      toast({ title: "Erro", variant: "destructive" });
+      await supabase.from("specialties").update({ is_active: true }).eq("id", specialty.id);
+      toast.success("Especialidade reativada!");
+      invalidateAll();
+    } catch {
+      toast.error("Erro ao reativar");
     } finally {
-      setTogglingId(null);
+      setTogglingSlug(null);
     }
+  };
+
+  const invalidateAll = () => {
+    if (!clinic?.id) return;
+    queryClient.invalidateQueries({ queryKey: ["clinic-specialties", clinic.id] });
+    queryClient.invalidateQueries({ queryKey: ["enabled-specialties", clinic.id] });
+    queryClient.invalidateQueries({ queryKey: ["specialties", clinic.id] });
+    queryClient.invalidateQueries({ queryKey: ["all-specialties", clinic.id] });
+    queryClient.invalidateQueries({ queryKey: ["standard-specialties"] });
   };
 
   const openEditDialog = (specialty: ClinicSpecialty) => {
@@ -718,14 +316,8 @@ export function SpecialtiesSection() {
     setNewDescription("");
   };
 
-  const isLoading = loadingStandard || loadingCustom;
-  
-  // Count using deduplicated map — avoids counting duplicate DB records
-  const enabledCount = YESCLIN_SPECIALTIES.filter((ys) => {
-    const existing = enabledStandardMap[ys.name];
-    return existing?.is_active ?? false;
-  }).length;
-
+  const activeCustom = filteredCustom.filter(s => s.is_active);
+  const inactiveCustom = filteredCustom.filter(s => !s.is_active);
 
   return (
     <>
@@ -738,7 +330,7 @@ export function SpecialtiesSection() {
             <div>
               <CardTitle>Especialidades da Clínica</CardTitle>
               <CardDescription>
-                Habilite as especialidades padrão do Yesclin ou crie especialidades personalizadas.
+                Ative especialidades para provisionar automaticamente prontuários, templates e fluxos de atendimento.
               </CardDescription>
             </div>
           </div>
@@ -750,7 +342,6 @@ export function SpecialtiesSection() {
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Search */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -761,11 +352,11 @@ export function SpecialtiesSection() {
                 />
               </div>
 
-              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'padrao' | 'personalizada')}>
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "padrao" | "personalizada")}>
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="padrao" className="gap-2">
                     <Globe className="h-4 w-4" />
-                    Padrão do Yesclin
+                    Padrão Yesclin
                   </TabsTrigger>
                   <TabsTrigger value="personalizada" className="gap-2">
                     <Building className="h-4 w-4" />
@@ -773,55 +364,85 @@ export function SpecialtiesSection() {
                   </TabsTrigger>
                 </TabsList>
 
-                {/* Standard Yesclin Specialties */}
+                {/* Standard Specialties */}
                 <TabsContent value="padrao" className="mt-4">
                   <div className="rounded-lg border bg-muted/30 p-3 mb-4">
-                    <p className="text-sm text-muted-foreground">
-                      Estas são as especialidades oficialmente suportadas pelo Yesclin. 
-                      Ative as que sua clínica oferece para liberar modelos de prontuário, procedimentos e fluxos de atendimento.
-                    </p>
+                    <div className="flex items-start gap-2">
+                      <Sparkles className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                      <p className="text-sm text-muted-foreground">
+                        Ao ativar, o sistema provisiona automaticamente: <strong>abas de prontuário</strong>, 
+                        <strong> templates de anamnese</strong> e <strong>recursos específicos</strong> da especialidade.
+                      </p>
+                    </div>
                   </div>
 
                   {enabledCount > 0 && (
                     <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20 mb-4">
                       <Check className="h-4 w-4 text-primary" />
                       <span className="text-sm font-medium">
-                        {enabledCount} especialidade(s) habilitada(s)
+                        {enabledCount} especialidade(s) ativa(s)
                       </span>
                     </div>
                   )}
 
+                  {/* Provision result feedback */}
+                  {provisionResult && (
+                    <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 mb-4">
+                      <div className="flex items-start gap-2">
+                        <Check className="h-4 w-4 text-green-600 mt-0.5" />
+                        <div className="text-sm">
+                          <p className="font-medium text-green-700 dark:text-green-400">
+                            Provisionamento concluído
+                          </p>
+                          <p className="text-green-600 dark:text-green-500 mt-1">
+                            {String(provisionResult.specialty_name)}: {String(provisionResult.tabs_created)} aba(s) 
+                            e {String(provisionResult.templates_created)} template(s) criados.
+                          </p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="mt-1 h-6 text-xs text-green-600"
+                            onClick={() => setProvisionResult(null)}
+                          >
+                            Fechar
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {filteredYesclinSpecialties.map((specialty) => {
-                      const existing = enabledStandardMap[specialty.name];
+                    {filteredOfficial.map((spec) => {
+                      const existing = enabledBySlug[spec.slug];
                       const isEnabled = existing?.is_active ?? false;
-                      const Icon = specialty.icon;
-                      const isToggling = togglingId === specialty.key || togglingId === existing?.id;
+                      const Icon = SPECIALTY_ICONS[spec.slug] || Stethoscope;
+                      const colorClass = SPECIALTY_COLORS[spec.slug] || "bg-blue-500";
+                      const isToggling = togglingSlug === spec.slug;
 
                       return (
                         <div
-                          key={specialty.key}
+                          key={spec.slug}
                           className={`relative flex items-start gap-3 p-4 rounded-xl border transition-all ${
-                            isEnabled
-                              ? "bg-primary/5 border-primary/30"
-                              : "bg-card hover:bg-muted/50"
+                            isEnabled ? "bg-primary/5 border-primary/30" : "bg-card hover:bg-muted/50"
                           }`}
                         >
-                          <div
-                            className={`w-9 h-9 rounded-lg ${specialty.color} flex items-center justify-center shrink-0`}
-                          >
-                            <Icon className="h-5 w-5 text-white" />
+                          <div className={`w-9 h-9 rounded-lg ${colorClass} flex items-center justify-center shrink-0`}>
+                            {isToggling ? (
+                              <Loader2 className="h-5 w-5 text-white animate-spin" />
+                            ) : (
+                              <Icon className="h-5 w-5 text-white" />
+                            )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <span className="font-medium text-sm block">{specialty.name}</span>
+                            <span className="font-medium text-sm block">{spec.name}</span>
                             <p className="text-xs text-muted-foreground mt-0.5">
-                              {specialty.description}
+                              {SPECIALTY_DESCRIPTIONS[spec.slug]}
                             </p>
                           </div>
                           {isOwner && (
                             <Switch
                               checked={isEnabled}
-                              onCheckedChange={() => handleToggleStandard(specialty)}
+                              onCheckedChange={() => handleToggleStandard(spec.slug, spec.name)}
                               disabled={isToggling}
                               className="shrink-0"
                             />
@@ -845,7 +466,7 @@ export function SpecialtiesSection() {
                   <div className="flex items-center justify-between mb-4">
                     <div className="rounded-lg border bg-muted/30 p-3 flex-1 mr-4">
                       <p className="text-sm text-muted-foreground">
-                        Especialidades exclusivas desta clínica. Recebem automaticamente um modelo básico de prontuário.
+                        Especialidades exclusivas desta clínica.
                       </p>
                     </div>
                     {isOwner && (
@@ -861,9 +482,7 @@ export function SpecialtiesSection() {
                       <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
                         <Building className="h-6 w-6 text-muted-foreground" />
                       </div>
-                      <h3 className="font-medium text-foreground mb-1">
-                        Nenhuma especialidade personalizada
-                      </h3>
+                      <h3 className="font-medium text-foreground mb-1">Nenhuma especialidade personalizada</h3>
                       <p className="text-sm text-muted-foreground max-w-sm">
                         Crie especialidades exclusivas quando as padrão do Yesclin não atenderem.
                       </p>
@@ -876,41 +495,22 @@ export function SpecialtiesSection() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {/* Active */}
                       {activeCustom.length > 0 && (
                         <div className="space-y-2">
-                          <h4 className="text-sm font-medium text-primary">
-                            Habilitadas ({activeCustom.length})
-                          </h4>
+                          <h4 className="text-sm font-medium text-primary">Habilitadas ({activeCustom.length})</h4>
                           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                            {activeCustom.map((specialty) => (
-                              <div
-                                key={specialty.id}
-                                className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-                              >
+                            {activeCustom.map((s) => (
+                              <div key={s.id} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
                                 <div className="flex-1 min-w-0">
-                                  <span className="font-medium truncate block">{specialty.name}</span>
-                                  {specialty.description && (
-                                    <span className="text-xs text-muted-foreground truncate block">
-                                      {specialty.description}
-                                    </span>
-                                  )}
+                                  <span className="font-medium truncate block">{s.name}</span>
+                                  {s.description && <span className="text-xs text-muted-foreground truncate block">{s.description}</span>}
                                 </div>
                                 {isOwner && (
                                   <div className="flex items-center gap-1 ml-2">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8"
-                                      onClick={() => openEditDialog(specialty)}
-                                    >
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(s)}>
                                       <Pencil className="h-4 w-4" />
                                     </Button>
-                                    <Switch
-                                      checked={specialty.is_active}
-                                      onCheckedChange={() => handleToggleCustom(specialty)}
-                                      disabled={togglingId === specialty.id}
-                                    />
+                                    <Switch checked={s.is_active} onCheckedChange={() => handleToggleCustom(s)} disabled={togglingSlug === s.id} />
                                   </div>
                                 )}
                               </div>
@@ -919,38 +519,21 @@ export function SpecialtiesSection() {
                         </div>
                       )}
 
-                      {/* Inactive */}
                       {inactiveCustom.length > 0 && (
                         <div className="space-y-2">
-                          <h4 className="text-sm font-medium text-muted-foreground">
-                            Desabilitadas ({inactiveCustom.length})
-                          </h4>
+                          <h4 className="text-sm font-medium text-muted-foreground">Desabilitadas ({inactiveCustom.length})</h4>
                           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                            {inactiveCustom.map((specialty) => (
-                              <div
-                                key={specialty.id}
-                                className="flex items-center justify-between p-3 rounded-lg border border-dashed bg-muted/30 opacity-70"
-                              >
+                            {inactiveCustom.map((s) => (
+                              <div key={s.id} className="flex items-center justify-between p-3 rounded-lg border border-dashed bg-muted/30 opacity-70">
                                 <div className="flex-1 min-w-0">
-                                  <span className="font-medium truncate text-muted-foreground block">
-                                    {specialty.name}
-                                  </span>
+                                  <span className="font-medium truncate text-muted-foreground block">{s.name}</span>
                                 </div>
                                 {isOwner && (
                                   <div className="flex items-center gap-1 ml-2">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8"
-                                      onClick={() => openEditDialog(specialty)}
-                                    >
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(s)}>
                                       <Pencil className="h-4 w-4" />
                                     </Button>
-                                    <Switch
-                                      checked={specialty.is_active}
-                                      onCheckedChange={() => handleToggleCustom(specialty)}
-                                      disabled={togglingId === specialty.id}
-                                    />
+                                    <Switch checked={s.is_active} onCheckedChange={() => handleToggleCustom(s)} disabled={togglingSlug === s.id} />
                                   </div>
                                 )}
                               </div>
@@ -972,80 +555,26 @@ export function SpecialtiesSection() {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {editingSpecialty ? (
-                <>
-                  <Pencil className="h-5 w-5 text-primary" />
-                  Editar Especialidade
-                </>
-              ) : (
-                <>
-                  <Plus className="h-5 w-5 text-primary" />
-                  Nova Especialidade Personalizada
-                </>
-              )}
+              {editingSpecialty ? <><Pencil className="h-5 w-5 text-primary" /> Editar Especialidade</> : <><Plus className="h-5 w-5 text-primary" /> Nova Especialidade Personalizada</>}
             </DialogTitle>
             <DialogDescription>
-              {editingSpecialty
-                ? "Atualize o nome ou descrição da especialidade."
-                : "Crie uma especialidade exclusiva para sua clínica."}
+              {editingSpecialty ? "Atualize o nome ou descrição." : "Crie uma especialidade exclusiva para sua clínica."}
             </DialogDescription>
           </DialogHeader>
-
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">
-                Nome <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="name"
-                placeholder="Ex: Acupuntura, Quiropraxia..."
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                autoFocus
-              />
+              <Label htmlFor="name">Nome <span className="text-destructive">*</span></Label>
+              <Input id="name" placeholder="Ex: Acupuntura, Quiropraxia..." value={newName} onChange={(e) => setNewName(e.target.value)} autoFocus />
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="description">Descrição (opcional)</Label>
-              <Input
-                id="description"
-                placeholder="Breve descrição da especialidade"
-                value={newDescription}
-                onChange={(e) => setNewDescription(e.target.value)}
-              />
+              <Input id="description" placeholder="Breve descrição" value={newDescription} onChange={(e) => setNewDescription(e.target.value)} />
             </div>
-
-            {!editingSpecialty && (
-              <div className="p-3 rounded-lg bg-muted/50 border">
-                <p className="text-sm text-muted-foreground">
-                  💡 A especialidade será criada com <strong>modelo básico de prontuário</strong> 
-                  (anamnese, evolução) e <strong>fluxo básico de atendimento</strong>.
-                </p>
-              </div>
-            )}
           </div>
-
           <DialogFooter>
-            <Button variant="outline" onClick={closeDialog} disabled={isSubmitting}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={editingSpecialty ? handleEditCustom : handleCreateCustom}
-              disabled={isSubmitting || !newName.trim()}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Salvando...
-                </>
-              ) : editingSpecialty ? (
-                "Salvar"
-              ) : (
-                <>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Criar
-                </>
-              )}
+            <Button variant="outline" onClick={closeDialog} disabled={isSubmitting}>Cancelar</Button>
+            <Button onClick={editingSpecialty ? handleEditCustom : handleCreateCustom} disabled={isSubmitting || !newName.trim()}>
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...</> : editingSpecialty ? "Salvar" : <><Plus className="mr-2 h-4 w-4" /> Criar</>}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1060,23 +589,18 @@ export function SpecialtiesSection() {
               Desabilitar especialidade?
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
-              <p>
-                A especialidade <strong>"{confirmDeactivate?.name}"</strong> será desabilitada.
-              </p>
+              <p>A especialidade <strong>"{confirmDeactivate?.name}"</strong> será desabilitada.</p>
               <ul className="text-sm list-disc list-inside space-y-1 mt-2">
-                <li>Novos profissionais não poderão ser vinculados</li>
-                <li>Novos procedimentos não poderão usar</li>
+                <li>Abas de prontuário e templates serão desativados</li>
                 <li>Novos agendamentos não poderão selecionar</li>
                 <li>Registros existentes serão mantidos</li>
+                <li>Pode ser reativada a qualquer momento</li>
               </ul>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeactivateConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={handleDeactivateConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Desabilitar
             </AlertDialogAction>
           </AlertDialogFooter>
