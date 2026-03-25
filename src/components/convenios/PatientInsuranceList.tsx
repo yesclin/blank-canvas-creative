@@ -4,33 +4,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { PatientInsurance, Insurance } from "@/types/convenios";
 import { holderTypeLabels } from "@/types/convenios";
+import { useCreatePatientInsurance } from "@/hooks/useConveniosData";
 import { format, parseISO, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -42,8 +29,25 @@ interface PatientInsuranceListProps {
 }
 
 export function PatientInsuranceList({ patientInsurances, insurances, patients }: PatientInsuranceListProps) {
+  const createPatientInsurance = useCreatePatientInsurance();
   const [search, setSearch] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const [form, setForm] = useState({
+    patient_id: '',
+    insurance_id: '',
+    card_number: '',
+    valid_until: '',
+    holder_type: 'titular',
+    holder_name: '',
+    holder_cpf: '',
+    notes: '',
+  });
+
+  const resetForm = () => setForm({
+    patient_id: '', insurance_id: '', card_number: '', valid_until: '',
+    holder_type: 'titular', holder_name: '', holder_cpf: '', notes: '',
+  });
 
   const filteredPatientInsurances = patientInsurances.filter((pi) =>
     pi.patient_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -65,8 +69,22 @@ export function PatientInsuranceList({ patientInsurances, insurances, patients }
   };
 
   const handleSave = () => {
-    toast.success('Vínculo salvo com sucesso!');
-    setIsDialogOpen(false);
+    if (!form.patient_id || !form.insurance_id || !form.card_number) {
+      toast.error('Paciente, convênio e número da carteirinha são obrigatórios');
+      return;
+    }
+    createPatientInsurance.mutate({
+      patient_id: form.patient_id,
+      insurance_id: form.insurance_id,
+      card_number: form.card_number,
+      validity_date: form.valid_until || undefined,
+      holder_type: form.holder_type,
+      holder_name: form.holder_name || undefined,
+      holder_cpf: form.holder_cpf || undefined,
+      notes: form.notes || undefined,
+    }, {
+      onSuccess: () => { setIsDialogOpen(false); resetForm(); },
+    });
   };
 
   return (
@@ -74,29 +92,18 @@ export function PatientInsuranceList({ patientInsurances, insurances, patients }
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar paciente, convênio ou carteirinha..."
-            className="pl-9"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <Input placeholder="Buscar paciente, convênio ou carteirinha..." className="pl-9"
+            value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-        
-        <Button onClick={() => setIsDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Vincular Paciente
+        <Button onClick={() => { resetForm(); setIsDialogOpen(true); }}>
+          <Plus className="h-4 w-4 mr-2" />Vincular Paciente
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Pacientes Vinculados a Convênios
-          </CardTitle>
-          <CardDescription>
-            Gerencie as carteirinhas de convênio dos pacientes
-          </CardDescription>
+          <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" />Pacientes Vinculados a Convênios</CardTitle>
+          <CardDescription>Gerencie as carteirinhas de convênio dos pacientes</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -134,9 +141,7 @@ export function PatientInsuranceList({ patientInsurances, insurances, patients }
                         {holderTypeLabels[pi.holder_type]}
                       </Badge>
                       {pi.holder_type === 'dependente' && pi.holder_name && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                          Titular: {pi.holder_name}
-                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">Titular: {pi.holder_name}</div>
                       )}
                     </TableCell>
                     <TableCell>
@@ -146,12 +151,8 @@ export function PatientInsuranceList({ patientInsurances, insurances, patients }
                           <span className={isExpired(pi.valid_until) ? 'text-red-600' : isExpiringSoon(pi.valid_until) ? 'text-yellow-600' : ''}>
                             {format(parseISO(pi.valid_until), 'dd/MM/yyyy', { locale: ptBR })}
                           </span>
-                          {isExpired(pi.valid_until) && (
-                            <AlertTriangle className="h-4 w-4 text-red-600" />
-                          )}
-                          {isExpiringSoon(pi.valid_until) && (
-                            <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                          )}
+                          {isExpired(pi.valid_until) && <AlertTriangle className="h-4 w-4 text-red-600" />}
+                          {isExpiringSoon(pi.valid_until) && <AlertTriangle className="h-4 w-4 text-yellow-600" />}
                         </div>
                       ) : (
                         <span className="text-muted-foreground">Sem validade</span>
@@ -167,9 +168,7 @@ export function PatientInsuranceList({ patientInsurances, insurances, patients }
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon">
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                      <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
                     </TableCell>
                   </TableRow>
                 ))
@@ -179,64 +178,50 @@ export function PatientInsuranceList({ patientInsurances, insurances, patients }
         </CardContent>
       </Card>
 
-      {/* Dialog para novo vínculo */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Vincular Paciente a Convênio</DialogTitle>
-            <DialogDescription>
-              Registre a carteirinha do convênio do paciente
-            </DialogDescription>
+            <DialogDescription>Registre a carteirinha do convênio do paciente</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label>Paciente *</Label>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o paciente" />
-                </SelectTrigger>
+              <Select value={form.patient_id} onValueChange={(v) => setForm(p => ({ ...p, patient_id: v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
                 <SelectContent>
                   {patients.map((patient) => (
-                    <SelectItem key={patient.id} value={patient.id}>
-                      {patient.name}
-                    </SelectItem>
+                    <SelectItem key={patient.id} value={patient.id}>{patient.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-
             <div className="grid gap-2">
               <Label>Convênio *</Label>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o convênio" />
-                </SelectTrigger>
+              <Select value={form.insurance_id} onValueChange={(v) => setForm(p => ({ ...p, insurance_id: v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione o convênio" /></SelectTrigger>
                 <SelectContent>
-                  {insurances.filter(i => i.is_active).map((insurance) => (
-                    <SelectItem key={insurance.id} value={insurance.id}>
-                      {insurance.name}
-                    </SelectItem>
+                  {insurances.filter(i => i.is_active).map((ins) => (
+                    <SelectItem key={ins.id} value={ins.id}>{ins.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-
             <div className="grid gap-2">
               <Label>Número da Carteirinha *</Label>
-              <Input placeholder="Ex: 0123456789012345" />
+              <Input placeholder="Ex: 0123456789012345" value={form.card_number}
+                onChange={(e) => setForm(p => ({ ...p, card_number: e.target.value }))} />
             </div>
-
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>Validade</Label>
-                <Input type="date" />
+                <Input type="date" value={form.valid_until}
+                  onChange={(e) => setForm(p => ({ ...p, valid_until: e.target.value }))} />
               </div>
               <div className="grid gap-2">
                 <Label>Tipo</Label>
-                <Select defaultValue="titular">
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                <Select value={form.holder_type} onValueChange={(v) => setForm(p => ({ ...p, holder_type: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="titular">Titular</SelectItem>
                     <SelectItem value="dependente">Dependente</SelectItem>
@@ -244,28 +229,26 @@ export function PatientInsuranceList({ patientInsurances, insurances, patients }
                 </Select>
               </div>
             </div>
-
             <div className="grid gap-2">
               <Label>Nome do Titular (se dependente)</Label>
-              <Input placeholder="Nome completo do titular" />
+              <Input placeholder="Nome completo do titular" value={form.holder_name}
+                onChange={(e) => setForm(p => ({ ...p, holder_name: e.target.value }))} />
             </div>
-
             <div className="grid gap-2">
               <Label>CPF do Titular (se dependente)</Label>
-              <Input placeholder="000.000.000-00" />
+              <Input placeholder="000.000.000-00" value={form.holder_cpf}
+                onChange={(e) => setForm(p => ({ ...p, holder_cpf: e.target.value }))} />
             </div>
-
             <div className="grid gap-2">
               <Label>Observações</Label>
-              <Textarea placeholder="Observações adicionais..." />
+              <Textarea placeholder="Observações adicionais..." value={form.notes}
+                onChange={(e) => setForm(p => ({ ...p, notes: e.target.value }))} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSave}>
-              Salvar
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSave} disabled={createPatientInsurance.isPending}>
+              {createPatientInsurance.isPending ? 'Salvando...' : 'Salvar'}
             </Button>
           </DialogFooter>
         </DialogContent>

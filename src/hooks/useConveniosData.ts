@@ -619,6 +619,58 @@ export function useCreateInsuranceProcedure() {
 }
 
 // =============================================
+// PATIENT INSURANCE MUTATIONS
+// =============================================
+
+export function useCreatePatientInsurance() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (formData: {
+      patient_id: string;
+      insurance_id: string;
+      card_number: string;
+      validity_date?: string;
+      holder_type?: string;
+      holder_name?: string;
+      holder_cpf?: string;
+      notes?: string;
+    }) => {
+      const clinicId = await getClinicId();
+      
+      const { data, error } = await supabase
+        .from('patient_insurances')
+        .insert({
+          clinic_id: clinicId,
+          patient_id: formData.patient_id,
+          insurance_id: formData.insurance_id,
+          card_number: formData.card_number,
+          validity_date: formData.validity_date || null,
+          holder_type: formData.holder_type || 'titular',
+          holder_name: formData.holder_name || null,
+          holder_cpf: formData.holder_cpf || null,
+          notes: formData.notes || null,
+          is_active: true,
+          is_primary: false,
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['patient-insurances'] });
+      queryClient.invalidateQueries({ queryKey: ['convenios-stats'] });
+      toast.success('Carteirinha vinculada com sucesso!');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Erro ao vincular carteirinha');
+    },
+  });
+}
+
+// =============================================
 // AUTHORIZATIONS MUTATIONS
 // =============================================
 

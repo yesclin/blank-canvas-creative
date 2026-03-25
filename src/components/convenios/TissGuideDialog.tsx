@@ -29,11 +29,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Separator } from "@/components/ui/separator";
 import type { TissGuide, Insurance, TissGuideType } from "@/types/convenios";
 import { guideTypeLabels, guideStatusLabels, guideStatusColors } from "@/types/convenios";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCreateTissGuide } from "@/hooks/useConveniosData";
+import { DocumentHeader } from "@/components/documents/DocumentHeader";
+import { toast } from "sonner";
+
 const useProcedureOptions = () => useQuery({
   queryKey: ["procedures-options"],
   queryFn: async () => {
@@ -41,8 +44,6 @@ const useProcedureOptions = () => useQuery({
     return (data || []).map(p => ({ id: p.id, name: p.name, code: "", price: p.price || 0 }));
   },
 });
-import { DocumentHeader } from "@/components/documents/DocumentHeader";
-import { toast } from "sonner";
 
 interface TissGuideDialogProps {
   open: boolean;
@@ -71,7 +72,8 @@ export function TissGuideDialog({
   patients,
   professionals 
 }: TissGuideDialogProps) {
-  const { data: mockProcedures = [] } = useProcedureOptions();
+  const { data: procedures = [] } = useProcedureOptions();
+  const createGuide = useCreateTissGuide();
   const isNew = !guide;
   const isEditable = !guide || ['rascunho', 'aberta'].includes(guide.status);
 
@@ -101,7 +103,6 @@ export function TissGuideDialog({
         beneficiary_card_number: guide.beneficiary_card_number || '',
         notes: guide.notes || '',
       });
-      // In real implementation, load items from guide
       setItems([]);
     } else {
       setFormData({
@@ -120,10 +121,8 @@ export function TissGuideDialog({
 
   const handleAddItem = () => {
     if (!newItemProcedure) return;
-    
-    const procedure = mockProcedures.find(p => p.id === newItemProcedure);
+    const procedure = procedures.find(p => p.id === newItemProcedure);
     if (!procedure) return;
-
     const newItem: GuideItem = {
       id: Date.now().toString(),
       procedure_id: procedure.id,
@@ -133,7 +132,6 @@ export function TissGuideDialog({
       unit_value: procedure.price,
       total_value: procedure.price,
     };
-
     setItems([...items, newItem]);
     setNewItemProcedure('');
   };
@@ -145,11 +143,7 @@ export function TissGuideDialog({
   const handleItemQuantityChange = (itemId: string, quantity: number) => {
     setItems(items.map(item => {
       if (item.id === itemId) {
-        return {
-          ...item,
-          quantity,
-          total_value: item.unit_value * quantity,
-        };
+        return { ...item, quantity, total_value: item.unit_value * quantity };
       }
       return item;
     }));
@@ -158,10 +152,7 @@ export function TissGuideDialog({
   const totalValue = items.reduce((sum, item) => sum + item.total_value, 0);
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
 
   const handleSave = () => {
@@ -169,19 +160,20 @@ export function TissGuideDialog({
       toast.error('Paciente e Convênio são obrigatórios');
       return;
     }
-    
-    toast.success(isNew ? 'Guia criada como rascunho!' : 'Guia atualizada!');
-    onOpenChange(false);
-  };
 
-  const handleSubmit = () => {
-    if (items.length === 0) {
-      toast.error('Adicione pelo menos um procedimento');
-      return;
-    }
-    
-    toast.success('Guia enviada para o convênio!');
-    onOpenChange(false);
+    createGuide.mutate({
+      guide_type: formData.guide_type,
+      patient_id: formData.patient_id,
+      insurance_id: formData.insurance_id,
+      professional_id: formData.professional_id,
+      service_date: formData.service_date,
+      authorization_number: formData.main_authorization_number || undefined,
+      beneficiary_card_number: formData.beneficiary_card_number || undefined,
+      notes: formData.notes || undefined,
+      total_requested: totalValue,
+    }, {
+      onSuccess: () => onOpenChange(false),
+    });
   };
 
   return (
@@ -205,7 +197,6 @@ export function TissGuideDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Institutional Header for Document/Print */}
         <div className="border rounded-lg p-4 bg-muted/30 print:bg-white">
           <DocumentHeader showAddress={true} showContact={true} />
         </div>
@@ -226,9 +217,7 @@ export function TissGuideDialog({
                   onValueChange={(value: TissGuideType) => setFormData(prev => ({ ...prev, guide_type: value }))}
                   disabled={!isEditable}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="consulta">Consulta</SelectItem>
                     <SelectItem value="sp_sadt">SP/SADT</SelectItem>
@@ -236,33 +225,23 @@ export function TissGuideDialog({
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="grid gap-2">
                 <Label>Data do Atendimento *</Label>
-                <Input 
-                  type="date" 
-                  value={formData.service_date}
+                <Input type="date" value={formData.service_date}
                   onChange={(e) => setFormData(prev => ({ ...prev, service_date: e.target.value }))}
-                  disabled={!isEditable}
-                />
+                  disabled={!isEditable} />
               </div>
             </div>
 
             <div className="grid gap-2">
               <Label>Paciente *</Label>
-              <Select 
-                value={formData.patient_id}
+              <Select value={formData.patient_id}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, patient_id: value }))}
-                disabled={!isEditable}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o paciente" />
-                </SelectTrigger>
+                disabled={!isEditable}>
+                <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
                 <SelectContent>
                   {patients.map((patient) => (
-                    <SelectItem key={patient.id} value={patient.id}>
-                      {patient.name}
-                    </SelectItem>
+                    <SelectItem key={patient.id} value={patient.id}>{patient.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -271,75 +250,52 @@ export function TissGuideDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>Convênio *</Label>
-                <Select 
-                  value={formData.insurance_id}
+                <Select value={formData.insurance_id}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, insurance_id: value }))}
-                  disabled={!isEditable}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o convênio" />
-                  </SelectTrigger>
+                  disabled={!isEditable}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o convênio" /></SelectTrigger>
                   <SelectContent>
                     {insurances.filter(i => i.is_active).map((insurance) => (
-                      <SelectItem key={insurance.id} value={insurance.id}>
-                        {insurance.name}
-                      </SelectItem>
+                      <SelectItem key={insurance.id} value={insurance.id}>{insurance.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="grid gap-2">
                 <Label>Nº Carteirinha</Label>
-                <Input 
-                  value={formData.beneficiary_card_number}
+                <Input value={formData.beneficiary_card_number}
                   onChange={(e) => setFormData(prev => ({ ...prev, beneficiary_card_number: e.target.value }))}
-                  placeholder="Número da carteirinha"
-                  disabled={!isEditable}
-                />
+                  placeholder="Número da carteirinha" disabled={!isEditable} />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>Profissional Executante</Label>
-                <Select 
-                  value={formData.professional_id}
+                <Select value={formData.professional_id}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, professional_id: value }))}
-                  disabled={!isEditable}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o profissional" />
-                  </SelectTrigger>
+                  disabled={!isEditable}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o profissional" /></SelectTrigger>
                   <SelectContent>
                     {professionals.map((prof) => (
-                      <SelectItem key={prof.id} value={prof.id}>
-                        {prof.name}
-                      </SelectItem>
+                      <SelectItem key={prof.id} value={prof.id}>{prof.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="grid gap-2">
                 <Label>Nº Autorização (se houver)</Label>
-                <Input 
-                  value={formData.main_authorization_number}
+                <Input value={formData.main_authorization_number}
                   onChange={(e) => setFormData(prev => ({ ...prev, main_authorization_number: e.target.value }))}
-                  placeholder="Número da autorização prévia"
-                  disabled={!isEditable}
-                />
+                  placeholder="Número da autorização prévia" disabled={!isEditable} />
               </div>
             </div>
 
             <div className="grid gap-2">
               <Label>Observações</Label>
-              <Textarea 
-                value={formData.notes}
+              <Textarea value={formData.notes}
                 onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                placeholder="Observações adicionais..."
-                disabled={!isEditable}
-              />
+                placeholder="Observações adicionais..." disabled={!isEditable} />
             </div>
 
             {guide?.rejection_reason && (
@@ -358,16 +314,15 @@ export function TissGuideDialog({
                     <SelectValue placeholder="Selecione um procedimento para adicionar" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockProcedures.map((proc) => (
+                    {procedures.map((proc) => (
                       <SelectItem key={proc.id} value={proc.id}>
-                        {proc.code} - {proc.name} ({formatCurrency(proc.price)})
+                        {proc.code ? `${proc.code} - ` : ''}{proc.name} ({formatCurrency(proc.price)})
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <Button onClick={handleAddItem} disabled={!newItemProcedure}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adicionar
+                  <Plus className="h-4 w-4 mr-2" />Adicionar
                 </Button>
               </div>
             )}
@@ -393,30 +348,20 @@ export function TissGuideDialog({
                 ) : (
                   items.map((item) => (
                     <TableRow key={item.id}>
-                      <TableCell className="font-mono">{item.procedure_code}</TableCell>
+                      <TableCell className="font-mono">{item.procedure_code || '-'}</TableCell>
                       <TableCell>{item.procedure_description}</TableCell>
                       <TableCell className="text-center">
                         {isEditable ? (
-                          <Input
-                            type="number"
-                            min="1"
-                            value={item.quantity}
+                          <Input type="number" min="1" value={item.quantity}
                             onChange={(e) => handleItemQuantityChange(item.id, parseInt(e.target.value) || 1)}
-                            className="w-16 text-center"
-                          />
-                        ) : (
-                          item.quantity
-                        )}
+                            className="w-16 text-center" />
+                        ) : item.quantity}
                       </TableCell>
                       <TableCell className="text-right">{formatCurrency(item.unit_value)}</TableCell>
                       <TableCell className="text-right font-medium">{formatCurrency(item.total_value)}</TableCell>
                       {isEditable && (
                         <TableCell>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => handleRemoveItem(item.id)}
-                          >
+                          <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </TableCell>
@@ -442,48 +387,18 @@ export function TissGuideDialog({
                   <History className="h-4 w-4" />
                   <span className="text-sm">Histórico de alterações da guia</span>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3 p-3 border rounded-lg">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium">Status alterado para Aprovada</div>
-                      <div className="text-xs text-muted-foreground">21/01/2024 às 14:00 • Sistema</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 border rounded-lg">
-                    <Send className="h-4 w-4 text-blue-600" />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium">Guia enviada para o convênio</div>
-                      <div className="text-xs text-muted-foreground">20/01/2024 às 10:00 • Recepcionista Maria</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 border rounded-lg">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium">Guia criada</div>
-                      <div className="text-xs text-muted-foreground">20/01/2024 às 09:00 • Recepcionista Maria</div>
-                    </div>
-                  </div>
-                </div>
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhum histórico registrado</p>
               </div>
             </TabsContent>
           )}
         </Tabs>
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {isEditable ? 'Cancelar' : 'Fechar'}
-          </Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           {isEditable && (
-            <>
-              <Button variant="secondary" onClick={handleSave}>
-                Salvar Rascunho
-              </Button>
-              <Button onClick={handleSubmit}>
-                <Send className="h-4 w-4 mr-2" />
-                Enviar Guia
-              </Button>
-            </>
+            <Button onClick={handleSave} disabled={createGuide.isPending}>
+              {createGuide.isPending ? 'Salvando...' : (isNew ? 'Salvar Rascunho' : 'Atualizar')}
+            </Button>
           )}
         </DialogFooter>
       </DialogContent>
