@@ -75,6 +75,7 @@ export type Database = {
           status: Database["public"]["Enums"]["document_status"]
           template_id: string | null
           updated_at: string
+          validation_code: string | null
         }
         Insert: {
           clinic_id: string
@@ -89,6 +90,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["document_status"]
           template_id?: string | null
           updated_at?: string
+          validation_code?: string | null
         }
         Update: {
           clinic_id?: string
@@ -103,6 +105,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["document_status"]
           template_id?: string | null
           updated_at?: string
+          validation_code?: string | null
         }
         Relationships: [
           {
