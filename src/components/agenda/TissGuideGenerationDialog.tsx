@@ -124,7 +124,7 @@ export function TissGuideGenerationDialog({
       guide_type: guideType,
       service_date: appointment.scheduled_date,
       procedure_name: appointment.appointment_type === 'procedimento' 
-        ? mockCoveredProcedures.find(p => p.id === selectedProcedure)?.name 
+        ? coveredProcedures.find(p => p.id === selectedProcedure)?.name 
         : undefined,
       authorization_number: authorizationNumber || undefined,
       card_number: cardNumber || undefined,
@@ -261,7 +261,7 @@ export function TissGuideGenerationDialog({
                   <SelectValue placeholder="Selecione o procedimento" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockCoveredProcedures.map((proc) => (
+                  {coveredProcedures.map((proc) => (
                     <SelectItem key={proc.id} value={proc.id}>
                       {proc.code} - {proc.name} ({formatCurrency(proc.price)})
                     </SelectItem>
