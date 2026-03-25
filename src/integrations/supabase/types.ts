@@ -4103,6 +4103,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      clinic_specialty_summary: { Args: { _clinic_id: string }; Returns: Json }
       deactivate_specialty: {
         Args: { _clinic_id: string; _specialty_slug: string }
         Returns: Json
