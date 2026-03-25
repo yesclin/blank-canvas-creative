@@ -2451,6 +2451,7 @@ export type Database = {
           ip_address: string | null
           patient_id: string
           revoked_at: string | null
+          revoked_by: string | null
           signature_data: string | null
           status: Database["public"]["Enums"]["consent_status"]
           term_id: string
@@ -2466,6 +2467,7 @@ export type Database = {
           ip_address?: string | null
           patient_id: string
           revoked_at?: string | null
+          revoked_by?: string | null
           signature_data?: string | null
           status?: Database["public"]["Enums"]["consent_status"]
           term_id: string
@@ -2481,6 +2483,7 @@ export type Database = {
           ip_address?: string | null
           patient_id?: string
           revoked_at?: string | null
+          revoked_by?: string | null
           signature_data?: string | null
           status?: Database["public"]["Enums"]["consent_status"]
           term_id?: string
