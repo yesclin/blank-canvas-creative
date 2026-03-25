@@ -40,7 +40,8 @@ export function MaterialFormDialog({
   material,
   mode,
 }: MaterialFormDialogProps) {
-  const { formData, updateField, resetForm, loadMaterial, isValid } = useMaterialForm();
+  const { formData, updateField, reset, setFormData } = useMaterialForm();
+  const isValid = formData.name.trim().length > 0;
   const createMutation = useCreateMaterial();
   const updateMutation = useUpdateMaterial();
 
@@ -49,9 +50,16 @@ export function MaterialFormDialog({
   useEffect(() => {
     if (open) {
       if (mode === "edit" && material) {
-        loadMaterial(material);
+        setFormData({
+          name: material.name,
+          category: material.category,
+          unit: material.unit,
+          min_quantity: material.min_quantity,
+          unit_cost: material.unit_cost,
+          description: material.description,
+        });
       } else {
-        resetForm();
+        reset();
       }
     }
   }, [open, mode, material]);
@@ -61,12 +69,12 @@ export function MaterialFormDialog({
 
     try {
       if (mode === "edit" && material) {
-        await updateMutation.mutateAsync({ id: material.id, formData });
+        await updateMutation.mutateAsync({ id: material.id, ...formData });
       } else {
         await createMutation.mutateAsync(formData);
       }
       onOpenChange(false);
-      resetForm();
+      reset();
     } catch (error) {
       // Error handled by mutation
     }
@@ -75,7 +83,7 @@ export function MaterialFormDialog({
   const handleClose = () => {
     if (!isLoading) {
       onOpenChange(false);
-      resetForm();
+      reset();
     }
   };
 

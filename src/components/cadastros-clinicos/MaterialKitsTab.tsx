@@ -53,8 +53,8 @@ import {
   useCreateMaterialKit,
   useUpdateMaterialKit,
   useToggleMaterialKitStatus,
-  useAddMaterialToKit,
-  useRemoveMaterialFromKit,
+  useAddMaterialKitItem,
+  useRemoveMaterialKitItem,
   useMaterialKitForm,
   useMaterialKitItemForm,
 } from "@/hooks/useMaterialKitsCRUD";
@@ -81,11 +81,13 @@ export function MaterialKitsTab() {
   const createKitMutation = useCreateMaterialKit();
   const updateKitMutation = useUpdateMaterialKit();
   const toggleKitMutation = useToggleMaterialKitStatus();
-  const addItemMutation = useAddMaterialToKit();
-  const removeItemMutation = useRemoveMaterialFromKit();
+  const addItemMutation = useAddMaterialKitItem();
+  const removeItemMutation = useRemoveMaterialKitItem();
 
-  const { formData: kitFormData, updateField: updateKitField, resetForm: resetKitForm, loadKit, isValid: isKitValid } = useMaterialKitForm();
-  const { formData: itemFormData, updateField: updateItemField, resetForm: resetItemForm, isValid: isItemValid } = useMaterialKitItemForm();
+  const { formData: kitFormData, updateField: updateKitField, reset: resetKitForm, setFormData: setKitFormData } = useMaterialKitForm();
+  const isKitValid = kitFormData.name.trim().length > 0;
+  const { formData: itemFormData, updateField: updateItemField, reset: resetItemForm } = useMaterialKitItemForm();
+  const isItemValid = itemFormData.material_id.length > 0 && itemFormData.quantity > 0;
   
   const { isOwner, can } = usePermissions();
   const canManage = isOwner || can("configuracoes", "edit");
@@ -110,7 +112,7 @@ export function MaterialKitsTab() {
   };
 
   const handleEditKit = (kit: MaterialKit) => {
-    loadKit(kit);
+    setKitFormData({ name: kit.name, description: kit.description });
     setEditKit(kit);
     setKitDialogOpen(true);
   };
@@ -124,7 +126,7 @@ export function MaterialKitsTab() {
     if (!isKitValid) return;
 
     if (editKit) {
-      await updateKitMutation.mutateAsync({ id: editKit.id, formData: kitFormData });
+      await updateKitMutation.mutateAsync({ id: editKit.id, ...kitFormData });
     } else {
       await createKitMutation.mutateAsync(kitFormData);
     }
@@ -142,8 +144,8 @@ export function MaterialKitsTab() {
     if (!isItemValid || !selectedKit) return;
 
     await addItemMutation.mutateAsync({
-      kitId: selectedKit.id,
-      formData: itemFormData,
+      kit_id: selectedKit.id,
+      ...itemFormData,
     });
     setAddItemDialogOpen(false);
     resetItemForm();
@@ -151,7 +153,7 @@ export function MaterialKitsTab() {
 
   const handleRemoveItem = async () => {
     if (!deleteItemId || !selectedKit) return;
-    await removeItemMutation.mutateAsync({ id: deleteItemId, kitId: selectedKit.id });
+    await removeItemMutation.mutateAsync({ itemId: deleteItemId, kitId: selectedKit.id });
     setDeleteItemId(null);
   };
 
@@ -159,7 +161,7 @@ export function MaterialKitsTab() {
     if (!confirmToggle) return;
     await toggleKitMutation.mutateAsync({
       id: confirmToggle.id,
-      isActive: confirmToggle.is_active,
+      is_active: !confirmToggle.is_active,
     });
     setConfirmToggle(null);
   };
