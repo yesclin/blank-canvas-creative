@@ -3,32 +3,33 @@ import { supabase } from '@/integrations/supabase/client';
 import { useClinicData } from '@/hooks/useClinicData';
 import { toast } from 'sonner';
 
+/**
+ * Maps to the real `clinical_media` table.
+ */
 export interface MedicalRecordFile {
   id: string;
   clinic_id: string;
   patient_id: string;
-  entry_id: string | null;
   file_name: string;
-  file_type: string;
+  file_type: string | null;
   file_size: number | null;
   file_url: string;
   category: string;
   description: string | null;
-  is_before_after: boolean;
-  before_after_type: string | null;
+  professional_id: string | null;
   created_at: string;
-  created_by: string | null;
 }
 
 export interface FileInput {
   patient_id: string;
-  entry_id?: string | null;
   file_name: string;
   file_type: string;
   file_size?: number;
   file_url: string;
   category: string;
   description?: string;
+  // Legacy fields kept for API compat — ignored
+  entry_id?: string | null;
   is_before_after?: boolean;
   before_after_type?: 'before' | 'after';
 }
@@ -44,14 +45,29 @@ export function useMedicalRecordFiles() {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('medical_record_files')
+        .from('clinical_media')
         .select('*')
         .eq('clinic_id', clinic.id)
         .eq('patient_id', patientId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setFiles((data as MedicalRecordFile[]) || []);
+
+      const mapped: MedicalRecordFile[] = (data || []).map((row) => ({
+        id: row.id,
+        clinic_id: row.clinic_id,
+        patient_id: row.patient_id,
+        file_name: row.file_name,
+        file_type: row.file_type,
+        file_size: row.file_size,
+        file_url: row.file_url,
+        category: row.category || 'general',
+        description: row.description,
+        professional_id: row.professional_id,
+        created_at: row.created_at,
+      }));
+
+      setFiles(mapped);
     } catch (err) {
       console.error('Error fetching files:', err);
       toast.error('Erro ao carregar arquivos');
@@ -67,20 +83,17 @@ export function useMedicalRecordFiles() {
       const { data: userData } = await supabase.auth.getUser();
 
       const { data, error } = await supabase
-        .from('medical_record_files')
+        .from('clinical_media')
         .insert({
           clinic_id: clinic.id,
           patient_id: input.patient_id,
-          entry_id: input.entry_id || null,
           file_name: input.file_name,
           file_type: input.file_type,
           file_size: input.file_size || null,
           file_url: input.file_url,
           category: input.category,
           description: input.description || null,
-          is_before_after: input.is_before_after || false,
-          before_after_type: input.before_after_type || null,
-          created_by: userData?.user?.id || null,
+          professional_id: userData?.user?.id ? undefined : null,
         })
         .select()
         .single();
@@ -102,7 +115,8 @@ export function useMedicalRecordFiles() {
   const deleteFile = async (id: string, patientId: string): Promise<boolean> => {
     setSaving(true);
     try {
-      const { error } = await supabase.from('medical_record_files').delete().eq('id', id);
+      // clinical_media only allows delete for admins via RLS
+      const { error } = await supabase.from('clinical_media').delete().eq('id', id);
 
       if (error) throw error;
 
@@ -118,31 +132,25 @@ export function useMedicalRecordFiles() {
     }
   };
 
-  // Filter by category
   const getFilesByCategory = useCallback(
     (category: string) => files.filter((f) => f.category === category),
     [files]
   );
 
-  // Get images only
   const getImages = useCallback(
-    () => files.filter((f) => f.file_type.startsWith('image/')),
+    () => files.filter((f) => f.file_type?.startsWith('image/')),
     [files]
   );
 
-  // Get documents
   const getDocuments = useCallback(
-    () => files.filter((f) => !f.file_type.startsWith('image/')),
+    () => files.filter((f) => !f.file_type?.startsWith('image/')),
     [files]
   );
 
-  // Get before/after pairs
   const getBeforeAfterPairs = useCallback(() => {
-    const beforeAfter = files.filter((f) => f.is_before_after);
-    const before = beforeAfter.filter((f) => f.before_after_type === 'before');
-    const after = beforeAfter.filter((f) => f.before_after_type === 'after');
-    return { before, after };
-  }, [files]);
+    // Before/after is now managed via before_after_records table, not inline flags
+    return { before: [] as MedicalRecordFile[], after: [] as MedicalRecordFile[] };
+  }, []);
 
   return {
     files,
