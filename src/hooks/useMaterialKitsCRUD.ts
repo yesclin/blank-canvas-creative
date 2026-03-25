@@ -10,7 +10,7 @@ import type {
 } from '@/types/cadastros-clinicos';
 
 // =============================================
-// HELPER: Get clinic_id from current user
+// HELPER
 // =============================================
 async function getClinicId(): Promise<string> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -27,7 +27,7 @@ async function getClinicId(): Promise<string> {
 }
 
 // =============================================
-// KIT QUERIES
+// KIT QUERIES — backed by product_kits table
 // =============================================
 
 export function useMaterialKitsList(includeInactive: boolean = false) {
@@ -37,13 +37,13 @@ export function useMaterialKitsList(includeInactive: boolean = false) {
       const clinicId = await getClinicId();
       
       let query = supabase
-        .from('material_kits')
+        .from('product_kits')
         .select(`
           *,
-          material_kit_items (
+          product_kit_items (
             id,
             quantity,
-            materials:material_id (unit_cost)
+            products:product_id (cost_price)
           )
         `)
         .eq('clinic_id', clinicId)
@@ -57,47 +57,28 @@ export function useMaterialKitsList(includeInactive: boolean = false) {
       
       if (error) throw error;
       
-      // Calculate items count and total cost
-      return (data || []).map((kit: any) => {
-        const items = kit.material_kit_items || [];
+      return (data || []).map((kit: any): MaterialKit => {
+        const items = kit.product_kit_items || [];
         const totalCost = items.reduce((sum: number, item: any) => {
-          const unitCost = item.materials?.unit_cost || 0;
-          return sum + (item.quantity * unitCost);
+          const unitCost = item.products?.cost_price || 0;
+          return sum + (Number(unitCost) * Number(item.quantity));
         }, 0);
         
         return {
-          ...kit,
+          id: kit.id,
+          clinic_id: kit.clinic_id,
+          name: kit.name,
+          description: kit.description,
+          is_active: kit.is_active,
           items_count: items.length,
           total_cost: totalCost,
-          material_kit_items: undefined, // Remove nested data
-        } as MaterialKit;
+          created_at: kit.created_at,
+          updated_at: kit.updated_at,
+        };
       });
     },
   });
 }
-
-export function useMaterialKit(id: string | null) {
-  return useQuery({
-    queryKey: ['material-kit', id],
-    queryFn: async () => {
-      if (!id) return null;
-      
-      const { data, error } = await supabase
-        .from('material_kits')
-        .select('*')
-        .eq('id', id)
-        .single();
-        
-      if (error) throw error;
-      return data as MaterialKit;
-    },
-    enabled: !!id,
-  });
-}
-
-// =============================================
-// KIT ITEMS QUERIES
-// =============================================
 
 export function useMaterialKitItems(kitId: string | null) {
   return useQuery({
@@ -106,22 +87,29 @@ export function useMaterialKitItems(kitId: string | null) {
       if (!kitId) return [];
       
       const { data, error } = await supabase
-        .from('material_kit_items')
+        .from('product_kit_items')
         .select(`
-          *,
-          materials:material_id (name, category, unit_cost)
+          id,
+          kit_id,
+          product_id,
+          quantity,
+          created_at,
+          products:product_id (id, name, unit, cost_price)
         `)
-        .eq('kit_id', kitId)
-        .order('created_at');
+        .eq('kit_id', kitId);
       
       if (error) throw error;
       
-      return (data || []).map((item: any) => ({
-        ...item,
-        material_name: item.materials?.name,
-        material_category: item.materials?.category,
-        material_unit_cost: item.materials?.unit_cost,
-      })) as MaterialKitItem[];
+      return (data || []).map((item: any): MaterialKitItem => ({
+        id: item.id,
+        kit_id: item.kit_id,
+        material_id: item.product_id,
+        material_name: item.products?.name || 'Produto',
+        material_unit: item.products?.unit || 'un',
+        quantity: Number(item.quantity),
+        unit_cost: Number(item.products?.cost_price) || 0,
+        created_at: item.created_at,
+      }));
     },
     enabled: !!kitId,
   });
@@ -137,30 +125,27 @@ export function useCreateMaterialKit() {
   return useMutation({
     mutationFn: async (formData: MaterialKitFormData) => {
       const clinicId = await getClinicId();
-      const { data: { user } } = await supabase.auth.getUser();
       
       const { data, error } = await supabase
-        .from('material_kits')
+        .from('product_kits')
         .insert({
           clinic_id: clinicId,
           name: formData.name,
           description: formData.description,
-          created_by: user?.id,
-          is_active: true,
         })
         .select()
         .single();
-        
+      
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['material-kits-list'] });
-      toast.success('Kit criado com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['product-kits-list'] });
+      toast.success('Kit criado com sucesso');
     },
     onError: (error) => {
-      console.error('Error creating material kit:', error);
-      toast.error('Erro ao criar kit');
+      toast.error('Erro ao criar kit: ' + error.message);
     },
   });
 }
@@ -169,29 +154,27 @@ export function useUpdateMaterialKit() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, formData }: { id: string; formData: MaterialKitFormData }) => {
+    mutationFn: async ({ id, ...formData }: MaterialKitFormData & { id: string }) => {
       const { data, error } = await supabase
-        .from('material_kits')
+        .from('product_kits')
         .update({
           name: formData.name,
           description: formData.description,
-          updated_at: new Date().toISOString(),
         })
         .eq('id', id)
         .select()
         .single();
-        
+      
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['material-kits-list'] });
-      queryClient.invalidateQueries({ queryKey: ['material-kit'] });
-      toast.success('Kit atualizado com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['product-kits-list'] });
+      toast.success('Kit atualizado com sucesso');
     },
     onError: (error) => {
-      console.error('Error updating material kit:', error);
-      toast.error('Erro ao atualizar kit');
+      toast.error('Erro ao atualizar kit: ' + error.message);
     },
   });
 }
@@ -200,27 +183,18 @@ export function useToggleMaterialKitStatus() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
-      const { data, error } = await supabase
-        .from('material_kits')
-        .update({
-          is_active: !isActive,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', id)
-        .select()
-        .single();
-        
+    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
+      const { error } = await supabase
+        .from('product_kits')
+        .update({ is_active })
+        .eq('id', id);
+      
       if (error) throw error;
-      return data;
     },
-    onSuccess: (data) => {
+    onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['material-kits-list'] });
-      toast.success(data.is_active ? 'Kit ativado!' : 'Kit desativado!');
-    },
-    onError: (error) => {
-      console.error('Error toggling material kit status:', error);
-      toast.error('Erro ao alterar status do kit');
+      queryClient.invalidateQueries({ queryKey: ['product-kits-list'] });
+      toast.success(vars.is_active ? 'Kit ativado' : 'Kit desativado');
     },
   });
 }
@@ -231,114 +205,75 @@ export function useDeleteMaterialKit() {
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('material_kits')
-        .delete()
+        .from('product_kits')
+        .update({ is_active: false })
         .eq('id', id);
-        
+      
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['material-kits-list'] });
-      toast.success('Kit removido com sucesso!');
-    },
-    onError: (error) => {
-      console.error('Error deleting material kit:', error);
-      toast.error('Erro ao remover kit');
+      queryClient.invalidateQueries({ queryKey: ['product-kits-list'] });
+      toast.success('Kit removido com sucesso');
     },
   });
 }
 
 // =============================================
-// KIT ITEMS MUTATIONS
+// KIT ITEM MUTATIONS
 // =============================================
 
-export function useAddMaterialToKit() {
+export function useAddMaterialKitItem() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ kitId, formData }: { kitId: string; formData: MaterialKitItemFormData }) => {
+    mutationFn: async (formData: MaterialKitItemFormData & { kit_id: string }) => {
       const { data, error } = await supabase
-        .from('material_kit_items')
+        .from('product_kit_items')
         .insert({
-          kit_id: kitId,
-          material_id: formData.material_id,
+          kit_id: formData.kit_id,
+          product_id: formData.material_id,
           quantity: formData.quantity,
-          unit: formData.unit,
         })
         .select()
         .single();
-        
-      if (error) {
-        if (error.code === '23505') {
-          throw new Error('Este material já está no kit');
-        }
-        throw error;
-      }
+      
+      if (error) throw error;
       return data;
     },
-    onSuccess: (_, { kitId }) => {
-      queryClient.invalidateQueries({ queryKey: ['material-kit-items', kitId] });
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['material-kit-items', vars.kit_id] });
       queryClient.invalidateQueries({ queryKey: ['material-kits-list'] });
-      toast.success('Material adicionado ao kit!');
-    },
-    onError: (error: any) => {
-      console.error('Error adding material to kit:', error);
-      toast.error(error.message || 'Erro ao adicionar material');
-    },
-  });
-}
-
-export function useUpdateKitItem() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ id, kitId, formData }: { id: string; kitId: string; formData: Partial<MaterialKitItemFormData> }) => {
-      const { data, error } = await supabase
-        .from('material_kit_items')
-        .update({
-          quantity: formData.quantity,
-          unit: formData.unit,
-        })
-        .eq('id', id)
-        .select()
-        .single();
-        
-      if (error) throw error;
-      return { data, kitId };
-    },
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['material-kit-items', result.kitId] });
-      queryClient.invalidateQueries({ queryKey: ['material-kits-list'] });
-      toast.success('Item atualizado!');
+      queryClient.invalidateQueries({ queryKey: ['product-kits-list'] });
+      toast.success('Item adicionado ao kit');
     },
     onError: (error) => {
-      console.error('Error updating kit item:', error);
-      toast.error('Erro ao atualizar item');
+      toast.error('Erro ao adicionar item: ' + error.message);
     },
   });
 }
 
-export function useRemoveMaterialFromKit() {
+export function useRemoveMaterialKitItem() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, kitId }: { id: string; kitId: string }) => {
+    mutationFn: async ({ itemId, kitId }: { itemId: string; kitId: string }) => {
       const { error } = await supabase
-        .from('material_kit_items')
+        .from('product_kit_items')
         .delete()
-        .eq('id', id);
-        
+        .eq('id', itemId);
+      
       if (error) throw error;
       return { kitId };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['material-kit-items', result.kitId] });
       queryClient.invalidateQueries({ queryKey: ['material-kits-list'] });
-      toast.success('Material removido do kit!');
+      queryClient.invalidateQueries({ queryKey: ['product-kits-list'] });
+      toast.success('Item removido do kit');
     },
     onError: (error) => {
-      console.error('Error removing material from kit:', error);
-      toast.error('Erro ao remover material');
+      toast.error('Erro ao remover item: ' + error.message);
     },
   });
 }
@@ -355,68 +290,32 @@ const defaultKitFormData: MaterialKitFormData = {
 export function useMaterialKitForm(initialData?: MaterialKit | null) {
   const [formData, setFormData] = useState<MaterialKitFormData>(
     initialData
-      ? {
-          name: initialData.name,
-          description: initialData.description || '',
-        }
+      ? { name: initialData.name, description: initialData.description }
       : defaultKitFormData
   );
 
-  const updateField = <K extends keyof MaterialKitFormData>(
-    field: K,
-    value: MaterialKitFormData[K]
-  ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  const updateField = <K extends keyof MaterialKitFormData>(field: K, value: MaterialKitFormData[K]) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const resetForm = () => {
-    setFormData(defaultKitFormData);
-  };
+  const reset = () => setFormData(defaultKitFormData);
 
-  const loadKit = (kit: MaterialKit) => {
-    setFormData({
-      name: kit.name,
-      description: kit.description || '',
-    });
-  };
-
-  const isValid = formData.name.trim().length > 0;
-
-  return {
-    formData,
-    updateField,
-    resetForm,
-    loadKit,
-    isValid,
-  };
+  return { formData, setFormData, updateField, reset };
 }
 
 const defaultItemFormData: MaterialKitItemFormData = {
   material_id: '',
   quantity: 1,
-  unit: 'unidade',
 };
 
 export function useMaterialKitItemForm() {
   const [formData, setFormData] = useState<MaterialKitItemFormData>(defaultItemFormData);
 
-  const updateField = <K extends keyof MaterialKitItemFormData>(
-    field: K,
-    value: MaterialKitItemFormData[K]
-  ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  const updateField = <K extends keyof MaterialKitItemFormData>(field: K, value: MaterialKitItemFormData[K]) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const resetForm = () => {
-    setFormData(defaultItemFormData);
-  };
+  const reset = () => setFormData(defaultItemFormData);
 
-  const isValid = formData.material_id && formData.quantity > 0;
-
-  return {
-    formData,
-    updateField,
-    resetForm,
-    isValid,
-  };
+  return { formData, setFormData, updateField, reset };
 }

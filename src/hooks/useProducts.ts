@@ -68,13 +68,12 @@ export function useLowStockProducts() {
         .from("products")
         .select("*")
         .eq("is_active", true)
-        .order("stock_quantity");
+        .order("current_stock");
       
       if (error) throw error;
       
-      // Filter client-side: products where stock is at or below minimum
       return (data as Product[]).filter(
-        p => p.stock_quantity <= p.min_stock_quantity
+        p => p.current_stock <= p.min_stock
       );
     },
   });
@@ -95,14 +94,13 @@ export function useCreateProduct() {
           name: data.name,
           description: data.description || null,
           sku: data.sku || null,
-          barcode: data.barcode || null,
           category: data.category || null,
           unit: data.unit,
-          stock_quantity: data.stock_quantity || 0,
-          min_stock_quantity: data.min_stock_quantity || 0,
+          current_stock: data.current_stock || 0,
+          min_stock: data.min_stock || 0,
           cost_price: data.cost_price || 0,
           sale_price: data.sale_price,
-          supplier: data.supplier || null,
+          product_type: data.product_type || 'material_clinico',
           is_active: data.is_active ?? true,
         })
         .select()
@@ -113,10 +111,11 @@ export function useCreateProduct() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-products"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-stats"] });
       toast.success("Produto criado com sucesso!");
     },
     onError: (error: Error) => {
-      console.error("Error creating product:", error);
       toast.error("Erro ao criar produto: " + error.message);
     },
   });
@@ -128,12 +127,21 @@ export function useUpdateProduct() {
   
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<ProductFormData> }) => {
+      const updateData: Record<string, any> = { updated_at: new Date().toISOString() };
+      if (data.name !== undefined) updateData.name = data.name;
+      if (data.description !== undefined) updateData.description = data.description;
+      if (data.sku !== undefined) updateData.sku = data.sku;
+      if (data.category !== undefined) updateData.category = data.category;
+      if (data.unit !== undefined) updateData.unit = data.unit;
+      if (data.current_stock !== undefined) updateData.current_stock = data.current_stock;
+      if (data.min_stock !== undefined) updateData.min_stock = data.min_stock;
+      if (data.cost_price !== undefined) updateData.cost_price = data.cost_price;
+      if (data.sale_price !== undefined) updateData.sale_price = data.sale_price;
+      if (data.is_active !== undefined) updateData.is_active = data.is_active;
+      
       const { error } = await supabase
         .from("products")
-        .update({
-          ...data,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq("id", id);
       
       if (error) throw error;
@@ -141,7 +149,8 @@ export function useUpdateProduct() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      // Atualizar custos de procedimentos quando cost_price mudar
+      queryClient.invalidateQueries({ queryKey: ["stock-products"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-stats"] });
       queryClient.invalidateQueries({ queryKey: ["procedure-product-costs"] });
       queryClient.invalidateQueries({ queryKey: ["procedure-product-cost"] });
       queryClient.invalidateQueries({ queryKey: ["procedure-products"] });
@@ -169,6 +178,7 @@ export function useDeleteProduct() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-products"] });
       toast.success("Produto removido!");
     },
     onError: (error: Error) => {
@@ -186,7 +196,7 @@ export function useUpdateProductStock() {
       const { error } = await supabase
         .from("products")
         .update({ 
-          stock_quantity: quantity,
+          current_stock: quantity,
           updated_at: new Date().toISOString() 
         })
         .eq("id", id);
@@ -196,6 +206,8 @@ export function useUpdateProductStock() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-products"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-stats"] });
     },
     onError: (error: Error) => {
       toast.error("Erro ao atualizar estoque: " + error.message);

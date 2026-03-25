@@ -91,16 +91,15 @@ export function useCreateStockMovement() {
       // Get current product stock
       const { data: product, error: productError } = await supabase
         .from("products")
-        .select("stock_quantity, cost_price")
+        .select("current_stock, cost_price")
         .eq("id", data.product_id)
         .single();
       
       if (productError) throw productError;
       
-      const previousQuantity = Number(product.stock_quantity) || 0;
+      const previousQuantity = Number(product.current_stock) || 0;
       let newQuantity = previousQuantity;
       
-      // Calculate new quantity based on movement type
       switch (data.movement_type) {
         case 'entrada':
         case 'devolucao':
@@ -111,14 +110,13 @@ export function useCreateStockMovement() {
           newQuantity = previousQuantity - data.quantity;
           break;
         case 'ajuste':
-          newQuantity = data.quantity; // Direct set for adjustments
+          newQuantity = data.quantity;
           break;
       }
       
       const unitCost = data.unit_cost || product.cost_price || 0;
-      const totalCost = unitCost * data.quantity;
       
-      // Insert movement
+      // Insert movement (columns match real DB schema)
       const { data: movement, error: movementError } = await supabase
         .from("stock_movements")
         .insert({
@@ -126,15 +124,11 @@ export function useCreateStockMovement() {
           product_id: data.product_id,
           movement_type: data.movement_type,
           quantity: data.quantity,
-          previous_quantity: previousQuantity,
-          new_quantity: newQuantity,
           unit_cost: unitCost,
-          total_cost: totalCost,
-          reason: data.reason,
+          notes: data.notes || null,
           reference_type: data.reference_type || null,
           reference_id: data.reference_id || null,
-          notes: data.notes || null,
-          created_by: user?.id || null,
+          performed_by: user?.id || null,
         })
         .select()
         .single();
@@ -145,7 +139,7 @@ export function useCreateStockMovement() {
       const { error: updateError } = await supabase
         .from("products")
         .update({ 
-          stock_quantity: newQuantity,
+          current_stock: newQuantity,
           updated_at: new Date().toISOString() 
         })
         .eq("id", data.product_id);
@@ -157,10 +151,12 @@ export function useCreateStockMovement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-products"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-alerts"] });
       toast.success("Movimentação registrada com sucesso!");
     },
     onError: (error: Error) => {
-      console.error("Error creating stock movement:", error);
       toast.error("Erro ao registrar movimentação: " + error.message);
     },
   });
@@ -177,7 +173,7 @@ export function useStockMovementStats(startDate?: string, endDate?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stock_movements")
-        .select("movement_type, quantity, total_cost")
+        .select("movement_type, quantity, unit_cost")
         .gte("created_at", `${start}T00:00:00`)
         .lte("created_at", `${end}T23:59:59`);
       
@@ -192,9 +188,9 @@ export function useStockMovementStats(startDate?: string, endDate?: string) {
         movementCount: data.length,
       };
       
-      data.forEach((m) => {
+      data.forEach((m: any) => {
         const qty = Number(m.quantity) || 0;
-        const cost = Number(m.total_cost) || 0;
+        const cost = (Number(m.unit_cost) || 0) * qty;
         
         if (m.movement_type === 'entrada' || m.movement_type === 'devolucao') {
           stats.totalEntradas += qty;
