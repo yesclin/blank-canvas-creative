@@ -183,9 +183,6 @@ export function useProntuarioData(patientId: string | null) {
     const typeMapping: Record<string, string[]> = {
       evolucao: ['evolution'],
       anamnese: ['anamnesis'],
-      diagnostico: ['diagnosis'],
-      prescricoes: ['prescription'],
-      procedimentos: ['procedure'],
     };
 
     const types = typeMapping[tabKey] || [];
