@@ -24,12 +24,12 @@ export interface OfficialSpecialtyDef {
 }
 
 export const OFFICIAL_SPECIALTIES: readonly OfficialSpecialtyDef[] = [
-  { name: "Clínica Geral", slug: "clinica-geral" },
+  { name: "Clínica Geral", slug: "geral" },
   { name: "Psicologia", slug: "psicologia" },
   { name: "Nutrição", slug: "nutricao" },
   { name: "Fisioterapia", slug: "fisioterapia" },
   { name: "Pilates", slug: "pilates" },
-  { name: "Estética / Harmonização Facial", slug: "estetica-harmonizacao" },
+  { name: "Estética / Harmonização Facial", slug: "estetica" },
   { name: "Odontologia", slug: "odontologia" },
   { name: "Dermatologia", slug: "dermatologia" },
   { name: "Pediatria", slug: "pediatria" },
