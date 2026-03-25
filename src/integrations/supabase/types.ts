@@ -14,6 +14,183 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointment_events: {
+        Row: {
+          appointment_id: string
+          clinic_id: string
+          created_at: string
+          event_type: string
+          id: string
+          new_status: string | null
+          notes: string | null
+          old_status: string | null
+          performed_by: string | null
+        }
+        Insert: {
+          appointment_id: string
+          clinic_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          new_status?: string | null
+          notes?: string | null
+          old_status?: string | null
+          performed_by?: string | null
+        }
+        Update: {
+          appointment_id?: string
+          clinic_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          new_status?: string | null
+          notes?: string | null
+          old_status?: string | null
+          performed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_events_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_events_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      appointment_rules: {
+        Row: {
+          clinic_id: string
+          config: Json
+          created_at: string
+          id: string
+          is_active: boolean
+          rule_type: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          config?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          rule_type: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          config?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          rule_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_rules_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      appointment_statuses: {
+        Row: {
+          clinic_id: string
+          color: string | null
+          created_at: string
+          icon: string | null
+          id: string
+          is_system: boolean
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          clinic_id: string
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_system?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          clinic_id?: string
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_system?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_statuses_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      appointment_types: {
+        Row: {
+          clinic_id: string
+          color: string | null
+          created_at: string
+          duration_minutes: number
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          color?: string | null
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          color?: string | null
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_types_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           appointment_type: string
@@ -263,6 +440,44 @@ export type Database = {
           },
         ]
       }
+      idle_alert_settings: {
+        Row: {
+          alert_type: string
+          clinic_id: string
+          created_at: string
+          id: string
+          idle_threshold_minutes: number
+          is_active: boolean
+          updated_at: string
+        }
+        Insert: {
+          alert_type?: string
+          clinic_id: string
+          created_at?: string
+          id?: string
+          idle_threshold_minutes?: number
+          is_active?: boolean
+          updated_at?: string
+        }
+        Update: {
+          alert_type?: string
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          idle_threshold_minutes?: number
+          is_active?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "idle_alert_settings_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       insurances: {
         Row: {
           ans_code: string | null
@@ -394,6 +609,175 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_clinical_flags: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          flag_type: string
+          id: string
+          is_active: boolean
+          patient_id: string
+          severity: string | null
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          flag_type: string
+          id?: string
+          is_active?: boolean
+          patient_id: string
+          severity?: string | null
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          flag_type?: string
+          id?: string
+          is_active?: boolean
+          patient_id?: string
+          severity?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_clinical_flags_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_clinical_flags_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_guardians: {
+        Row: {
+          clinic_id: string
+          cpf: string | null
+          created_at: string
+          full_name: string
+          id: string
+          is_primary: boolean
+          patient_id: string
+          phone: string | null
+          relationship: string | null
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          cpf?: string | null
+          created_at?: string
+          full_name: string
+          id?: string
+          is_primary?: boolean
+          patient_id: string
+          phone?: string | null
+          relationship?: string | null
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          cpf?: string | null
+          created_at?: string
+          full_name?: string
+          id?: string
+          is_primary?: boolean
+          patient_id?: string
+          phone?: string | null
+          relationship?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_guardians_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_guardians_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_insurances: {
+        Row: {
+          card_number: string | null
+          clinic_id: string
+          created_at: string
+          id: string
+          insurance_id: string
+          is_active: boolean
+          patient_id: string
+          plan_name: string | null
+          updated_at: string
+          validity_date: string | null
+        }
+        Insert: {
+          card_number?: string | null
+          clinic_id: string
+          created_at?: string
+          id?: string
+          insurance_id: string
+          is_active?: boolean
+          patient_id: string
+          plan_name?: string | null
+          updated_at?: string
+          validity_date?: string | null
+        }
+        Update: {
+          card_number?: string | null
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          insurance_id?: string
+          is_active?: boolean
+          patient_id?: string
+          plan_name?: string | null
+          updated_at?: string
+          validity_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_insurances_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_insurances_insurance_id_fkey"
+            columns: ["insurance_id"]
+            isOneToOne: false
+            referencedRelation: "insurances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_insurances_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
             referencedColumns: ["id"]
           },
         ]
@@ -557,6 +941,181 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professional_authorized_procedures: {
+        Row: {
+          created_at: string
+          id: string
+          procedure_id: string
+          professional_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          procedure_id: string
+          professional_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          procedure_id?: string
+          professional_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_authorized_procedures_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_authorized_procedures_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professional_authorized_rooms: {
+        Row: {
+          created_at: string
+          id: string
+          professional_id: string
+          room_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          professional_id: string
+          room_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          professional_id?: string
+          room_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_authorized_rooms_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_authorized_rooms_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professional_schedules: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          day_of_week: number
+          end_time: string
+          id: string
+          is_active: boolean
+          professional_id: string
+          room_id: string | null
+          slot_duration_minutes: number
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          id?: string
+          is_active?: boolean
+          professional_id: string
+          room_id?: string | null
+          slot_duration_minutes?: number
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          professional_id?: string
+          room_id?: string | null
+          slot_duration_minutes?: number
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_schedules_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_schedules_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_schedules_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professional_specialties: {
+        Row: {
+          created_at: string
+          id: string
+          is_primary: boolean
+          professional_id: string
+          specialty_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          professional_id: string
+          specialty_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          professional_id?: string
+          specialty_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_specialties_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_specialties_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
             referencedColumns: ["id"]
           },
         ]
@@ -806,6 +1365,56 @@ export type Database = {
           },
         ]
       }
+      user_invitations: {
+        Row: {
+          accepted_at: string | null
+          clinic_id: string
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          role: Database["public"]["Enums"]["app_role"]
+          status: Database["public"]["Enums"]["invitation_status"]
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          clinic_id: string
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: Database["public"]["Enums"]["invitation_status"]
+          token?: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          clinic_id?: string
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: Database["public"]["Enums"]["invitation_status"]
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_invitations_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           clinic_id: string
@@ -886,6 +1495,32 @@ export type Database = {
         | "relatorios"
         | "configuracoes"
       app_role: "owner" | "admin" | "profissional" | "recepcionista"
+      consent_status: "granted" | "revoked" | "pending"
+      document_status: "rascunho" | "assinado" | "cancelado"
+      invitation_status: "pending" | "accepted" | "expired" | "cancelled"
+      product_type: "material_clinico" | "insumo" | "item_venda" | "medicamento"
+      stock_movement_type:
+        | "entrada"
+        | "saida"
+        | "ajuste"
+        | "consumo_procedimento"
+        | "venda"
+        | "devolucao"
+      tiss_guide_status:
+        | "rascunho"
+        | "enviada"
+        | "autorizada"
+        | "negada"
+        | "paga"
+        | "glosada"
+      tiss_guide_type:
+        | "consulta"
+        | "sadt"
+        | "internacao"
+        | "honorarios"
+        | "odontologica"
+      transaction_status: "pendente" | "pago" | "cancelado" | "estornado"
+      transaction_type: "receita" | "despesa"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1027,6 +1662,35 @@ export const Constants = {
         "configuracoes",
       ],
       app_role: ["owner", "admin", "profissional", "recepcionista"],
+      consent_status: ["granted", "revoked", "pending"],
+      document_status: ["rascunho", "assinado", "cancelado"],
+      invitation_status: ["pending", "accepted", "expired", "cancelled"],
+      product_type: ["material_clinico", "insumo", "item_venda", "medicamento"],
+      stock_movement_type: [
+        "entrada",
+        "saida",
+        "ajuste",
+        "consumo_procedimento",
+        "venda",
+        "devolucao",
+      ],
+      tiss_guide_status: [
+        "rascunho",
+        "enviada",
+        "autorizada",
+        "negada",
+        "paga",
+        "glosada",
+      ],
+      tiss_guide_type: [
+        "consulta",
+        "sadt",
+        "internacao",
+        "honorarios",
+        "odontologica",
+      ],
+      transaction_status: ["pendente", "pago", "cancelado", "estornado"],
+      transaction_type: ["receita", "despesa"],
     },
   },
 } as const
