@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { FileText, CheckCircle, AlertTriangle, Building2, User, Stethoscope } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -52,12 +54,27 @@ export interface GeneratedGuideData {
   auto_calculate_fee: boolean;
 }
 
-// Mock para procedimentos cobertos pelo convênio
-const mockCoveredProcedures = [
-  { id: '1', code: '10101012', name: 'Consulta em consultório', price: 150 },
-  { id: '2', code: '20101015', name: 'Retorno de consulta', price: 100 },
-  { id: '3', code: '30101010', name: 'Avaliação clínica geral', price: 200 },
-];
+// Hook to fetch real insurance procedures
+function useInsuranceProcedures(insuranceId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["insurance-procedures", insuranceId],
+    queryFn: async () => {
+      if (!insuranceId) return [];
+      const { data, error } = await supabase
+        .from("insurance_procedures")
+        .select("id, tuss_code, authorized_price, procedures(id, name)")
+        .eq("insurance_id", insuranceId);
+      if (error) throw error;
+      return (data || []).map(ip => ({
+        id: ip.id,
+        code: ip.tuss_code || "",
+        name: (ip.procedures as any)?.name || "Procedimento",
+        price: ip.authorized_price || 0,
+      }));
+    },
+    enabled: !!insuranceId,
+  });
+}
 
 export function TissGuideGenerationDialog({
   open,
