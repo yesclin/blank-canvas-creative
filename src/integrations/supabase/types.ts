@@ -1630,54 +1630,81 @@ export type Database = {
           approved_amount: number | null
           calculated_amount: number
           clinic_id: string
+          clinic_net_value: number | null
           created_at: string
+          fee_fixed_value: number | null
+          fee_percentage: number | null
+          fee_type: string | null
           gloss_amount: number | null
           gross_value: number | null
+          guide_id: string | null
           id: string
           insurance_id: string
+          notes: string | null
           patient_id: string | null
           payment_date: string | null
+          payment_due_date: string | null
           procedure_id: string | null
           professional_fee: number | null
           professional_id: string | null
+          reference_period: string | null
           service_date: string | null
           status: string
+          updated_at: string | null
         }
         Insert: {
           appointment_id?: string | null
           approved_amount?: number | null
           calculated_amount: number
           clinic_id: string
+          clinic_net_value?: number | null
           created_at?: string
+          fee_fixed_value?: number | null
+          fee_percentage?: number | null
+          fee_type?: string | null
           gloss_amount?: number | null
           gross_value?: number | null
+          guide_id?: string | null
           id?: string
           insurance_id: string
+          notes?: string | null
           patient_id?: string | null
           payment_date?: string | null
+          payment_due_date?: string | null
           procedure_id?: string | null
           professional_fee?: number | null
           professional_id?: string | null
+          reference_period?: string | null
           service_date?: string | null
           status?: string
+          updated_at?: string | null
         }
         Update: {
           appointment_id?: string | null
           approved_amount?: number | null
           calculated_amount?: number
           clinic_id?: string
+          clinic_net_value?: number | null
           created_at?: string
+          fee_fixed_value?: number | null
+          fee_percentage?: number | null
+          fee_type?: string | null
           gloss_amount?: number | null
           gross_value?: number | null
+          guide_id?: string | null
           id?: string
           insurance_id?: string
+          notes?: string | null
           patient_id?: string | null
           payment_date?: string | null
+          payment_due_date?: string | null
           procedure_id?: string | null
           professional_fee?: number | null
           professional_id?: string | null
+          reference_period?: string | null
           service_date?: string | null
           status?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -1692,6 +1719,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insurance_fee_calculations_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "tiss_guides"
             referencedColumns: ["id"]
           },
           {
@@ -1726,38 +1760,80 @@ export type Database = {
       }
       insurance_fee_rules: {
         Row: {
+          clinic_id: string | null
           config: Json
           created_at: string
+          description: string | null
+          fee_type: string | null
+          fee_value: number | null
           id: string
           insurance_id: string
           is_active: boolean
+          payment_deadline_days: number | null
+          procedure_id: string | null
+          professional_id: string | null
           rule_type: string
           updated_at: string
         }
         Insert: {
+          clinic_id?: string | null
           config?: Json
           created_at?: string
+          description?: string | null
+          fee_type?: string | null
+          fee_value?: number | null
           id?: string
           insurance_id: string
           is_active?: boolean
+          payment_deadline_days?: number | null
+          procedure_id?: string | null
+          professional_id?: string | null
           rule_type: string
           updated_at?: string
         }
         Update: {
+          clinic_id?: string | null
           config?: Json
           created_at?: string
+          description?: string | null
+          fee_type?: string | null
+          fee_value?: number | null
           id?: string
           insurance_id?: string
           is_active?: boolean
+          payment_deadline_days?: number | null
+          procedure_id?: string | null
+          professional_id?: string | null
           rule_type?: string
           updated_at?: string
         }
         Relationships: [
           {
+            foreignKeyName: "insurance_fee_rules_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "insurance_fee_rules_insurance_id_fkey"
             columns: ["insurance_id"]
             isOneToOne: false
             referencedRelation: "insurances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insurance_fee_rules_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insurance_fee_rules_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
         ]
@@ -1809,36 +1885,66 @@ export type Database = {
       }
       insurances: {
         Row: {
+          allowed_guide_types: string[] | null
           ans_code: string | null
           clinic_id: string
+          code: string | null
           contact_email: string | null
           contact_phone: string | null
           created_at: string
+          default_fee_type: string | null
+          default_fee_value: number | null
+          default_payment_deadline_days: number | null
           id: string
           is_active: boolean
           name: string
+          notes: string | null
+          requires_authorization: boolean
+          return_allowed: boolean
+          return_days: number
+          tiss_code: string | null
           updated_at: string
         }
         Insert: {
+          allowed_guide_types?: string[] | null
           ans_code?: string | null
           clinic_id: string
+          code?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
+          default_fee_type?: string | null
+          default_fee_value?: number | null
+          default_payment_deadline_days?: number | null
           id?: string
           is_active?: boolean
           name: string
+          notes?: string | null
+          requires_authorization?: boolean
+          return_allowed?: boolean
+          return_days?: number
+          tiss_code?: string | null
           updated_at?: string
         }
         Update: {
+          allowed_guide_types?: string[] | null
           ans_code?: string | null
           clinic_id?: string
+          code?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
+          default_fee_type?: string | null
+          default_fee_value?: number | null
+          default_payment_deadline_days?: number | null
           id?: string
           is_active?: boolean
           name?: string
+          notes?: string | null
+          requires_authorization?: boolean
+          return_allowed?: boolean
+          return_days?: number
+          tiss_code?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -2686,9 +2792,14 @@ export type Database = {
           card_number: string | null
           clinic_id: string
           created_at: string
+          holder_cpf: string | null
+          holder_name: string | null
+          holder_type: string | null
           id: string
           insurance_id: string
           is_active: boolean
+          is_primary: boolean
+          notes: string | null
           patient_id: string
           plan_name: string | null
           updated_at: string
@@ -2698,9 +2809,14 @@ export type Database = {
           card_number?: string | null
           clinic_id: string
           created_at?: string
+          holder_cpf?: string | null
+          holder_name?: string | null
+          holder_type?: string | null
           id?: string
           insurance_id: string
           is_active?: boolean
+          is_primary?: boolean
+          notes?: string | null
           patient_id: string
           plan_name?: string | null
           updated_at?: string
@@ -2710,9 +2826,14 @@ export type Database = {
           card_number?: string | null
           clinic_id?: string
           created_at?: string
+          holder_cpf?: string | null
+          holder_name?: string | null
+          holder_type?: string | null
           id?: string
           insurance_id?: string
           is_active?: boolean
+          is_primary?: boolean
+          notes?: string | null
           patient_id?: string
           plan_name?: string | null
           updated_at?: string
@@ -4046,10 +4167,18 @@ export type Database = {
       }
       tiss_guide_items: {
         Row: {
+          approved_quantity: number | null
+          approved_value: number | null
           created_at: string
           description: string
+          execution_date: string | null
+          glosa_code: string | null
+          glosa_reason: string | null
+          glosa_value: number | null
           guide_id: string
           id: string
+          item_order: number | null
+          procedure_code: string | null
           procedure_id: string | null
           quantity: number
           total_price: number | null
@@ -4057,10 +4186,18 @@ export type Database = {
           unit_price: number | null
         }
         Insert: {
+          approved_quantity?: number | null
+          approved_value?: number | null
           created_at?: string
           description: string
+          execution_date?: string | null
+          glosa_code?: string | null
+          glosa_reason?: string | null
+          glosa_value?: number | null
           guide_id: string
           id?: string
+          item_order?: number | null
+          procedure_code?: string | null
           procedure_id?: string | null
           quantity?: number
           total_price?: number | null
@@ -4068,10 +4205,18 @@ export type Database = {
           unit_price?: number | null
         }
         Update: {
+          approved_quantity?: number | null
+          approved_value?: number | null
           created_at?: string
           description?: string
+          execution_date?: string | null
+          glosa_code?: string | null
+          glosa_reason?: string | null
+          glosa_value?: number | null
           guide_id?: string
           id?: string
+          item_order?: number | null
+          procedure_code?: string | null
           procedure_id?: string | null
           quantity?: number
           total_price?: number | null
@@ -4099,6 +4244,8 @@ export type Database = {
         Row: {
           appointment_id: string | null
           authorization_number: string | null
+          beneficiary_card_number: string | null
+          beneficiary_name: string | null
           clinic_id: string
           created_at: string
           data: Json
@@ -4106,16 +4253,27 @@ export type Database = {
           guide_type: Database["public"]["Enums"]["tiss_guide_type"]
           id: string
           insurance_id: string
+          issue_date: string | null
+          notes: string | null
           patient_id: string
+          patient_insurance_id: string | null
           professional_id: string
+          rejection_reason: string | null
+          service_date: string | null
           status: Database["public"]["Enums"]["tiss_guide_status"]
           submitted_at: string | null
+          tiss_version: string | null
           total_amount: number | null
+          total_approved: number | null
+          total_glosa: number | null
+          total_requested: number | null
           updated_at: string
         }
         Insert: {
           appointment_id?: string | null
           authorization_number?: string | null
+          beneficiary_card_number?: string | null
+          beneficiary_name?: string | null
           clinic_id: string
           created_at?: string
           data?: Json
@@ -4123,16 +4281,27 @@ export type Database = {
           guide_type: Database["public"]["Enums"]["tiss_guide_type"]
           id?: string
           insurance_id: string
+          issue_date?: string | null
+          notes?: string | null
           patient_id: string
+          patient_insurance_id?: string | null
           professional_id: string
+          rejection_reason?: string | null
+          service_date?: string | null
           status?: Database["public"]["Enums"]["tiss_guide_status"]
           submitted_at?: string | null
+          tiss_version?: string | null
           total_amount?: number | null
+          total_approved?: number | null
+          total_glosa?: number | null
+          total_requested?: number | null
           updated_at?: string
         }
         Update: {
           appointment_id?: string | null
           authorization_number?: string | null
+          beneficiary_card_number?: string | null
+          beneficiary_name?: string | null
           clinic_id?: string
           created_at?: string
           data?: Json
@@ -4140,11 +4309,20 @@ export type Database = {
           guide_type?: Database["public"]["Enums"]["tiss_guide_type"]
           id?: string
           insurance_id?: string
+          issue_date?: string | null
+          notes?: string | null
           patient_id?: string
+          patient_insurance_id?: string | null
           professional_id?: string
+          rejection_reason?: string | null
+          service_date?: string | null
           status?: Database["public"]["Enums"]["tiss_guide_status"]
           submitted_at?: string | null
+          tiss_version?: string | null
           total_amount?: number | null
+          total_approved?: number | null
+          total_glosa?: number | null
+          total_requested?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -4174,6 +4352,13 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tiss_guides_patient_insurance_id_fkey"
+            columns: ["patient_insurance_id"]
+            isOneToOne: false
+            referencedRelation: "patient_insurances"
             referencedColumns: ["id"]
           },
           {
