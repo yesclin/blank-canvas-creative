@@ -303,7 +303,8 @@ export function useTissGuides() {
           *,
           insurances:insurance_id (name),
           patients:patient_id (full_name),
-          professionals:professional_id (full_name)
+          professionals:professional_id (full_name),
+          tiss_guide_items (*)
         `)
         .eq('clinic_id', clinicId)
         .order('created_at', { ascending: false });
