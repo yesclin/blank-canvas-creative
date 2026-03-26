@@ -103,7 +103,16 @@ export function TissGuideDialog({
         beneficiary_card_number: guide.beneficiary_card_number || '',
         notes: guide.notes || '',
       });
-      setItems([]);
+      // Load existing items from DB
+      setItems((guide.items || []).map((gi: any) => ({
+        id: gi.id || Date.now().toString(),
+        procedure_id: gi.procedure_id || '',
+        procedure_code: gi.procedure_code || '',
+        procedure_description: gi.procedure_description || gi.description || '',
+        quantity: gi.quantity || 1,
+        unit_value: gi.unit_value || Number(gi.unit_price) || 0,
+        total_value: gi.total_value || Number(gi.total_price) || 0,
+      })));
     } else {
       setFormData({
         guide_type: 'consulta',
