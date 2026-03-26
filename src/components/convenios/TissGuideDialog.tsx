@@ -33,7 +33,7 @@ import type { TissGuide, Insurance, TissGuideType } from "@/types/convenios";
 import { guideTypeLabels, guideStatusLabels, guideStatusColors } from "@/types/convenios";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useCreateTissGuide } from "@/hooks/useConveniosData";
+import { useCreateTissGuide, type TissGuideItemInput } from "@/hooks/useConveniosData";
 import { DocumentHeader } from "@/components/documents/DocumentHeader";
 import { toast } from "sonner";
 
@@ -103,7 +103,16 @@ export function TissGuideDialog({
         beneficiary_card_number: guide.beneficiary_card_number || '',
         notes: guide.notes || '',
       });
-      setItems([]);
+      // Load existing items from DB
+      setItems((guide.items || []).map((gi: any) => ({
+        id: gi.id || Date.now().toString(),
+        procedure_id: gi.procedure_id || '',
+        procedure_code: gi.procedure_code || '',
+        procedure_description: gi.procedure_description || gi.description || '',
+        quantity: gi.quantity || 1,
+        unit_value: gi.unit_value || Number(gi.unit_price) || 0,
+        total_value: gi.total_value || Number(gi.total_price) || 0,
+      })));
     } else {
       setFormData({
         guide_type: 'consulta',
@@ -161,6 +170,15 @@ export function TissGuideDialog({
       return;
     }
 
+    const guideItems: TissGuideItemInput[] = items.map(item => ({
+      procedure_id: item.procedure_id,
+      procedure_code: item.procedure_code,
+      description: item.procedure_description,
+      quantity: item.quantity,
+      unit_price: item.unit_value,
+      total_price: item.total_value,
+    }));
+
     createGuide.mutate({
       guide_type: formData.guide_type,
       patient_id: formData.patient_id,
@@ -171,6 +189,7 @@ export function TissGuideDialog({
       beneficiary_card_number: formData.beneficiary_card_number || undefined,
       notes: formData.notes || undefined,
       total_requested: totalValue,
+      items: guideItems,
     }, {
       onSuccess: () => onOpenChange(false),
     });
