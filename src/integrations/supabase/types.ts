@@ -793,30 +793,60 @@ export type Database = {
       }
       clinic_channel_integrations: {
         Row: {
+          access_token: string | null
+          api_url: string | null
+          base_url: string | null
+          business_account_id: string | null
           channel: string
           clinic_id: string
           config: Json
           created_at: string
+          display_phone_number: string | null
           id: string
+          instance_id: string | null
           is_active: boolean
+          metadata: Json | null
+          phone_number_id: string | null
+          provider: string | null
+          status: string | null
           updated_at: string
         }
         Insert: {
+          access_token?: string | null
+          api_url?: string | null
+          base_url?: string | null
+          business_account_id?: string | null
           channel: string
           clinic_id: string
           config?: Json
           created_at?: string
+          display_phone_number?: string | null
           id?: string
+          instance_id?: string | null
           is_active?: boolean
+          metadata?: Json | null
+          phone_number_id?: string | null
+          provider?: string | null
+          status?: string | null
           updated_at?: string
         }
         Update: {
+          access_token?: string | null
+          api_url?: string | null
+          base_url?: string | null
+          business_account_id?: string | null
           channel?: string
           clinic_id?: string
           config?: Json
           created_at?: string
+          display_phone_number?: string | null
           id?: string
+          instance_id?: string | null
           is_active?: boolean
+          metadata?: Json | null
+          phone_number_id?: string | null
+          provider?: string | null
+          status?: string | null
           updated_at?: string
         }
         Relationships: [
