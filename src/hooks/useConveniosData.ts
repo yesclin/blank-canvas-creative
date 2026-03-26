@@ -313,10 +313,8 @@ export function useTissGuides() {
       
       return (data || []).map((item: any) => ({
         ...item,
-        // Map DB enums to frontend types
         guide_type: dbToFrontendGuideType[item.guide_type] || item.guide_type,
         status: dbToFrontendGuideStatus[item.status] || item.status,
-        // Map column names
         guide_number: item.guide_number || `GUIA-${item.id.slice(0, 8).toUpperCase()}`,
         main_authorization_number: item.authorization_number || null,
         issue_date: item.issue_date || (item.created_at ? item.created_at.split('T')[0] : ''),
@@ -324,10 +322,21 @@ export function useTissGuides() {
         total_requested: Number(item.total_requested) || Number(item.total_amount) || 0,
         total_approved: Number(item.total_approved) || 0,
         total_glosa: Number(item.total_glosa) || 0,
-        // Joined fields
         insurance_name: item.insurances?.name || '',
         patient_name: item.patients?.full_name || '',
         professional_name: item.professionals?.full_name || '',
+        items: (item.tiss_guide_items || []).map((gi: any) => ({
+          id: gi.id,
+          guide_id: gi.guide_id,
+          procedure_id: gi.procedure_id,
+          procedure_code: gi.procedure_code || '',
+          procedure_description: gi.description,
+          quantity: gi.quantity,
+          unit_value: Number(gi.unit_price) || 0,
+          total_value: Number(gi.total_price) || 0,
+          item_order: gi.item_order || 0,
+          created_at: gi.created_at,
+        })),
       })) as TissGuide[];
     },
   });
