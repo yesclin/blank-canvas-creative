@@ -161,6 +161,15 @@ export function TissGuideDialog({
       return;
     }
 
+    const guideItems: TissGuideItemInput[] = items.map(item => ({
+      procedure_id: item.procedure_id,
+      procedure_code: item.procedure_code,
+      description: item.procedure_description,
+      quantity: item.quantity,
+      unit_price: item.unit_value,
+      total_price: item.total_value,
+    }));
+
     createGuide.mutate({
       guide_type: formData.guide_type,
       patient_id: formData.patient_id,
@@ -171,6 +180,7 @@ export function TissGuideDialog({
       beneficiary_card_number: formData.beneficiary_card_number || undefined,
       notes: formData.notes || undefined,
       total_requested: totalValue,
+      items: guideItems,
     }, {
       onSuccess: () => onOpenChange(false),
     });
