@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { format, subMonths, eachDayOfInterval, eachMonthOfInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
+import { isRevenue } from '@/utils/financeEnumMapper';
 import type {
   ReportFilters,
   FinancialReportData,
@@ -201,9 +202,15 @@ export function useReportsRealData(filters: ReportFilters) {
     financialTransactions.forEach(tx => {
       const dateKey = tx.transaction_date;
       const entry = byDay.get(dateKey);
-      if (entry && tx.type === 'entrada') {
+      if (!entry) return;
+      
+      if (isRevenue(tx.type)) {
         entry.faturamento += Number(tx.amount) || 0;
-        entry.recebido += Number(tx.amount) || 0;
+        if (tx.status === 'pago') {
+          entry.recebido += Number(tx.amount) || 0;
+        } else {
+          entry.pendente += Number(tx.amount) || 0;
+        }
       }
     });
 
@@ -276,7 +283,7 @@ export function useReportsRealData(filters: ReportFilters) {
       convenio: 'Convênio',
     };
 
-    financialTransactions.filter(tx => tx.type === 'entrada').forEach(tx => {
+    financialTransactions.filter(tx => isRevenue(tx.type)).forEach(tx => {
       const method = tx.payment_method || 'outro';
       const existing = methods.get(method) || { total: 0, count: 0 };
       existing.total += Number(tx.amount) || 0;
@@ -295,8 +302,38 @@ export function useReportsRealData(filters: ReportFilters) {
     }));
   })();
 
-  // Pacotes (placeholder - não temos tabela de pacotes ainda)
-  const packagesReport: PackageReport[] = [];
+  // Pacotes de tratamento (real data from treatment_packages)
+  const { data: treatmentPackagesData = [] } = useQuery({
+    queryKey: ['report-treatment-packages', startDateStr, endDateStr],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('treatment_packages')
+        .select(`
+          id,
+          name,
+          total_sessions,
+          used_sessions,
+          total_value,
+          paid_value,
+          status,
+          patient_id,
+          patients:patient_id (full_name)
+        `);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const packagesReport: PackageReport[] = treatmentPackagesData.map((pkg: any) => ({
+    packageId: pkg.id,
+    patientName: pkg.patients?.full_name || 'Paciente',
+    packageName: pkg.name || 'Pacote',
+    totalSessions: pkg.total_sessions || 0,
+    usedSessions: pkg.used_sessions || 0,
+    totalValue: Number(pkg.total_value) || 0,
+    paidValue: Number(pkg.paid_value) || 0,
+    status: pkg.status || 'ativo',
+  }));
 
   // Dados de atendimentos por período
   const appointmentData: AppointmentReportData[] = (() => {
@@ -568,7 +605,7 @@ export function useReportsRealData(filters: ReportFilters) {
   // Resumo executivo
   const executiveSummary: ExecutiveSummary = (() => {
     const faturamentoAtual = financialTransactions
-      .filter(tx => tx.type === 'entrada')
+      .filter(tx => isRevenue(tx.type))
       .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
     
     const atendimentosRealizados = appointmentsData?.filter(a => a.status === 'finalizado').length || 0;
