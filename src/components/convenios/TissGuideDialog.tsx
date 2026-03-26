@@ -33,7 +33,7 @@ import type { TissGuide, Insurance, TissGuideType } from "@/types/convenios";
 import { guideTypeLabels, guideStatusLabels, guideStatusColors } from "@/types/convenios";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useCreateTissGuide } from "@/hooks/useConveniosData";
+import { useCreateTissGuide, type TissGuideItemInput } from "@/hooks/useConveniosData";
 import { DocumentHeader } from "@/components/documents/DocumentHeader";
 import { toast } from "sonner";
 

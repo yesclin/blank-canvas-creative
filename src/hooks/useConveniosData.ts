@@ -332,6 +332,15 @@ export function useTissGuides() {
   });
 }
 
+export interface TissGuideItemInput {
+  procedure_id: string;
+  procedure_code?: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+}
+
 export function useCreateTissGuide() {
   const queryClient = useQueryClient();
   
@@ -346,6 +355,7 @@ export function useCreateTissGuide() {
       beneficiary_card_number?: string;
       notes?: string;
       total_requested?: number;
+      items?: TissGuideItemInput[];
     }) => {
       const clinicId = await getClinicId();
       
@@ -371,6 +381,30 @@ export function useCreateTissGuide() {
         .single();
       
       if (error) throw error;
+      
+      // Persist guide items
+      if (formData.items && formData.items.length > 0 && data?.id) {
+        const itemsToInsert = formData.items.map((item, index) => ({
+          guide_id: data.id,
+          procedure_id: item.procedure_id,
+          procedure_code: item.procedure_code || null,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_price: item.total_price,
+          item_order: index + 1,
+        }));
+        
+        const { error: itemsError } = await supabase
+          .from('tiss_guide_items')
+          .insert(itemsToInsert);
+        
+        if (itemsError) {
+          console.error('Error inserting guide items:', itemsError);
+          throw itemsError;
+        }
+      }
+      
       return data;
     },
     onSuccess: () => {
