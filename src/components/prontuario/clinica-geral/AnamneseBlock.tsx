@@ -645,7 +645,6 @@ export function AnamneseBlock({
           responses: structuredData,
           specialty_id: specialtyId,
           appointment_id: appointmentId || undefined,
-          structure_snapshot: v2Template?.structure,
         });
       } catch (err) {
         console.error('Erro ao salvar no anamnesis_records:', err);
