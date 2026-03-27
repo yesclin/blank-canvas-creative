@@ -225,6 +225,7 @@ export function AnamneseBlock({
   // Auto-save refs
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedData = useRef<string>('');
+  const editingInitialData = useRef<string>('{}');
 
   // ─── Fetch clinic templates from DB (V2) ──────────────────────────
   const { templates: v2Templates, isLoading: loadingTemplates, createTemplate } = useAnamnesisTemplatesV2({
@@ -318,6 +319,10 @@ export function AnamneseBlock({
       if (Array.isArray(v)) return v.length > 0;
       return v !== undefined && v !== null && v !== '';
     });
+  }, [structuredData]);
+
+  const hasUnsavedChanges = useCallback(() => {
+    return JSON.stringify(structuredData) !== editingInitialData.current;
   }, [structuredData]);
 
   // ─── Template switch handler ────────────────────────────────────
@@ -559,7 +564,9 @@ export function AnamneseBlock({
   }, []);
 
   const handleStartNewAnamnese = useCallback(() => {
-    setStructuredData({});
+    const nextData = {};
+    editingInitialData.current = JSON.stringify(nextData);
+    setStructuredData(nextData);
     setIsCreatingNew(true);
     setIsEditingExisting(false);
     setIsEditing(true);
@@ -567,16 +574,19 @@ export function AnamneseBlock({
   }, []);
 
   const handleStartEdit = () => {
+    let nextData: Record<string, unknown> = {};
+
     if (selectedRecord?.template_id) {
       setSelectedTemplateId(selectedRecord.template_id);
     }
+
     // Priority: selected V2 record > legacy structured_data > legacy flat fields
     if (selectedRecord && Object.keys(selectedRecord.responses).length > 0) {
-      setStructuredData({ ...selectedRecord.responses as Record<string, unknown> });
+      nextData = { ...selectedRecord.responses as Record<string, unknown> };
     } else if (currentAnamnese?.structured_data && Object.keys(currentAnamnese.structured_data).length > 0) {
-      setStructuredData({ ...currentAnamnese.structured_data });
+      nextData = { ...currentAnamnese.structured_data };
     } else if (currentAnamnese) {
-      setStructuredData({
+      nextData = {
         qp_descricao: currentAnamnese.queixa_principal || '',
         hda_evolucao: currentAnamnese.historia_doenca_atual || '',
         hpp_doencas_obs: currentAnamnese.antecedentes_pessoais || '',
@@ -584,8 +594,11 @@ export function AnamneseBlock({
         med_lista: currentAnamnese.medicamentos_uso_continuo || '',
         alergias_medicamentosas: currentAnamnese.alergias || '',
         hab_alimentacao: currentAnamnese.habitos_vida || '',
-      });
+      };
     }
+
+    editingInitialData.current = JSON.stringify(nextData);
+    setStructuredData(nextData);
     setLastAutoSave(null);
     setIsEditingExisting(true);
     setIsCreatingNew(false);
@@ -593,16 +606,18 @@ export function AnamneseBlock({
   };
 
   const handleStartNewVersion = () => {
+    let nextData: Record<string, unknown> = {};
+
     // Copy data from selected record but create a new one
     if (selectedRecord) {
       if (selectedRecord.template_id) setSelectedTemplateId(selectedRecord.template_id);
       if (Object.keys(selectedRecord.responses).length > 0) {
-        setStructuredData({ ...selectedRecord.responses as Record<string, unknown> });
+        nextData = { ...selectedRecord.responses as Record<string, unknown> };
       }
     } else if (currentAnamnese?.structured_data && Object.keys(currentAnamnese.structured_data).length > 0) {
-      setStructuredData({ ...currentAnamnese.structured_data });
+      nextData = { ...currentAnamnese.structured_data };
     } else if (currentAnamnese) {
-      setStructuredData({
+      nextData = {
         qp_descricao: currentAnamnese.queixa_principal || '',
         hda_evolucao: currentAnamnese.historia_doenca_atual || '',
         hpp_doencas_obs: currentAnamnese.antecedentes_pessoais || '',
@@ -610,8 +625,11 @@ export function AnamneseBlock({
         med_lista: currentAnamnese.medicamentos_uso_continuo || '',
         alergias_medicamentosas: currentAnamnese.alergias || '',
         hab_alimentacao: currentAnamnese.habitos_vida || '',
-      });
+      };
     }
+
+    editingInitialData.current = JSON.stringify(nextData);
+    setStructuredData(nextData);
     setLastAutoSave(null);
     setIsEditingExisting(false);
     setIsCreatingNew(false);
@@ -619,6 +637,7 @@ export function AnamneseBlock({
   };
 
   const handleCancel = () => {
+    editingInitialData.current = '{}';
     setIsEditing(false);
     setIsEditingExisting(false);
     setIsCreatingNew(false);
@@ -627,7 +646,7 @@ export function AnamneseBlock({
   };
 
   const handleBackClick = () => {
-    if (hasFilledData()) {
+    if (hasUnsavedChanges()) {
       setShowDiscardConfirm(true);
     } else {
       handleCancel();
@@ -679,6 +698,7 @@ export function AnamneseBlock({
       setIsEditing(false);
       setIsEditingExisting(false);
       setIsCreatingNew(false);
+      editingInitialData.current = '{}';
       setStructuredData({});
       setLastAutoSave(null);
     } catch (err) {
@@ -1017,7 +1037,7 @@ export function AnamneseBlock({
               {renderTemplateSelector()}
             </div>
             {canEdit && activeTemplate && (
-              <Button onClick={() => { setIsCreatingNew(true); setIsEditing(true); }}>
+              <Button onClick={handleStartNewAnamnese}>
                 <Edit3 className="h-4 w-4 mr-2" />
                 Registrar Anamnese
               </Button>
@@ -1065,31 +1085,38 @@ export function AnamneseBlock({
         {renderSwitchConfirmDialog()}
         <div className="space-y-6">
           {/* Minimal header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
               <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 flex-shrink-0"
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9 w-9 shrink-0 px-0"
                 onClick={handleBackClick}
                 disabled={isSavingLocal || savingV2}
+                aria-label="Voltar para a lista de anamneses"
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
-              <h3 className="font-semibold text-base tracking-tight">
-                {isCreatingNew ? 'Nova Anamnese' : isEditingExisting ? 'Editar Anamnese' : 'Nova Versão'}
-              </h3>
-              <Badge variant="outline" className="text-[10px] font-medium border-amber-300 text-amber-600 bg-amber-50">
-                Rascunho
-              </Badge>
+              <div className="flex min-w-0 flex-wrap items-center gap-2 md:gap-3">
+                <h3 className="font-semibold text-base tracking-tight">
+                  {isCreatingNew ? 'Nova Anamnese' : isEditingExisting ? 'Editar Anamnese' : 'Nova Versão'}
+                </h3>
+                <Badge variant="outline" className="text-xs font-medium">
+                  Rascunho
+                </Badge>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-start gap-2 md:justify-end">
               {lastAutoSave && (
-                <span className="text-[10px] text-muted-foreground/70 flex items-center gap-1">
-                  <Check className="h-2.5 w-2.5" />
+                <span className="text-xs text-muted-foreground flex items-center gap-1 whitespace-nowrap">
+                  <Check className="h-3 w-3" />
                   {format(lastAutoSave, "HH:mm")}
                 </span>
               )}
+              {(isCreatingNew || allTemplates.length > 1) && renderTemplateSelector()}
             </div>
-            {(isCreatingNew || allTemplates.length > 1) && renderTemplateSelector()}
           </div>
 
           {/* Discard changes confirmation */}
