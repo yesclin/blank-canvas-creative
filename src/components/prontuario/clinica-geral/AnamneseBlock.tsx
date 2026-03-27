@@ -61,7 +61,7 @@ import {
   mapStructuredToLegacy,
   type SecaoAnamnese,
 } from "@/hooks/prontuario/clinica-geral/anamneseTemplates";
-import { useAnamnesisTemplatesV2, type AnamnesisTemplateV2, type TemplateSection } from "@/hooks/useAnamnesisTemplatesV2";
+import { useAnamnesisTemplatesV2, useAnamnesisRecords, type AnamnesisTemplateV2, type TemplateSection } from "@/hooks/useAnamnesisTemplatesV2";
 import { useInstitutionalPdf } from "@/hooks/useInstitutionalPdf";
 import { FileDown } from "lucide-react";
 import { cn } from "@/lib/utils";
