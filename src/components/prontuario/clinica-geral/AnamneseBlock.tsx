@@ -1169,9 +1169,9 @@ export function AnamneseBlock({
       {renderRecordsList()}
 
       {/* Compact header + actions for selected record */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         {/* Left: title, version, status */}
-        <div className="flex items-center gap-2 min-w-0 flex-wrap">
+        <div className="flex items-center gap-2 min-w-0">
           <h3 className="font-semibold text-sm truncate">
             {viewTemplate?.nome || selectedRecord?.template_name || 'Anamnese'}
           </h3>
@@ -1191,16 +1191,13 @@ export function AnamneseBlock({
           </Badge>
         </div>
 
-        {/* Right: date + action buttons — all in one group */}
-        <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-auto">
+        {/* Right: date + actions — single horizontal group */}
+        <div className="flex items-center gap-2 flex-shrink-0 flex-nowrap">
           {(selectedRecord || currentAnamnese) && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mr-1">
-              <Clock className="h-3 w-3" />
-              <span>
-                {format(parseISO(selectedRecord?.created_at || currentAnamnese!.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                {(selectedRecord ? undefined : currentAnamnese?.created_by_name) && ` • ${currentAnamnese?.created_by_name}`}
-              </span>
-            </div>
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap">
+              <Clock className="h-3 w-3 flex-shrink-0" />
+              {format(parseISO(selectedRecord?.created_at || currentAnamnese!.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+            </span>
           )}
           {currentAnamnese && (
             <Button variant="ghost" size="sm" disabled={generating} onClick={() => {
