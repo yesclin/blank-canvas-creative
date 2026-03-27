@@ -4883,6 +4883,7 @@ export type Database = {
           marital_status: string | null
           notes: string | null
           phone: string | null
+          rg: string | null
           updated_at: string
         }
         Insert: {
@@ -4907,6 +4908,7 @@ export type Database = {
           marital_status?: string | null
           notes?: string | null
           phone?: string | null
+          rg?: string | null
           updated_at?: string
         }
         Update: {
@@ -4931,6 +4933,7 @@ export type Database = {
           marital_status?: string | null
           notes?: string | null
           phone?: string | null
+          rg?: string | null
           updated_at?: string
         }
         Relationships: [
