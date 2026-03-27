@@ -1675,9 +1675,13 @@ export type Database = {
       }
       custom_prontuario_fields: {
         Row: {
+          all_appointments: boolean | null
           clinic_id: string
           config: Json | null
           created_at: string
+          created_by: string | null
+          description: string | null
+          display_order: number | null
           field_key: string
           field_order: number
           field_type: string
@@ -1685,15 +1689,22 @@ export type Database = {
           is_active: boolean
           is_required: boolean
           label: string
+          name: string | null
           options: Json | null
+          placeholder: string | null
+          procedure_id: string | null
           specialty_id: string | null
           tab_key: string
           updated_at: string
         }
         Insert: {
+          all_appointments?: boolean | null
           clinic_id: string
           config?: Json | null
           created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number | null
           field_key: string
           field_order?: number
           field_type?: string
@@ -1701,15 +1712,22 @@ export type Database = {
           is_active?: boolean
           is_required?: boolean
           label: string
+          name?: string | null
           options?: Json | null
+          placeholder?: string | null
+          procedure_id?: string | null
           specialty_id?: string | null
           tab_key: string
           updated_at?: string
         }
         Update: {
+          all_appointments?: boolean | null
           clinic_id?: string
           config?: Json | null
           created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number | null
           field_key?: string
           field_order?: number
           field_type?: string
@@ -1717,7 +1735,10 @@ export type Database = {
           is_active?: boolean
           is_required?: boolean
           label?: string
+          name?: string | null
           options?: Json | null
+          placeholder?: string | null
+          procedure_id?: string | null
           specialty_id?: string | null
           tab_key?: string
           updated_at?: string
@@ -1728,6 +1749,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_prontuario_fields_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
             referencedColumns: ["id"]
           },
           {
@@ -3095,11 +3123,13 @@ export type Database = {
         Row: {
           clinic_id: string
           created_at: string
+          display_order: number | null
           icon: string | null
           id: string
           is_active: boolean
           is_system: boolean
           name: string
+          scope: string | null
           slug: string
           sort_order: number
           specialty_id: string | null
@@ -3108,11 +3138,13 @@ export type Database = {
         Insert: {
           clinic_id: string
           created_at?: string
+          display_order?: number | null
           icon?: string | null
           id?: string
           is_active?: boolean
           is_system?: boolean
           name: string
+          scope?: string | null
           slug: string
           sort_order?: number
           specialty_id?: string | null
@@ -3121,11 +3153,13 @@ export type Database = {
         Update: {
           clinic_id?: string
           created_at?: string
+          display_order?: number | null
           icon?: string | null
           id?: string
           is_active?: boolean
           is_system?: boolean
           name?: string
+          scope?: string | null
           slug?: string
           sort_order?: number
           specialty_id?: string | null
