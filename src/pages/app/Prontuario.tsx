@@ -1244,17 +1244,7 @@ export default function Prontuario() {
             />
           );
         }
-        if (activeSpecialtyKey === 'odontologia') {
-          return (
-            <AnamneseOdontologicaBlock
-              patientId={patientId}
-              clinicId={clinicIdForFisio || null}
-              appointmentId={activeAppointment?.id}
-              canEdit={canEditCurrentTab}
-            />
-          );
-        }
-        // Default: Clínica Geral - Anamnese com versionamento
+        // Default: Clínica Geral / Odontologia / other - Anamnese com versionamento
         return (
           <AnamneseBlock
             currentAnamnese={currentAnamnese}
