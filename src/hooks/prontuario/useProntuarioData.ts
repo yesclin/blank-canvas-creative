@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useProntuarioConfig } from './useProntuarioConfig';
 import { useMedicalRecordEntries, MedicalRecordEntry } from './useMedicalRecordEntries';
 import { useMedicalRecordFiles, MedicalRecordFile } from './useMedicalRecordFiles';
+import { useActiveSpecialty } from './useActiveSpecialty';
 import { supabase } from '@/integrations/supabase/client';
 import { useClinicData } from '@/hooks/useClinicData';
 import type { TabConfig } from './useTabs';
@@ -48,7 +49,8 @@ export interface ClinicalAlert {
  */
 export function useProntuarioData(patientId: string | null) {
   const { clinic } = useClinicData();
-  const config = useProntuarioConfig();
+  const { activeSpecialtyId } = useActiveSpecialty(patientId);
+  const config = useProntuarioConfig(activeSpecialtyId);
   const entriesHook = useMedicalRecordEntries();
   const filesHook = useMedicalRecordFiles();
 

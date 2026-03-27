@@ -151,24 +151,30 @@ export type Database = {
           created_by: string | null
           fields: Json
           id: string
+          structure: Json
           template_id: string
           version: number
+          version_number: number | null
         }
         Insert: {
           created_at?: string
           created_by?: string | null
           fields?: Json
           id?: string
+          structure?: Json
           template_id: string
           version: number
+          version_number?: number | null
         }
         Update: {
           created_at?: string
           created_by?: string | null
           fields?: Json
           id?: string
+          structure?: Json
           template_id?: string
           version?: number
+          version_number?: number | null
         }
         Relationships: [
           {
@@ -182,45 +188,72 @@ export type Database = {
       }
       anamnesis_templates: {
         Row: {
+          archived: boolean
+          campos: Json
           clinic_id: string
           created_at: string
           created_by: string | null
+          current_version_id: string | null
           description: string | null
           fields: Json
+          icon: string | null
           id: string
           is_active: boolean
+          is_default: boolean
           is_system: boolean
           name: string
+          procedure_id: string | null
+          specialty: string | null
           specialty_id: string | null
+          template_type: string | null
           updated_at: string
+          usage_count: number
           version: number
         }
         Insert: {
+          archived?: boolean
+          campos?: Json
           clinic_id: string
           created_at?: string
           created_by?: string | null
+          current_version_id?: string | null
           description?: string | null
           fields?: Json
+          icon?: string | null
           id?: string
           is_active?: boolean
+          is_default?: boolean
           is_system?: boolean
           name: string
+          procedure_id?: string | null
+          specialty?: string | null
           specialty_id?: string | null
+          template_type?: string | null
           updated_at?: string
+          usage_count?: number
           version?: number
         }
         Update: {
+          archived?: boolean
+          campos?: Json
           clinic_id?: string
           created_at?: string
           created_by?: string | null
+          current_version_id?: string | null
           description?: string | null
           fields?: Json
+          icon?: string | null
           id?: string
           is_active?: boolean
+          is_default?: boolean
           is_system?: boolean
           name?: string
+          procedure_id?: string | null
+          specialty?: string | null
           specialty_id?: string | null
+          template_type?: string | null
           updated_at?: string
+          usage_count?: number
           version?: number
         }
         Relationships: [
@@ -2890,6 +2923,7 @@ export type Database = {
           is_required: boolean
           label: string
           options: Json | null
+          placeholder: string | null
           tab_key: string
           template_id: string | null
           updated_at: string
@@ -2905,6 +2939,7 @@ export type Database = {
           is_required?: boolean
           label: string
           options?: Json | null
+          placeholder?: string | null
           tab_key: string
           template_id?: string | null
           updated_at?: string
@@ -2920,6 +2955,7 @@ export type Database = {
           is_required?: boolean
           label?: string
           options?: Json | null
+          placeholder?: string | null
           tab_key?: string
           template_id?: string | null
           updated_at?: string
@@ -3210,30 +3246,48 @@ export type Database = {
           clinic_id: string
           config: Json
           created_at: string
+          description: string | null
           id: string
+          is_active: boolean
           is_default: boolean
+          is_system: boolean
           name: string
+          professional_id: string | null
+          scope: string | null
           specialty_id: string | null
+          type: string | null
           updated_at: string
         }
         Insert: {
           clinic_id: string
           config?: Json
           created_at?: string
+          description?: string | null
           id?: string
+          is_active?: boolean
           is_default?: boolean
+          is_system?: boolean
           name: string
+          professional_id?: string | null
+          scope?: string | null
           specialty_id?: string | null
+          type?: string | null
           updated_at?: string
         }
         Update: {
           clinic_id?: string
           config?: Json
           created_at?: string
+          description?: string | null
           id?: string
+          is_active?: boolean
           is_default?: boolean
+          is_system?: boolean
           name?: string
+          professional_id?: string | null
+          scope?: string | null
           specialty_id?: string | null
+          type?: string | null
           updated_at?: string
         }
         Relationships: [
