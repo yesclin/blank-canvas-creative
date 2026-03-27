@@ -1084,7 +1084,11 @@ export function AnamneseBlock({
   }
 
   // ─── VIEW MODE ──────────────────────────────────────────────────
-  const hasStructuredData = currentAnamnese?.structured_data && Object.keys(currentAnamnese.structured_data).length > 0;
+  const hasStructuredData = (currentAnamnese?.structured_data && Object.keys(currentAnamnese.structured_data).length > 0)
+    || (existingV2Record && Object.keys(existingV2Record.responses).length > 0);
+  const viewData = (existingV2Record && Object.keys(existingV2Record.responses).length > 0)
+    ? existingV2Record.responses as Record<string, unknown>
+    : currentAnamnese?.structured_data;
 
   return (
     <div className="space-y-3">
