@@ -918,7 +918,7 @@ export function AnamneseBlock({
   );
 
   // ─── Empty state ────────────────────────────────────────────────
-  if (!currentAnamnese && !isEditing) {
+  if (!currentAnamnese && !existingV2Record && !isEditing) {
     return (
       <>
         {renderSwitchConfirmDialog()}
