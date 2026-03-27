@@ -1699,7 +1699,7 @@ export default function Prontuario() {
           />
         );
 
-
+      case 'plano_alimentar':
         // Nutrição - Plano Alimentar
         return (
           <PlanoAlimentarBlock
@@ -1712,8 +1712,6 @@ export default function Prontuario() {
             onDeactivate={deactivatePlanoAlimentar}
           />
         );
-
-      // case 'evolucao_corporal' removed - not in Nutrition menu
 
       case 'exames':
         // Specialty-specific documents block
