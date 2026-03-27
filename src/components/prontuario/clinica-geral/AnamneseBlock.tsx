@@ -611,32 +611,16 @@ export function AnamneseBlock({
     setLastAutoSave(null);
   };
 
+  const [isSavingLocal, setIsSavingLocal] = useState(false);
+
   const handleSave = async () => {
-    const legacy = mapStructuredToLegacy(structuredData);
-    const saveData = {
-      queixa_principal: legacy.queixa_principal || '',
-      historia_doenca_atual: legacy.historia_doenca_atual || '',
-      antecedentes_pessoais: legacy.antecedentes_pessoais || '',
-      antecedentes_familiares: legacy.antecedentes_familiares || '',
-      habitos_vida: legacy.habitos_vida || '',
-      medicamentos_uso_continuo: legacy.medicamentos_uso_continuo || '',
-      alergias: legacy.alergias || '',
-      comorbidades: currentAnamnese?.comorbidades || '',
-      structured_data: structuredData,
-      template_id: activeTemplate?.id || '',
-    };
+    if (isSavingLocal) return; // prevent double-click
+    setIsSavingLocal(true);
 
-    // Save to legacy patient_anamneses
-    if (isEditingExisting && currentAnamnese && onUpdate) {
-      await onUpdate(currentAnamnese.id, saveData);
-    } else {
-      await onSave(saveData);
-    }
-
-    // Also save to V2 anamnesis_records for proper template-based persistence
-    if (activeTemplate && patientIdForRecords) {
-      const v2Template = v2Templates.find(t => t.id === activeTemplate.id);
-      try {
+    try {
+      // Save to V2 anamnesis_records (primary persistence)
+      if (activeTemplate && patientIdForRecords) {
+        const v2Template = v2Templates.find(t => t.id === activeTemplate.id);
         await saveV2Record({
           id: existingV2Record?.id, // update if exists
           patient_id: patientIdForRecords,
@@ -646,16 +630,40 @@ export function AnamneseBlock({
           specialty_id: specialtyId,
           appointment_id: appointmentId || undefined,
         });
-      } catch (err) {
-        console.error('Erro ao salvar no anamnesis_records:', err);
-        // Don't block - legacy save already succeeded
-      }
-    }
+        // Toast is handled by the mutation's onSuccess/onError in useAnamnesisTemplatesV2
+      } else {
+        // Fallback to legacy save only if V2 path isn't available
+        const legacy = mapStructuredToLegacy(structuredData);
+        const saveData = {
+          queixa_principal: legacy.queixa_principal || '',
+          historia_doenca_atual: legacy.historia_doenca_atual || '',
+          antecedentes_pessoais: legacy.antecedentes_pessoais || '',
+          antecedentes_familiares: legacy.antecedentes_familiares || '',
+          habitos_vida: legacy.habitos_vida || '',
+          medicamentos_uso_continuo: legacy.medicamentos_uso_continuo || '',
+          alergias: legacy.alergias || '',
+          comorbidades: currentAnamnese?.comorbidades || '',
+          structured_data: structuredData,
+          template_id: activeTemplate?.id || '',
+        };
 
-    setIsEditing(false);
-    setIsEditingExisting(false);
-    setStructuredData({});
-    setLastAutoSave(null);
+        if (isEditingExisting && currentAnamnese && onUpdate) {
+          await onUpdate(currentAnamnese.id, saveData);
+        } else {
+          await onSave(saveData);
+        }
+      }
+
+      setIsEditing(false);
+      setIsEditingExisting(false);
+      setStructuredData({});
+      setLastAutoSave(null);
+    } catch (err) {
+      // Error toast already shown by the mutation hook — no duplicate here
+      console.error('handleSave error:', err);
+    } finally {
+      setIsSavingLocal(false);
+    }
   };
 
   const updateField = (fieldId: string, value: unknown) => {
