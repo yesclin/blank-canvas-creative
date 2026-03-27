@@ -42,6 +42,7 @@ import {
   Edit3,
   Save,
   X,
+  ArrowLeft,
   Clock,
   History,
   AlertTriangle,
@@ -219,6 +220,7 @@ export function AnamneseBlock({
   const [creatingDefault, setCreatingDefault] = useState(false);
   const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
   // Auto-save refs
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -622,6 +624,14 @@ export function AnamneseBlock({
     setIsCreatingNew(false);
     setStructuredData({});
     setLastAutoSave(null);
+  };
+
+  const handleBackClick = () => {
+    if (hasFilledData()) {
+      setShowDiscardConfirm(true);
+    } else {
+      handleCancel();
+    }
   };
 
   const [isSavingLocal, setIsSavingLocal] = useState(false);
@@ -1057,6 +1067,15 @@ export function AnamneseBlock({
           {/* Minimal header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 flex-shrink-0"
+                onClick={handleBackClick}
+                disabled={isSavingLocal || savingV2}
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
               <h3 className="font-semibold text-base tracking-tight">
                 {isCreatingNew ? 'Nova Anamnese' : isEditingExisting ? 'Editar Anamnese' : 'Nova Versão'}
               </h3>
@@ -1072,6 +1091,27 @@ export function AnamneseBlock({
             </div>
             {(isCreatingNew || allTemplates.length > 1) && renderTemplateSelector()}
           </div>
+
+          {/* Discard changes confirmation */}
+          <AlertDialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
+            <AlertDialogContent className="bg-background">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                  Deseja sair sem salvar?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  As alterações não salvas serão perdidas.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Continuar editando</AlertDialogCancel>
+                <AlertDialogAction onClick={handleCancel} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Sair sem salvar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
           {/* Premium blocks */}
           <div className="space-y-8">
