@@ -1117,7 +1117,6 @@ export default function Prontuario() {
               } : null}
               clinicalData={{
                 allergies: prontuarioClinicalData?.allergies || [],
-                chronic_diseases: prontuarioClinicalData?.chronic_diseases || [],
                 current_medications: prontuarioClinicalData?.current_medications || [],
               }}
               alerts={[]}
@@ -1141,7 +1140,6 @@ export default function Prontuario() {
               clinicalData={{
                 allergies: prontuarioClinicalData?.allergies || [],
                 chronic_diseases: prontuarioClinicalData?.chronic_diseases || [],
-                current_medications: prontuarioClinicalData?.current_medications || [],
               }}
               alerts={[]}
               loading={loading}
