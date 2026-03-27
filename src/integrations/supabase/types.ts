@@ -1400,9 +1400,14 @@ export type Database = {
           address_state: string | null
           address_street: string | null
           address_zip: string | null
+          cnpj: string | null
+          cpf: string | null
           created_at: string
           email: string | null
+          fiscal_type: string | null
           id: string
+          inscricao_estadual: string | null
+          inscricao_municipal: string | null
           logo_url: string | null
           margin_alert_enabled: boolean | null
           margin_alert_min_percent: number | null
@@ -1423,9 +1428,14 @@ export type Database = {
           address_state?: string | null
           address_street?: string | null
           address_zip?: string | null
+          cnpj?: string | null
+          cpf?: string | null
           created_at?: string
           email?: string | null
+          fiscal_type?: string | null
           id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
           logo_url?: string | null
           margin_alert_enabled?: boolean | null
           margin_alert_min_percent?: number | null
@@ -1446,9 +1456,14 @@ export type Database = {
           address_state?: string | null
           address_street?: string | null
           address_zip?: string | null
+          cnpj?: string | null
+          cpf?: string | null
           created_at?: string
           email?: string | null
+          fiscal_type?: string | null
           id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
           logo_url?: string | null
           margin_alert_enabled?: boolean | null
           margin_alert_min_percent?: number | null
