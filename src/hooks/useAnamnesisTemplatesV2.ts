@@ -149,28 +149,60 @@ export function useAnamnesisTemplatesV2(options?: {
             structure = [];
           }
         } else if (Array.isArray(tmpl.campos) && tmpl.campos.length > 0) {
-          // Convert legacy flat campos (with section property) into grouped sections
-          const sectionMap = new Map<string, TemplateField[]>();
-          for (const campo of tmpl.campos) {
-            const sectionTitle = campo.section || 'Geral';
-            if (!sectionMap.has(sectionTitle)) sectionMap.set(sectionTitle, []);
-            sectionMap.get(sectionTitle)!.push({
-              id: campo.id,
-              type: campo.type || 'textarea',
-              label: campo.label || '',
-              required: campo.required || false,
-              placeholder: campo.placeholder,
-              options: campo.options,
-            });
-          }
-          let idx = 0;
-          for (const [title, fields] of sectionMap) {
-            structure.push({
-              id: `section_legacy_${idx++}`,
-              type: 'section',
-              title,
-              fields,
-            });
+          // Detect format: nested sections ({id, title, fields}) vs flat campos ({id, label, section})
+          const firstItem = tmpl.campos[0] as any;
+          const isNestedSections = firstItem && (Array.isArray(firstItem.fields) || firstItem.title || firstItem.titulo);
+
+          if (isNestedSections) {
+            // Nested section format (same as versioned structure)
+            structure = (tmpl.campos as any[]).map((s: any, idx: number) => ({
+              id: s.id || `section_${idx}`,
+              type: 'section' as const,
+              title: s.title || s.titulo || 'Seção',
+              fields: Array.isArray(s.fields)
+                ? (s.fields as any[]).map((f: any) => ({
+                    id: f.id || '',
+                    type: f.type || 'text',
+                    label: f.label || f.nome || '',
+                    required: f.required ?? f.obrigatorio ?? false,
+                    placeholder: f.placeholder || '',
+                    options: f.options || f.opcoes || undefined,
+                  }))
+                : Array.isArray(s.campos)
+                  ? (s.campos as any[]).map((c: any) => ({
+                      id: c.id || c.nome || '',
+                      type: c.type || c.tipo || 'text',
+                      label: c.label || c.nome || '',
+                      required: c.required ?? c.obrigatorio ?? false,
+                      placeholder: c.placeholder || '',
+                      options: c.options || c.opcoes || undefined,
+                    }))
+                  : [],
+            }));
+          } else {
+            // Legacy flat campos (with section property) into grouped sections
+            const sectionMap = new Map<string, TemplateField[]>();
+            for (const campo of tmpl.campos as any[]) {
+              const sectionTitle = campo.section || 'Geral';
+              if (!sectionMap.has(sectionTitle)) sectionMap.set(sectionTitle, []);
+              sectionMap.get(sectionTitle)!.push({
+                id: campo.id,
+                type: campo.type || 'textarea',
+                label: campo.label || '',
+                required: campo.required || false,
+                placeholder: campo.placeholder,
+                options: campo.options,
+              });
+            }
+            let idx = 0;
+            for (const [title, fields] of sectionMap) {
+              structure.push({
+                id: `section_legacy_${idx++}`,
+                type: 'section',
+                title,
+                fields,
+              });
+            }
           }
         }
 
