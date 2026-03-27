@@ -104,6 +104,7 @@ interface AnamneseBlockProps {
   patientData?: any;
   specialtyId?: string | null;
   specialtyName?: string | null;
+  appointmentId?: string | null;
 }
 
 // ─── Multi-select badge component ────────────────────────────────────
