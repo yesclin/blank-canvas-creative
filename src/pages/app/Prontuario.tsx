@@ -179,10 +179,30 @@ import {
   LinhaDoTempoPediatriaBlock,
 } from "@/components/prontuario/pediatria";
 import { AnamneseDermatologiaBlock } from "@/components/prontuario/dermatologia/AnamneseDermatologiaBlock";
+import {
+  VisaoGeralDermatoBlock,
+  ExameDermatoBlock,
+  PrescricoesDermatoBlock,
+  EvolucoesDermatoBlock,
+  ImagensDermatoBlock,
+  AlertasDermatoBlock,
+  LinhaDoTempoDermatoBlock,
+} from "@/components/prontuario/dermatologia";
 import { AnamnesePediatriaWrapper } from "@/components/prontuario/pediatria/AnamnesePediatriaWrapper";
 import { PlanoCondutaDermatoBlock } from "@/components/prontuario/dermatologia/PlanoCondutaDermatoBlock";
 import { DiagnosticoDermatoWrapper } from "@/components/prontuario/dermatologia/DiagnosticoDermatoWrapper";
 import { DiagnosticoOdontologicoWrapper } from "@/components/prontuario/odontology/DiagnosticoOdontologicoWrapper";
+import {
+  OdontologiaVisaoGeralBlock,
+  AnamneseOdontologicaBlock,
+  AvaliacaoClinicaOdontologicaBlock,
+  PlanoTratamentoOdontologicoBlock,
+  EvolucoesOdontologicasBlock,
+  ProcedimentosRealizadosBlock as ProcedimentosOdontoBlock,
+  MateriaisUtilizadosBlock,
+  ExamesDocumentosBlock as ExamesDocumentosOdontoBlock,
+  HistoricoTimelineBlock as HistoricoTimelineOdontoBlock,
+} from "@/components/prontuario/odontology";
 import {
   useEvolucoesNutricaoData, 
   useAvaliacaoNutricionalData, 
