@@ -571,16 +571,25 @@ export function useAnamnesisRecords(patientId: string | null, appointmentId?: st
           .eq('id', input.id);
         if (error) throw error;
       } else {
+        // Look up professional_id from user_id
+        const { data: profData } = await supabase
+          .from('professionals')
+          .select('id')
+          .eq('user_id', userData.user.id)
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle();
+
         // Create new record with immutable context snapshot
         const insertData: Record<string, unknown> = {
           appointment_id: input.appointment_id || null,
           patient_id: input.patient_id,
           clinic_id: clinic.id,
-          professional_id: userData.user.id,
+          professional_id: profData?.id || userData.user.id,
           template_id: input.template_id,
           template_version_id: input.template_version_id,
           responses: input.responses as unknown as Json,
-          data: input.responses as unknown as Json, // also save to legacy 'data' column
+          data: input.responses as unknown as Json,
           created_by: userData.user.id,
         };
 
