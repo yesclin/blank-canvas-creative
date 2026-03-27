@@ -567,7 +567,8 @@ export function useAnamnesisRecords(patientId: string | null, appointmentId?: st
           .from('anamnesis_records')
           .update({
             responses: input.responses as unknown as Json,
-          })
+            data: input.responses as unknown as Json,
+          } as any)
           .eq('id', input.id);
         if (error) throw error;
       } else {
