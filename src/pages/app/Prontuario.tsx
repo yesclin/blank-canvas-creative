@@ -1104,6 +1104,26 @@ export default function Prontuario() {
             />
           );
         }
+        if (activeSpecialtyKey === 'dermatologia') {
+          return (
+            <VisaoGeralDermatoBlock
+              patientId={patientId}
+              clinicId={clinicIdForFisio || null}
+              canEdit={canEditCurrentTab}
+              onNavigateToModule={(moduleKey) => setActiveTab(moduleKey)}
+            />
+          );
+        }
+        if (activeSpecialtyKey === 'odontologia') {
+          return (
+            <OdontologiaVisaoGeralBlock
+              patientId={patientId}
+              clinicId={clinicIdForFisio || null}
+              canEdit={canEditCurrentTab}
+              onNavigateToModule={(moduleKey) => setActiveTab(moduleKey)}
+            />
+          );
+        }
         // Default: Clínica Geral - Visão Geral
         return (
           <VisaoGeralBlock
