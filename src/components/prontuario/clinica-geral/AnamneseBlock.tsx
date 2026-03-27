@@ -1233,12 +1233,6 @@ export function AnamneseBlock({
             Histórico ({anamneseHistory.length})
           </Button>
         )}
-        {canEdit && (
-          <Button variant="outline" size="sm" onClick={handleStartNewAnamnese}>
-            <Plus className="h-4 w-4 mr-1.5" />
-            Nova Anamnese
-          </Button>
-        )}
         {canEdit && onUpdate && selectedRecord && (
           <Button variant="outline" size="sm" onClick={handleStartEdit}>
             <Edit3 className="h-4 w-4 mr-1.5" />
