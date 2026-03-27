@@ -513,9 +513,9 @@ export function useClinicalTimeline(patientId: string | null) {
         // Access logs (limited for performance)
         supabase
           .from('access_logs')
-          .select('id, user_id, action, resource, created_at')
+          .select('id, user_id, action, resource_type, resource_id, details, created_at')
           .eq('clinic_id', clinic.id)
-          .ilike('resource', `%patient:${patientId}%`)
+          .eq('resource_id', patientId)
           .order('created_at', { ascending: false })
           .limit(50),
 
