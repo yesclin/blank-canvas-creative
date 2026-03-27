@@ -71,7 +71,9 @@ interface RawAccessLog {
   id: string;
   user_id: string | null;
   action: string;
-  resource: string | null;
+  resource_type: string;
+  resource_id: string | null;
+  details: Record<string, any> | null;
   created_at: string;
 }
 
