@@ -253,6 +253,22 @@ export function AnamneseBlock({
     }
   }, [activeTemplate, selectedTemplateId]);
 
+  // ─── Load existing V2 record for active template ────────────────
+  const existingV2Record = useMemo(() => {
+    if (!selectedTemplateId || !v2Records.length) return null;
+    return v2Records.find(r => r.template_id === selectedTemplateId) || null;
+  }, [selectedTemplateId, v2Records]);
+
+  // Load V2 record responses into structuredData when viewing (not editing)
+  useEffect(() => {
+    if (!isEditing && existingV2Record && Object.keys(existingV2Record.responses).length > 0) {
+      // Only set if we don't already have legacy data loaded
+      if (!currentAnamnese?.structured_data || Object.keys(currentAnamnese.structured_data).length === 0) {
+        setStructuredData(existingV2Record.responses as Record<string, unknown>);
+      }
+    }
+  }, [existingV2Record, isEditing, currentAnamnese]);
+
   // ─── Auto-save (10s debounce, silent) ───────────────────────────────
   useEffect(() => {
     if (!isEditing) return;
