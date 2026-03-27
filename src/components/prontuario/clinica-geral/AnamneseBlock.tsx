@@ -1167,9 +1167,9 @@ export function AnamneseBlock({
       {/* Content */}
       <Card>
         <CardContent className="p-0 divide-y">
-          {hasStructuredData ? (
+          {hasStructuredData && viewData ? (
             (activeTemplate?.secoes || []).map(secao =>
-              renderViewSection(secao, currentAnamnese!.structured_data!)
+              renderViewSection(secao, viewData)
             )
           ) : (
             currentAnamnese && renderLegacyView(currentAnamnese)
