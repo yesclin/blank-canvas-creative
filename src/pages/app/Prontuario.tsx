@@ -1255,6 +1255,7 @@ export default function Prontuario() {
             patientName={patient?.full_name}
             patientCpf={patient?.cpf}
             patientData={{
+              id: patientId,
               full_name: patient?.full_name,
               birth_date: patient?.birth_date,
               gender: patient?.gender as 'M' | 'F' | 'O' | null | undefined,
@@ -1265,6 +1266,7 @@ export default function Prontuario() {
             }}
             specialtyId={activeSpecialtyId}
             specialtyName={activeSpecialty?.name}
+            appointmentId={activeAppointment?.id || null}
           />
         );
 
