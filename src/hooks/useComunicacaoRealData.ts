@@ -188,7 +188,7 @@ export function useMessageLogs() {
     enabled: !!clinic?.id,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("message_logs")
+        .from("message_queue")
         .select("*, patients(full_name, phone)")
         .eq("clinic_id", clinic!.id)
         .order("created_at", { ascending: false })
@@ -196,16 +196,16 @@ export function useMessageLogs() {
 
       if (error) throw error;
 
-      return (data || []).map((m): MessageLog => ({
+      return (data || []).map((m: any): MessageLog => ({
         id: m.id,
         clinic_id: m.clinic_id,
         patient_id: m.patient_id || "",
-        patient: m.patients ? { full_name: (m.patients as any).full_name, phone: (m.patients as any).phone } : undefined,
+        patient: m.patients ? { full_name: m.patients.full_name, phone: m.patients.phone } : undefined,
         template_id: m.template_id || undefined,
         channel: (m.channel || "whatsapp") as CommunicationChannel,
         message_type: "manual" as any,
-        content: m.content || "",
-        status: (m.status || "enviado") as any,
+        content: m.message_body || m.rendered_message || "",
+        status: (m.status || "pending") as any,
         metadata: {},
         created_at: m.created_at,
       }));
