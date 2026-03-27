@@ -596,8 +596,6 @@ export function useAnamnesisRecords(patientId: string | null, appointmentId?: st
 
         // Persist immutable context
         if (input.specialty_id) insertData.specialty_id = input.specialty_id;
-        if (input.procedure_id) insertData.procedure_id = input.procedure_id;
-        if (input.structure_snapshot) insertData.structure_snapshot = input.structure_snapshot as unknown as Json;
 
         const { error } = await supabase
           .from('anamnesis_records')
