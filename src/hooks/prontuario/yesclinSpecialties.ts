@@ -432,16 +432,12 @@ export const YESCLIN_SPECIALTY_LABELS: Record<SpecialtyKey, string> = {
   geral: 'Clínica Geral',
   odontologia: 'Odontologia',
   psicologia: 'Psicologia',
-  psiquiatria: 'Psiquiatria',
   nutricao: 'Nutrição',
   estetica: 'Estética',
   dermatologia: 'Dermatologia',
   fisioterapia: 'Fisioterapia',
   pilates: 'Pilates',
   pediatria: 'Pediatria',
-  ginecologia: 'Ginecologia',
-  oftalmologia: 'Oftalmologia',
-  custom: 'Personalizado',
 };
 
 /**

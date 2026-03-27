@@ -11,16 +11,12 @@ export type SpecialtyKey =
   | 'geral'
   | 'odontologia'
   | 'psicologia'
-  | 'psiquiatria'
   | 'nutricao'
   | 'estetica'
   | 'dermatologia'
   | 'fisioterapia'
   | 'pilates'
-  | 'pediatria'
-  | 'ginecologia'
-  | 'oftalmologia'
-  | 'custom';
+  | 'pediatria';
 
 export interface SpecialtyOption {
   id: string;

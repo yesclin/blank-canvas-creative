@@ -179,10 +179,30 @@ import {
   LinhaDoTempoPediatriaBlock,
 } from "@/components/prontuario/pediatria";
 import { AnamneseDermatologiaBlock } from "@/components/prontuario/dermatologia/AnamneseDermatologiaBlock";
+import {
+  VisaoGeralDermatoBlock,
+  ExameDermatoBlock,
+  PrescricoesDermatoBlock,
+  EvolucoesDermatoBlock,
+  ImagensDermatoBlock,
+  AlertasDermatoBlock,
+  LinhaDoTempoDermatoBlock,
+} from "@/components/prontuario/dermatologia";
 import { AnamnesePediatriaWrapper } from "@/components/prontuario/pediatria/AnamnesePediatriaWrapper";
 import { PlanoCondutaDermatoBlock } from "@/components/prontuario/dermatologia/PlanoCondutaDermatoBlock";
 import { DiagnosticoDermatoWrapper } from "@/components/prontuario/dermatologia/DiagnosticoDermatoWrapper";
 import { DiagnosticoOdontologicoWrapper } from "@/components/prontuario/odontology/DiagnosticoOdontologicoWrapper";
+import {
+  OdontologiaVisaoGeralBlock,
+  AnamneseOdontologicaBlock,
+  AvaliacaoClinicaOdontologicaBlock,
+  PlanoTratamentoOdontologicoBlock,
+  EvolucoesOdontologicasBlock,
+  ProcedimentosRealizadosBlock as ProcedimentosOdontoBlock,
+  MateriaisUtilizadosBlock,
+  ExamesDocumentosBlock as ExamesDocumentosOdontoBlock,
+  HistoricoTimelineBlock as HistoricoTimelineOdontoBlock,
+} from "@/components/prontuario/odontology";
 import {
   useEvolucoesNutricaoData, 
   useAvaliacaoNutricionalData, 
@@ -1084,6 +1104,49 @@ export default function Prontuario() {
             />
           );
         }
+        if (activeSpecialtyKey === 'dermatologia') {
+          return (
+            <VisaoGeralDermatoBlock
+              patient={patient ? {
+                id: patient.id,
+                full_name: patient.full_name,
+                birth_date: patient.birth_date,
+                gender: patient.gender,
+                phone: patient.phone,
+                email: patient.email,
+              } : null}
+              clinicalData={{
+                allergies: prontuarioClinicalData?.allergies || [],
+                current_medications: prontuarioClinicalData?.current_medications || [],
+              }}
+              alerts={[]}
+              lastAppointment={null}
+              loading={loading}
+              onNavigateToModule={(moduleKey) => setActiveTab(moduleKey)}
+            />
+          );
+        }
+        if (activeSpecialtyKey === 'odontologia') {
+          return (
+            <OdontologiaVisaoGeralBlock
+              patient={patient ? {
+                id: patient.id,
+                full_name: patient.full_name,
+                birth_date: patient.birth_date,
+                gender: patient.gender,
+                phone: patient.phone,
+                email: patient.email,
+              } : null}
+              clinicalData={{
+                allergies: prontuarioClinicalData?.allergies || [],
+                chronic_diseases: prontuarioClinicalData?.chronic_diseases || [],
+              }}
+              alerts={[]}
+              loading={loading}
+              onNavigateToModule={(moduleKey) => setActiveTab(moduleKey)}
+            />
+          );
+        }
         // Default: Clínica Geral - Visão Geral
         return (
           <VisaoGeralBlock
@@ -1181,7 +1244,7 @@ export default function Prontuario() {
             />
           );
         }
-        // Default: Clínica Geral - Anamnese com versionamento
+        // Default: Clínica Geral / Odontologia / other - Anamnese com versionamento
         return (
           <AnamneseBlock
             currentAnamnese={currentAnamnese}
@@ -1219,7 +1282,7 @@ export default function Prontuario() {
             />
           );
         }
-        // Clínica Geral - Exame Físico (sinais vitais, medidas)
+        // Default: Clínica Geral / Dermatologia / Odontologia - Exame Físico
         return (
           <ExameFisicoBlock
             exames={examesFisicos}
@@ -1626,7 +1689,7 @@ export default function Prontuario() {
           />
         );
 
-
+      case 'plano_alimentar':
         // Nutrição - Plano Alimentar
         return (
           <PlanoAlimentarBlock
@@ -1639,8 +1702,6 @@ export default function Prontuario() {
             onDeactivate={deactivatePlanoAlimentar}
           />
         );
-
-      // case 'evolucao_corporal' removed - not in Nutrition menu
 
       case 'exames':
         // Specialty-specific documents block
@@ -1893,208 +1954,6 @@ export default function Prontuario() {
           />
         );
 
-      case 'exames':
-      case 'documentos':
-      case 'imagens':
-        return (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold capitalize">{activeTab}</h2>
-              {canEditCurrentTab ? (
-                <Button disabled={!canPerformAction('upload_files')}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Anexar Arquivo
-                </Button>
-              ) : (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" disabled className="opacity-50">
-                        <ShieldX className="h-4 w-4 mr-2" />
-                        Somente Leitura
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {!hasActiveAppointment 
-                        ? appointmentReason 
-                        : 'Você não tem permissão para adicionar arquivos'}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-            </div>
-            
-            {tabFiles.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Paperclip className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">Nenhum arquivo encontrado.</p>
-                  {canEditCurrentTab && (
-                    <Button className="mt-4" disabled={!canPerformAction('upload_files')}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Anexar Arquivo
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {tabFiles.map((file) => (
-                  <Card 
-                    key={file.id} 
-                    className={cn(
-                      "cursor-pointer hover:shadow-md transition-all duration-500",
-                      highlightedId === file.id && "ring-2 ring-primary bg-primary/5 animate-pulse"
-                    )}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3">
-                        {file.file_type.startsWith('image/') ? (
-                          <Image className="h-8 w-8 text-primary" />
-                        ) : (
-                          <FileText className="h-8 w-8 text-muted-foreground" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{file.file_name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(file.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-
-      case 'alertas':
-        return (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold">Alertas Clínicos</h2>
-              {canEditCurrentTab ? (
-                <Button disabled={!canPerformAction('create_entry')}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Alerta
-                </Button>
-              ) : (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" disabled className="opacity-50">
-                        <ShieldX className="h-4 w-4 mr-2" />
-                        Somente Leitura
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {!hasActiveAppointment 
-                        ? appointmentReason 
-                        : 'Você não tem permissão para criar alertas'}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-            </div>
-            
-            {activeAlerts.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">Nenhum alerta ativo.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {activeAlerts.map((alert) => (
-                  <Card 
-                    key={alert.id} 
-                    className={cn(
-                      "border-l-4 transition-all duration-500",
-                      alert.severity === 'critical' ? "border-l-destructive" :
-                      alert.severity === 'warning' ? "border-l-yellow-500" :
-                      "border-l-primary",
-                      highlightedId === alert.id && "ring-2 ring-primary bg-primary/5 animate-pulse"
-                    )}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge variant={
-                              alert.severity === 'critical' ? 'destructive' :
-                              alert.severity === 'warning' ? 'default' : 'secondary'
-                            }>
-                              {alert.severity === 'critical' ? 'Crítico' :
-                               alert.severity === 'warning' ? 'Atenção' : 'Info'}
-                            </Badge>
-                            <Badge variant="outline">{alert.alert_type}</Badge>
-                          </div>
-                          <p className="font-medium">{alert.title}</p>
-                          {alert.description && (
-                            <p className="text-sm text-muted-foreground mt-1">{alert.description}</p>
-                          )}
-                        </div>
-                        {canEditCurrentTab && (
-                          <Button variant="ghost" size="sm" disabled={!canPerformAction('edit_entry')}>
-                            Dispensar
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-
-      case 'historico':
-        return (
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold">Histórico / Auditoria</h2>
-            <Card>
-              <CardContent className="py-8 text-center">
-                <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  O histórico de auditoria registra todas as ações realizadas no prontuário.
-                </p>
-                {config.security.audit_enabled ? (
-                  <Badge className="mt-4" variant="default">Auditoria Habilitada</Badge>
-                ) : (
-                  <Badge className="mt-4" variant="secondary">Auditoria Desabilitada</Badge>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        );
-
-      case 'timeline':
-        // Get restricted tabs based on permissions
-        const restrictedTabs = allNavItems
-          .filter(item => !canViewTab(getStandardTabKey(item.id)))
-          .map(item => item.id);
-        
-        return (
-          <ClinicalTimeline
-            patientId={patientId}
-            onNavigateToTab={(tabKey, entityId) => {
-              setActiveTab(tabKey);
-              if (entityId) {
-                setHighlightedId(entityId);
-                if (highlightTimeoutRef.current) {
-                  clearTimeout(highlightTimeoutRef.current);
-                }
-                highlightTimeoutRef.current = setTimeout(() => {
-                  setHighlightedId(null);
-                }, 3000);
-              }
-            }}
-            restrictedTabs={restrictedTabs}
-            className="h-full"
-          />
-        );
 
       case 'odontograma':
         return (

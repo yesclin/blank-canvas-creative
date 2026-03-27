@@ -143,47 +143,6 @@ export const SPECIALTY_CAPABILITIES: Record<SpecialtyKey, SpecialtyCapability> =
     icon: 'Baby',
   },
 
-  // Unsupported but typed for safety — fallback to geral
-  psiquiatria: {
-    label: 'Psiquiatria',
-    anamnesisSlug: 'psiquiatria',
-    enabledBlocks: [
-      'resumo', 'anamnese', 'evolucao', 'exame_fisico', 'diagnostico',
-      'conduta', 'prescricoes', 'exames', 'alertas', 'timeline',
-    ],
-    defaultModules: [...CORE_MODULES, 'recurring_sessions', 'therapeutic_plan'],
-    icon: 'Stethoscope',
-  },
-  ginecologia: {
-    label: 'Ginecologia',
-    anamnesisSlug: 'ginecologia',
-    enabledBlocks: [
-      'resumo', 'anamnese', 'evolucao', 'exame_fisico', 'diagnostico',
-      'conduta', 'prescricoes', 'exames', 'alertas', 'timeline',
-    ],
-    defaultModules: [...CORE_MODULES, 'procedures_module'],
-    icon: 'Stethoscope',
-  },
-  oftalmologia: {
-    label: 'Oftalmologia',
-    anamnesisSlug: 'oftalmologia',
-    enabledBlocks: [
-      'resumo', 'anamnese', 'evolucao', 'exame_fisico', 'diagnostico',
-      'conduta', 'prescricoes', 'exames', 'alertas', 'timeline',
-    ],
-    defaultModules: [...CORE_MODULES, 'procedures_module'],
-    icon: 'Stethoscope',
-  },
-  custom: {
-    label: 'Personalizado',
-    anamnesisSlug: 'custom',
-    enabledBlocks: [
-      'resumo', 'anamnese', 'evolucao', 'exame_fisico', 'diagnostico',
-      'conduta', 'prescricoes', 'exames', 'alertas', 'timeline',
-    ],
-    defaultModules: [...CORE_MODULES],
-    icon: 'Stethoscope',
-  },
 };
 
 // ---------------------------------------------------------------------------
