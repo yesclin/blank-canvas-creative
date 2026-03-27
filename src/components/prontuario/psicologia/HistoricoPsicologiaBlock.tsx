@@ -46,7 +46,7 @@ interface ConsentRecord {
   term_title: string;
   consent_type: string;
   accepted_at: string;
-  term_version?: string;
+  term_version?: number | string;
 }
 
 /**

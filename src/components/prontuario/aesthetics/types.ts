@@ -87,7 +87,7 @@ export interface FacialMapImage {
    consent_type: ConsentType;
    term_title: string;
    term_content: string;
-   term_version: string;
+   term_version: number | string;
    accepted_at: string;
    ip_address?: string | null;
    user_agent?: string | null;

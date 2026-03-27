@@ -22,7 +22,7 @@ interface ConsentCollectionDialogProps {
   onOpenChange: (open: boolean) => void;
   patientName: string;
   termTitle: string;
-  termVersion: string;
+  termVersion: number | string;
   termContent: string;
   onConfirm: () => Promise<boolean>;
   isLoading?: boolean;
