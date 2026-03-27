@@ -8,7 +8,7 @@ export interface ConsentTerm {
   clinic_id: string;
   title: string;
   content: string;
-  version: string;
+  version: number;
   is_active: boolean;
   parent_term_id: string | null;
   created_at: string;
@@ -18,7 +18,7 @@ export interface ConsentTerm {
 export interface ConsentTermInput {
   title: string;
   content: string;
-  version?: string;
+  version?: number;
 }
 
 export function useConsentTerms() {
@@ -61,7 +61,7 @@ export function useConsentTerms() {
         clinic_id: clinic.id,
         title: input.title,
         content: input.content,
-        version: input.version || '1.0',
+        version: input.version || 1,
         is_active: false, // New terms start as inactive
       });
 
@@ -86,9 +86,8 @@ export function useConsentTerms() {
       const parentTerm = terms.find(t => t.id === parentTermId);
       if (!parentTerm) throw new Error('Termo original não encontrado');
 
-      // Calculate new version (increment minor version)
-      const [major, minor] = parentTerm.version.split('.').map(Number);
-      const newVersion = `${major}.${minor + 1}`;
+      // Calculate new version (increment by 1)
+      const newVersion = (parentTerm.version || 1) + 1;
 
       const { error } = await supabase.from('consent_terms').insert({
         clinic_id: clinic.id,

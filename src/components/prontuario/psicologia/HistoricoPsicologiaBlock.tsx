@@ -46,7 +46,7 @@ interface ConsentRecord {
   term_title: string;
   consent_type: string;
   accepted_at: string;
-  term_version?: string;
+  term_version?: number | string;
 }
 
 /**
@@ -228,7 +228,7 @@ export function HistoricoPsicologiaBlock({
         title: item.term_title,
         subtitle: `Tipo: ${item.consent_type}`,
         metadata: {
-          ...(item.term_version ? { 'Versão': item.term_version } : {}),
+          ...(item.term_version ? { 'Versão': String(item.term_version) } : {}),
         },
       });
     });

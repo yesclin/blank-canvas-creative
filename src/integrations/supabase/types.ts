@@ -1636,6 +1636,7 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          parent_term_id: string | null
           term_type: string
           title: string
           updated_at: string
@@ -1647,6 +1648,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          parent_term_id?: string | null
           term_type?: string
           title: string
           updated_at?: string
@@ -1658,6 +1660,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          parent_term_id?: string | null
           term_type?: string
           title?: string
           updated_at?: string
@@ -1671,13 +1674,24 @@ export type Database = {
             referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "consent_terms_parent_term_id_fkey"
+            columns: ["parent_term_id"]
+            isOneToOne: false
+            referencedRelation: "consent_terms"
+            referencedColumns: ["id"]
+          },
         ]
       }
       custom_prontuario_fields: {
         Row: {
+          all_appointments: boolean | null
           clinic_id: string
           config: Json | null
           created_at: string
+          created_by: string | null
+          description: string | null
+          display_order: number | null
           field_key: string
           field_order: number
           field_type: string
@@ -1685,15 +1699,22 @@ export type Database = {
           is_active: boolean
           is_required: boolean
           label: string
+          name: string | null
           options: Json | null
+          placeholder: string | null
+          procedure_id: string | null
           specialty_id: string | null
           tab_key: string
           updated_at: string
         }
         Insert: {
+          all_appointments?: boolean | null
           clinic_id: string
           config?: Json | null
           created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number | null
           field_key: string
           field_order?: number
           field_type?: string
@@ -1701,15 +1722,22 @@ export type Database = {
           is_active?: boolean
           is_required?: boolean
           label: string
+          name?: string | null
           options?: Json | null
+          placeholder?: string | null
+          procedure_id?: string | null
           specialty_id?: string | null
           tab_key: string
           updated_at?: string
         }
         Update: {
+          all_appointments?: boolean | null
           clinic_id?: string
           config?: Json | null
           created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number | null
           field_key?: string
           field_order?: number
           field_type?: string
@@ -1717,7 +1745,10 @@ export type Database = {
           is_active?: boolean
           is_required?: boolean
           label?: string
+          name?: string | null
           options?: Json | null
+          placeholder?: string | null
+          procedure_id?: string | null
           specialty_id?: string | null
           tab_key?: string
           updated_at?: string
@@ -1728,6 +1759,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_prontuario_fields_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
             referencedColumns: ["id"]
           },
           {
@@ -3095,11 +3133,15 @@ export type Database = {
         Row: {
           clinic_id: string
           created_at: string
+          display_order: number | null
           icon: string | null
           id: string
           is_active: boolean
           is_system: boolean
+          key: string | null
           name: string
+          professional_id: string | null
+          scope: string | null
           slug: string
           sort_order: number
           specialty_id: string | null
@@ -3108,11 +3150,15 @@ export type Database = {
         Insert: {
           clinic_id: string
           created_at?: string
+          display_order?: number | null
           icon?: string | null
           id?: string
           is_active?: boolean
           is_system?: boolean
+          key?: string | null
           name: string
+          professional_id?: string | null
+          scope?: string | null
           slug: string
           sort_order?: number
           specialty_id?: string | null
@@ -3121,11 +3167,15 @@ export type Database = {
         Update: {
           clinic_id?: string
           created_at?: string
+          display_order?: number | null
           icon?: string | null
           id?: string
           is_active?: boolean
           is_system?: boolean
+          key?: string | null
           name?: string
+          professional_id?: string | null
+          scope?: string | null
           slug?: string
           sort_order?: number
           specialty_id?: string | null
@@ -3137,6 +3187,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_record_tabs_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
           {
@@ -6435,6 +6492,8 @@ export type Database = {
       }
       system_security_settings: {
         Row: {
+          allow_patient_data_deletion: boolean | null
+          anonymize_reports: boolean | null
           clinic_id: string
           created_at: string
           enable_access_logging: boolean
@@ -6443,9 +6502,13 @@ export type Database = {
           enforce_consent_before_care: boolean
           id: string
           lock_record_without_consent: boolean
+          log_retention_days: number | null
+          require_consent_on_registration: boolean | null
           updated_at: string
         }
         Insert: {
+          allow_patient_data_deletion?: boolean | null
+          anonymize_reports?: boolean | null
           clinic_id: string
           created_at?: string
           enable_access_logging?: boolean
@@ -6454,9 +6517,13 @@ export type Database = {
           enforce_consent_before_care?: boolean
           id?: string
           lock_record_without_consent?: boolean
+          log_retention_days?: number | null
+          require_consent_on_registration?: boolean | null
           updated_at?: string
         }
         Update: {
+          allow_patient_data_deletion?: boolean | null
+          anonymize_reports?: boolean | null
           clinic_id?: string
           created_at?: string
           enable_access_logging?: boolean
@@ -6465,6 +6532,8 @@ export type Database = {
           enforce_consent_before_care?: boolean
           id?: string
           lock_record_without_consent?: boolean
+          log_retention_days?: number | null
+          require_consent_on_registration?: boolean | null
           updated_at?: string
         }
         Relationships: [

@@ -56,7 +56,7 @@ interface TermosConsentimentosPsicologiaBlockProps {
   patientId: string;
   patientName: string;
   // Callbacks
-  onGrantConsent: (termId: string, termVersion: string) => Promise<boolean>;
+  onGrantConsent: (termId: string, termVersion: number) => Promise<boolean>;
   onRevokeConsent: (consentId: string) => Promise<boolean>;
   // Permissões
   canEdit?: boolean;
