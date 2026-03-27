@@ -338,14 +338,13 @@ export default function ConfigClinica() {
 
     // Log audit entry
     if (user) {
-      await supabase.from("clinic_audit_logs").insert({
+      await supabase.from("audit_logs").insert({
         clinic_id: clinicId,
         user_id: user.id,
         action: "update_settings",
-        changes: {
-          updated_fields: Object.keys(updateData),
-          timestamp: new Date().toISOString(),
-        },
+        table_name: "clinics",
+        record_id: clinicId,
+        new_data: { updated_fields: Object.keys(updateData), timestamp: new Date().toISOString() },
       });
     }
 
