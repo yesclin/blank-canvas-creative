@@ -1540,6 +1540,7 @@ export type Database = {
           address_state: string | null
           address_street: string | null
           address_zip: string | null
+          allow_negative_stock: boolean | null
           cnpj: string | null
           cpf: string | null
           created_at: string
@@ -1568,6 +1569,7 @@ export type Database = {
           address_state?: string | null
           address_street?: string | null
           address_zip?: string | null
+          allow_negative_stock?: boolean | null
           cnpj?: string | null
           cpf?: string | null
           created_at?: string
@@ -1596,6 +1598,7 @@ export type Database = {
           address_state?: string | null
           address_street?: string | null
           address_zip?: string | null
+          allow_negative_stock?: boolean | null
           cnpj?: string | null
           cpf?: string | null
           created_at?: string
@@ -1919,6 +1922,67 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: true
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instrumentos_psicologicos: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          data_aplicacao: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          patient_id: string
+          professional_id: string | null
+          resultado: Json | null
+          tipo: string | null
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          data_aplicacao?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          patient_id: string
+          professional_id?: string | null
+          resultado?: Json | null
+          tipo?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          data_aplicacao?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          patient_id?: string
+          professional_id?: string | null
+          resultado?: Json | null
+          tipo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instrumentos_psicologicos_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instrumentos_psicologicos_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instrumentos_psicologicos_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
         ]
@@ -3412,6 +3476,70 @@ export type Database = {
           },
         ]
       }
+      patient_anamnese_psicologia: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          data: Json | null
+          historico_familiar: string | null
+          historico_pessoal: string | null
+          id: string
+          medicamentos: string | null
+          patient_id: string
+          professional_id: string | null
+          queixa_principal: string | null
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          data?: Json | null
+          historico_familiar?: string | null
+          historico_pessoal?: string | null
+          id?: string
+          medicamentos?: string | null
+          patient_id: string
+          professional_id?: string | null
+          queixa_principal?: string | null
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          data?: Json | null
+          historico_familiar?: string | null
+          historico_pessoal?: string | null
+          id?: string
+          medicamentos?: string | null
+          patient_id?: string
+          professional_id?: string | null
+          queixa_principal?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_anamnese_psicologia_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_anamnese_psicologia_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_anamnese_psicologia_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patient_clinical_data: {
         Row: {
           allergies: string[]
@@ -3897,6 +4025,140 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
         }
         Relationships: []
+      }
+      plano_terapeutico_psicologia: {
+        Row: {
+          abordagem: string | null
+          clinic_id: string
+          created_at: string
+          data: Json | null
+          frequencia: string | null
+          id: string
+          objetivos: string | null
+          patient_id: string
+          professional_id: string | null
+          status: string | null
+          titulo: string | null
+          updated_at: string
+        }
+        Insert: {
+          abordagem?: string | null
+          clinic_id: string
+          created_at?: string
+          data?: Json | null
+          frequencia?: string | null
+          id?: string
+          objetivos?: string | null
+          patient_id: string
+          professional_id?: string | null
+          status?: string | null
+          titulo?: string | null
+          updated_at?: string
+        }
+        Update: {
+          abordagem?: string | null
+          clinic_id?: string
+          created_at?: string
+          data?: Json | null
+          frequencia?: string | null
+          id?: string
+          objetivos?: string | null
+          patient_id?: string
+          professional_id?: string | null
+          status?: string | null
+          titulo?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plano_terapeutico_psicologia_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plano_terapeutico_psicologia_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plano_terapeutico_psicologia_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planos_acao_crise: {
+        Row: {
+          acoes: string | null
+          clinic_id: string
+          contatos_emergencia: Json | null
+          created_at: string
+          data: Json | null
+          id: string
+          is_active: boolean
+          patient_id: string
+          professional_id: string | null
+          sinais_alerta: string | null
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          acoes?: string | null
+          clinic_id: string
+          contatos_emergencia?: Json | null
+          created_at?: string
+          data?: Json | null
+          id?: string
+          is_active?: boolean
+          patient_id: string
+          professional_id?: string | null
+          sinais_alerta?: string | null
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          acoes?: string | null
+          clinic_id?: string
+          contatos_emergencia?: Json | null
+          created_at?: string
+          data?: Json | null
+          id?: string
+          is_active?: boolean
+          patient_id?: string
+          professional_id?: string | null
+          sinais_alerta?: string | null
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planos_acao_crise_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planos_acao_crise_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planos_acao_crise_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       procedure_kits: {
         Row: {
@@ -5015,6 +5277,82 @@ export type Database = {
           },
         ]
       }
+      sessoes_psicologia: {
+        Row: {
+          adesao_terapeutica: string | null
+          clinic_id: string
+          created_at: string
+          data_sessao: string | null
+          emocoes_predominantes: string | null
+          evolucao_caso: string | null
+          humor_paciente: string | null
+          id: string
+          numero_sessao: number | null
+          observacoes: string | null
+          patient_id: string
+          professional_id: string | null
+          tecnicas_utilizadas: string | null
+          tema_central: string | null
+          updated_at: string
+        }
+        Insert: {
+          adesao_terapeutica?: string | null
+          clinic_id: string
+          created_at?: string
+          data_sessao?: string | null
+          emocoes_predominantes?: string | null
+          evolucao_caso?: string | null
+          humor_paciente?: string | null
+          id?: string
+          numero_sessao?: number | null
+          observacoes?: string | null
+          patient_id: string
+          professional_id?: string | null
+          tecnicas_utilizadas?: string | null
+          tema_central?: string | null
+          updated_at?: string
+        }
+        Update: {
+          adesao_terapeutica?: string | null
+          clinic_id?: string
+          created_at?: string
+          data_sessao?: string | null
+          emocoes_predominantes?: string | null
+          evolucao_caso?: string | null
+          humor_paciente?: string | null
+          id?: string
+          numero_sessao?: number | null
+          observacoes?: string | null
+          patient_id?: string
+          professional_id?: string | null
+          tecnicas_utilizadas?: string | null
+          tema_central?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessoes_psicologia_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessoes_psicologia_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessoes_psicologia_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       specialties: {
         Row: {
           clinic_id: string | null
@@ -5248,6 +5586,114 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: true
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      therapeutic_goal_updates: {
+        Row: {
+          created_at: string
+          goal_id: string
+          id: string
+          new_progress: number | null
+          observation: string | null
+          old_progress: number | null
+          score_value: number | null
+          updated_by: string
+        }
+        Insert: {
+          created_at?: string
+          goal_id: string
+          id?: string
+          new_progress?: number | null
+          observation?: string | null
+          old_progress?: number | null
+          score_value?: number | null
+          updated_by: string
+        }
+        Update: {
+          created_at?: string
+          goal_id?: string
+          id?: string
+          new_progress?: number | null
+          observation?: string | null
+          old_progress?: number | null
+          score_value?: number | null
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "therapeutic_goal_updates_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "therapeutic_goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      therapeutic_goals: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          data: Json | null
+          descricao: string | null
+          id: string
+          meta_type: string | null
+          patient_id: string
+          professional_id: string | null
+          progresso: number | null
+          status: string | null
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          data?: Json | null
+          descricao?: string | null
+          id?: string
+          meta_type?: string | null
+          patient_id: string
+          professional_id?: string | null
+          progresso?: number | null
+          status?: string | null
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          data?: Json | null
+          descricao?: string | null
+          id?: string
+          meta_type?: string | null
+          patient_id?: string
+          professional_id?: string | null
+          progresso?: number | null
+          status?: string | null
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "therapeutic_goals_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "therapeutic_goals_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "therapeutic_goals_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
         ]
