@@ -229,6 +229,10 @@ export function AnamneseBlock({
     activeOnly: true
   });
 
+  // ─── V2 Records: load and save from anamnesis_records ──────────
+  const patientIdForRecords = patientData?.id || currentAnamnese?.patient_id || null;
+  const { records: v2Records, saveRecord: saveV2Record, isSaving: savingV2 } = useAnamnesisRecords(patientIdForRecords, appointmentId);
+
   const allTemplates: UnifiedTemplate[] = useMemo(() => {
     return v2Templates.map(v2TemplateToUnified);
   }, [v2Templates]);
