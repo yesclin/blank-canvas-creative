@@ -228,7 +228,7 @@ export function HistoricoPsicologiaBlock({
         title: item.term_title,
         subtitle: `Tipo: ${item.consent_type}`,
         metadata: {
-          ...(item.term_version ? { 'Versão': item.term_version } : {}),
+          ...(item.term_version ? { 'Versão': String(item.term_version) } : {}),
         },
       });
     });
