@@ -1169,7 +1169,7 @@ export function AnamneseBlock({
       {renderRecordsList()}
 
       {/* Compact header + actions for selected record */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         {/* Left: title, version, status, date */}
         <div className="flex items-center gap-2 min-w-0 flex-wrap">
           <h3 className="font-semibold text-sm truncate">
@@ -1200,8 +1200,8 @@ export function AnamneseBlock({
           )}
         </div>
 
-        {/* Right: all action buttons grouped */}
-        <div className="flex items-center gap-1.5 flex-shrink-0">
+        {/* Right: action buttons — all grouped together */}
+        <div className="flex items-center gap-1.5 flex-shrink-0 self-end sm:self-auto">
           {currentAnamnese && (
             <Button variant="ghost" size="sm" disabled={generating} onClick={() => {
               generateAnamnesisPdf(
