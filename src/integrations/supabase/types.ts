@@ -1063,6 +1063,51 @@ export type Database = {
           },
         ]
       }
+      clinic_specialty_modules: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          id: string
+          is_enabled: boolean
+          module_key: string
+          specialty_id: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          module_key: string
+          specialty_id: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          module_key?: string
+          specialty_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_specialty_modules_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinic_specialty_modules_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinical_alerts: {
         Row: {
           alert_type: string
@@ -1391,6 +1436,101 @@ export type Database = {
           },
         ]
       }
+      clinical_modules: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          display_order: number
+          icon: string | null
+          id: string
+          is_active: boolean
+          is_system: boolean
+          key: string
+          name: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          key: string
+          name: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          key?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      clinical_scales: {
+        Row: {
+          clinic_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          interpretation_guide: Json | null
+          is_active: boolean
+          is_system: boolean
+          max_value: number | null
+          min_value: number | null
+          name: string
+          options: Json | null
+          scale_type: string
+          unit: string | null
+        }
+        Insert: {
+          clinic_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          interpretation_guide?: Json | null
+          is_active?: boolean
+          is_system?: boolean
+          max_value?: number | null
+          min_value?: number | null
+          name: string
+          options?: Json | null
+          scale_type?: string
+          unit?: string | null
+        }
+        Update: {
+          clinic_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          interpretation_guide?: Json | null
+          is_active?: boolean
+          is_system?: boolean
+          max_value?: number | null
+          min_value?: number | null
+          name?: string
+          options?: Json | null
+          scale_type?: string
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_scales_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinics: {
         Row: {
           address_city: string | null
@@ -1400,6 +1540,7 @@ export type Database = {
           address_state: string | null
           address_street: string | null
           address_zip: string | null
+          allow_negative_stock: boolean | null
           cnpj: string | null
           cpf: string | null
           created_at: string
@@ -1428,6 +1569,7 @@ export type Database = {
           address_state?: string | null
           address_street?: string | null
           address_zip?: string | null
+          allow_negative_stock?: boolean | null
           cnpj?: string | null
           cpf?: string | null
           created_at?: string
@@ -1456,6 +1598,7 @@ export type Database = {
           address_state?: string | null
           address_street?: string | null
           address_zip?: string | null
+          allow_negative_stock?: boolean | null
           cnpj?: string | null
           cpf?: string | null
           created_at?: string
@@ -1526,6 +1669,305 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_prontuario_fields: {
+        Row: {
+          clinic_id: string
+          config: Json | null
+          created_at: string
+          field_key: string
+          field_order: number
+          field_type: string
+          id: string
+          is_active: boolean
+          is_required: boolean
+          label: string
+          options: Json | null
+          specialty_id: string | null
+          tab_key: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          config?: Json | null
+          created_at?: string
+          field_key: string
+          field_order?: number
+          field_type?: string
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          label: string
+          options?: Json | null
+          specialty_id?: string | null
+          tab_key: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          config?: Json | null
+          created_at?: string
+          field_key?: string
+          field_order?: number
+          field_type?: string
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          label?: string
+          options?: Json | null
+          specialty_id?: string | null
+          tab_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_prontuario_fields_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_prontuario_fields_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documentos_clinicos: {
+        Row: {
+          clinic_id: string
+          conteudo: Json | null
+          created_at: string
+          id: string
+          patient_id: string
+          professional_id: string | null
+          status: string | null
+          tipo: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          conteudo?: Json | null
+          created_at?: string
+          id?: string
+          patient_id: string
+          professional_id?: string | null
+          status?: string | null
+          tipo: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          conteudo?: Json | null
+          created_at?: string
+          id?: string
+          patient_id?: string
+          professional_id?: string | null
+          status?: string | null
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentos_clinicos_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_clinicos_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_clinicos_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documentos_log: {
+        Row: {
+          action: string
+          clinic_id: string
+          created_at: string
+          details: Json | null
+          document_id: string | null
+          document_type: string | null
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          clinic_id: string
+          created_at?: string
+          details?: Json | null
+          document_id?: string | null
+          document_type?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          clinic_id?: string
+          created_at?: string
+          details?: Json | null
+          document_id?: string | null
+          document_type?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentos_log_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      facial_map_applications: {
+        Row: {
+          created_at: string
+          data: Json | null
+          facial_map_id: string
+          id: string
+          notes: string | null
+          product_name: string | null
+          region: string | null
+          units: number | null
+        }
+        Insert: {
+          created_at?: string
+          data?: Json | null
+          facial_map_id: string
+          id?: string
+          notes?: string | null
+          product_name?: string | null
+          region?: string | null
+          units?: number | null
+        }
+        Update: {
+          created_at?: string
+          data?: Json | null
+          facial_map_id?: string
+          id?: string
+          notes?: string | null
+          product_name?: string | null
+          region?: string | null
+          units?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facial_map_applications_facial_map_id_fkey"
+            columns: ["facial_map_id"]
+            isOneToOne: false
+            referencedRelation: "facial_maps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      facial_map_images: {
+        Row: {
+          annotations: Json | null
+          created_at: string
+          facial_map_id: string
+          id: string
+          image_url: string
+        }
+        Insert: {
+          annotations?: Json | null
+          created_at?: string
+          facial_map_id: string
+          id?: string
+          image_url: string
+        }
+        Update: {
+          annotations?: Json | null
+          created_at?: string
+          facial_map_id?: string
+          id?: string
+          image_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facial_map_images_facial_map_id_fkey"
+            columns: ["facial_map_id"]
+            isOneToOne: false
+            referencedRelation: "facial_maps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      facial_maps: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          data: Json | null
+          id: string
+          map_type: string | null
+          notes: string | null
+          patient_id: string
+          professional_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          data?: Json | null
+          id?: string
+          map_type?: string | null
+          notes?: string | null
+          patient_id: string
+          professional_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          data?: Json | null
+          id?: string
+          map_type?: string | null
+          notes?: string | null
+          patient_id?: string
+          professional_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facial_maps_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facial_maps_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facial_maps_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
         ]
@@ -1713,6 +2155,67 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: true
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instrumentos_psicologicos: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          data_aplicacao: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          patient_id: string
+          professional_id: string | null
+          resultado: Json | null
+          tipo: string | null
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          data_aplicacao?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          patient_id: string
+          professional_id?: string | null
+          resultado?: Json | null
+          tipo?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          data_aplicacao?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          patient_id?: string
+          professional_id?: string | null
+          resultado?: Json | null
+          tipo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instrumentos_psicologicos_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instrumentos_psicologicos_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instrumentos_psicologicos_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
         ]
@@ -2260,6 +2763,196 @@ export type Database = {
           },
         ]
       }
+      material_kit_items: {
+        Row: {
+          created_at: string
+          id: string
+          kit_id: string
+          product_id: string
+          quantity: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kit_id: string
+          product_id: string
+          quantity?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kit_id?: string
+          product_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "material_kit_items_kit_id_fkey"
+            columns: ["kit_id"]
+            isOneToOne: false
+            referencedRelation: "product_kits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_kit_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medical_record_action_permissions: {
+        Row: {
+          action_key: string
+          allowed: boolean
+          clinic_id: string
+          created_at: string
+          id: string
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          action_key: string
+          allowed?: boolean
+          clinic_id: string
+          created_at?: string
+          id?: string
+          role: string
+          updated_at?: string
+        }
+        Update: {
+          action_key?: string
+          allowed?: boolean
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medical_record_action_permissions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medical_record_fields: {
+        Row: {
+          clinic_id: string
+          config: Json | null
+          created_at: string
+          field_key: string
+          field_order: number
+          field_type: string
+          id: string
+          is_required: boolean
+          label: string
+          options: Json | null
+          tab_key: string
+          template_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          config?: Json | null
+          created_at?: string
+          field_key: string
+          field_order?: number
+          field_type?: string
+          id?: string
+          is_required?: boolean
+          label: string
+          options?: Json | null
+          tab_key: string
+          template_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          config?: Json | null
+          created_at?: string
+          field_key?: string
+          field_order?: number
+          field_type?: string
+          id?: string
+          is_required?: boolean
+          label?: string
+          options?: Json | null
+          tab_key?: string
+          template_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medical_record_fields_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_record_fields_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "medical_record_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medical_record_security_config: {
+        Row: {
+          allow_evolution_edit_minutes: number
+          audit_enabled: boolean
+          audit_retention_days: number
+          clinic_id: string
+          created_at: string
+          id: string
+          lock_after_signature: boolean
+          require_consent_before_access: boolean
+          require_justification_for_edit: boolean
+          signature_lock_hours: number
+          updated_at: string
+        }
+        Insert: {
+          allow_evolution_edit_minutes?: number
+          audit_enabled?: boolean
+          audit_retention_days?: number
+          clinic_id: string
+          created_at?: string
+          id?: string
+          lock_after_signature?: boolean
+          require_consent_before_access?: boolean
+          require_justification_for_edit?: boolean
+          signature_lock_hours?: number
+          updated_at?: string
+        }
+        Update: {
+          allow_evolution_edit_minutes?: number
+          audit_enabled?: boolean
+          audit_retention_days?: number
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          lock_after_signature?: boolean
+          require_consent_before_access?: boolean
+          require_justification_for_edit?: boolean
+          signature_lock_hours?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medical_record_security_config_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       medical_record_signatures: {
         Row: {
           clinic_id: string
@@ -2351,6 +3044,53 @@ export type Database = {
           },
         ]
       }
+      medical_record_tab_permissions: {
+        Row: {
+          can_edit: boolean
+          can_export: boolean
+          can_sign: boolean
+          can_view: boolean
+          clinic_id: string
+          created_at: string
+          id: string
+          role: string
+          tab_key: string
+          updated_at: string
+        }
+        Insert: {
+          can_edit?: boolean
+          can_export?: boolean
+          can_sign?: boolean
+          can_view?: boolean
+          clinic_id: string
+          created_at?: string
+          id?: string
+          role: string
+          tab_key: string
+          updated_at?: string
+        }
+        Update: {
+          can_edit?: boolean
+          can_export?: boolean
+          can_sign?: boolean
+          can_view?: boolean
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+          tab_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medical_record_tab_permissions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       medical_record_tabs: {
         Row: {
           clinic_id: string
@@ -2404,6 +3144,104 @@ export type Database = {
             columns: ["specialty_id"]
             isOneToOne: false
             referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medical_record_templates: {
+        Row: {
+          clinic_id: string
+          config: Json
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          specialty_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          config?: Json
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          specialty_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          config?: Json
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          specialty_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medical_record_templates_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_record_templates_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medical_record_visual_settings: {
+        Row: {
+          accent_color: string | null
+          clinic_id: string
+          created_at: string
+          font_size: string | null
+          id: string
+          layout: string | null
+          logo_position: string | null
+          logo_url: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string | null
+          clinic_id: string
+          created_at?: string
+          font_size?: string | null
+          id?: string
+          layout?: string | null
+          logo_position?: string | null
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string | null
+          clinic_id?: string
+          created_at?: string
+          font_size?: string | null
+          id?: string
+          layout?: string | null
+          logo_position?: string | null
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medical_record_visual_settings_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -2677,6 +3515,54 @@ export type Database = {
           },
         ]
       }
+      modelos_receita_profissional: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          itens: Json
+          nome: string
+          professional_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          itens?: Json
+          nome: string
+          professional_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          itens?: Json
+          nome?: string
+          professional_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modelos_receita_profissional_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "modelos_receita_profissional_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       module_permissions: {
         Row: {
           actions: Database["public"]["Enums"]["app_action"][]
@@ -2765,6 +3651,47 @@ export type Database = {
             columns: ["procedure_id"]
             isOneToOne: false
             referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      odontogram_teeth: {
+        Row: {
+          conditions: Json | null
+          created_at: string
+          id: string
+          notes: string | null
+          odontogram_id: string
+          status: string | null
+          tooth_number: number
+          updated_at: string
+        }
+        Insert: {
+          conditions?: Json | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          odontogram_id: string
+          status?: string | null
+          tooth_number: number
+          updated_at?: string
+        }
+        Update: {
+          conditions?: Json | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          odontogram_id?: string
+          status?: string | null
+          tooth_number?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "odontogram_teeth_odontogram_id_fkey"
+            columns: ["odontogram_id"]
+            isOneToOne: false
+            referencedRelation: "odontograms"
             referencedColumns: ["id"]
           },
         ]
@@ -2867,6 +3794,135 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_anamnese_psicologia: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          data: Json | null
+          historico_familiar: string | null
+          historico_pessoal: string | null
+          id: string
+          medicamentos: string | null
+          patient_id: string
+          professional_id: string | null
+          queixa_principal: string | null
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          data?: Json | null
+          historico_familiar?: string | null
+          historico_pessoal?: string | null
+          id?: string
+          medicamentos?: string | null
+          patient_id: string
+          professional_id?: string | null
+          queixa_principal?: string | null
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          data?: Json | null
+          historico_familiar?: string | null
+          historico_pessoal?: string | null
+          id?: string
+          medicamentos?: string | null
+          patient_id?: string
+          professional_id?: string | null
+          queixa_principal?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_anamnese_psicologia_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_anamnese_psicologia_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_anamnese_psicologia_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_anamneses: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          data: Json
+          id: string
+          patient_id: string
+          professional_id: string | null
+          specialty_id: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          data?: Json
+          id?: string
+          patient_id: string
+          professional_id?: string | null
+          specialty_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          patient_id?: string
+          professional_id?: string | null
+          specialty_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_anamneses_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_anamneses_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_anamneses_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_anamneses_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
             referencedColumns: ["id"]
           },
         ]
@@ -2982,6 +4038,64 @@ export type Database = {
           },
         ]
       }
+      patient_condutas: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          data: Json | null
+          descricao: string
+          id: string
+          patient_id: string
+          professional_id: string | null
+          tipo: string | null
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          data?: Json | null
+          descricao: string
+          id?: string
+          patient_id: string
+          professional_id?: string | null
+          tipo?: string | null
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          data?: Json | null
+          descricao?: string
+          id?: string
+          patient_id?: string
+          professional_id?: string | null
+          tipo?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_condutas_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_condutas_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_condutas_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patient_consents: {
         Row: {
           clinic_id: string
@@ -3051,6 +4165,337 @@ export type Database = {
             columns: ["term_id"]
             isOneToOne: false
             referencedRelation: "consent_terms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_diagnosticos: {
+        Row: {
+          clinic_id: string
+          codigo_cid: string | null
+          created_at: string
+          data: Json | null
+          descricao: string
+          id: string
+          patient_id: string
+          professional_id: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          codigo_cid?: string | null
+          created_at?: string
+          data?: Json | null
+          descricao: string
+          id?: string
+          patient_id: string
+          professional_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          codigo_cid?: string | null
+          created_at?: string
+          data?: Json | null
+          descricao?: string
+          id?: string
+          patient_id?: string
+          professional_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_diagnosticos_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_diagnosticos_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_diagnosticos_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_documentos: {
+        Row: {
+          clinic_id: string
+          conteudo: Json | null
+          created_at: string
+          file_url: string | null
+          id: string
+          patient_id: string
+          professional_id: string | null
+          status: string | null
+          tipo: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          conteudo?: Json | null
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          patient_id: string
+          professional_id?: string | null
+          status?: string | null
+          tipo: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          conteudo?: Json | null
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          patient_id?: string
+          professional_id?: string | null
+          status?: string | null
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_documentos_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_documentos_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_documentos_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_evolucoes: {
+        Row: {
+          appointment_id: string | null
+          clinic_id: string
+          created_at: string
+          data: Json
+          id: string
+          notes: string | null
+          patient_id: string
+          professional_id: string | null
+          specialty_id: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          clinic_id: string
+          created_at?: string
+          data?: Json
+          id?: string
+          notes?: string | null
+          patient_id: string
+          professional_id?: string | null
+          specialty_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          clinic_id?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          professional_id?: string | null
+          specialty_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_evolucoes_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_evolucoes_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_evolucoes_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_evolucoes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_evolucoes_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_exames_fisicos: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          data: Json
+          id: string
+          notes: string | null
+          patient_id: string
+          professional_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          data?: Json
+          id?: string
+          notes?: string | null
+          patient_id: string
+          professional_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          professional_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_exames_fisicos_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_exames_fisicos_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_exames_fisicos_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_generated_documents: {
+        Row: {
+          clinic_id: string
+          content: Json | null
+          created_at: string
+          document_type: string
+          id: string
+          patient_id: string
+          pdf_url: string | null
+          professional_id: string | null
+          signed_at: string | null
+          signed_by: string | null
+          status: string | null
+          title: string
+          updated_at: string
+          validation_code: string | null
+        }
+        Insert: {
+          clinic_id: string
+          content?: Json | null
+          created_at?: string
+          document_type: string
+          id?: string
+          patient_id: string
+          pdf_url?: string | null
+          professional_id?: string | null
+          signed_at?: string | null
+          signed_by?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string
+          validation_code?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          content?: Json | null
+          created_at?: string
+          document_type?: string
+          id?: string
+          patient_id?: string
+          pdf_url?: string | null
+          professional_id?: string | null
+          signed_at?: string | null
+          signed_by?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string
+          validation_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_generated_documents_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_generated_documents_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_generated_documents_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
         ]
@@ -3185,6 +4630,179 @@ export type Database = {
           },
         ]
       }
+      patient_prescricao_itens: {
+        Row: {
+          created_at: string
+          dosagem: string | null
+          duracao: string | null
+          frequencia: string | null
+          id: string
+          medicamento: string
+          observacoes: string | null
+          ordem: number | null
+          prescricao_id: string
+          via: string | null
+        }
+        Insert: {
+          created_at?: string
+          dosagem?: string | null
+          duracao?: string | null
+          frequencia?: string | null
+          id?: string
+          medicamento: string
+          observacoes?: string | null
+          ordem?: number | null
+          prescricao_id: string
+          via?: string | null
+        }
+        Update: {
+          created_at?: string
+          dosagem?: string | null
+          duracao?: string | null
+          frequencia?: string | null
+          id?: string
+          medicamento?: string
+          observacoes?: string | null
+          ordem?: number | null
+          prescricao_id?: string
+          via?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_prescricao_itens_prescricao_id_fkey"
+            columns: ["prescricao_id"]
+            isOneToOne: false
+            referencedRelation: "patient_prescricoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_prescricoes: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          data: Json
+          id: string
+          patient_id: string
+          professional_id: string | null
+          signed_at: string | null
+          signed_by: string | null
+          status: string | null
+          tipo: string | null
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          data?: Json
+          id?: string
+          patient_id: string
+          professional_id?: string | null
+          signed_at?: string | null
+          signed_by?: string | null
+          status?: string | null
+          tipo?: string | null
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          patient_id?: string
+          professional_id?: string | null
+          signed_at?: string | null
+          signed_by?: string | null
+          status?: string | null
+          tipo?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_prescricoes_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_prescricoes_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_prescricoes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_scale_readings: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          patient_id: string
+          professional_id: string | null
+          scale_id: string
+          value: number
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          patient_id: string
+          professional_id?: string | null
+          scale_id: string
+          value: number
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          professional_id?: string | null
+          scale_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_scale_readings_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_scale_readings_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_scale_readings_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_scale_readings_scale_id_fkey"
+            columns: ["scale_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_scales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patients: {
         Row: {
           address_city: string | null
@@ -3294,6 +4912,257 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
         }
         Relationships: []
+      }
+      plano_terapeutico_psicologia: {
+        Row: {
+          abordagem: string | null
+          clinic_id: string
+          created_at: string
+          data: Json | null
+          frequencia: string | null
+          id: string
+          objetivos: string | null
+          patient_id: string
+          professional_id: string | null
+          status: string | null
+          titulo: string | null
+          updated_at: string
+        }
+        Insert: {
+          abordagem?: string | null
+          clinic_id: string
+          created_at?: string
+          data?: Json | null
+          frequencia?: string | null
+          id?: string
+          objetivos?: string | null
+          patient_id: string
+          professional_id?: string | null
+          status?: string | null
+          titulo?: string | null
+          updated_at?: string
+        }
+        Update: {
+          abordagem?: string | null
+          clinic_id?: string
+          created_at?: string
+          data?: Json | null
+          frequencia?: string | null
+          id?: string
+          objetivos?: string | null
+          patient_id?: string
+          professional_id?: string | null
+          status?: string | null
+          titulo?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plano_terapeutico_psicologia_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plano_terapeutico_psicologia_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plano_terapeutico_psicologia_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planos_acao_crise: {
+        Row: {
+          acoes: string | null
+          clinic_id: string
+          contatos_emergencia: Json | null
+          created_at: string
+          data: Json | null
+          id: string
+          is_active: boolean
+          patient_id: string
+          professional_id: string | null
+          sinais_alerta: string | null
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          acoes?: string | null
+          clinic_id: string
+          contatos_emergencia?: Json | null
+          created_at?: string
+          data?: Json | null
+          id?: string
+          is_active?: boolean
+          patient_id: string
+          professional_id?: string | null
+          sinais_alerta?: string | null
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          acoes?: string | null
+          clinic_id?: string
+          contatos_emergencia?: Json | null
+          created_at?: string
+          data?: Json | null
+          id?: string
+          is_active?: boolean
+          patient_id?: string
+          professional_id?: string | null
+          sinais_alerta?: string | null
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planos_acao_crise_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planos_acao_crise_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planos_acao_crise_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      procedure_kits: {
+        Row: {
+          created_at: string
+          id: string
+          procedure_id: string
+          product_kit_id: string
+          quantity: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          procedure_id: string
+          product_kit_id: string
+          quantity?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          procedure_id?: string
+          product_kit_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procedure_kits_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procedure_kits_product_kit_id_fkey"
+            columns: ["product_kit_id"]
+            isOneToOne: false
+            referencedRelation: "product_kits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      procedure_materials: {
+        Row: {
+          created_at: string
+          id: string
+          procedure_id: string
+          product_id: string
+          quantity: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          procedure_id: string
+          product_id: string
+          quantity?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          procedure_id?: string
+          product_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procedure_materials_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procedure_materials_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      procedure_product_kits: {
+        Row: {
+          created_at: string
+          id: string
+          procedure_id: string
+          product_kit_id: string
+          quantity: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          procedure_id: string
+          product_kit_id: string
+          quantity?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          procedure_id?: string
+          product_kit_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procedure_product_kits_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procedure_product_kits_product_kit_id_fkey"
+            columns: ["product_kit_id"]
+            isOneToOne: false
+            referencedRelation: "product_kits"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       procedure_products: {
         Row: {
@@ -4202,6 +6071,39 @@ export type Database = {
           },
         ]
       }
+      scale_specialties: {
+        Row: {
+          id: string
+          scale_id: string
+          specialty_id: string
+        }
+        Insert: {
+          id?: string
+          scale_id: string
+          specialty_id: string
+        }
+        Update: {
+          id?: string
+          scale_id?: string
+          specialty_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scale_specialties_scale_id_fkey"
+            columns: ["scale_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_scales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scale_specialties_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schedule_blocks: {
         Row: {
           all_day: boolean
@@ -4262,6 +6164,82 @@ export type Database = {
           },
         ]
       }
+      sessoes_psicologia: {
+        Row: {
+          adesao_terapeutica: string | null
+          clinic_id: string
+          created_at: string
+          data_sessao: string | null
+          emocoes_predominantes: string | null
+          evolucao_caso: string | null
+          humor_paciente: string | null
+          id: string
+          numero_sessao: number | null
+          observacoes: string | null
+          patient_id: string
+          professional_id: string | null
+          tecnicas_utilizadas: string | null
+          tema_central: string | null
+          updated_at: string
+        }
+        Insert: {
+          adesao_terapeutica?: string | null
+          clinic_id: string
+          created_at?: string
+          data_sessao?: string | null
+          emocoes_predominantes?: string | null
+          evolucao_caso?: string | null
+          humor_paciente?: string | null
+          id?: string
+          numero_sessao?: number | null
+          observacoes?: string | null
+          patient_id: string
+          professional_id?: string | null
+          tecnicas_utilizadas?: string | null
+          tema_central?: string | null
+          updated_at?: string
+        }
+        Update: {
+          adesao_terapeutica?: string | null
+          clinic_id?: string
+          created_at?: string
+          data_sessao?: string | null
+          emocoes_predominantes?: string | null
+          evolucao_caso?: string | null
+          humor_paciente?: string | null
+          id?: string
+          numero_sessao?: number | null
+          observacoes?: string | null
+          patient_id?: string
+          professional_id?: string | null
+          tecnicas_utilizadas?: string | null
+          tema_central?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessoes_psicologia_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessoes_psicologia_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessoes_psicologia_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       specialties: {
         Row: {
           clinic_id: string | null
@@ -4305,6 +6283,57 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_alerts: {
+        Row: {
+          alert_type: string
+          clinic_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          last_triggered_at: string | null
+          product_id: string
+          threshold: number | null
+          updated_at: string
+        }
+        Insert: {
+          alert_type?: string
+          clinic_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_triggered_at?: string | null
+          product_id: string
+          threshold?: number | null
+          updated_at?: string
+        }
+        Update: {
+          alert_type?: string
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_triggered_at?: string | null
+          product_id?: string
+          threshold?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_alerts_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_alerts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -4366,6 +6395,44 @@ export type Database = {
           },
         ]
       }
+      stock_prediction_settings: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          id: string
+          prediction_days: number
+          prediction_enabled: boolean
+          safety_margin_percent: number
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          id?: string
+          prediction_days?: number
+          prediction_enabled?: boolean
+          safety_margin_percent?: number
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          prediction_days?: number
+          prediction_enabled?: boolean
+          safety_margin_percent?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_prediction_settings_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_security_settings: {
         Row: {
           clinic_id: string
@@ -4406,6 +6473,114 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: true
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      therapeutic_goal_updates: {
+        Row: {
+          created_at: string
+          goal_id: string
+          id: string
+          new_progress: number | null
+          observation: string | null
+          old_progress: number | null
+          score_value: number | null
+          updated_by: string
+        }
+        Insert: {
+          created_at?: string
+          goal_id: string
+          id?: string
+          new_progress?: number | null
+          observation?: string | null
+          old_progress?: number | null
+          score_value?: number | null
+          updated_by: string
+        }
+        Update: {
+          created_at?: string
+          goal_id?: string
+          id?: string
+          new_progress?: number | null
+          observation?: string | null
+          old_progress?: number | null
+          score_value?: number | null
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "therapeutic_goal_updates_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "therapeutic_goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      therapeutic_goals: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          data: Json | null
+          descricao: string | null
+          id: string
+          meta_type: string | null
+          patient_id: string
+          professional_id: string | null
+          progresso: number | null
+          status: string | null
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          data?: Json | null
+          descricao?: string | null
+          id?: string
+          meta_type?: string | null
+          patient_id: string
+          professional_id?: string | null
+          progresso?: number | null
+          status?: string | null
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          data?: Json | null
+          descricao?: string | null
+          id?: string
+          meta_type?: string | null
+          patient_id?: string
+          professional_id?: string | null
+          progresso?: number | null
+          status?: string | null
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "therapeutic_goals_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "therapeutic_goals_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "therapeutic_goals_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
         ]
@@ -4777,6 +6952,47 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_audit_logs: {
+        Row: {
+          action: string
+          clinic_id: string
+          created_at: string
+          details: Json
+          id: string
+          performed_by: string
+          target_email: string | null
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          clinic_id: string
+          created_at?: string
+          details?: Json
+          id?: string
+          performed_by: string
+          target_email?: string | null
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          clinic_id?: string
+          created_at?: string
+          details?: Json
+          id?: string
+          performed_by?: string
+          target_email?: string | null
+          target_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_audit_logs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
