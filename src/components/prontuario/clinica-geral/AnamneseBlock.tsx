@@ -1069,13 +1069,13 @@ export function AnamneseBlock({
               Cancelar
             </Button>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleSave} disabled={saving}>
+              <Button variant="outline" size="sm" onClick={handleSave} disabled={isSavingLocal || savingV2}>
                 <Save className="h-4 w-4 mr-1.5" />
-                {saving ? 'Salvando...' : 'Salvar Rascunho'}
+                {isSavingLocal || savingV2 ? 'Salvando...' : 'Salvar Rascunho'}
               </Button>
-              <Button size="sm" onClick={handleSave} disabled={saving}>
+              <Button size="sm" onClick={handleSave} disabled={isSavingLocal || savingV2}>
                 <CheckCircle2 className="h-4 w-4 mr-1.5" />
-                Finalizar
+                {isSavingLocal || savingV2 ? 'Salvando...' : 'Finalizar'}
               </Button>
             </div>
           </div>
