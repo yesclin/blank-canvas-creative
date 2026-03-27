@@ -53,7 +53,7 @@ export function useActiveSpecialty(patientId: string | null | undefined) {
   // so the first enabled specialty in DB becomes the default, not always 'geral'.
   const specialties = useMemo((): SpecialtyOption[] => {
     return globalEnabledSpecialties
-      .map(dbSpec => {
+      .map((dbSpec): SpecialtyOption | null => {
         const yesclinSpec = YESCLIN_SUPPORTED_SPECIALTIES.find(
           (ys: YesclinSpecialty) => ys.name.toLowerCase().trim() === dbSpec.name.toLowerCase().trim()
         );
