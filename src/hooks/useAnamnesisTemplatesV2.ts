@@ -554,8 +554,6 @@ export function useAnamnesisRecords(patientId: string | null, appointmentId?: st
       template_version_id: string;
       responses: Record<string, unknown>;
       specialty_id?: string | null;
-      procedure_id?: string | null;
-      structure_snapshot?: unknown;
     }) => {
       if (!clinic?.id) throw new Error('Clínica não identificada');
       const { data: userData } = await supabase.auth.getUser();
@@ -567,25 +565,35 @@ export function useAnamnesisRecords(patientId: string | null, appointmentId?: st
           .from('anamnesis_records')
           .update({
             responses: input.responses as unknown as Json,
-          })
+            data: input.responses as unknown as Json,
+          } as any)
           .eq('id', input.id);
         if (error) throw error;
       } else {
+        // Look up professional_id from user_id
+        const { data: profData } = await supabase
+          .from('professionals')
+          .select('id')
+          .eq('user_id', userData.user.id)
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle();
+
         // Create new record with immutable context snapshot
         const insertData: Record<string, unknown> = {
           appointment_id: input.appointment_id || null,
           patient_id: input.patient_id,
           clinic_id: clinic.id,
+          professional_id: profData?.id || userData.user.id,
           template_id: input.template_id,
           template_version_id: input.template_version_id,
           responses: input.responses as unknown as Json,
+          data: input.responses as unknown as Json,
           created_by: userData.user.id,
         };
 
         // Persist immutable context
         if (input.specialty_id) insertData.specialty_id = input.specialty_id;
-        if (input.procedure_id) insertData.procedure_id = input.procedure_id;
-        if (input.structure_snapshot) insertData.structure_snapshot = input.structure_snapshot as unknown as Json;
 
         const { error } = await supabase
           .from('anamnesis_records')

@@ -61,7 +61,7 @@ import {
   mapStructuredToLegacy,
   type SecaoAnamnese,
 } from "@/hooks/prontuario/clinica-geral/anamneseTemplates";
-import { useAnamnesisTemplatesV2, type AnamnesisTemplateV2, type TemplateSection } from "@/hooks/useAnamnesisTemplatesV2";
+import { useAnamnesisTemplatesV2, useAnamnesisRecords, type AnamnesisTemplateV2, type TemplateSection } from "@/hooks/useAnamnesisTemplatesV2";
 import { useInstitutionalPdf } from "@/hooks/useInstitutionalPdf";
 import { FileDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -104,6 +104,7 @@ interface AnamneseBlockProps {
   patientData?: any;
   specialtyId?: string | null;
   specialtyName?: string | null;
+  appointmentId?: string | null;
 }
 
 // ─── Multi-select badge component ────────────────────────────────────
@@ -200,6 +201,7 @@ export function AnamneseBlock({
   patientData,
   specialtyId,
   specialtyName,
+  appointmentId,
 }: AnamneseBlockProps) {
   const navigate = useNavigate();
   const { generateAnamnesisPdf, generating } = useInstitutionalPdf();
@@ -227,6 +229,10 @@ export function AnamneseBlock({
     activeOnly: true
   });
 
+  // ─── V2 Records: load and save from anamnesis_records ──────────
+  const patientIdForRecords = patientData?.id || currentAnamnese?.patient_id || null;
+  const { records: v2Records, saveRecord: saveV2Record, isSaving: savingV2 } = useAnamnesisRecords(patientIdForRecords, appointmentId);
+
   const allTemplates: UnifiedTemplate[] = useMemo(() => {
     return v2Templates.map(v2TemplateToUnified);
   }, [v2Templates]);
@@ -246,6 +252,22 @@ export function AnamneseBlock({
       setSelectedTemplateId(activeTemplate.id);
     }
   }, [activeTemplate, selectedTemplateId]);
+
+  // ─── Load existing V2 record for active template ────────────────
+  const existingV2Record = useMemo(() => {
+    if (!selectedTemplateId || !v2Records.length) return null;
+    return v2Records.find(r => r.template_id === selectedTemplateId) || null;
+  }, [selectedTemplateId, v2Records]);
+
+  // Load V2 record responses into structuredData when viewing (not editing)
+  useEffect(() => {
+    if (!isEditing && existingV2Record && Object.keys(existingV2Record.responses).length > 0) {
+      // Only set if we don't already have legacy data loaded
+      if (!currentAnamnese?.structured_data || Object.keys(currentAnamnese.structured_data).length === 0) {
+        setStructuredData(existingV2Record.responses as Record<string, unknown>);
+      }
+    }
+  }, [existingV2Record, isEditing, currentAnamnese]);
 
   // ─── Auto-save (10s debounce, silent) ───────────────────────────────
   useEffect(() => {
@@ -536,7 +558,10 @@ export function AnamneseBlock({
     if (currentAnamnese?.template_id) {
       setSelectedTemplateId(currentAnamnese.template_id);
     }
-    if (currentAnamnese?.structured_data && Object.keys(currentAnamnese.structured_data).length > 0) {
+    // Priority: V2 record responses > legacy structured_data > legacy flat fields
+    if (existingV2Record && Object.keys(existingV2Record.responses).length > 0) {
+      setStructuredData({ ...existingV2Record.responses as Record<string, unknown> });
+    } else if (currentAnamnese?.structured_data && Object.keys(currentAnamnese.structured_data).length > 0) {
       setStructuredData({ ...currentAnamnese.structured_data });
     } else if (currentAnamnese) {
       setStructuredData({
@@ -558,7 +583,10 @@ export function AnamneseBlock({
     if (currentAnamnese?.template_id) {
       setSelectedTemplateId(currentAnamnese.template_id);
     }
-    if (currentAnamnese?.structured_data && Object.keys(currentAnamnese.structured_data).length > 0) {
+    // Same priority for loading data
+    if (existingV2Record && Object.keys(existingV2Record.responses).length > 0) {
+      setStructuredData({ ...existingV2Record.responses as Record<string, unknown> });
+    } else if (currentAnamnese?.structured_data && Object.keys(currentAnamnese.structured_data).length > 0) {
       setStructuredData({ ...currentAnamnese.structured_data });
     } else if (currentAnamnese) {
       setStructuredData({
@@ -597,11 +625,33 @@ export function AnamneseBlock({
       structured_data: structuredData,
       template_id: activeTemplate?.id || '',
     };
+
+    // Save to legacy patient_anamneses
     if (isEditingExisting && currentAnamnese && onUpdate) {
       await onUpdate(currentAnamnese.id, saveData);
     } else {
       await onSave(saveData);
     }
+
+    // Also save to V2 anamnesis_records for proper template-based persistence
+    if (activeTemplate && patientIdForRecords) {
+      const v2Template = v2Templates.find(t => t.id === activeTemplate.id);
+      try {
+        await saveV2Record({
+          id: existingV2Record?.id, // update if exists
+          patient_id: patientIdForRecords,
+          template_id: activeTemplate.id,
+          template_version_id: v2Template?.current_version_id || '',
+          responses: structuredData,
+          specialty_id: specialtyId,
+          appointment_id: appointmentId || undefined,
+        });
+      } catch (err) {
+        console.error('Erro ao salvar no anamnesis_records:', err);
+        // Don't block - legacy save already succeeded
+      }
+    }
+
     setIsEditing(false);
     setIsEditingExisting(false);
     setStructuredData({});
@@ -867,7 +917,7 @@ export function AnamneseBlock({
   );
 
   // ─── Empty state ────────────────────────────────────────────────
-  if (!currentAnamnese && !isEditing) {
+  if (!currentAnamnese && !existingV2Record && !isEditing) {
     return (
       <>
         {renderSwitchConfirmDialog()}
@@ -1033,7 +1083,11 @@ export function AnamneseBlock({
   }
 
   // ─── VIEW MODE ──────────────────────────────────────────────────
-  const hasStructuredData = currentAnamnese?.structured_data && Object.keys(currentAnamnese.structured_data).length > 0;
+  const hasStructuredData = (currentAnamnese?.structured_data && Object.keys(currentAnamnese.structured_data).length > 0)
+    || (existingV2Record && Object.keys(existingV2Record.responses).length > 0);
+  const viewData = (existingV2Record && Object.keys(existingV2Record.responses).length > 0)
+    ? existingV2Record.responses as Record<string, unknown>
+    : currentAnamnese?.structured_data;
 
   return (
     <div className="space-y-3">
@@ -1112,9 +1166,9 @@ export function AnamneseBlock({
       {/* Content */}
       <Card>
         <CardContent className="p-0 divide-y">
-          {hasStructuredData ? (
+          {hasStructuredData && viewData ? (
             (activeTemplate?.secoes || []).map(secao =>
-              renderViewSection(secao, currentAnamnese!.structured_data!)
+              renderViewSection(secao, viewData)
             )
           ) : (
             currentAnamnese && renderLegacyView(currentAnamnese)
