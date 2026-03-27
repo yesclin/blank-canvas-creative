@@ -41,7 +41,7 @@ const DEFAULT_SECURITY: SecurityConfig = {
  * Hook that CONSUMES the prontuario configuration for the usage module.
  * This reads from the config tables and provides the structure to the Prontuario page.
  */
-export function useProntuarioConfig() {
+export function useProntuarioConfig(specialtyId?: string | null) {
   const { clinic, isLoading: clinicLoading } = useClinicData();
   const [tabs, setTabs] = useState<TabConfig[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -54,23 +54,40 @@ export function useProntuarioConfig() {
     setLoading(true);
 
     try {
-      // Fetch active tabs
-      const { data: tabsData } = await supabase
+      // Fetch active tabs scoped to the current specialty when available
+      let tabsQuery = supabase
         .from('medical_record_tabs')
         .select('*')
         .eq('clinic_id', clinic.id)
         .eq('is_active', true)
         .order('display_order', { ascending: true });
 
-      setTabs((tabsData as TabConfig[]) || []);
+      if (specialtyId) {
+        tabsQuery = tabsQuery.eq('specialty_id', specialtyId);
+      }
 
-      // Fetch active templates with their fields
-      const { data: templatesData } = await supabase
+      const { data: tabsData } = await tabsQuery;
+
+      setTabs(((tabsData || []).map((tab: any) => ({
+        ...tab,
+        key: tab.key || tab.slug,
+        display_order: tab.display_order ?? tab.sort_order ?? 0,
+      })) as TabConfig[]) || []);
+
+      // Fetch active medical-record templates scoped to the current specialty
+      let templatesQuery = supabase
         .from('medical_record_templates')
         .select('*')
         .eq('clinic_id', clinic.id)
         .eq('is_active', true)
-        .order('type', { ascending: true });
+        .order('type', { ascending: true })
+        .order('name', { ascending: true });
+
+      if (specialtyId) {
+        templatesQuery = templatesQuery.eq('specialty_id', specialtyId);
+      }
+
+      const { data: templatesData } = await templatesQuery;
 
       setTemplates((templatesData as Template[]) || []);
 
@@ -112,7 +129,7 @@ export function useProntuarioConfig() {
     } finally {
       setLoading(false);
     }
-  }, [clinic?.id]);
+  }, [clinic?.id, specialtyId]);
 
   useEffect(() => {
     if (!clinicLoading && clinic?.id) {
