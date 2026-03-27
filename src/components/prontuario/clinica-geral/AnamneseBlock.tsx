@@ -1064,7 +1064,7 @@ export function AnamneseBlock({
 
           {/* Sticky action bar — clean */}
           <div className="sticky bottom-0 z-10 bg-background/95 backdrop-blur-sm border-t py-3 flex items-center justify-between">
-            <Button variant="ghost" size="sm" onClick={handleCancel} disabled={saving} className="text-muted-foreground">
+            <Button variant="ghost" size="sm" onClick={handleCancel} disabled={isSavingLocal || savingV2} className="text-muted-foreground">
               <X className="h-4 w-4 mr-1.5" />
               Cancelar
             </Button>
