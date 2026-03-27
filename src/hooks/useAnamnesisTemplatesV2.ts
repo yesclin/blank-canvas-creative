@@ -585,15 +585,65 @@ export function useAnamnesisRecords(patientId: string | null, appointmentId?: st
         }
 
         if (!resolvedProfessionalId) {
+          // Try active professional first
           const { data: profData } = await supabase
             .from('professionals')
             .select('id')
             .eq('user_id', userData.user.id)
-            .eq('is_active', true)
             .eq('clinic_id', clinic.id)
+            .eq('is_active', true)
             .limit(1)
             .maybeSingle();
           resolvedProfessionalId = profData?.id || null;
+
+          // Try inactive professional and reactivate
+          if (!resolvedProfessionalId) {
+            const { data: inactiveProf } = await supabase
+              .from('professionals')
+              .select('id')
+              .eq('user_id', userData.user.id)
+              .eq('clinic_id', clinic.id)
+              .limit(1)
+              .maybeSingle();
+            if (inactiveProf?.id) {
+              await supabase
+                .from('professionals')
+                .update({ is_active: true } as any)
+                .eq('id', inactiveProf.id);
+              resolvedProfessionalId = inactiveProf.id;
+            }
+          }
+
+          // Auto-create professional from profile data
+          if (!resolvedProfessionalId) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('full_name, email')
+              .eq('user_id', userData.user.id)
+              .eq('clinic_id', clinic.id)
+              .maybeSingle();
+
+            const profName = profile?.full_name || userData.user.email?.split('@')[0] || 'Profissional';
+            const profEmail = profile?.email || userData.user.email || '';
+
+            const { data: newProf, error: createErr } = await supabase
+              .from('professionals')
+              .insert({
+                clinic_id: clinic.id,
+                user_id: userData.user.id,
+                full_name: profName,
+                email: profEmail,
+                is_active: true,
+              } as any)
+              .select('id')
+              .single();
+
+            if (createErr) {
+              console.error('Erro ao criar profissional automaticamente:', createErr);
+              throw new Error('Não foi possível vincular seu usuário como profissional. Contate o administrador.');
+            }
+            resolvedProfessionalId = newProf.id;
+          }
         }
 
         if (!resolvedProfessionalId) {
