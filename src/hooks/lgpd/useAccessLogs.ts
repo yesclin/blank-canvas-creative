@@ -5,10 +5,12 @@ import { toast } from 'sonner';
 
 export interface AccessLog {
   id: string;
-  user_id: string | null;
+  user_id: string;
   clinic_id: string;
   action: string;
-  resource: string | null;
+  resource_type: string;
+  resource_id: string | null;
+  details: Record<string, any> | null;
   ip_address: string | null;
   user_agent: string | null;
   created_at: string;
@@ -33,19 +35,16 @@ const ACTION_LABELS: Record<string, { label: string; color: 'default' | 'seconda
   CREATE: { label: 'Criação', color: 'default' },
   UPDATE: { label: 'Atualização', color: 'default' },
   DELETE: { label: 'Exclusão', color: 'destructive' },
-  // Clinical evolution actions
+  view: { label: 'Visualização', color: 'outline' },
   VIEW_EVOLUTION: { label: 'Visualização de Evolução', color: 'outline' },
   CREATE_EVOLUTION: { label: 'Criação de Evolução', color: 'default' },
   EDIT_EVOLUTION: { label: 'Edição de Evolução', color: 'default' },
   EVOLUTION_CREATED: { label: 'Evolução Criada', color: 'default' },
   EVOLUTION_UPDATED: { label: 'Evolução Atualizada', color: 'default' },
-  // Clinical alert actions
   VIEW_ALERT: { label: 'Visualização de Alerta', color: 'outline' },
   CREATE_ALERT: { label: 'Criação de Alerta', color: 'default' },
-  // Media actions
   VIEW_MEDIA: { label: 'Visualização de Mídia', color: 'outline' },
   UPLOAD_MEDIA: { label: 'Upload de Mídia', color: 'default' },
-  // Sales actions
   SALE_CREATED: { label: 'Venda Realizada', color: 'default' },
   SALE_STATUS_UPDATED: { label: 'Status de Venda Atualizado', color: 'secondary' },
   SALE_CANCELLED: { label: 'Venda Cancelada', color: 'destructive' },
@@ -84,10 +83,8 @@ export function useAccessLogs() {
       }
 
       const { data: logsData, error } = await query;
-
       if (error) throw error;
 
-      // Get unique user IDs to fetch names
       const userIds = [...new Set((logsData || []).filter(l => l.user_id).map(l => l.user_id))];
 
       let profileMap = new Map<string, string>();
@@ -102,6 +99,9 @@ export function useAccessLogs() {
 
       const enrichedLogs: AccessLog[] = (logsData || []).map(log => ({
         ...log,
+        details: typeof log.details === 'object' && log.details !== null && !Array.isArray(log.details)
+          ? log.details as Record<string, any>
+          : null,
         user_name: log.user_id ? profileMap.get(log.user_id) || 'Usuário' : 'Sistema',
       }));
 
@@ -120,23 +120,21 @@ export function useAccessLogs() {
     }
   }, [clinicLoading, clinic?.id, fetchLogs]);
 
-  const logAction = async (action: string, resource?: string): Promise<void> => {
+  const logAction = async (action: string, resourceType?: string): Promise<void> => {
     if (!clinic?.id) return;
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      // Use edge function to log action (server-side logging for security)
       await supabase.functions.invoke('log-access', {
         body: {
           action,
-          resource,
+          resource_type: resourceType || 'system',
           user_agent: navigator.userAgent,
         },
       });
     } catch (err) {
-      // Silently fail - logging should not disrupt user experience
       console.error('Error logging action:', err);
     }
   };

@@ -4,7 +4,6 @@ import { useClinicData } from "@/hooks/useClinicData";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
-  Search,
   Filter,
   Loader2,
   ChevronLeft,
@@ -13,7 +12,7 @@ import {
   ShieldAlert,
   RefreshCw,
 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,30 +44,49 @@ const PAGE_SIZE = 25;
 
 const ACTION_LABELS: Record<string, string> = {
   document_created: "Documento criado",
+  document_signed: "Documento assinado",
   document_revoked: "Documento revogado",
   document_replaced: "Documento substituído",
+  document_exported: "Documento exportado",
+  evolution_created: "Evolução criada",
+  evolution_signed: "Evolução assinada",
+  evolution_viewed: "Evolução visualizada",
+  consent_granted: "Consentimento concedido",
+  consent_revoked: "Consentimento revogado",
+  patient_data_accessed: "Dados do paciente acessados",
+  patient_data_exported: "Dados do paciente exportados",
   patient_updated: "Paciente atualizado",
   settings_updated: "Configurações alteradas",
+  security_settings_updated: "Config. segurança alteradas",
   user_permission_changed: "Permissão alterada",
+  user_invited: "Usuário convidado",
+  user_deactivated: "Usuário desativado",
+  specialty_activated: "Especialidade ativada",
+  specialty_deactivated: "Especialidade desativada",
 };
 
-const ENTITY_LABELS: Record<string, string> = {
-  clinical_document: "Documento Clínico",
-  patient: "Paciente",
+const TABLE_LABELS: Record<string, string> = {
+  clinical_documents: "Documento Clínico",
+  clinical_evolutions: "Evolução Clínica",
+  anamnesis_records: "Anamnese",
+  patients: "Paciente",
+  patient_consents: "Consentimento",
   clinic_settings: "Configurações",
-  user_role: "Permissão de Usuário",
+  user_roles: "Permissão de Usuário",
+  finance_transactions: "Transação Financeira",
+  specialties: "Especialidade",
+  professionals: "Profissional",
 };
 
 interface AuditLog {
   id: string;
   clinic_id: string;
-  user_id: string;
+  user_id: string | null;
   action: string;
-  entity_type: string;
-  entity_id: string | null;
-  metadata: Record<string, any>;
-  ip_address: string | null;
-  user_agent: string | null;
+  table_name: string;
+  record_id: string | null;
+  old_data: Record<string, any> | null;
+  new_data: Record<string, any> | null;
   created_at: string;
   user_name?: string;
 }
@@ -82,7 +100,7 @@ export default function Auditoria() {
 
   // Filters
   const [filterAction, setFilterAction] = useState("all");
-  const [filterEntity, setFilterEntity] = useState("all");
+  const [filterTable, setFilterTable] = useState("all");
   const [filterStartDate, setFilterStartDate] = useState("");
   const [filterEndDate, setFilterEndDate] = useState("");
   const [filterUserId, setFilterUserId] = useState("all");
@@ -98,6 +116,7 @@ export default function Auditoria() {
     const { data } = await supabase
       .from("profiles")
       .select("user_id, full_name")
+      .eq("clinic_id", clinic.id)
       .not("user_id", "is", null);
     if (data) {
       setUsers(data.map((p) => ({ id: p.user_id, name: p.full_name || "Usuário" })));
@@ -108,7 +127,6 @@ export default function Auditoria() {
     if (!clinic?.id) return;
     setLoading(true);
     try {
-      // Count query
       let countQuery = supabase
         .from("audit_logs")
         .select("id", { count: "exact", head: true })
@@ -121,14 +139,13 @@ export default function Auditoria() {
         .order("created_at", { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
-      // Apply filters
       if (filterAction !== "all") {
         countQuery = countQuery.eq("action", filterAction);
         dataQuery = dataQuery.eq("action", filterAction);
       }
-      if (filterEntity !== "all") {
-        countQuery = countQuery.eq("entity_type", filterEntity);
-        dataQuery = dataQuery.eq("entity_type", filterEntity);
+      if (filterTable !== "all") {
+        countQuery = countQuery.eq("table_name", filterTable);
+        dataQuery = dataQuery.eq("table_name", filterTable);
       }
       if (filterUserId !== "all") {
         countQuery = countQuery.eq("user_id", filterUserId);
@@ -144,13 +161,12 @@ export default function Auditoria() {
       }
 
       const [{ count }, { data, error }] = await Promise.all([countQuery, dataQuery]);
-
       if (error) throw error;
 
       setTotalCount(count || 0);
 
       // Enrich with user names
-      const userIds = [...new Set((data || []).map((l: any) => l.user_id))];
+      const userIds = [...new Set((data || []).filter((l: any) => l.user_id).map((l: any) => l.user_id))];
       let profileMap = new Map<string, string>();
       if (userIds.length > 0) {
         const { data: profiles } = await supabase
@@ -163,8 +179,9 @@ export default function Auditoria() {
       setLogs(
         (data || []).map((l: any) => ({
           ...l,
-          metadata: typeof l.metadata === "object" && l.metadata !== null ? l.metadata : {},
-          user_name: profileMap.get(l.user_id) || "Usuário",
+          old_data: typeof l.old_data === "object" && l.old_data !== null ? l.old_data : null,
+          new_data: typeof l.new_data === "object" && l.new_data !== null ? l.new_data : null,
+          user_name: l.user_id ? profileMap.get(l.user_id) || "Usuário" : "Sistema",
         }))
       );
     } catch (err) {
@@ -172,33 +189,30 @@ export default function Auditoria() {
     } finally {
       setLoading(false);
     }
-  }, [clinic?.id, page, filterAction, filterEntity, filterUserId, filterStartDate, filterEndDate]);
+  }, [clinic?.id, page, filterAction, filterTable, filterUserId, filterStartDate, filterEndDate]);
 
   useEffect(() => {
-    if (!clinicLoading && clinic?.id) {
-      fetchUsers();
-    }
+    if (!clinicLoading && clinic?.id) fetchUsers();
   }, [clinicLoading, clinic?.id, fetchUsers]);
 
   useEffect(() => {
-    if (!clinicLoading && clinic?.id) {
-      fetchLogs();
-    }
+    if (!clinicLoading && clinic?.id) fetchLogs();
   }, [clinicLoading, clinic?.id, fetchLogs]);
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   const clearFilters = () => {
     setFilterAction("all");
-    setFilterEntity("all");
+    setFilterTable("all");
     setFilterUserId("all");
     setFilterStartDate("");
     setFilterEndDate("");
     setPage(0);
   };
 
-  const formatMetadata = (metadata: Record<string, any>): string => {
-    return JSON.stringify(metadata, null, 2);
+  const formatData = (data: Record<string, any> | null): string => {
+    if (!data) return "—";
+    return JSON.stringify(data, null, 2);
   };
 
   return (
@@ -254,14 +268,14 @@ export default function Auditoria() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Entidade</Label>
-              <Select value={filterEntity} onValueChange={(v) => { setFilterEntity(v); setPage(0); }}>
+              <Label className="text-xs">Módulo</Label>
+              <Select value={filterTable} onValueChange={(v) => { setFilterTable(v); setPage(0); }}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Todas" />
+                  <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas as entidades</SelectItem>
-                  {Object.entries(ENTITY_LABELS).map(([key, label]) => (
+                  <SelectItem value="all">Todos os módulos</SelectItem>
+                  {Object.entries(TABLE_LABELS).map(([key, label]) => (
                     <SelectItem key={key} value={key}>{label}</SelectItem>
                   ))}
                 </SelectContent>
@@ -326,7 +340,7 @@ export default function Auditoria() {
                       <TableHead>Data/Hora</TableHead>
                       <TableHead>Usuário</TableHead>
                       <TableHead>Ação</TableHead>
-                      <TableHead>Entidade</TableHead>
+                      <TableHead>Módulo</TableHead>
                       <TableHead className="text-center">Detalhes</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -345,7 +359,7 @@ export default function Auditoria() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {ENTITY_LABELS[log.entity_type] || log.entity_type}
+                          {TABLE_LABELS[log.table_name] || log.table_name}
                         </TableCell>
                         <TableCell className="text-center">
                           <Button
@@ -363,27 +377,16 @@ export default function Auditoria() {
                 </Table>
               </div>
 
-              {/* Pagination */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-between px-4 py-3 border-t">
                   <p className="text-sm text-muted-foreground">
                     Página {page + 1} de {totalPages}
                   </p>
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={page === 0}
-                      onClick={() => setPage((p) => p - 1)}
-                    >
+                    <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={page >= totalPages - 1}
-                      onClick={() => setPage((p) => p + 1)}
-                    >
+                    <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>
@@ -394,7 +397,7 @@ export default function Auditoria() {
         </CardContent>
       </Card>
 
-      {/* Metadata Modal */}
+      {/* Detail Modal */}
       <Dialog open={!!selectedLog} onOpenChange={(open) => { if (!open) setSelectedLog(null); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -418,30 +421,36 @@ export default function Auditoria() {
                   <p className="font-medium">{ACTION_LABELS[selectedLog.action] || selectedLog.action}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground text-xs">Entidade</p>
-                  <p className="font-medium">{ENTITY_LABELS[selectedLog.entity_type] || selectedLog.entity_type}</p>
+                  <p className="text-muted-foreground text-xs">Módulo</p>
+                  <p className="font-medium">{TABLE_LABELS[selectedLog.table_name] || selectedLog.table_name}</p>
                 </div>
-                {selectedLog.entity_id && (
+                {selectedLog.record_id && (
                   <div className="col-span-2">
-                    <p className="text-muted-foreground text-xs">ID da Entidade</p>
-                    <p className="font-mono text-xs">{selectedLog.entity_id}</p>
-                  </div>
-                )}
-                {selectedLog.user_agent && (
-                  <div className="col-span-2">
-                    <p className="text-muted-foreground text-xs">User Agent</p>
-                    <p className="text-xs text-muted-foreground truncate">{selectedLog.user_agent}</p>
+                    <p className="text-muted-foreground text-xs">ID do Registro</p>
+                    <p className="font-mono text-xs">{selectedLog.record_id}</p>
                   </div>
                 )}
               </div>
-              <div>
-                <p className="text-muted-foreground text-xs mb-2">Metadata</p>
-                <ScrollArea className="max-h-[300px]">
-                  <pre className="bg-muted rounded-md p-3 text-xs overflow-x-auto whitespace-pre-wrap">
-                    {formatMetadata(selectedLog.metadata)}
-                  </pre>
-                </ScrollArea>
-              </div>
+              {selectedLog.old_data && (
+                <div>
+                  <p className="text-muted-foreground text-xs mb-2">Dados Anteriores</p>
+                  <ScrollArea className="max-h-[150px]">
+                    <pre className="bg-muted rounded-md p-3 text-xs overflow-x-auto whitespace-pre-wrap">
+                      {formatData(selectedLog.old_data)}
+                    </pre>
+                  </ScrollArea>
+                </div>
+              )}
+              {selectedLog.new_data && (
+                <div>
+                  <p className="text-muted-foreground text-xs mb-2">Dados Atuais</p>
+                  <ScrollArea className="max-h-[150px]">
+                    <pre className="bg-muted rounded-md p-3 text-xs overflow-x-auto whitespace-pre-wrap">
+                      {formatData(selectedLog.new_data)}
+                    </pre>
+                  </ScrollArea>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
