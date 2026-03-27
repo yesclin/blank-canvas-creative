@@ -619,11 +619,34 @@ export function AnamneseBlock({
       structured_data: structuredData,
       template_id: activeTemplate?.id || '',
     };
+
+    // Save to legacy patient_anamneses
     if (isEditingExisting && currentAnamnese && onUpdate) {
       await onUpdate(currentAnamnese.id, saveData);
     } else {
       await onSave(saveData);
     }
+
+    // Also save to V2 anamnesis_records for proper template-based persistence
+    if (activeTemplate && patientIdForRecords) {
+      const v2Template = v2Templates.find(t => t.id === activeTemplate.id);
+      try {
+        await saveV2Record({
+          id: existingV2Record?.id, // update if exists
+          patient_id: patientIdForRecords,
+          template_id: activeTemplate.id,
+          template_version_id: v2Template?.current_version_id || '',
+          responses: structuredData,
+          specialty_id: specialtyId,
+          appointment_id: appointmentId || undefined,
+          structure_snapshot: v2Template?.structure,
+        });
+      } catch (err) {
+        console.error('Erro ao salvar no anamnesis_records:', err);
+        // Don't block - legacy save already succeeded
+      }
+    }
+
     setIsEditing(false);
     setIsEditingExisting(false);
     setStructuredData({});
