@@ -554,8 +554,6 @@ export function useAnamnesisRecords(patientId: string | null, appointmentId?: st
       template_version_id: string;
       responses: Record<string, unknown>;
       specialty_id?: string | null;
-      procedure_id?: string | null;
-      structure_snapshot?: unknown;
     }) => {
       if (!clinic?.id) throw new Error('Clínica não identificada');
       const { data: userData } = await supabase.auth.getUser();
