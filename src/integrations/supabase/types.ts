@@ -4880,6 +4880,7 @@ export type Database = {
           has_clinical_alert: boolean
           id: string
           is_active: boolean
+          marital_status: string | null
           notes: string | null
           phone: string | null
           updated_at: string
@@ -4903,6 +4904,7 @@ export type Database = {
           has_clinical_alert?: boolean
           id?: string
           is_active?: boolean
+          marital_status?: string | null
           notes?: string | null
           phone?: string | null
           updated_at?: string
@@ -4926,6 +4928,7 @@ export type Database = {
           has_clinical_alert?: boolean
           id?: string
           is_active?: boolean
+          marital_status?: string | null
           notes?: string | null
           phone?: string | null
           updated_at?: string
