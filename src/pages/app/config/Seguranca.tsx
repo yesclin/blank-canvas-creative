@@ -691,7 +691,7 @@ export default function ConfigSeguranca() {
                               {actionInfo.label}
                             </Badge>
                           </TableCell>
-                          <TableCell>{log.resource || "—"}</TableCell>
+                          <TableCell>{log.resource_type || "—"}</TableCell>
                           <TableCell className="text-muted-foreground text-sm">
                             {log.ip_address || "—"}
                           </TableCell>
