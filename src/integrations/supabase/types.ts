@@ -1636,6 +1636,7 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          parent_term_id: string | null
           term_type: string
           title: string
           updated_at: string
@@ -1647,6 +1648,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          parent_term_id?: string | null
           term_type?: string
           title: string
           updated_at?: string
@@ -1658,6 +1660,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          parent_term_id?: string | null
           term_type?: string
           title?: string
           updated_at?: string
@@ -1669,6 +1672,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consent_terms_parent_term_id_fkey"
+            columns: ["parent_term_id"]
+            isOneToOne: false
+            referencedRelation: "consent_terms"
             referencedColumns: ["id"]
           },
         ]
@@ -6482,6 +6492,8 @@ export type Database = {
       }
       system_security_settings: {
         Row: {
+          allow_patient_data_deletion: boolean | null
+          anonymize_reports: boolean | null
           clinic_id: string
           created_at: string
           enable_access_logging: boolean
@@ -6490,9 +6502,13 @@ export type Database = {
           enforce_consent_before_care: boolean
           id: string
           lock_record_without_consent: boolean
+          log_retention_days: number | null
+          require_consent_on_registration: boolean | null
           updated_at: string
         }
         Insert: {
+          allow_patient_data_deletion?: boolean | null
+          anonymize_reports?: boolean | null
           clinic_id: string
           created_at?: string
           enable_access_logging?: boolean
@@ -6501,9 +6517,13 @@ export type Database = {
           enforce_consent_before_care?: boolean
           id?: string
           lock_record_without_consent?: boolean
+          log_retention_days?: number | null
+          require_consent_on_registration?: boolean | null
           updated_at?: string
         }
         Update: {
+          allow_patient_data_deletion?: boolean | null
+          anonymize_reports?: boolean | null
           clinic_id?: string
           created_at?: string
           enable_access_logging?: boolean
@@ -6512,6 +6532,8 @@ export type Database = {
           enforce_consent_before_care?: boolean
           id?: string
           lock_record_without_consent?: boolean
+          log_retention_days?: number | null
+          require_consent_on_registration?: boolean | null
           updated_at?: string
         }
         Relationships: [
