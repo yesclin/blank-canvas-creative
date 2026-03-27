@@ -8,7 +8,7 @@ export interface PatientConsent {
   clinic_id: string;
   patient_id: string;
   term_id: string;
-  term_version: string;
+  term_version: number;
   status: 'granted' | 'revoked';
   granted_at: string;
   revoked_at: string | null;
@@ -94,7 +94,7 @@ export function usePatientConsents(patientId?: string) {
   const grantConsent = async (
     patientId: string, 
     termId: string, 
-    termVersion: string
+    termVersion: number
   ): Promise<boolean> => {
     if (!clinic?.id) return false;
     setSaving(true);
