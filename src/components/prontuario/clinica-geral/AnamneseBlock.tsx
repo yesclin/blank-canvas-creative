@@ -52,6 +52,7 @@ import {
   Check,
   CheckCircle2,
   Calculator,
+  Plus,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO } from "date-fns";
@@ -61,7 +62,7 @@ import {
   mapStructuredToLegacy,
   type SecaoAnamnese,
 } from "@/hooks/prontuario/clinica-geral/anamneseTemplates";
-import { useAnamnesisTemplatesV2, useAnamnesisRecords, type AnamnesisTemplateV2, type TemplateSection } from "@/hooks/useAnamnesisTemplatesV2";
+import { useAnamnesisTemplatesV2, useAnamnesisRecords, type AnamnesisTemplateV2, type AnamnesisRecord, type TemplateSection } from "@/hooks/useAnamnesisTemplatesV2";
 import { useInstitutionalPdf } from "@/hooks/useInstitutionalPdf";
 import { FileDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -163,7 +164,6 @@ function v2TemplateToUnified(t: AnamnesisTemplateV2): UnifiedTemplate {
     is_system: t.is_system,
     secoes: t.structure
       .map(section => {
-        // Filter out identification fields from any section
         const filteredFields = (section.fields || []).filter(f => !IDENTIFICATION_FIELD_IDS.has(f.id));
         return {
           id: section.id,
@@ -180,7 +180,6 @@ function v2TemplateToUnified(t: AnamnesisTemplateV2): UnifiedTemplate {
           })),
         };
       })
-      // Remove sections that are now empty OR are pure identification sections
       .filter(s => s.campos.length > 0 || !IDENTIFICATION_SECTION_IDS.has(s.id))
       .filter(s => s.campos.length > 0),
   };
@@ -208,6 +207,7 @@ export function AnamneseBlock({
 
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingExisting, setIsEditingExisting] = useState(false);
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<AnamneseData | null>(null);
   const [structuredData, setStructuredData] = useState<Record<string, unknown>>({});
@@ -218,6 +218,7 @@ export function AnamneseBlock({
   const [editingV2Template, setEditingV2Template] = useState<AnamnesisTemplateV2 | null>(null);
   const [creatingDefault, setCreatingDefault] = useState(false);
   const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
+  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
 
   // Auto-save refs
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -229,9 +230,9 @@ export function AnamneseBlock({
     activeOnly: true
   });
 
-  // ─── V2 Records: load and save from anamnesis_records ──────────
+  // ─── V2 Records: ALL records for this patient (no appointment filter) ──
   const patientIdForRecords = patientData?.id || currentAnamnese?.patient_id || null;
-  const { records: v2Records, saveRecord: saveV2Record, isSaving: savingV2 } = useAnamnesisRecords(patientIdForRecords, appointmentId);
+  const { records: v2Records, saveRecord: saveV2Record, isSaving: savingV2 } = useAnamnesisRecords(patientIdForRecords, null);
 
   const allTemplates: UnifiedTemplate[] = useMemo(() => {
     return v2Templates.map(v2TemplateToUnified);
@@ -253,21 +254,37 @@ export function AnamneseBlock({
     }
   }, [activeTemplate, selectedTemplateId]);
 
-  // ─── Load existing V2 record for active template ────────────────
-  const existingV2Record = useMemo(() => {
-    if (!selectedTemplateId || !v2Records.length) return null;
-    return v2Records.find(r => r.template_id === selectedTemplateId) || null;
-  }, [selectedTemplateId, v2Records]);
+  // ─── Selected record from records list ────────────────────────────
+  const selectedRecord = useMemo(() => {
+    if (!v2Records.length) return null;
+    if (selectedRecordId) {
+      return v2Records.find(r => r.id === selectedRecordId) || v2Records[0];
+    }
+    return v2Records[0];
+  }, [v2Records, selectedRecordId]);
 
-  // Load V2 record responses into structuredData when viewing (not editing)
+  // Backward compat alias
+  const existingV2Record = selectedRecord;
+
+  // Auto-select first record when records load
   useEffect(() => {
-    if (!isEditing && existingV2Record && Object.keys(existingV2Record.responses).length > 0) {
-      // Only set if we don't already have legacy data loaded
-      if (!currentAnamnese?.structured_data || Object.keys(currentAnamnese.structured_data).length === 0) {
-        setStructuredData(existingV2Record.responses as Record<string, unknown>);
+    if (v2Records.length > 0 && !selectedRecordId) {
+      setSelectedRecordId(v2Records[0].id);
+    }
+  }, [v2Records, selectedRecordId]);
+
+  // Load selected record data into view (when not editing)
+  useEffect(() => {
+    if (!isEditing && selectedRecord) {
+      const responses = selectedRecord.responses as Record<string, unknown>;
+      if (responses && Object.keys(responses).length > 0) {
+        setStructuredData(responses);
+      }
+      if (selectedRecord.template_id) {
+        setSelectedTemplateId(selectedRecord.template_id);
       }
     }
-  }, [existingV2Record, isEditing, currentAnamnese]);
+  }, [selectedRecord, isEditing]);
 
   // ─── Auto-save (10s debounce, silent) ───────────────────────────────
   useEffect(() => {
@@ -343,7 +360,6 @@ export function AnamneseBlock({
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error('Usuário não autenticado');
 
-      // ── 1. Check if a template already exists for this clinic+specialty ──
       const { data: existing, error: fetchErr } = await supabase
         .from('anamnesis_templates')
         .select('id, current_version_id, is_active, is_default')
@@ -354,34 +370,28 @@ export function AnamneseBlock({
         .maybeSingle();
 
       if (fetchErr) {
-        console.error('Erro ao verificar modelo existente:', { code: (fetchErr as any).code, message: fetchErr.message, details: (fetchErr as any).details, clinic_id: clinic.id, specialty_id: specialtyId });
+        console.error('Erro ao verificar modelo existente:', fetchErr);
         throw fetchErr;
       }
 
-      // ── If template exists, just ensure it's active+default and reload ──
       if (existing) {
-        console.log('Modelo de anamnese já existe, reutilizando:', existing.id);
         if (!existing.is_active || !existing.is_default) {
           await supabase
             .from('anamnesis_templates')
             .update({ is_active: true, is_default: true } as any)
             .eq('id', existing.id);
         }
-        // Force refetch templates
         window.location.reload();
         return;
       }
 
-      // ── 2. No template found — create one ──
       const defaultStructure: TemplateSection[] = [
-        // BLOCO 1 — Queixa Principal
         {
           id: 'section_queixa_principal', type: 'section', title: 'Queixa Principal',
           fields: [
             { id: 'f_queixa_principal', type: 'textarea', label: 'Queixa principal', required: true, placeholder: 'Descreva a queixa principal do paciente nas palavras dele...' },
           ],
         },
-        // BLOCO 2 — História da Doença Atual (HDA)
         {
           id: 'section_hda', type: 'section', title: 'História da Doença Atual (HDA)',
           fields: [
@@ -394,7 +404,6 @@ export function AnamneseBlock({
             { id: 'f_hda_tratamentos_previos', type: 'textarea', label: 'Tratamentos prévios', placeholder: 'Medicamentos, procedimentos já realizados...' },
           ],
         },
-        // BLOCO 3 — Revisão de Sistemas
         {
           id: 'section_revisao_sistemas', type: 'section', title: 'Revisão de Sistemas',
           fields: [
@@ -419,7 +428,6 @@ export function AnamneseBlock({
             { id: 'f_rs_outros', type: 'textarea', label: 'Outros achados na revisão', placeholder: 'Outros sintomas relevantes...' },
           ],
         },
-        // BLOCO 4 — Antecedentes Pessoais
         {
           id: 'section_antecedentes_pessoais', type: 'section', title: 'Antecedentes Pessoais',
           fields: [
@@ -431,7 +439,6 @@ export function AnamneseBlock({
             { id: 'f_ap_gineco_obstetrico', type: 'textarea', label: 'Ginecológico / Obstétrico (se aplicável)', placeholder: 'G_P_A_, DUM, contraceptivos...' },
           ],
         },
-        // BLOCO 5 — Medicamentos / Tratamentos
         {
           id: 'section_medicamentos', type: 'section', title: 'Medicamentos / Tratamentos',
           fields: [
@@ -441,14 +448,12 @@ export function AnamneseBlock({
             { id: 'f_med_suplementos', type: 'textarea', label: 'Suplementos / Fitoterápicos', placeholder: 'Suplementos em uso...' },
           ],
         },
-        // BLOCO 6 — Antecedentes Familiares
         {
           id: 'section_antecedentes_familiares', type: 'section', title: 'Antecedentes Familiares',
           fields: [
             { id: 'f_af_historico', type: 'textarea', label: 'Histórico familiar', placeholder: 'Pai IAM aos 55a, mãe DM2, irmão HAS...' },
           ],
         },
-        // BLOCO 7 — Hábitos de Vida
         {
           id: 'section_habitos_vida', type: 'section', title: 'Hábitos de Vida',
           fields: [
@@ -464,7 +469,6 @@ export function AnamneseBlock({
             { id: 'f_hv_estresse_trabalho', type: 'textarea', label: 'Estresse / Trabalho', placeholder: 'Nível de estresse, carga de trabalho...' },
           ],
         },
-        // BLOCO 8 — Exame Físico
         {
           id: 'section_exame_fisico', type: 'section', title: 'Exame Físico',
           fields: [
@@ -482,7 +486,6 @@ export function AnamneseBlock({
             { id: 'f_ef_pele_extremidades', type: 'textarea', label: 'Pele e Extremidades', placeholder: 'Sem lesões, pulsos presentes, sem edema...' },
           ],
         },
-        // BLOCO 9 — Hipóteses Diagnósticas
         {
           id: 'section_hipoteses', type: 'section', title: 'Hipóteses Diagnósticas',
           fields: [
@@ -490,7 +493,6 @@ export function AnamneseBlock({
             { id: 'f_hd_diferenciais', type: 'textarea', label: 'Diagnósticos diferenciais', placeholder: 'Liste as hipóteses diferenciais...' },
           ],
         },
-        // BLOCO 10 — Plano / Conduta
         {
           id: 'section_conduta', type: 'section', title: 'Plano / Conduta',
           fields: [
@@ -515,22 +517,14 @@ export function AnamneseBlock({
           structure: defaultStructure,
         });
       } catch (createErr: any) {
-        // Handle duplicate/conflict — try to fetch and use existing
         if (createErr?.code === '23505' || createErr?.message?.includes('duplicate')) {
-          console.warn('Conflito de duplicidade ao criar modelo, buscando existente...');
           window.location.reload();
           return;
         }
         throw createErr;
       }
     } catch (err: any) {
-      console.error('Erro ao criar modelo padrão:', {
-        code: err?.code,
-        message: err?.message,
-        details: err?.details,
-        clinic_id: clinic?.id,
-        specialty_id: specialtyId,
-      });
+      console.error('Erro ao criar modelo padrão:', err);
       toast.error(`Erro ao criar modelo: ${err?.message || 'Erro desconhecido'}`);
     } finally {
       setCreatingDefault(false);
@@ -554,13 +548,29 @@ export function AnamneseBlock({
   }, [loadingTemplates, allTemplates.length, specialtyId, clinic?.id, creatingDefault, handleCreateDefaultTemplate]);
 
   // ─── Handlers ───────────────────────────────────────────────────
+
+  const handleSelectRecord = useCallback((recordId: string) => {
+    setSelectedRecordId(recordId);
+    setIsEditing(false);
+    setIsEditingExisting(false);
+    setIsCreatingNew(false);
+  }, []);
+
+  const handleStartNewAnamnese = useCallback(() => {
+    setStructuredData({});
+    setIsCreatingNew(true);
+    setIsEditingExisting(false);
+    setIsEditing(true);
+    setLastAutoSave(null);
+  }, []);
+
   const handleStartEdit = () => {
-    if (currentAnamnese?.template_id) {
-      setSelectedTemplateId(currentAnamnese.template_id);
+    if (selectedRecord?.template_id) {
+      setSelectedTemplateId(selectedRecord.template_id);
     }
-    // Priority: V2 record responses > legacy structured_data > legacy flat fields
-    if (existingV2Record && Object.keys(existingV2Record.responses).length > 0) {
-      setStructuredData({ ...existingV2Record.responses as Record<string, unknown> });
+    // Priority: selected V2 record > legacy structured_data > legacy flat fields
+    if (selectedRecord && Object.keys(selectedRecord.responses).length > 0) {
+      setStructuredData({ ...selectedRecord.responses as Record<string, unknown> });
     } else if (currentAnamnese?.structured_data && Object.keys(currentAnamnese.structured_data).length > 0) {
       setStructuredData({ ...currentAnamnese.structured_data });
     } else if (currentAnamnese) {
@@ -576,16 +586,17 @@ export function AnamneseBlock({
     }
     setLastAutoSave(null);
     setIsEditingExisting(true);
+    setIsCreatingNew(false);
     setIsEditing(true);
   };
 
   const handleStartNewVersion = () => {
-    if (currentAnamnese?.template_id) {
-      setSelectedTemplateId(currentAnamnese.template_id);
-    }
-    // Same priority for loading data
-    if (existingV2Record && Object.keys(existingV2Record.responses).length > 0) {
-      setStructuredData({ ...existingV2Record.responses as Record<string, unknown> });
+    // Copy data from selected record but create a new one
+    if (selectedRecord) {
+      if (selectedRecord.template_id) setSelectedTemplateId(selectedRecord.template_id);
+      if (Object.keys(selectedRecord.responses).length > 0) {
+        setStructuredData({ ...selectedRecord.responses as Record<string, unknown> });
+      }
     } else if (currentAnamnese?.structured_data && Object.keys(currentAnamnese.structured_data).length > 0) {
       setStructuredData({ ...currentAnamnese.structured_data });
     } else if (currentAnamnese) {
@@ -601,12 +612,14 @@ export function AnamneseBlock({
     }
     setLastAutoSave(null);
     setIsEditingExisting(false);
+    setIsCreatingNew(false);
     setIsEditing(true);
   };
 
   const handleCancel = () => {
     setIsEditing(false);
     setIsEditingExisting(false);
+    setIsCreatingNew(false);
     setStructuredData({});
     setLastAutoSave(null);
   };
@@ -614,15 +627,15 @@ export function AnamneseBlock({
   const [isSavingLocal, setIsSavingLocal] = useState(false);
 
   const handleSave = async () => {
-    if (isSavingLocal) return; // prevent double-click
+    if (isSavingLocal) return;
     setIsSavingLocal(true);
 
     try {
-      // Save to V2 anamnesis_records (primary persistence)
       if (activeTemplate && patientIdForRecords) {
         const v2Template = v2Templates.find(t => t.id === activeTemplate.id);
         await saveV2Record({
-          id: existingV2Record?.id, // update if exists
+          // Only pass id when editing existing — new anamnese and new version create fresh records
+          id: isEditingExisting ? existingV2Record?.id : undefined,
           patient_id: patientIdForRecords,
           template_id: activeTemplate.id,
           template_version_id: v2Template?.current_version_id || '',
@@ -630,9 +643,8 @@ export function AnamneseBlock({
           specialty_id: specialtyId,
           appointment_id: appointmentId || undefined,
         });
-        // Toast is handled by the mutation's onSuccess/onError in useAnamnesisTemplatesV2
       } else {
-        // Fallback to legacy save only if V2 path isn't available
+        // Fallback to legacy save
         const legacy = mapStructuredToLegacy(structuredData);
         const saveData = {
           queixa_principal: legacy.queixa_principal || '',
@@ -656,10 +668,10 @@ export function AnamneseBlock({
 
       setIsEditing(false);
       setIsEditingExisting(false);
+      setIsCreatingNew(false);
       setStructuredData({});
       setLastAutoSave(null);
     } catch (err) {
-      // Error toast already shown by the mutation hook — no duplicate here
       console.error('handleSave error:', err);
     } finally {
       setIsSavingLocal(false);
@@ -831,8 +843,7 @@ export function AnamneseBlock({
   }
 
   // ─── No templates exist ─────────────────────────────────────────
-   if (allTemplates.length === 0) {
-    // Auto-provisioning is in progress or will trigger
+  if (allTemplates.length === 0) {
     return (
       <Card className="border-dashed">
         <CardContent className="p-10 text-center">
@@ -849,7 +860,7 @@ export function AnamneseBlock({
   }
 
   // ─── Template exists but no structure ───────────────────────────
-  if (activeTemplate && activeTemplate.secoes.length === 0 && !currentAnamnese) {
+  if (activeTemplate && activeTemplate.secoes.length === 0 && !currentAnamnese && v2Records.length === 0) {
     return (
       <Card className="border-dashed">
         <CardContent className="p-10 text-center">
@@ -924,8 +935,59 @@ export function AnamneseBlock({
     </AlertDialog>
   );
 
+  // ─── Records list ─────────────────────────────────────────────────
+  const renderRecordsList = () => {
+    if (v2Records.length === 0) return null;
+    return (
+      <div className="space-y-2 mb-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-foreground">
+            Registros de Anamnese ({v2Records.length})
+          </h3>
+          {canEdit && (
+            <Button variant="outline" size="sm" onClick={handleStartNewAnamnese}>
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              Nova Anamnese
+            </Button>
+          )}
+        </div>
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {v2Records.map((record) => (
+            <div
+              key={record.id}
+              onClick={() => handleSelectRecord(record.id)}
+              className={cn(
+                "flex-shrink-0 p-3 rounded-lg border cursor-pointer transition-all min-w-[200px] max-w-[280px]",
+                "hover:bg-muted/50 hover:shadow-sm",
+                record.id === selectedRecordId
+                  ? "border-primary bg-primary/5 shadow-sm"
+                  : "border-border"
+              )}
+            >
+              <div className="flex items-center gap-1.5 mb-1">
+                <FileText className="h-3.5 w-3.5 text-primary/70 flex-shrink-0" />
+                <span className="text-xs font-medium truncate">
+                  {record.template_name || 'Anamnese'}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                <Clock className="h-2.5 w-2.5" />
+                {format(parseISO(record.created_at), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}
+              </div>
+              {record.version_number && (
+                <Badge variant="outline" className="text-[9px] mt-1 px-1 py-0">
+                  v{record.version_number}
+                </Badge>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   // ─── Empty state ────────────────────────────────────────────────
-  if (!currentAnamnese && !existingV2Record && !isEditing) {
+  if (!currentAnamnese && !existingV2Record && v2Records.length === 0 && !isEditing) {
     return (
       <>
         {renderSwitchConfirmDialog()}
@@ -937,7 +999,7 @@ export function AnamneseBlock({
               {renderTemplateSelector()}
             </div>
             {canEdit && activeTemplate && (
-              <Button onClick={() => setIsEditing(true)}>
+              <Button onClick={() => { setIsCreatingNew(true); setIsEditing(true); }}>
                 <Edit3 className="h-4 w-4 mr-2" />
                 Registrar Anamnese
               </Button>
@@ -956,7 +1018,6 @@ export function AnamneseBlock({
   // ─── EDITING MODE — Premium single-page layout ──────────────────
   if (isEditing) {
     const sections = activeTemplate?.secoes || [];
-    // Block icons for premium feel
     const blockIcons: Record<string, React.ReactNode> = {
       'motivo_consulta': <Stethoscope className="h-4 w-4" />,
       'section_queixa_principal': <Stethoscope className="h-4 w-4" />,
@@ -976,7 +1037,6 @@ export function AnamneseBlock({
       'plano_conduta': <CheckCircle2 className="h-4 w-4" />,
     };
 
-    // Determine if a section uses a grid layout for compact fields (selects)
     const isCompactSection = (secao: SecaoAnamnese) => {
       const selectFields = secao.campos.filter(c => c.type === 'select' || c.type === 'radio');
       return selectFields.length >= 3;
@@ -990,7 +1050,7 @@ export function AnamneseBlock({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <h3 className="font-semibold text-base tracking-tight">
-                {currentAnamnese ? 'Atualizar Anamnese' : 'Nova Anamnese'}
+                {isCreatingNew ? 'Nova Anamnese' : isEditingExisting ? 'Editar Anamnese' : 'Nova Versão'}
               </h3>
               <Badge variant="outline" className="text-[10px] font-medium border-amber-300 text-amber-600 bg-amber-50">
                 Rascunho
@@ -1002,7 +1062,7 @@ export function AnamneseBlock({
                 </span>
               )}
             </div>
-            {allTemplates.length > 1 && renderTemplateSelector()}
+            {(isCreatingNew || allTemplates.length > 1) && renderTemplateSelector()}
           </div>
 
           {/* Premium blocks */}
@@ -1015,7 +1075,6 @@ export function AnamneseBlock({
 
               return (
                 <div key={secao.id} className="space-y-4">
-                  {/* Block title */}
                   <div className="flex items-center gap-2.5 pb-2 border-b border-border/50">
                     <span className="text-primary/70">{icon}</span>
                     <h4 className="font-semibold text-sm tracking-tight text-foreground">
@@ -1023,9 +1082,7 @@ export function AnamneseBlock({
                     </h4>
                   </div>
 
-                  {/* Fields */}
                   <div className="space-y-5 pl-0.5">
-                    {/* Large textarea fields first */}
                     {textareaFields.map(campo => (
                       <div key={campo.id} className="space-y-1.5">
                         <Label className={cn(
@@ -1038,7 +1095,6 @@ export function AnamneseBlock({
                       </div>
                     ))}
 
-                    {/* Compact grid for selects and short fields */}
                     {otherFields.length > 0 && (
                       <div className={cn(
                         compact ? "grid grid-cols-2 md:grid-cols-4 gap-4" : "grid grid-cols-1 md:grid-cols-2 gap-4"
@@ -1062,7 +1118,7 @@ export function AnamneseBlock({
             })}
           </div>
 
-          {/* Sticky action bar — clean */}
+          {/* Sticky action bar */}
           <div className="sticky bottom-0 z-10 bg-background/95 backdrop-blur-sm border-t py-3 flex items-center justify-between">
             <Button variant="ghost" size="sm" onClick={handleCancel} disabled={isSavingLocal || savingV2} className="text-muted-foreground">
               <X className="h-4 w-4 mr-1.5" />
@@ -1091,34 +1147,52 @@ export function AnamneseBlock({
   }
 
   // ─── VIEW MODE ──────────────────────────────────────────────────
-  const hasStructuredData = (currentAnamnese?.structured_data && Object.keys(currentAnamnese.structured_data).length > 0)
-    || (existingV2Record && Object.keys(existingV2Record.responses).length > 0);
-  const viewData = (existingV2Record && Object.keys(existingV2Record.responses).length > 0)
-    ? existingV2Record.responses as Record<string, unknown>
+  const hasStructuredData = (selectedRecord && Object.keys(selectedRecord.responses).length > 0)
+    || (currentAnamnese?.structured_data && Object.keys(currentAnamnese.structured_data).length > 0);
+  const viewData = (selectedRecord && Object.keys(selectedRecord.responses).length > 0)
+    ? selectedRecord.responses as Record<string, unknown>
     : currentAnamnese?.structured_data;
+
+  // Resolve the template for the selected record
+  const viewTemplate = useMemo(() => {
+    if (selectedRecord?.template_id) {
+      return allTemplates.find(t => t.id === selectedRecord.template_id) || activeTemplate;
+    }
+    return activeTemplate;
+  }, [selectedRecord, allTemplates, activeTemplate]);
 
   return (
     <div className="space-y-3">
-      {/* Compact header */}
+      {/* Records list */}
+      {renderRecordsList()}
+
+      {/* Compact header for selected record */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <h3 className="font-semibold text-sm truncate">
-            {activeTemplate?.nome || 'Anamnese'}
+            {viewTemplate?.nome || selectedRecord?.template_name || 'Anamnese'}
           </h3>
-          <Badge variant="outline" className="text-[10px] flex-shrink-0">
-            v{currentAnamnese?.version || 1}
-          </Badge>
+          {selectedRecord?.version_number && (
+            <Badge variant="outline" className="text-[10px] flex-shrink-0">
+              v{selectedRecord.version_number}
+            </Badge>
+          )}
+          {!selectedRecord && currentAnamnese && (
+            <Badge variant="outline" className="text-[10px] flex-shrink-0">
+              v{currentAnamnese.version || 1}
+            </Badge>
+          )}
           <Badge variant="secondary" className="text-[10px] flex-shrink-0 bg-emerald-500/10 text-emerald-700 border-emerald-200">
             <Check className="h-2.5 w-2.5 mr-0.5" />
             Finalizado
           </Badge>
         </div>
-        {currentAnamnese && (
+        {(selectedRecord || currentAnamnese) && (
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Clock className="h-3 w-3" />
             <span>
-              {format(parseISO(currentAnamnese.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-              {currentAnamnese.created_by_name && ` • ${currentAnamnese.created_by_name}`}
+              {format(parseISO(selectedRecord?.created_at || currentAnamnese!.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+              {(selectedRecord ? undefined : currentAnamnese?.created_by_name) && ` • ${currentAnamnese?.created_by_name}`}
             </span>
           </div>
         )}
@@ -1140,7 +1214,7 @@ export function AnamneseBlock({
                 birth_date: patientData?.birth_date || patientData?.data_nascimento,
               },
               currentAnamnese,
-              activeTemplate?.secoes || [],
+              viewTemplate?.secoes || [],
               {
                 name: currentAnamnese.created_by_name,
                 specialty: specialtyName || undefined,
@@ -1157,13 +1231,19 @@ export function AnamneseBlock({
             Histórico ({anamneseHistory.length})
           </Button>
         )}
-        {canEdit && onUpdate && (
+        {canEdit && (
+          <Button variant="outline" size="sm" onClick={handleStartNewAnamnese}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Nova Anamnese
+          </Button>
+        )}
+        {canEdit && onUpdate && selectedRecord && (
           <Button variant="outline" size="sm" onClick={handleStartEdit}>
             <Edit3 className="h-4 w-4 mr-1.5" />
             Editar
           </Button>
         )}
-        {canEdit && (
+        {canEdit && selectedRecord && (
           <Button size="sm" onClick={handleStartNewVersion}>
             <Edit3 className="h-4 w-4 mr-1.5" />
             Nova Versão
@@ -1175,7 +1255,7 @@ export function AnamneseBlock({
       <Card>
         <CardContent className="p-0 divide-y">
           {hasStructuredData && viewData ? (
-            (activeTemplate?.secoes || []).map(secao =>
+            (viewTemplate?.secoes || []).map(secao =>
               renderViewSection(secao, viewData)
             )
           ) : (
@@ -1239,7 +1319,7 @@ export function AnamneseBlock({
             {selectedVersion && (
               selectedVersion.structured_data && Object.keys(selectedVersion.structured_data).length > 0 ? (
                 <div className="space-y-4 pr-4">
-                  {(activeTemplate?.secoes || []).map(secao => {
+                  {(viewTemplate?.secoes || []).map(secao => {
                     const filledFields = secao.campos.filter(c => {
                       const v = selectedVersion.structured_data?.[c.id];
                       if (Array.isArray(v)) return v.length > 0;
