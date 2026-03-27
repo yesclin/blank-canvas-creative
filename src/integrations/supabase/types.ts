@@ -2612,6 +2612,56 @@ export type Database = {
           },
         ]
       }
+      modelos_documento: {
+        Row: {
+          cabecalho_personalizado: string | null
+          clinic_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_default: boolean
+          nome: string
+          rodape: string | null
+          texto_padrao: string | null
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          cabecalho_personalizado?: string | null
+          clinic_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          nome: string
+          rodape?: string | null
+          texto_padrao?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          cabecalho_personalizado?: string | null
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          nome?: string
+          rodape?: string | null
+          texto_padrao?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modelos_documento_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       module_permissions: {
         Row: {
           actions: Database["public"]["Enums"]["app_action"][]
