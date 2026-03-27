@@ -49,25 +49,24 @@ export function useActiveSpecialty(patientId: string | null | undefined) {
   } = useGlobalSpecialty();
 
   // Map enabled DB specialties to Yesclin SpecialtyOptions
+  // IMPORTANT: Iterate globalEnabledSpecialties (DB order) instead of YESCLIN_SUPPORTED_SPECIALTIES
+  // so the first enabled specialty in DB becomes the default, not always 'geral'.
   const specialties = useMemo((): SpecialtyOption[] => {
-    const enabledNames = new Set(
-      globalEnabledSpecialties.map(s => s.name.toLowerCase().trim())
-    );
-    
-    return YESCLIN_SUPPORTED_SPECIALTIES
-      .filter((spec: YesclinSpecialty) => enabledNames.has(spec.name.toLowerCase().trim()))
-      .map((spec: YesclinSpecialty) => {
-        const dbSpecialty = globalEnabledSpecialties.find(
-          es => es.name.toLowerCase().trim() === spec.name.toLowerCase().trim()
+    return globalEnabledSpecialties
+      .map((dbSpec): SpecialtyOption | null => {
+        const yesclinSpec = YESCLIN_SUPPORTED_SPECIALTIES.find(
+          (ys: YesclinSpecialty) => ys.name.toLowerCase().trim() === dbSpec.name.toLowerCase().trim()
         );
+        if (!yesclinSpec) return null;
         return {
-          id: dbSpecialty?.id || `yesclin-${spec.key}`,
-          name: spec.name,
-          key: spec.key,
-          description: spec.description,
-          icon: spec.icon,
+          id: dbSpec.id,
+          name: yesclinSpec.name,
+          key: yesclinSpec.key,
+          description: yesclinSpec.description,
+          icon: yesclinSpec.icon,
         };
-      });
+      })
+      .filter((s): s is SpecialtyOption => s !== null);
   }, [globalEnabledSpecialties]);
 
   const isFromAppointment = !!(activeAppointment?.resolved_specialty_id);

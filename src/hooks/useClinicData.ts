@@ -12,6 +12,7 @@ export interface ClinicData {
   inscricao_municipal: string | null;
   phone: string | null;
   email: string | null;
+  primary_specialty_id: string | null;
   address_street: string | null;
   address_number: string | null;
   address_complement: string | null;
@@ -54,6 +55,7 @@ export function useClinicData() {
             inscricao_municipal,
             phone,
             email,
+            primary_specialty_id,
             address_street,
             address_number,
             address_complement,
