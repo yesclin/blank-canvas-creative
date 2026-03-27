@@ -3128,7 +3128,9 @@ export type Database = {
           id: string
           is_active: boolean
           is_system: boolean
+          key: string | null
           name: string
+          professional_id: string | null
           scope: string | null
           slug: string
           sort_order: number
@@ -3143,7 +3145,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_system?: boolean
+          key?: string | null
           name: string
+          professional_id?: string | null
           scope?: string | null
           slug: string
           sort_order?: number
@@ -3158,7 +3162,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_system?: boolean
+          key?: string | null
           name?: string
+          professional_id?: string | null
           scope?: string | null
           slug?: string
           sort_order?: number
@@ -3171,6 +3177,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_record_tabs_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
           {
