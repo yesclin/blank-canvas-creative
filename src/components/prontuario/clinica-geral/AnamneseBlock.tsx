@@ -201,6 +201,7 @@ export function AnamneseBlock({
   patientData,
   specialtyId,
   specialtyName,
+  appointmentId,
 }: AnamneseBlockProps) {
   const navigate = useNavigate();
   const { generateAnamnesisPdf, generating } = useInstitutionalPdf();
