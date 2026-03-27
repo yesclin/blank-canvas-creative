@@ -36,7 +36,6 @@ export function mapSpecialtyNameToKey(name: string): SpecialtyKey {
  * 1. Active appointment specialty (locked)
  * 2. User's manual selection (from global context)
  * 3. First enabled specialty
- * 4. Default: 'geral'
  */
 export function useActiveSpecialty(patientId: string | null | undefined) {
   const { data: activeAppointment, isLoading: appointmentLoading } = useActiveAppointment(patientId);
@@ -48,21 +47,26 @@ export function useActiveSpecialty(patientId: string | null | undefined) {
     setSelectedSpecialtyId,
   } = useGlobalSpecialty();
 
-  // Map enabled DB specialties to Yesclin SpecialtyOptions
-  // IMPORTANT: Iterate globalEnabledSpecialties (DB order) instead of YESCLIN_SUPPORTED_SPECIALTIES
-  // so the first enabled specialty in DB becomes the default, not always 'geral'.
+  // Map enabled DB specialties to Yesclin SpecialtyOptions using the DB slug/key first.
+  // This keeps the display name coming from the real clinic specialty while reusing
+  // the canonical Yesclin capability map.
   const specialties = useMemo((): SpecialtyOption[] => {
     return globalEnabledSpecialties
       .map((dbSpec): SpecialtyOption | null => {
+        const slugKey = dbSpec.slug as SpecialtyKey;
         const yesclinSpec = YESCLIN_SUPPORTED_SPECIALTIES.find(
-          (ys: YesclinSpecialty) => ys.name.toLowerCase().trim() === dbSpec.name.toLowerCase().trim()
+          (ys: YesclinSpecialty) => ys.key === slugKey
+        ) || YESCLIN_SUPPORTED_SPECIALTIES.find(
+          (ys: YesclinSpecialty) => ys.key === resolveSpecialtyKey(dbSpec.name)
         );
+
         if (!yesclinSpec) return null;
+
         return {
           id: dbSpec.id,
-          name: yesclinSpec.name,
+          name: dbSpec.name,
           key: yesclinSpec.key,
-          description: yesclinSpec.description,
+          description: dbSpec.description || yesclinSpec.description,
           icon: yesclinSpec.icon,
         };
       })
@@ -71,43 +75,74 @@ export function useActiveSpecialty(patientId: string | null | undefined) {
 
   const isFromAppointment = !!(activeAppointment?.resolved_specialty_id);
 
-  const activeSpecialtyKey = useMemo((): SpecialtyKey => {
-    // Priority 1: appointment specialty (locked)
-    if (activeAppointment?.resolved_specialty_name) {
-      const key = resolveSpecialtyKey(activeAppointment.resolved_specialty_name);
-      if (specialties.some(s => s.key === key)) return key;
+  const activeSpecialty = useMemo((): SpecialtyOption | null => {
+    // Priority 1: appointment specialty by real specialty id
+    if (activeAppointment?.resolved_specialty_id) {
+      const appointmentSpecialty = specialties.find(
+        (specialty) => specialty.id === activeAppointment.resolved_specialty_id
+      );
+      if (appointmentSpecialty) return appointmentSpecialty;
     }
-    
+
+    // Priority 1b: appointment specialty by resolved name/key
+    if (activeAppointment?.resolved_specialty_name) {
+      const appointmentKey = resolveSpecialtyKey(activeAppointment.resolved_specialty_name);
+      const specialtyFromEnabledList = specialties.find(
+        (specialty) => specialty.key === appointmentKey
+      );
+      if (specialtyFromEnabledList) return specialtyFromEnabledList;
+
+      const supportedSpecialty = YESCLIN_SUPPORTED_SPECIALTIES.find(
+        (specialty) => specialty.key === appointmentKey
+      );
+      if (supportedSpecialty) {
+        return {
+          id: activeAppointment.resolved_specialty_id || `appointment-${supportedSpecialty.key}`,
+          name: activeAppointment.resolved_specialty_name,
+          key: supportedSpecialty.key,
+          description: supportedSpecialty.description,
+          icon: supportedSpecialty.icon,
+        };
+      }
+    }
+
     // Priority 2: user manual selection
     if (selectedSpecialtyId) {
-      const selected = specialties.find(s => s.id === selectedSpecialtyId);
-      if (selected) return selected.key;
+      const manuallySelectedSpecialty = specialties.find(
+        (specialty) => specialty.id === selectedSpecialtyId
+      );
+      if (manuallySelectedSpecialty) return manuallySelectedSpecialty;
     }
-    
-    // Priority 3: first enabled specialty
-    if (specialties.length > 0) {
-      return specialties[0].key;
-    }
-    
+
+    // Priority 3: first enabled specialty from clinic
+    return specialties[0] || null;
+  }, [
+    activeAppointment?.resolved_specialty_id,
+    activeAppointment?.resolved_specialty_name,
+    selectedSpecialtyId,
+    specialties,
+  ]);
+
+  const activeSpecialtyKey = useMemo((): SpecialtyKey => {
+    if (activeSpecialty) return activeSpecialty.key;
+    if (specialties.length > 0) return specialties[0].key;
     return 'geral';
-  }, [activeAppointment?.resolved_specialty_name, selectedSpecialtyId, specialties]);
+  }, [activeSpecialty, specialties]);
 
-  const activeSpecialty = useMemo((): SpecialtyOption | null => {
-    return specialties.find(s => s.key === activeSpecialtyKey) || null;
-  }, [activeSpecialtyKey, specialties]);
-
-  const activeSpecialtyId = activeSpecialty?.id || null;
+  const activeSpecialtyId = activeSpecialty?.id || activeAppointment?.resolved_specialty_id || null;
+  const activeSpecialtyName = activeSpecialty?.name || activeAppointment?.resolved_specialty_name || null;
 
   return {
     activeSpecialtyId,
     activeSpecialty,
+    activeSpecialtyName,
     activeSpecialtyKey,
     specialties,
     isFromAppointment,
     isSpecialtyLocked: isFromAppointment,
     isSingleSpecialty,
     selectionBlockedReason: isFromAppointment
-      ? `Especialidade bloqueada: ${activeAppointment?.resolved_specialty_name || activeSpecialty?.name || ''} (atendimento em andamento)`
+      ? `Especialidade bloqueada: ${activeSpecialtyName || ''} (atendimento em andamento)`
       : null,
     setActiveSpecialty: (id: string | null) => {
       if (!isFromAppointment) {

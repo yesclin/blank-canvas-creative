@@ -550,6 +550,7 @@ export default function Prontuario() {
   const {
     activeSpecialtyId,
     activeSpecialty,
+    activeSpecialtyName,
     activeSpecialtyKey,
     specialties,
     isFromAppointment: isSpecialtyFromAppointment,
@@ -1183,7 +1184,7 @@ export default function Prontuario() {
               insurance_name: (patient as any)?.insurance?.insurance_name || null,
             }}
             specialtyId={activeSpecialtyId}
-            specialtyName={activeSpecialty?.name}
+            specialtyName={activeSpecialtyName}
             appointmentId={activeAppointment?.id || null}
           />
         );
@@ -2111,7 +2112,7 @@ export default function Prontuario() {
         patient={patient}
         patientLoading={patientLoading}
         activeSpecialtyKey={activeSpecialtyKey}
-        activeSpecialtyName={activeSpecialty?.name}
+        activeSpecialtyName={activeSpecialtyName}
         professionalName={currentProfessionalName}
         isSpecialtyFromAppointment={isSpecialtyFromAppointment}
         specialtyLoading={specialtyLoading}

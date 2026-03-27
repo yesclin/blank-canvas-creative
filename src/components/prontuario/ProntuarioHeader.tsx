@@ -152,7 +152,7 @@ export function ProntuarioHeader({
 
   const age = patient ? calculateAge(patient.birth_date) : null;
   const gender = patient ? formatGender(patient.gender) : '';
-  const displaySpecialty = activeSpecialtyName || YESCLIN_SPECIALTY_LABELS[activeSpecialtyKey] || 'Clínica Geral';
+  const displaySpecialty = activeSpecialtyName || YESCLIN_SPECIALTY_LABELS[activeSpecialtyKey];
 
   const hasClinicalData = clinicalSummary && (
     clinicalSummary.allergies.length > 0 ||

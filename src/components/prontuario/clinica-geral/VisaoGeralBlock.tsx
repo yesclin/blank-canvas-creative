@@ -169,7 +169,7 @@ export function VisaoGeralBlock({
   const criticalAlerts = activeAlerts.filter(a => a.severity === 'critical');
   
   // Resolve display name for specialty
-  const specialtyDisplayName = activeSpecialtyName || YESCLIN_SPECIALTY_LABELS[activeSpecialtyKey] || 'Clínica Geral';
+  const specialtyDisplayName = activeSpecialtyName || YESCLIN_SPECIALTY_LABELS[activeSpecialtyKey];
 
   if (loading) {
     return (
