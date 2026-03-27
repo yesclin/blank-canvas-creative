@@ -274,7 +274,7 @@ export function useClinicalTimeline(patientId: string | null) {
     profiles: Map<string, string>
   ): TimelineEvent[] => {
     return logs
-      .filter(log => log.resource?.includes(`patient:`))
+      .filter(log => log.resource_type === 'patient' || log.resource_id === patientId)
       .map(log => {
         const eventType = ACTION_TO_EVENT[log.action] || 'ACCESS_LOGGED';
         
@@ -289,7 +289,7 @@ export function useClinicalTimeline(patientId: string | null) {
           author_name: log.user_id ? (profiles.get(log.user_id) || 'Usuário') : 'Sistema',
           timestamp: log.created_at,
           summary: `Ação: ${log.action}`,
-          metadata: { action: log.action, resource: log.resource },
+          metadata: { action: log.action, resource_type: log.resource_type, ...((log.details as Record<string, any>) || {}) },
           target_tab: 'auditoria',
           can_navigate: true,
         };
@@ -361,15 +361,14 @@ export function useClinicalTimeline(patientId: string | null) {
     profiles: Map<string, string>
   ): TimelineEvent[] => {
     return logs
-      .filter(log => log.action === 'SALE_CANCELLED' && log.resource?.includes('patient:'))
+      .filter(log => log.action === 'SALE_CANCELLED' && (log.resource_type === 'patient' || log.resource_id === patientId))
       .map(log => {
-        // Parse resource: sales/{id}|patient:{id}|sale_number:{num}|amount:{val}|reason:{text}
-        const parts = log.resource?.split('|') || [];
-        const saleIdPart = parts[0]?.replace('sales/', '') || '';
-        const patientPart = parts.find(p => p.startsWith('patient:'))?.replace('patient:', '') || '';
-        const saleNumberPart = parts.find(p => p.startsWith('sale_number:'))?.replace('sale_number:', '') || 'N/A';
-        const amountPart = parts.find(p => p.startsWith('amount:'))?.replace('amount:', '') || '0';
-        const reasonPart = parts.find(p => p.startsWith('reason:'))?.replace('reason:', '') || 'Cancelamento';
+        const d = (log.details as Record<string, any>) || {};
+        const saleIdPart = d.sale_id || '';
+        const patientPart = d.patient_id || patientId || '';
+        const saleNumberPart = d.sale_number || 'N/A';
+        const amountPart = String(d.amount || '0');
+        const reasonPart = d.reason || 'Cancelamento';
         
         const formattedAmount = new Intl.NumberFormat('pt-BR', {
           style: 'currency',
