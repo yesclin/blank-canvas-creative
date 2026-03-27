@@ -1282,16 +1282,7 @@ export default function Prontuario() {
             />
           );
         }
-        if (activeSpecialtyKey === 'dermatologia') {
-          return (
-            <ExameDermatoBlock
-              patientId={patientId}
-              clinicId={clinicIdForFisio || null}
-              canEdit={canEditCurrentTab}
-            />
-          );
-        }
-        // Clínica Geral / Odontologia - Exame Físico (sinais vitais, medidas)
+        // Default: Clínica Geral / Dermatologia / Odontologia - Exame Físico
         return (
           <ExameFisicoBlock
             exames={examesFisicos}
