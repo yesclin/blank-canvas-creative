@@ -158,17 +158,15 @@ export async function replaceDocument(params: {
   // 5) Generate QR code for the new document
   const qrCodeDataUrl = await generateValidationQRCode(newDocId);
 
-  // 6) Audit log (legacy)
-  await supabase.from('clinic_audit_logs').insert({
+  // 6) Audit log
+  await supabase.from('audit_logs').insert({
     clinic_id: params.clinicId,
     user_id: userId,
     action: 'document_replaced',
-    changes: {
-      old_document_id: params.oldDocumentId,
-      new_document_id: newDocId,
-      new_reference: newReference,
-      reason: params.reason,
-    },
+    table_name: 'clinical_documents',
+    record_id: newDocId,
+    old_data: { old_document_id: params.oldDocumentId, reason: params.reason },
+    new_data: { new_document_id: newDocId, new_reference: newReference },
   });
 
   // 7) Audit log (new system)
