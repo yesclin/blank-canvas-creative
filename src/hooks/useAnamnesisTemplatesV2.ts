@@ -570,21 +570,42 @@ export function useAnamnesisRecords(patientId: string | null, appointmentId?: st
           .eq('id', input.id);
         if (error) throw error;
       } else {
-        // Look up professional_id from user_id
-        const { data: profData } = await supabase
-          .from('professionals')
-          .select('id')
-          .eq('user_id', userData.user.id)
-          .eq('is_active', true)
-          .limit(1)
-          .maybeSingle();
+        // Resolve professional_id: prefer from appointment, fallback to logged-in user's professional record
+        let resolvedProfessionalId: string | null = null;
+
+        if (input.appointment_id) {
+          const { data: apptData } = await supabase
+            .from('appointments')
+            .select('professional_id')
+            .eq('id', input.appointment_id)
+            .maybeSingle();
+          if (apptData?.professional_id) {
+            resolvedProfessionalId = apptData.professional_id;
+          }
+        }
+
+        if (!resolvedProfessionalId) {
+          const { data: profData } = await supabase
+            .from('professionals')
+            .select('id')
+            .eq('user_id', userData.user.id)
+            .eq('is_active', true)
+            .eq('clinic_id', clinic.id)
+            .limit(1)
+            .maybeSingle();
+          resolvedProfessionalId = profData?.id || null;
+        }
+
+        if (!resolvedProfessionalId) {
+          throw new Error('Profissional não encontrado. Verifique se seu cadastro de profissional está ativo.');
+        }
 
         // Create new record with immutable context snapshot
         const insertData: Record<string, unknown> = {
           appointment_id: input.appointment_id || null,
           patient_id: input.patient_id,
           clinic_id: clinic.id,
-          professional_id: profData?.id || userData.user.id,
+          professional_id: resolvedProfessionalId,
           template_id: input.template_id,
           template_version_id: input.template_version_id,
           responses: input.responses as unknown as Json,
