@@ -12,6 +12,7 @@ import { filterOfficialSpecialties } from "@/constants/officialSpecialties";
 
 interface GlobalSpecialtyContextValue {
   enabledSpecialties: EnabledSpecialty[];
+  isLoading: boolean;
   isSingleSpecialty: boolean;
   /** Manually selected specialty id (null = use default/first) */
   selectedSpecialtyId: string | null;
@@ -20,6 +21,7 @@ interface GlobalSpecialtyContextValue {
 
 const GlobalSpecialtyContext = createContext<GlobalSpecialtyContextValue>({
   enabledSpecialties: [],
+  isLoading: true,
   isSingleSpecialty: false,
   selectedSpecialtyId: null,
   setSelectedSpecialtyId: () => {},
@@ -32,7 +34,7 @@ export function useGlobalSpecialty() {
 export { GlobalSpecialtyContext };
 
 export function GlobalSpecialtyProvider({ children }: { children: ReactNode }) {
-  const { data: rawSpecialties = [] } = useEnabledSpecialties();
+  const { data: rawSpecialties = [], isLoading } = useEnabledSpecialties();
   const specialties = useMemo(() => filterOfficialSpecialties(rawSpecialties), [rawSpecialties]);
   const [selectedSpecialtyId, setSelectedId] = useState<string | null>(null);
 
@@ -48,10 +50,11 @@ export function GlobalSpecialtyProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo((): GlobalSpecialtyContextValue => ({
     enabledSpecialties: specialties,
+    isLoading,
     isSingleSpecialty: specialties.length <= 1,
     selectedSpecialtyId: validSelectedId,
     setSelectedSpecialtyId,
-  }), [specialties, validSelectedId, setSelectedSpecialtyId]);
+  }), [specialties, isLoading, validSelectedId, setSelectedSpecialtyId]);
 
   return (
     <GlobalSpecialtyContext.Provider value={value}>
