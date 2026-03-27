@@ -832,6 +832,14 @@ export function AnamneseBlock({
     );
   };
 
+  // Resolve the template for the selected record (must be before early returns)
+  const viewTemplate = useMemo(() => {
+    if (selectedRecord?.template_id) {
+      return allTemplates.find(t => t.id === selectedRecord.template_id) || activeTemplate;
+    }
+    return activeTemplate;
+  }, [selectedRecord, allTemplates, activeTemplate]);
+
   // ─── Loading ────────────────────────────────────────────────────
   if (loading || loadingTemplates) {
     return (
@@ -1153,13 +1161,7 @@ export function AnamneseBlock({
     ? selectedRecord.responses as Record<string, unknown>
     : currentAnamnese?.structured_data;
 
-  // Resolve the template for the selected record
-  const viewTemplate = useMemo(() => {
-    if (selectedRecord?.template_id) {
-      return allTemplates.find(t => t.id === selectedRecord.template_id) || activeTemplate;
-    }
-    return activeTemplate;
-  }, [selectedRecord, allTemplates, activeTemplate]);
+  // viewTemplate is defined above early returns
 
   return (
     <div className="space-y-3">
