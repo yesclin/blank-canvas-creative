@@ -611,40 +611,64 @@ export type Database = {
         Row: {
           action_config: Json
           action_type: string
+          channel: string | null
           clinic_id: string
           conditions: Json | null
           created_at: string
+          created_by: string | null
+          delay_type: string | null
+          delay_value: number | null
+          description: string | null
           id: string
           is_active: boolean
           name: string
+          priority: number | null
           template_id: string | null
+          trigger_config: Json | null
           trigger_event: string
+          trigger_type: string | null
           updated_at: string
         }
         Insert: {
           action_config?: Json
           action_type: string
+          channel?: string | null
           clinic_id: string
           conditions?: Json | null
           created_at?: string
+          created_by?: string | null
+          delay_type?: string | null
+          delay_value?: number | null
+          description?: string | null
           id?: string
           is_active?: boolean
           name: string
+          priority?: number | null
           template_id?: string | null
+          trigger_config?: Json | null
           trigger_event: string
+          trigger_type?: string | null
           updated_at?: string
         }
         Update: {
           action_config?: Json
           action_type?: string
+          channel?: string | null
           clinic_id?: string
           conditions?: Json | null
           created_at?: string
+          created_by?: string | null
+          delay_type?: string | null
+          delay_value?: number | null
+          description?: string | null
           id?: string
           is_active?: boolean
           name?: string
+          priority?: number | null
           template_id?: string | null
+          trigger_config?: Json | null
           trigger_event?: string
+          trigger_type?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -2338,6 +2362,102 @@ export type Database = {
           },
         ]
       }
+      message_queue: {
+        Row: {
+          appointment_id: string | null
+          attempts: number
+          automation_rule_id: string | null
+          channel: string
+          clinic_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          message_body: string
+          patient_id: string | null
+          phone: string
+          provider_response: Json | null
+          rendered_message: string | null
+          scheduled_for: string | null
+          sent_at: string | null
+          status: string
+          template_id: string | null
+        }
+        Insert: {
+          appointment_id?: string | null
+          attempts?: number
+          automation_rule_id?: string | null
+          channel?: string
+          clinic_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_body?: string
+          patient_id?: string | null
+          phone?: string
+          provider_response?: Json | null
+          rendered_message?: string | null
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: string
+          template_id?: string | null
+        }
+        Update: {
+          appointment_id?: string | null
+          attempts?: number
+          automation_rule_id?: string | null
+          channel?: string
+          clinic_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_body?: string
+          patient_id?: string | null
+          phone?: string
+          provider_response?: Json | null
+          rendered_message?: string | null
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: string
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_queue_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_queue_automation_rule_id_fkey"
+            columns: ["automation_rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_queue_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_queue_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_queue_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "message_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_templates: {
         Row: {
           category: string | null
@@ -2347,7 +2467,9 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          is_system: boolean | null
           name: string
+          subject: string | null
           updated_at: string
           variables: Json | null
         }
@@ -2359,7 +2481,9 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          is_system?: boolean | null
           name: string
+          subject?: string | null
           updated_at?: string
           variables?: Json | null
         }
@@ -2371,7 +2495,9 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          is_system?: boolean | null
           name?: string
+          subject?: string | null
           updated_at?: string
           variables?: Json | null
         }

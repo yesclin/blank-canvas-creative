@@ -21,10 +21,9 @@ export function useMarketingStats() {
     if (!clinic?.id) return;
     try {
       const { data, error } = await supabase
-        .from("message_logs")
+        .from("message_queue")
         .select("status")
-        .eq("clinic_id", clinic.id)
-        .is("deleted_at", null);
+        .eq("clinic_id", clinic.id);
 
       if (error) throw error;
       setLogs(data || []);
@@ -50,7 +49,7 @@ export function useMarketingStats() {
         {
           event: "*",
           schema: "public",
-          table: "message_logs",
+          table: "message_queue",
           filter: `clinic_id=eq.${clinic.id}`,
         },
         () => {
