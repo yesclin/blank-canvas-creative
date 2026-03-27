@@ -1168,9 +1168,10 @@ export function AnamneseBlock({
       {/* Records list */}
       {renderRecordsList()}
 
-      {/* Compact header for selected record */}
+      {/* Compact header + actions for selected record */}
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-2 min-w-0">
+        {/* Left: title, version, status, date */}
+        <div className="flex items-center gap-2 min-w-0 flex-wrap">
           <h3 className="font-semibold text-sm truncate">
             {viewTemplate?.nome || selectedRecord?.template_name || 'Anamnese'}
           </h3>
@@ -1188,63 +1189,63 @@ export function AnamneseBlock({
             <Check className="h-2.5 w-2.5 mr-0.5" />
             Finalizado
           </Badge>
+          {(selectedRecord || currentAnamnese) && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              <span>
+                {format(parseISO(selectedRecord?.created_at || currentAnamnese!.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                {(selectedRecord ? undefined : currentAnamnese?.created_by_name) && ` • ${currentAnamnese?.created_by_name}`}
+              </span>
+            </div>
+          )}
         </div>
-        {(selectedRecord || currentAnamnese) && (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            <span>
-              {format(parseISO(selectedRecord?.created_at || currentAnamnese!.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-              {(selectedRecord ? undefined : currentAnamnese?.created_by_name) && ` • ${currentAnamnese?.created_by_name}`}
-            </span>
-          </div>
-        )}
-      </div>
 
-      {/* Actions */}
-      <div className="flex items-center justify-end gap-2 flex-wrap">
-        {currentAnamnese && (
-          <Button variant="ghost" size="sm" disabled={generating} onClick={() => {
-            generateAnamnesisPdf(
-              {
-                name: patientName || 'Paciente',
-                cpf: patientCpf,
-                id: patientData?.id,
-                age: patientData?.age || patientData?.idade,
-                sex: patientData?.sex || patientData?.sexo,
-                phone: patientData?.phone || patientData?.telefone,
-                insurance_name: patientData?.insurance_name || patientData?.convenio,
-                birth_date: patientData?.birth_date || patientData?.data_nascimento,
-              },
-              currentAnamnese,
-              viewTemplate?.secoes || [],
-              {
-                name: currentAnamnese.created_by_name,
-                specialty: specialtyName || undefined,
-              },
-            );
-          }}>
-            <FileDown className="h-4 w-4 mr-1" />
-            {generating ? 'Gerando...' : 'PDF'}
-          </Button>
-        )}
-        {anamneseHistory.length > 1 && (
-          <Button variant="ghost" size="sm" onClick={() => setShowHistory(true)}>
-            <History className="h-4 w-4 mr-1" />
-            Histórico ({anamneseHistory.length})
-          </Button>
-        )}
-        {canEdit && onUpdate && selectedRecord && (
-          <Button variant="outline" size="sm" onClick={handleStartEdit}>
-            <Edit3 className="h-4 w-4 mr-1.5" />
-            Editar
-          </Button>
-        )}
-        {canEdit && selectedRecord && (
-          <Button size="sm" onClick={handleStartNewVersion}>
-            <Edit3 className="h-4 w-4 mr-1.5" />
-            Nova Versão
-          </Button>
-        )}
+        {/* Right: all action buttons grouped */}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {currentAnamnese && (
+            <Button variant="ghost" size="sm" disabled={generating} onClick={() => {
+              generateAnamnesisPdf(
+                {
+                  name: patientName || 'Paciente',
+                  cpf: patientCpf,
+                  id: patientData?.id,
+                  age: patientData?.age || patientData?.idade,
+                  sex: patientData?.sex || patientData?.sexo,
+                  phone: patientData?.phone || patientData?.telefone,
+                  insurance_name: patientData?.insurance_name || patientData?.convenio,
+                  birth_date: patientData?.birth_date || patientData?.data_nascimento,
+                },
+                currentAnamnese,
+                viewTemplate?.secoes || [],
+                {
+                  name: currentAnamnese.created_by_name,
+                  specialty: specialtyName || undefined,
+                },
+              );
+            }}>
+              <FileDown className="h-4 w-4 mr-1" />
+              {generating ? 'Gerando...' : 'PDF'}
+            </Button>
+          )}
+          {anamneseHistory.length > 1 && (
+            <Button variant="ghost" size="sm" onClick={() => setShowHistory(true)}>
+              <History className="h-4 w-4 mr-1" />
+              Histórico ({anamneseHistory.length})
+            </Button>
+          )}
+          {canEdit && onUpdate && selectedRecord && (
+            <Button variant="outline" size="sm" onClick={handleStartEdit}>
+              <Edit3 className="h-4 w-4 mr-1.5" />
+              Editar
+            </Button>
+          )}
+          {canEdit && selectedRecord && (
+            <Button size="sm" onClick={handleStartNewVersion}>
+              <Edit3 className="h-4 w-4 mr-1.5" />
+              Nova Versão
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Content */}
