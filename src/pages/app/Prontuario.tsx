@@ -945,33 +945,30 @@ export default function Prontuario() {
   const canSignCurrentTab = canSignTab(getStandardTabKey(activeTab)) && !shouldBlockEditing && isDigitalSignatureEnabled && (hasActiveAppointment || isAdmin);
 
   // Build nav items from configuration or use defaults, filtered by permissions
-  const allNavItems = useMemo(() => {
-    return getActiveTabs().length > 0
-      ? getActiveTabs().map((tab: TabConfig) => ({
-          id: tab.key,
-          label: tab.name,
-          icon: ICON_MAP[tab.icon || 'FileText'] || FileText,
-        }))
-      : DEFAULT_NAV_ITEMS;
-  }, [getActiveTabs]);
+  // Build nav items from specialty's enabledBlocks (source of truth),
+  // using DEFAULT_NAV_ITEMS as icon lookup, filtered by permissions.
+  const defaultNavLookup = useMemo(() => {
+    const map: Record<string, { icon: LucideIcon }> = {};
+    for (const item of DEFAULT_NAV_ITEMS) {
+      map[item.id] = { icon: item.icon };
+    }
+    return map;
+  }, []);
 
-  // Filter nav items based on permissions AND active specialty, with specialty-specific labels
   const navItems = useMemo(() => {
-    return allNavItems
-      .filter(item => {
-        // Check permission first
-        const standardKey = getStandardTabKey(item.id);
-        if (!canViewTab(standardKey)) return false;
-        
-        // Check specialty visibility
-        return isBlockEnabled(item.id as ClinicalBlockKey, activeSpecialtyKey);
+    const enabledBlocks = getVisibleTabsForSpecialty(activeSpecialtyKey);
+    
+    return enabledBlocks
+      .filter(blockKey => {
+        const standardKey = getStandardTabKey(blockKey);
+        return canViewTab(standardKey);
       })
-      .map(item => ({
-        ...item,
-        // Apply specialty-specific label override if available
-        label: getClinicalBlockLabel(item.id as ClinicalBlockKey, activeSpecialtyKey),
+      .map(blockKey => ({
+        id: blockKey,
+        label: getClinicalBlockLabel(blockKey, activeSpecialtyKey),
+        icon: defaultNavLookup[blockKey]?.icon || FileText,
       }));
-  }, [allNavItems, activeSpecialtyKey]);
+  }, [activeSpecialtyKey, defaultNavLookup]);
 
   // CRITICAL: Reset state completely when specialty changes
   // This ensures no visual artifacts from previous specialty remain
