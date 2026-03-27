@@ -558,7 +558,10 @@ export function AnamneseBlock({
     if (currentAnamnese?.template_id) {
       setSelectedTemplateId(currentAnamnese.template_id);
     }
-    if (currentAnamnese?.structured_data && Object.keys(currentAnamnese.structured_data).length > 0) {
+    // Priority: V2 record responses > legacy structured_data > legacy flat fields
+    if (existingV2Record && Object.keys(existingV2Record.responses).length > 0) {
+      setStructuredData({ ...existingV2Record.responses as Record<string, unknown> });
+    } else if (currentAnamnese?.structured_data && Object.keys(currentAnamnese.structured_data).length > 0) {
       setStructuredData({ ...currentAnamnese.structured_data });
     } else if (currentAnamnese) {
       setStructuredData({
@@ -580,7 +583,10 @@ export function AnamneseBlock({
     if (currentAnamnese?.template_id) {
       setSelectedTemplateId(currentAnamnese.template_id);
     }
-    if (currentAnamnese?.structured_data && Object.keys(currentAnamnese.structured_data).length > 0) {
+    // Same priority for loading data
+    if (existingV2Record && Object.keys(existingV2Record.responses).length > 0) {
+      setStructuredData({ ...existingV2Record.responses as Record<string, unknown> });
+    } else if (currentAnamnese?.structured_data && Object.keys(currentAnamnese.structured_data).length > 0) {
       setStructuredData({ ...currentAnamnese.structured_data });
     } else if (currentAnamnese) {
       setStructuredData({

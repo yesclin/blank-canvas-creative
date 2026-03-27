@@ -576,9 +576,11 @@ export function useAnamnesisRecords(patientId: string | null, appointmentId?: st
           appointment_id: input.appointment_id || null,
           patient_id: input.patient_id,
           clinic_id: clinic.id,
+          professional_id: userData.user.id,
           template_id: input.template_id,
           template_version_id: input.template_version_id,
           responses: input.responses as unknown as Json,
+          data: input.responses as unknown as Json, // also save to legacy 'data' column
           created_by: userData.user.id,
         };
 
