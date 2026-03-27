@@ -177,12 +177,13 @@ export function DocumentHistoryPanel({ patientId }: DocumentHistoryPanelProps) {
         } as any)
         .eq("id", revokeTarget.id);
 
-      await supabase.from("clinic_audit_logs").insert({
+      await supabase.from("audit_logs").insert({
         clinic_id: clinic.id,
         user_id: user.id,
         action: "document_revoked",
-        changes: {
-          document_id: revokeTarget.id,
+        table_name: "clinical_documents",
+        record_id: revokeTarget.id,
+        old_data: {
           document_reference: revokeTarget.document_reference,
           document_type: revokeTarget.document_type,
           reason: revokeReason.trim(),

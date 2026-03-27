@@ -924,42 +924,93 @@ export type Database = {
       clinic_document_settings: {
         Row: {
           clinic_id: string
+          clinic_name: string | null
           created_at: string
           custom_css: string | null
+          doc_type_config: Json | null
           document_type: string
+          font_family: string | null
           footer_text: string | null
+          header_layout: string | null
+          header_style: string | null
           header_text: string | null
           id: string
           logo_position: string | null
+          logo_url: string | null
+          primary_color: string | null
+          responsible_crm: string | null
+          responsible_name: string | null
+          secondary_color: string | null
           show_clinic_info: boolean
+          show_crm: boolean | null
+          show_digital_signature: boolean | null
+          show_footer: boolean | null
           show_professional_info: boolean
+          signature_image_url: string | null
           updated_at: string
+          use_professional_from_doc: boolean | null
+          watermark_text: string | null
+          watermark_type: string | null
         }
         Insert: {
           clinic_id: string
+          clinic_name?: string | null
           created_at?: string
           custom_css?: string | null
+          doc_type_config?: Json | null
           document_type: string
+          font_family?: string | null
           footer_text?: string | null
+          header_layout?: string | null
+          header_style?: string | null
           header_text?: string | null
           id?: string
           logo_position?: string | null
+          logo_url?: string | null
+          primary_color?: string | null
+          responsible_crm?: string | null
+          responsible_name?: string | null
+          secondary_color?: string | null
           show_clinic_info?: boolean
+          show_crm?: boolean | null
+          show_digital_signature?: boolean | null
+          show_footer?: boolean | null
           show_professional_info?: boolean
+          signature_image_url?: string | null
           updated_at?: string
+          use_professional_from_doc?: boolean | null
+          watermark_text?: string | null
+          watermark_type?: string | null
         }
         Update: {
           clinic_id?: string
+          clinic_name?: string | null
           created_at?: string
           custom_css?: string | null
+          doc_type_config?: Json | null
           document_type?: string
+          font_family?: string | null
           footer_text?: string | null
+          header_layout?: string | null
+          header_style?: string | null
           header_text?: string | null
           id?: string
           logo_position?: string | null
+          logo_url?: string | null
+          primary_color?: string | null
+          responsible_crm?: string | null
+          responsible_name?: string | null
+          secondary_color?: string | null
           show_clinic_info?: boolean
+          show_crm?: boolean | null
+          show_digital_signature?: boolean | null
+          show_footer?: boolean | null
           show_professional_info?: boolean
+          signature_image_url?: string | null
           updated_at?: string
+          use_professional_from_doc?: boolean | null
+          watermark_text?: string | null
+          watermark_type?: string | null
         }
         Relationships: [
           {
@@ -1074,13 +1125,25 @@ export type Database = {
           clinic_id: string
           content: Json
           created_at: string
+          created_by: string | null
+          document_hash: string | null
+          document_reference: string | null
           document_type: string
           id: string
+          is_revoked: boolean | null
           patient_id: string
+          patient_name: string | null
           pdf_url: string | null
           professional_id: string
+          professional_name: string | null
+          replaced_by_document_id: string | null
+          replaces_document_id: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          revoked_reason: string | null
           signed_at: string | null
           signed_by: string | null
+          source_record_id: string | null
           status: Database["public"]["Enums"]["document_status"]
           title: string
           updated_at: string
@@ -1090,13 +1153,25 @@ export type Database = {
           clinic_id: string
           content?: Json
           created_at?: string
+          created_by?: string | null
+          document_hash?: string | null
+          document_reference?: string | null
           document_type: string
           id?: string
+          is_revoked?: boolean | null
           patient_id: string
+          patient_name?: string | null
           pdf_url?: string | null
           professional_id: string
+          professional_name?: string | null
+          replaced_by_document_id?: string | null
+          replaces_document_id?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          revoked_reason?: string | null
           signed_at?: string | null
           signed_by?: string | null
+          source_record_id?: string | null
           status?: Database["public"]["Enums"]["document_status"]
           title: string
           updated_at?: string
@@ -1106,13 +1181,25 @@ export type Database = {
           clinic_id?: string
           content?: Json
           created_at?: string
+          created_by?: string | null
+          document_hash?: string | null
+          document_reference?: string | null
           document_type?: string
           id?: string
+          is_revoked?: boolean | null
           patient_id?: string
+          patient_name?: string | null
           pdf_url?: string | null
           professional_id?: string
+          professional_name?: string | null
+          replaced_by_document_id?: string | null
+          replaces_document_id?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          revoked_reason?: string | null
           signed_at?: string | null
           signed_by?: string | null
+          source_record_id?: string | null
           status?: Database["public"]["Enums"]["document_status"]
           title?: string
           updated_at?: string
@@ -1138,6 +1225,20 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_documents_replaced_by_document_id_fkey"
+            columns: ["replaced_by_document_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_documents_replaces_document_id_fkey"
+            columns: ["replaces_document_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_documents"
             referencedColumns: ["id"]
           },
         ]
@@ -4710,6 +4811,10 @@ export type Database = {
       deactivate_specialty: {
         Args: { _clinic_id: string; _specialty_slug: string }
         Returns: Json
+      }
+      get_next_document_number: {
+        Args: { p_clinic_id: string }
+        Returns: number
       }
       get_user_all_permissions: {
         Args: { _user_id: string }
