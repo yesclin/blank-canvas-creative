@@ -63,51 +63,70 @@ export type Database = {
       }
       anamnesis_records: {
         Row: {
+          appointment_id: string | null
           clinic_id: string
           created_at: string
+          created_by: string | null
           data: Json
           id: string
           patient_id: string
           professional_id: string
+          responses: Json | null
           signed_at: string | null
           signed_by: string | null
           specialty_id: string | null
           status: Database["public"]["Enums"]["document_status"]
           template_id: string | null
+          template_version_id: string | null
           updated_at: string
           validation_code: string | null
         }
         Insert: {
+          appointment_id?: string | null
           clinic_id: string
           created_at?: string
+          created_by?: string | null
           data?: Json
           id?: string
           patient_id: string
           professional_id: string
+          responses?: Json | null
           signed_at?: string | null
           signed_by?: string | null
           specialty_id?: string | null
           status?: Database["public"]["Enums"]["document_status"]
           template_id?: string | null
+          template_version_id?: string | null
           updated_at?: string
           validation_code?: string | null
         }
         Update: {
+          appointment_id?: string | null
           clinic_id?: string
           created_at?: string
+          created_by?: string | null
           data?: Json
           id?: string
           patient_id?: string
           professional_id?: string
+          responses?: Json | null
           signed_at?: string | null
           signed_by?: string | null
           specialty_id?: string | null
           status?: Database["public"]["Enums"]["document_status"]
           template_id?: string | null
+          template_version_id?: string | null
           updated_at?: string
           validation_code?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "anamnesis_records_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "anamnesis_records_clinic_id_fkey"
             columns: ["clinic_id"]
@@ -141,6 +160,13 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "anamnesis_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anamnesis_records_template_version_id_fkey"
+            columns: ["template_version_id"]
+            isOneToOne: false
+            referencedRelation: "anamnesis_template_versions"
             referencedColumns: ["id"]
           },
         ]
