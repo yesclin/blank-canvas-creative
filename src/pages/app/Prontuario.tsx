@@ -1107,9 +1107,22 @@ export default function Prontuario() {
         if (activeSpecialtyKey === 'dermatologia') {
           return (
             <VisaoGeralDermatoBlock
-              patientId={patientId}
-              clinicId={clinicIdForFisio || null}
-              canEdit={canEditCurrentTab}
+              patient={patient ? {
+                id: patient.id,
+                full_name: patient.full_name,
+                birth_date: patient.birth_date,
+                gender: patient.gender,
+                phone: patient.phone,
+                email: patient.email,
+              } : null}
+              clinicalData={{
+                allergies: prontuarioClinicalData?.allergies || [],
+                chronic_diseases: prontuarioClinicalData?.chronic_diseases || [],
+                current_medications: prontuarioClinicalData?.current_medications || [],
+              }}
+              alerts={[]}
+              lastAppointment={null}
+              loading={loading}
               onNavigateToModule={(moduleKey) => setActiveTab(moduleKey)}
             />
           );
@@ -1117,9 +1130,21 @@ export default function Prontuario() {
         if (activeSpecialtyKey === 'odontologia') {
           return (
             <OdontologiaVisaoGeralBlock
-              patientId={patientId}
-              clinicId={clinicIdForFisio || null}
-              canEdit={canEditCurrentTab}
+              patient={patient ? {
+                id: patient.id,
+                full_name: patient.full_name,
+                birth_date: patient.birth_date,
+                gender: patient.gender,
+                phone: patient.phone,
+                email: patient.email,
+              } : null}
+              clinicalData={{
+                allergies: prontuarioClinicalData?.allergies || [],
+                chronic_diseases: prontuarioClinicalData?.chronic_diseases || [],
+                current_medications: prontuarioClinicalData?.current_medications || [],
+              }}
+              alerts={[]}
+              loading={loading}
               onNavigateToModule={(moduleKey) => setActiveTab(moduleKey)}
             />
           );
