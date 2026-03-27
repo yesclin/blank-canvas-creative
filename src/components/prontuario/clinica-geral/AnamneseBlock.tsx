@@ -1170,7 +1170,7 @@ export function AnamneseBlock({
 
       {/* Compact header + actions for selected record */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        {/* Left: title, version, status, date */}
+        {/* Left: title, version, status */}
         <div className="flex items-center gap-2 min-w-0 flex-wrap">
           <h3 className="font-semibold text-sm truncate">
             {viewTemplate?.nome || selectedRecord?.template_name || 'Anamnese'}
@@ -1189,8 +1189,12 @@ export function AnamneseBlock({
             <Check className="h-2.5 w-2.5 mr-0.5" />
             Finalizado
           </Badge>
+        </div>
+
+        {/* Right: date + action buttons — all in one group */}
+        <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-auto">
           {(selectedRecord || currentAnamnese) && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mr-1">
               <Clock className="h-3 w-3" />
               <span>
                 {format(parseISO(selectedRecord?.created_at || currentAnamnese!.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
@@ -1198,10 +1202,6 @@ export function AnamneseBlock({
               </span>
             </div>
           )}
-        </div>
-
-        {/* Right: action buttons — all grouped together */}
-        <div className="flex items-center gap-1.5 flex-shrink-0 self-end sm:self-auto">
           {currentAnamnese && (
             <Button variant="ghost" size="sm" disabled={generating} onClick={() => {
               generateAnamnesisPdf(
