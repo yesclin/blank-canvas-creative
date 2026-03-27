@@ -1400,9 +1400,14 @@ export type Database = {
           address_state: string | null
           address_street: string | null
           address_zip: string | null
+          cnpj: string | null
+          cpf: string | null
           created_at: string
           email: string | null
+          fiscal_type: string | null
           id: string
+          inscricao_estadual: string | null
+          inscricao_municipal: string | null
           logo_url: string | null
           margin_alert_enabled: boolean | null
           margin_alert_min_percent: number | null
@@ -1423,9 +1428,14 @@ export type Database = {
           address_state?: string | null
           address_street?: string | null
           address_zip?: string | null
+          cnpj?: string | null
+          cpf?: string | null
           created_at?: string
           email?: string | null
+          fiscal_type?: string | null
           id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
           logo_url?: string | null
           margin_alert_enabled?: boolean | null
           margin_alert_min_percent?: number | null
@@ -1446,9 +1456,14 @@ export type Database = {
           address_state?: string | null
           address_street?: string | null
           address_zip?: string | null
+          cnpj?: string | null
+          cpf?: string | null
           created_at?: string
           email?: string | null
+          fiscal_type?: string | null
           id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
           logo_url?: string | null
           margin_alert_enabled?: boolean | null
           margin_alert_min_percent?: number | null
@@ -2605,6 +2620,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "message_templates_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      modelos_documento: {
+        Row: {
+          cabecalho_personalizado: string | null
+          clinic_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_default: boolean
+          nome: string
+          rodape: string | null
+          texto_padrao: string | null
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          cabecalho_personalizado?: string | null
+          clinic_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          nome: string
+          rodape?: string | null
+          texto_padrao?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          cabecalho_personalizado?: string | null
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          nome?: string
+          rodape?: string | null
+          texto_padrao?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modelos_documento_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"

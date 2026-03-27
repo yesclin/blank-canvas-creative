@@ -306,7 +306,7 @@ export default function ConfigClinica() {
       opening_hours: {
         schedule: formData.schedule,
       },
-      updated_by: user?.id,
+      updated_at: new Date().toISOString(),
     };
 
     // Only include fiscal data if admin or first time setting
