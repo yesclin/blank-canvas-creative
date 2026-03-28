@@ -215,11 +215,15 @@ export function AppointmentDialog({
   // Fetch professional-specific specialties — ALWAYS filter by selected professional
   const selectedProfId = lockedProfessionalId || watchProfessionalId || null;
   const { data: professionalSpecialties = [] } = useProfessionalSpecialties(selectedProfId);
+  const { enabledSpecialties: clinicSpecialties } = useGlobalSpecialty();
 
-  // Compute available specialties: always based on professional's linked specialties
+  // Compute available specialties:
+  // 1. If professional has linked specialties → use those (filtered by is_active)
+  // 2. If professional has NO linked specialties → fallback to all clinic-enabled specialties
   const availableSpecialties = useMemo(() => {
     if (!selectedProfId) return [];
-    return professionalSpecialties
+    
+    const profSpecs = professionalSpecialties
       .filter(ps => ps.specialty && ps.specialty.is_active)
       .map(ps => ({
         id: ps.specialty!.id,
@@ -227,7 +231,19 @@ export function AppointmentDialog({
         area: ps.specialty!.area,
         is_active: ps.specialty!.is_active,
       }));
-  }, [selectedProfId, professionalSpecialties]);
+    
+    // Fallback: if professional has no linked specialties, show all clinic-enabled specialties
+    if (profSpecs.length === 0 && clinicSpecialties.length > 0) {
+      return clinicSpecialties.map(s => ({
+        id: s.id,
+        name: s.name,
+        area: s.area ?? null,
+        is_active: true,
+      }));
+    }
+    
+    return profSpecs;
+  }, [selectedProfId, professionalSpecialties, clinicSpecialties]);
 
   // Auto-select when only one specialty; clear if current selection is no longer available
   useEffect(() => {
