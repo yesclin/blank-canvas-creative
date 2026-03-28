@@ -52,7 +52,7 @@ function getSupportedSpecialtyDefinition(key: SpecialtyKey | null) {
 
 /** @deprecated Use resolveSpecialtyKey from yesclinSpecialties.ts */
 export function mapSpecialtyNameToKey(name: string): SpecialtyKey {
-  return resolveSpecialtyKey(name);
+  return resolveOfficialSpecialtyKey(name) ?? 'geral';
 }
 
 /**
