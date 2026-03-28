@@ -30,9 +30,20 @@ export function useClinicData() {
     let cancelled = false;
     const fetchClinicData = async () => {
       try {
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        if (authError) throw authError;
+
+        const userId = authData.user?.id;
+        if (!userId) {
+          setClinic(null);
+          setIsLoading(false);
+          return;
+        }
+
         const { data: profile } = await supabase
           .from("profiles")
           .select("clinic_id")
+          .eq("user_id", userId)
           .maybeSingle();
 
         if (cancelled) return;
