@@ -32,7 +32,7 @@ export function SpecialtySelector({
   allSpecialties = [],
   onSelect,
 }: SpecialtySelectorProps) {
-  const displayLabel = activeSpecialty?.name?.trim() || 'Especialidade não definida';
+  const displayLabel = activeSpecialty?.name?.trim() || 'Carregando especialidade...';
   const IconComponent = activeSpecialty?.icon 
     ? SPECIALTY_ICONS[activeSpecialty.icon] || Stethoscope 
     : Stethoscope;
