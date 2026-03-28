@@ -22,7 +22,6 @@ import {
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { SpecialtyKey } from "@/hooks/prontuario/useActiveSpecialty";
-import { YESCLIN_SPECIALTY_LABELS } from "@/hooks/prontuario/yesclinSpecialties";
 
 /**
  * Dados do paciente para exibição na Visão Geral
@@ -169,7 +168,7 @@ export function VisaoGeralBlock({
   const criticalAlerts = activeAlerts.filter(a => a.severity === 'critical');
   
   // Resolve display name for specialty
-  const specialtyDisplayName = activeSpecialtyName?.trim() || YESCLIN_SPECIALTY_LABELS[activeSpecialtyKey] || 'Especialidade não definida';
+  const specialtyDisplayName = activeSpecialtyName?.trim() || 'Especialidade não definida';
 
   if (loading) {
     return (

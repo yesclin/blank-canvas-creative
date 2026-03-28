@@ -33,7 +33,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { SpecialtyKey } from "@/hooks/prontuario/useActiveSpecialty";
-import { YESCLIN_SPECIALTY_LABELS } from "@/hooks/prontuario/yesclinSpecialties";
 
 export interface ClinicalSummaryForHeader {
   allergies: string[];
@@ -110,6 +109,13 @@ export function ProntuarioHeader({
 }: ProntuarioHeaderProps) {
   const isMobile = useIsMobile();
 
+  console.log("[YesClin][ProntuarioHeader] receivedSpecialty", {
+    activeSpecialtyKey,
+    activeSpecialtyName,
+    specialtyLoading,
+    isSpecialtyFromAppointment,
+  });
+
   const calculateAge = (birthDate: string | null): number | null => {
     if (!birthDate) return null;
     try {
@@ -152,7 +158,9 @@ export function ProntuarioHeader({
 
   const age = patient ? calculateAge(patient.birth_date) : null;
   const gender = patient ? formatGender(patient.gender) : '';
-  const displaySpecialty = activeSpecialtyName?.trim() || YESCLIN_SPECIALTY_LABELS[activeSpecialtyKey] || 'Especialidade não definida';
+  const displaySpecialty = specialtyLoading
+    ? 'Carregando especialidade...'
+    : activeSpecialtyName?.trim() || 'Especialidade não definida';
 
   const hasClinicalData = clinicalSummary && (
     clinicalSummary.allergies.length > 0 ||

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useActiveAppointment } from './useActiveAppointment';
 import { 
   YESCLIN_SUPPORTED_SPECIALTIES, 
@@ -78,18 +78,8 @@ export function useActiveSpecialty(patientId: string | null | undefined) {
 
   const defaultSpecialty = useMemo((): SpecialtyOption | null => {
     if (specialties.length === 0) return null;
-
-    if (clinic?.primary_specialty_id) {
-      const primarySpecialty = specialties.find(
-        (specialty) => specialty.id === clinic.primary_specialty_id
-      );
-
-      if (primarySpecialty) return primarySpecialty;
-    }
-
-    const firstNonGeneralSpecialty = specialties.find((specialty) => specialty.key !== 'geral');
-    return firstNonGeneralSpecialty || specialties[0] || null;
-  }, [specialties, clinic?.primary_specialty_id]);
+    return specialties[0] || null;
+  }, [specialties]);
 
   const isFromAppointment = !!(activeAppointment?.resolved_specialty_id);
 
@@ -172,6 +162,26 @@ export function useActiveSpecialty(patientId: string | null | undefined) {
     if (specialties.length > 0) return specialties[0].key;
     return 'geral';
   }, [activeSpecialty, defaultSpecialty, specialties]);
+
+  useEffect(() => {
+    console.log('[YesClin][ActiveSpecialty] clinic.activeSpecialties', globalEnabledSpecialties);
+    console.log('[YesClin][ActiveSpecialty] clinic.primary_specialty_id', clinic?.primary_specialty_id ?? null);
+    console.log('[YesClin][ActiveSpecialty] selectedSpecialtyId', selectedSpecialtyId);
+    console.log('[YesClin][ActiveSpecialty] activeAppointment.resolved_specialty_id', activeAppointment?.resolved_specialty_id ?? null);
+    console.log('[YesClin][ActiveSpecialty] activeAppointment.resolved_specialty_name', activeAppointment?.resolved_specialty_name ?? null);
+    console.log('[YesClin][ActiveSpecialty] final.activeSpecialtyId', activeSpecialtyId);
+    console.log('[YesClin][ActiveSpecialty] final.activeSpecialtyName', activeSpecialtyName ?? null);
+    console.log('[YesClin][ActiveSpecialty] final.activeSpecialtyKey', activeSpecialtyKey);
+  }, [
+    globalEnabledSpecialties,
+    clinic?.primary_specialty_id,
+    selectedSpecialtyId,
+    activeAppointment?.resolved_specialty_id,
+    activeAppointment?.resolved_specialty_name,
+    activeSpecialtyId,
+    activeSpecialtyName,
+    activeSpecialtyKey,
+  ]);
 
   return {
     activeSpecialtyId,
