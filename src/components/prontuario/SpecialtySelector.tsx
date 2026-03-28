@@ -10,7 +10,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { SpecialtyOption, SpecialtyKey } from '@/hooks/prontuario/useActiveSpecialty';
-import { YESCLIN_SPECIALTY_LABELS } from '@/hooks/prontuario/yesclinSpecialties';
 import { cn } from '@/lib/utils';
 
 const SPECIALTY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -33,7 +32,7 @@ export function SpecialtySelector({
   allSpecialties = [],
   onSelect,
 }: SpecialtySelectorProps) {
-  const displayLabel = activeSpecialty?.name?.trim() || YESCLIN_SPECIALTY_LABELS[activeSpecialtyKey] || 'Especialidade não definida';
+  const displayLabel = activeSpecialty?.name?.trim() || 'Especialidade não definida';
   const IconComponent = activeSpecialty?.icon 
     ? SPECIALTY_ICONS[activeSpecialty.icon] || Stethoscope 
     : Stethoscope;

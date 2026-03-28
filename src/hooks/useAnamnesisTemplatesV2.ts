@@ -504,12 +504,12 @@ export function useAnamnesisTemplatesV2(options?: {
 
 // ─── Anamnesis Records Hook ───────────────────────────────────────
 
-export function useAnamnesisRecords(patientId: string | null, appointmentId?: string | null) {
+export function useAnamnesisRecords(patientId: string | null, appointmentId?: string | null, specialtyId?: string | null) {
   const { clinic } = useClinicData();
   const queryClient = useQueryClient();
 
   const recordsQuery = useQuery({
-    queryKey: ['anamnesis-records', patientId, appointmentId, clinic?.id],
+    queryKey: ['anamnesis-records', patientId, appointmentId, specialtyId, clinic?.id],
     queryFn: async () => {
       if (!patientId || !clinic?.id) return [];
 
@@ -522,6 +522,10 @@ export function useAnamnesisRecords(patientId: string | null, appointmentId?: st
 
       if (appointmentId) {
         q = q.eq('appointment_id', appointmentId);
+      }
+
+      if (specialtyId) {
+        q = q.eq('specialty_id', specialtyId);
       }
 
       const { data, error } = await q;

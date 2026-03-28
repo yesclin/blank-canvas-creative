@@ -558,6 +558,24 @@ export default function Prontuario() {
     loading: specialtyLoading,
   } = useActiveSpecialty(patientId);
 
+  useEffect(() => {
+    console.log('[YesClin][ProntuarioRoute] resolvedSpecialty', {
+      activeSpecialtyId,
+      activeSpecialtyName,
+      activeSpecialtyKey,
+      activeSpecialty,
+      specialties,
+      isSpecialtyFromAppointment,
+    });
+  }, [
+    activeSpecialtyId,
+    activeSpecialtyName,
+    activeSpecialtyKey,
+    activeSpecialty,
+    specialties,
+    isSpecialtyFromAppointment,
+  ]);
+
   // Visão Geral Data - specific for Clínica Geral specialty
   const {
     patient: visaoGeralPatient,
@@ -1154,6 +1172,8 @@ export default function Prontuario() {
             alerts={visaoGeralAlerts}
             lastAppointment={visaoGeralLastAppointment}
             loading={visaoGeralLoading}
+            activeSpecialtyKey={activeSpecialtyKey}
+            activeSpecialtyName={activeSpecialtyName}
             onNavigateToModule={(moduleKey) => {
               setActiveTab(moduleKey);
             }}
@@ -1164,10 +1184,10 @@ export default function Prontuario() {
         // Unified Anamnese for ALL specialties — uses V2 templates filtered by specialty
         return (
           <AnamneseBlock
-            currentAnamnese={currentAnamnese}
-            anamneseHistory={anamneseHistory}
-            loading={anamneseLoading}
-            saving={anamneseSaving}
+            currentAnamnese={activeSpecialtyKey === 'geral' ? currentAnamnese : null}
+            anamneseHistory={activeSpecialtyKey === 'geral' ? anamneseHistory : []}
+            loading={activeSpecialtyKey === 'geral' ? anamneseLoading : false}
+            saving={activeSpecialtyKey === 'geral' ? anamneseSaving : false}
             canEdit={canEditCurrentTab}
             onSave={saveAnamnese}
             onUpdate={updateAnamnese}

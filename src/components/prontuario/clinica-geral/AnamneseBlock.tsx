@@ -235,11 +235,36 @@ export function AnamneseBlock({
 
   // ─── V2 Records: ALL records for this patient (no appointment filter) ──
   const patientIdForRecords = patientData?.id || currentAnamnese?.patient_id || null;
-  const { records: v2Records, saveRecord: saveV2Record, isSaving: savingV2 } = useAnamnesisRecords(patientIdForRecords, null);
+  const { records: v2Records, saveRecord: saveV2Record, isSaving: savingV2 } = useAnamnesisRecords(patientIdForRecords, null, specialtyId);
+
+  useEffect(() => {
+    console.log('[YesClin][AnamneseBlock] receivedSpecialty', {
+      specialtyId,
+      specialtyName,
+      patientIdForRecords,
+      appointmentId,
+    });
+  }, [specialtyId, specialtyName, patientIdForRecords, appointmentId]);
 
   const allTemplates: UnifiedTemplate[] = useMemo(() => {
     return v2Templates.map(v2TemplateToUnified);
   }, [v2Templates]);
+
+  useEffect(() => {
+    console.log('[YesClin][AnamneseBlock] resolvedTemplatesAndRecords', {
+      specialtyId,
+      specialtyName,
+      templateIds: v2Templates.map((template) => ({
+        id: template.id,
+        name: template.name,
+        specialty_id: template.specialty_id,
+      })),
+      recordIds: v2Records.map((record) => ({
+        id: record.id,
+        template_id: record.template_id,
+      })),
+    });
+  }, [specialtyId, specialtyName, v2Templates, v2Records]);
 
   const activeTemplate = useMemo(() => {
     if (!allTemplates.length) return null;
