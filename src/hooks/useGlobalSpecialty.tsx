@@ -6,7 +6,7 @@
  * When 2-3 are enabled, the user picks in the Prontuário header.
  */
 
-import { createContext, useContext, useMemo, useState, useCallback, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useMemo, useState, useCallback, type ReactNode } from "react";
 import { useEnabledSpecialties, type EnabledSpecialty } from "./useEnabledSpecialties";
 import { filterOfficialSpecialties } from "@/constants/officialSpecialties";
 
@@ -47,12 +47,6 @@ export function GlobalSpecialtyProvider({ children }: { children: ReactNode }) {
   const setSelectedSpecialtyId = useCallback((id: string | null) => {
     setSelectedId(id);
   }, []);
-
-  useEffect(() => {
-    console.log("[YesClin][GlobalSpecialty] rawEnabledSpecialties", rawSpecialties);
-    console.log("[YesClin][GlobalSpecialty] filteredEnabledSpecialties", specialties);
-    console.log("[YesClin][GlobalSpecialty] selectedSpecialtyId", validSelectedId);
-  }, [rawSpecialties, specialties, validSelectedId]);
 
   const value = useMemo((): GlobalSpecialtyContextValue => ({
     enabledSpecialties: specialties,

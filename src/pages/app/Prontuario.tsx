@@ -552,29 +552,14 @@ export default function Prontuario() {
     activeSpecialty,
     activeSpecialtyName,
     activeSpecialtyKey,
+    activeSpecialtySlug,
     specialties,
     isFromAppointment: isSpecialtyFromAppointment,
     setActiveSpecialty,
     loading: specialtyLoading,
+    isResolved: isSpecialtyResolved,
+    noSpecialtyConfigured,
   } = useActiveSpecialty(patientId);
-
-  useEffect(() => {
-    console.log('[YesClin][ProntuarioRoute] resolvedSpecialty', {
-      activeSpecialtyId,
-      activeSpecialtyName,
-      activeSpecialtyKey,
-      activeSpecialty,
-      specialties,
-      isSpecialtyFromAppointment,
-    });
-  }, [
-    activeSpecialtyId,
-    activeSpecialtyName,
-    activeSpecialtyKey,
-    activeSpecialty,
-    specialties,
-    isSpecialtyFromAppointment,
-  ]);
 
   // Visão Geral Data - specific for Clínica Geral specialty
   const {
@@ -1020,6 +1005,10 @@ export default function Prontuario() {
     }
   }, [navItems, activeTab]);
 
+  const shouldHoldProntuarioRendering = specialtyLoading || !isSpecialtyResolved;
+  const resolvedSpecialtyName = activeSpecialty?.name ?? activeSpecialtyName ?? undefined;
+  const resolvedSpecialtyId = activeSpecialty?.id ?? activeSpecialtyId;
+
   // Handle search result click
   const handleSearchResultClick = useCallback((result: SearchResult) => {
     setHighlightedId(result.id);
@@ -1173,7 +1162,7 @@ export default function Prontuario() {
             lastAppointment={visaoGeralLastAppointment}
             loading={visaoGeralLoading}
             activeSpecialtyKey={activeSpecialtyKey}
-            activeSpecialtyName={activeSpecialtyName}
+            activeSpecialtyName={resolvedSpecialtyName}
             onNavigateToModule={(moduleKey) => {
               setActiveTab(moduleKey);
             }}
@@ -1203,8 +1192,8 @@ export default function Prontuario() {
               email: patient?.email,
               insurance_name: (patient as any)?.insurance?.insurance_name || null,
             }}
-            specialtyId={activeSpecialtyId}
-            specialtyName={activeSpecialtyName}
+            specialtyId={resolvedSpecialtyId}
+            specialtyName={resolvedSpecialtyName}
             appointmentId={activeAppointment?.id || null}
           />
         );
@@ -2127,12 +2116,34 @@ export default function Prontuario() {
         />
       )}
 
+      {shouldHoldProntuarioRendering && (
+        <div className="flex-1 space-y-4 p-4 md:p-6">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      )}
+
+      {!shouldHoldProntuarioRendering && noSpecialtyConfigured && (
+        <div className="flex-1 p-4 md:p-6">
+          <div className="rounded-lg border border-dashed bg-card p-6 text-center">
+            <p className="text-base font-medium text-foreground">Especialidade não definida</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Ative pelo menos uma especialidade oficial em Configurações &gt; Clínica para abrir o prontuário.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {!shouldHoldProntuarioRendering && !noSpecialtyConfigured && (
+        <>
+
       {/* Header Unificado */}
       <ProntuarioHeader
         patient={patient}
         patientLoading={patientLoading}
         activeSpecialtyKey={activeSpecialtyKey}
-        activeSpecialtyName={activeSpecialtyName}
+        activeSpecialtyName={resolvedSpecialtyName}
         professionalName={currentProfessionalName}
         isSpecialtyFromAppointment={isSpecialtyFromAppointment}
         specialtyLoading={specialtyLoading}
@@ -2230,6 +2241,8 @@ export default function Prontuario() {
           </div>
         </main>
       </div>
+      </>
+      )}
     </div>
     </ClinicalAccessGuard>
   );

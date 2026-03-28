@@ -168,7 +168,7 @@ export function VisaoGeralBlock({
   const criticalAlerts = activeAlerts.filter(a => a.severity === 'critical');
   
   // Resolve display name for specialty
-  const specialtyDisplayName = activeSpecialtyName?.trim() || 'Especialidade não definida';
+  const specialtyDisplayName = activeSpecialtyName?.trim() || '';
 
   if (loading) {
     return (
@@ -205,12 +205,14 @@ export function VisaoGeralBlock({
           <span>Clique nos cards para acessar os módulos</span>
         </div>
         
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 px-2.5 py-1 rounded-full">
-          <Info className="h-3 w-3" />
-          <span>
-            Módulos exibidos: <span className="font-medium text-primary">{specialtyDisplayName}</span>
-          </span>
-        </div>
+        {specialtyDisplayName && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 px-2.5 py-1 rounded-full">
+            <Info className="h-3 w-3" />
+            <span>
+              Módulos exibidos: <span className="font-medium text-primary">{specialtyDisplayName}</span>
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Grid de Cards de Resumo */}

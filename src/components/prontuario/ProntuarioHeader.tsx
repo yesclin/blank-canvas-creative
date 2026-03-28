@@ -109,13 +109,6 @@ export function ProntuarioHeader({
 }: ProntuarioHeaderProps) {
   const isMobile = useIsMobile();
 
-  console.log("[YesClin][ProntuarioHeader] receivedSpecialty", {
-    activeSpecialtyKey,
-    activeSpecialtyName,
-    specialtyLoading,
-    isSpecialtyFromAppointment,
-  });
-
   const calculateAge = (birthDate: string | null): number | null => {
     if (!birthDate) return null;
     try {

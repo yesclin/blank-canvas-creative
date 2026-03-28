@@ -118,8 +118,12 @@ export function AppointmentDialog({
   lockedPatientId,
   lockedPatientName,
 }: AppointmentDialogProps) {
-  const { enabledSpecialties } = useGlobalSpecialty();
-  const globalSpecialtyId = enabledSpecialties[0]?.id || null;
+  const { enabledSpecialties, selectedSpecialtyId } = useGlobalSpecialty();
+  const resolvedClinicSpecialty = useMemo(
+    () => enabledSpecialties.find((specialty) => specialty.id === selectedSpecialtyId) ?? enabledSpecialties[0] ?? null,
+    [enabledSpecialties, selectedSpecialtyId]
+  );
+  const globalSpecialtyId = resolvedClinicSpecialty?.id || null;
   const [selectedProcedure, setSelectedProcedure] = useState<Procedure | null>(null);
   const [showConflictConfirm, setShowConflictConfirm] = useState(false);
   
@@ -215,7 +219,7 @@ export function AppointmentDialog({
   // Fetch professional-specific specialties — ALWAYS filter by selected professional
   const selectedProfId = lockedProfessionalId || watchProfessionalId || null;
   const { data: professionalSpecialties = [] } = useProfessionalSpecialties(selectedProfId);
-  const { enabledSpecialties: clinicSpecialties } = useGlobalSpecialty();
+  const clinicSpecialties = enabledSpecialties;
 
   // Compute available specialties:
   // 1. If professional has linked specialties → use those (filtered by is_active)
@@ -255,12 +259,17 @@ export function AppointmentDialog({
     } else if (currentSpecialtyId && availableSpecialties.length > 0) {
       const stillAvailable = availableSpecialties.some(s => s.id === currentSpecialtyId);
       if (!stillAvailable) {
-        form.setValue("specialty_id", "");
+        const fallbackSpecialtyId = resolvedClinicSpecialty && availableSpecialties.some(s => s.id === resolvedClinicSpecialty.id)
+          ? resolvedClinicSpecialty.id
+          : "";
+        form.setValue("specialty_id", fallbackSpecialtyId);
       }
+    } else if (!currentSpecialtyId && resolvedClinicSpecialty && availableSpecialties.some(s => s.id === resolvedClinicSpecialty.id)) {
+      form.setValue("specialty_id", resolvedClinicSpecialty.id);
     } else if (availableSpecialties.length === 0) {
       form.setValue("specialty_id", "");
     }
-  }, [watchProfessionalId, availableSpecialties, form]);
+  }, [watchProfessionalId, availableSpecialties, form, resolvedClinicSpecialty]);
 
   // Clear procedure when specialty changes and current procedure doesn't match
   useEffect(() => {
