@@ -169,7 +169,7 @@ export function VisaoGeralBlock({
   const criticalAlerts = activeAlerts.filter(a => a.severity === 'critical');
   
   // Resolve display name for specialty
-  const specialtyDisplayName = activeSpecialtyName?.trim() || YESCLIN_SPECIALTY_LABELS[activeSpecialtyKey];
+  const specialtyDisplayName = activeSpecialtyName?.trim() || YESCLIN_SPECIALTY_LABELS[activeSpecialtyKey] || 'Especialidade não definida';
 
   if (loading) {
     return (

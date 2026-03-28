@@ -50,24 +50,28 @@ export function useMedicalRecordEntries() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const fetchEntriesForPatient = useCallback(async (patientId: string) => {
+  const fetchEntriesForPatient = useCallback(async (patientId: string, specialtyId?: string | null) => {
     if (!clinic?.id || !patientId) return;
     setLoading(true);
     try {
+      const evolutionsQuery = supabase
+        .from('clinical_evolutions')
+        .select('*')
+        .eq('clinic_id', clinic.id)
+        .eq('patient_id', patientId)
+        .order('created_at', { ascending: false });
+
+      const anamnesesQuery = supabase
+        .from('anamnesis_records')
+        .select('*')
+        .eq('clinic_id', clinic.id)
+        .eq('patient_id', patientId)
+        .order('created_at', { ascending: false });
+
       // Fetch both sources in parallel
       const [evolResult, anamResult] = await Promise.all([
-        supabase
-          .from('clinical_evolutions')
-          .select('*')
-          .eq('clinic_id', clinic.id)
-          .eq('patient_id', patientId)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('anamnesis_records')
-          .select('*')
-          .eq('clinic_id', clinic.id)
-          .eq('patient_id', patientId)
-          .order('created_at', { ascending: false }),
+        specialtyId ? evolutionsQuery.eq('specialty_id', specialtyId) : evolutionsQuery,
+        specialtyId ? anamnesesQuery.eq('specialty_id', specialtyId) : anamnesesQuery,
       ]);
 
       if (evolResult.error) throw evolResult.error;
@@ -152,7 +156,7 @@ export function useMedicalRecordEntries() {
 
         if (error) throw error;
         toast.success('Anamnese criada');
-        await fetchEntriesForPatient(input.patient_id);
+        await fetchEntriesForPatient(input.patient_id, input.specialty_id);
         return data.id;
       } else {
         const { data, error } = await supabase
@@ -172,7 +176,7 @@ export function useMedicalRecordEntries() {
 
         if (error) throw error;
         toast.success('Evolução criada');
-        await fetchEntriesForPatient(input.patient_id);
+        await fetchEntriesForPatient(input.patient_id, input.specialty_id);
         return data.id;
       }
     } catch (err) {
@@ -216,7 +220,7 @@ export function useMedicalRecordEntries() {
       }
 
       toast.success('Registro atualizado');
-      await fetchEntriesForPatient(patientId);
+      await fetchEntriesForPatient(patientId, entry.specialty_id);
       return true;
     } catch (err) {
       console.error('Error updating entry:', err);
@@ -245,7 +249,7 @@ export function useMedicalRecordEntries() {
       if (error) throw error;
 
       toast.success('Registro assinado');
-      await fetchEntriesForPatient(patientId);
+      await fetchEntriesForPatient(patientId, entry.specialty_id);
       return true;
     } catch (err) {
       console.error('Error signing entry:', err);

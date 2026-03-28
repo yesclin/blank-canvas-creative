@@ -49,7 +49,7 @@ export interface ClinicalAlert {
  */
 export function useProntuarioData(patientId: string | null) {
   const { clinic } = useClinicData();
-  const { activeSpecialtyId } = useActiveSpecialty(patientId);
+  const { activeSpecialtyId, activeSpecialtyName } = useActiveSpecialty(patientId);
   const config = useProntuarioConfig(activeSpecialtyId);
   const entriesHook = useMedicalRecordEntries();
   const filesHook = useMedicalRecordFiles();
@@ -134,10 +134,10 @@ export function useProntuarioData(patientId: string | null) {
     fetchPatient();
     fetchAlerts();
     fetchClinicalData();
-    entriesHook.fetchEntriesForPatient(patientId);
+    entriesHook.fetchEntriesForPatient(patientId, activeSpecialtyId);
     filesHook.fetchFilesForPatient(patientId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [patientId, clinic?.id, fetchPatient, fetchAlerts, fetchClinicalData]);
+  }, [patientId, clinic?.id, activeSpecialtyId, fetchPatient, fetchAlerts, fetchClinicalData]);
 
   // Get active tabs from configuration
   const getActiveTabs = useCallback((): TabConfig[] => {
@@ -278,6 +278,8 @@ export function useProntuarioData(patientId: string | null) {
   return {
     // Patient data
     patient,
+    activeSpecialtyId,
+    activeSpecialtyName,
     patientLoading,
     fetchPatient,
 
