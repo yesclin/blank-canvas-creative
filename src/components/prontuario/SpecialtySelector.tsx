@@ -34,7 +34,7 @@ export function SpecialtySelector({
   allSpecialties = [],
   onSelect,
 }: SpecialtySelectorProps) {
-  const displayLabel = activeSpecialty?.name || YESCLIN_SPECIALTY_LABELS[activeSpecialtyKey];
+  const displayLabel = activeSpecialty?.name?.trim() || YESCLIN_SPECIALTY_LABELS[activeSpecialtyKey];
   const IconComponent = activeSpecialty?.icon 
     ? SPECIALTY_ICONS[activeSpecialty.icon] || Stethoscope 
     : Stethoscope;
