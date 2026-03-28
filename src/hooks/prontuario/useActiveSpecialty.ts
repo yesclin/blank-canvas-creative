@@ -6,6 +6,7 @@ import {
   type YesclinSpecialty 
 } from './yesclinSpecialties';
 import { useGlobalSpecialty } from '@/hooks/useGlobalSpecialty';
+import { useClinicData } from '@/hooks/useClinicData';
 
 export type SpecialtyKey =
   | 'geral'
@@ -39,6 +40,7 @@ export function mapSpecialtyNameToKey(name: string): SpecialtyKey {
  */
 export function useActiveSpecialty(patientId: string | null | undefined) {
   const { data: activeAppointment, isLoading: appointmentLoading } = useActiveAppointment(patientId);
+  const { clinic, isLoading: clinicLoading } = useClinicData();
   
   const { 
     enabledSpecialties: globalEnabledSpecialties,
@@ -73,6 +75,21 @@ export function useActiveSpecialty(patientId: string | null | undefined) {
       })
       .filter((s): s is SpecialtyOption => s !== null);
   }, [globalEnabledSpecialties]);
+
+  const defaultSpecialty = useMemo((): SpecialtyOption | null => {
+    if (specialties.length === 0) return null;
+
+    if (clinic?.primary_specialty_id) {
+      const primarySpecialty = specialties.find(
+        (specialty) => specialty.id === clinic.primary_specialty_id
+      );
+
+      if (primarySpecialty) return primarySpecialty;
+    }
+
+    const firstNonGeneralSpecialty = specialties.find((specialty) => specialty.key !== 'geral');
+    return firstNonGeneralSpecialty || specialties[0] || null;
+  }, [specialties, clinic?.primary_specialty_id]);
 
   const isFromAppointment = !!(activeAppointment?.resolved_specialty_id);
 
@@ -115,13 +132,14 @@ export function useActiveSpecialty(patientId: string | null | undefined) {
       if (manuallySelectedSpecialty) return manuallySelectedSpecialty;
     }
 
-    // Priority 3: first enabled specialty from clinic
-    return specialties[0] || null;
+    // Priority 3: resolved default specialty from clinic
+    return defaultSpecialty;
   }, [
     activeAppointment?.resolved_specialty_id,
     activeAppointment?.resolved_specialty_name,
     selectedSpecialtyId,
     specialties,
+    defaultSpecialty,
   ]);
 
   const activeSpecialtyId = useMemo(() => {
@@ -133,8 +151,8 @@ export function useActiveSpecialty(patientId: string | null | undefined) {
       return selectedSpecialtyId;
     }
 
-    return specialties[0]?.id || activeSpecialty?.id || null;
-  }, [activeAppointment?.resolved_specialty_id, selectedSpecialtyId, specialties, activeSpecialty?.id]);
+    return defaultSpecialty?.id || activeSpecialty?.id || null;
+  }, [activeAppointment?.resolved_specialty_id, selectedSpecialtyId, specialties, defaultSpecialty?.id, activeSpecialty?.id]);
 
   const activeSpecialtyName = useMemo(() => {
     if (activeAppointment?.resolved_specialty_name) {
@@ -145,14 +163,15 @@ export function useActiveSpecialty(patientId: string | null | undefined) {
       return specialties.find((specialty) => specialty.id === activeSpecialtyId)?.name || activeSpecialty?.name || null;
     }
 
-    return specialties[0]?.name || activeSpecialty?.name || null;
-  }, [activeAppointment?.resolved_specialty_name, activeSpecialtyId, specialties, activeSpecialty?.name]);
+    return defaultSpecialty?.name || activeSpecialty?.name || null;
+  }, [activeAppointment?.resolved_specialty_name, activeSpecialtyId, specialties, defaultSpecialty?.name, activeSpecialty?.name]);
 
   const activeSpecialtyKey = useMemo((): SpecialtyKey => {
     if (activeSpecialty) return activeSpecialty.key;
+    if (defaultSpecialty) return defaultSpecialty.key;
     if (specialties.length > 0) return specialties[0].key;
     return 'geral';
-  }, [activeSpecialty, specialties]);
+  }, [activeSpecialty, defaultSpecialty, specialties]);
 
   return {
     activeSpecialtyId,
@@ -171,7 +190,7 @@ export function useActiveSpecialty(patientId: string | null | undefined) {
         setSelectedSpecialtyId(id);
       }
     },
-    loading: appointmentLoading || globalSpecialtiesLoading,
+    loading: appointmentLoading || globalSpecialtiesLoading || clinicLoading,
     activeAppointment,
   };
 }
