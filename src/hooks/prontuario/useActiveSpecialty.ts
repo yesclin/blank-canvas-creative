@@ -140,7 +140,7 @@ export function useActiveSpecialty(patientId: string | null | undefined) {
   const isFromAppointment = !!appointmentSpecialty;
   const activeSpecialtyId = activeSpecialty?.id ?? null;
   const activeSpecialtyName = activeSpecialty?.name ?? null;
-  const activeSpecialtyKey = activeSpecialty?.key ?? null;
+  const activeSpecialtyKey = activeSpecialty?.key ?? 'geral';
   const activeSpecialtySlug = activeSpecialty?.slug ?? null;
 
   return {
