@@ -135,9 +135,16 @@ function useClinicId() {
   return useQuery({
     queryKey: ["clinic-id-only"],
     queryFn: async () => {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+
+      const userId = authData.user?.id;
+      if (!userId) return null;
+
       const { data: profile } = await supabase
         .from("profiles")
         .select("clinic_id")
+        .eq("user_id", userId)
         .maybeSingle();
       return profile?.clinic_id || null;
     },
