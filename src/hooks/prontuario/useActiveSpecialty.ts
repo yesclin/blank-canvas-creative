@@ -42,6 +42,7 @@ export function useActiveSpecialty(patientId: string | null | undefined) {
   
   const { 
     enabledSpecialties: globalEnabledSpecialties,
+    isLoading: globalSpecialtiesLoading,
     isSingleSpecialty,
     selectedSpecialtyId,
     setSelectedSpecialtyId,
@@ -123,14 +124,35 @@ export function useActiveSpecialty(patientId: string | null | undefined) {
     specialties,
   ]);
 
+  const activeSpecialtyId = useMemo(() => {
+    if (activeAppointment?.resolved_specialty_id) {
+      return activeAppointment.resolved_specialty_id;
+    }
+
+    if (selectedSpecialtyId && specialties.some((specialty) => specialty.id === selectedSpecialtyId)) {
+      return selectedSpecialtyId;
+    }
+
+    return specialties[0]?.id || activeSpecialty?.id || null;
+  }, [activeAppointment?.resolved_specialty_id, selectedSpecialtyId, specialties, activeSpecialty?.id]);
+
+  const activeSpecialtyName = useMemo(() => {
+    if (activeAppointment?.resolved_specialty_name) {
+      return activeAppointment.resolved_specialty_name;
+    }
+
+    if (activeSpecialtyId) {
+      return specialties.find((specialty) => specialty.id === activeSpecialtyId)?.name || activeSpecialty?.name || null;
+    }
+
+    return specialties[0]?.name || activeSpecialty?.name || null;
+  }, [activeAppointment?.resolved_specialty_name, activeSpecialtyId, specialties, activeSpecialty?.name]);
+
   const activeSpecialtyKey = useMemo((): SpecialtyKey => {
     if (activeSpecialty) return activeSpecialty.key;
     if (specialties.length > 0) return specialties[0].key;
     return 'geral';
   }, [activeSpecialty, specialties]);
-
-  const activeSpecialtyId = activeSpecialty?.id || activeAppointment?.resolved_specialty_id || null;
-  const activeSpecialtyName = activeSpecialty?.name || activeAppointment?.resolved_specialty_name || null;
 
   return {
     activeSpecialtyId,
@@ -149,7 +171,7 @@ export function useActiveSpecialty(patientId: string | null | undefined) {
         setSelectedSpecialtyId(id);
       }
     },
-    loading: appointmentLoading,
+    loading: appointmentLoading || globalSpecialtiesLoading,
     activeAppointment,
   };
 }
