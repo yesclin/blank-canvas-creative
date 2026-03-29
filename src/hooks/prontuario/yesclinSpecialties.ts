@@ -509,6 +509,7 @@ export function resolveSpecialtyKey(name: string): SpecialtyKey {
     }
   }
   
-  // Default to general
+  // Return 'geral' only as type-safe fallback for backward compat callers
+  // New code should use resolveOfficialSlug from useResolvedSpecialty.ts instead
   return 'geral';
 }
