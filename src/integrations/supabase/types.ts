@@ -189,7 +189,7 @@ export type Database = {
           id?: string
           structure?: Json
           template_id: string
-          version: number
+          version?: number
           version_number?: number | null
         }
         Update: {
