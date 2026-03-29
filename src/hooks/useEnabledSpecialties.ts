@@ -38,10 +38,9 @@ export function useEnabledSpecialties() {
       // ONLY fetch clinic-specific specialties — created by provision_specialty RPC.
       const { data, error } = await supabase
         .from("specialties")
-        .select("id, name, slug, description, color, area, is_active, specialty_type, clinic_id")
+        .select("id, name, slug, description, color, is_active, specialty_type, clinic_id")
         .eq("is_active", true)
         .eq("clinic_id", clinic!.id)
-        .order("area")
         .order("name");
       
       if (error) {
