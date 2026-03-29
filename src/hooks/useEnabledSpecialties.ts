@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinicData } from "./useClinicData";
 import { toast } from "sonner";
-import { OFFICIAL_SPECIALTY_NAMES, getSpecialtySlug } from "@/constants/officialSpecialties";
+import { OFFICIAL_SPECIALTIES, OFFICIAL_SPECIALTY_NAMES, getSpecialtySlug } from "@/constants/officialSpecialties";
 
 export type SpecialtyType = 'padrao' | 'personalizada';
 
@@ -35,13 +35,10 @@ export function useEnabledSpecialties() {
   return useQuery({
     queryKey: ["enabled-specialties", clinic?.id],
     queryFn: async () => {
-      // Fetch both global and clinic-specific specialties
-      // ONLY fetch clinic-specific specialties — matches what Config > Clínica manages.
-      // Global specialties (clinic_id IS NULL) are NOT included because
-      // Config creates clinic-specific records when toggling a specialty on.
+      // ONLY fetch clinic-specific specialties — created by provision_specialty RPC.
       const { data, error } = await supabase
         .from("specialties")
-        .select("id, name, description, color, area, is_active, specialty_type, clinic_id")
+        .select("id, name, slug, description, color, area, is_active, specialty_type, clinic_id")
         .eq("is_active", true)
         .eq("clinic_id", clinic!.id)
         .order("area")
@@ -52,10 +49,22 @@ export function useEnabledSpecialties() {
         throw error;
       }
       
-      // WHITELIST FILTER: Only return officially supported specialties, enrich with slug
-      const filtered = (data as Array<Omit<EnabledSpecialty, 'slug'> & { name: string }>)
-        .filter(s => OFFICIAL_SPECIALTY_NAMES.some(name => name.toLowerCase() === s.name.trim().toLowerCase()))
-        .map(s => ({ ...s, slug: getSpecialtySlug(s.name) || s.name.toLowerCase().replace(/\s+/g, '-') }));
+      // WHITELIST: match by DB slug (primary) OR name (fallback).
+      // DB slug is set by provision_specialty and is always the official slug.
+      const filtered = (data ?? [])
+        .filter(s => {
+          // Match by slug first (exact match against official list)
+          if (s.slug && OFFICIAL_SPECIALTIES.some(o => o.slug === s.slug)) return true;
+          // Fallback: match by name
+          return OFFICIAL_SPECIALTY_NAMES.some(name => name.toLowerCase() === s.name.trim().toLowerCase());
+        })
+        .map(s => ({
+          ...s,
+          // Use DB slug if it's an official slug, otherwise resolve from name
+          slug: (s.slug && OFFICIAL_SPECIALTIES.some(o => o.slug === s.slug))
+            ? s.slug
+            : (getSpecialtySlug(s.name) || s.slug || s.name.toLowerCase().replace(/\s+/g, '-')),
+        }));
       return filtered as EnabledSpecialty[];
     },
     enabled: !!clinic?.id,
