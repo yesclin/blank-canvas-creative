@@ -301,6 +301,9 @@ export function SpecialtiesSection() {
     queryClient.invalidateQueries({ queryKey: ["specialties", clinic.id] });
     queryClient.invalidateQueries({ queryKey: ["all-specialties", clinic.id] });
     queryClient.invalidateQueries({ queryKey: ["standard-specialties"] });
+    queryClient.invalidateQueries({ queryKey: ["specialties-management", clinic.id] });
+    queryClient.invalidateQueries({ queryKey: ["custom-specialties", clinic.id] });
+    queryClient.invalidateQueries({ queryKey: ["professional-specialties"] });
   };
 
   const openEditDialog = (specialty: ClinicSpecialty) => {

@@ -148,7 +148,7 @@ export function useActiveSpecialty(patientId: string | null | undefined) {
     activeSpecialtyId,
     activeSpecialty,
     activeSpecialtyName,
-    activeSpecialtyKey: activeSpecialtyKey ?? ('geral' as SpecialtyKey), // ONLY for backward compat type, see note below
+    activeSpecialtyKey: activeSpecialtyKey as SpecialtyKey,
     activeSpecialtySlug,
     specialties,
     isFromAppointment,
