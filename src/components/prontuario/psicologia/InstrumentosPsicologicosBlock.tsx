@@ -567,6 +567,9 @@ export function InstrumentosPsicologicosBlock({
                 </div>
               )}
 
+            </div>
+            </ScrollArea>
+
               <DialogFooter className="gap-2">
                 {canEdit && onDelete && (
                   <Button 
@@ -584,7 +587,6 @@ export function InstrumentosPsicologicosBlock({
                   Fechar
                 </Button>
               </DialogFooter>
-            </div>
           )}
         </DialogContent>
       </Dialog>
