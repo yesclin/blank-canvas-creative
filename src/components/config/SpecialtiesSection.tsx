@@ -146,9 +146,39 @@ export function SpecialtiesSection() {
 
       if (error) throw error;
 
+      // Auto-link all active professionals to the new specialty
+      const specialtyRecord = await supabase
+        .from("specialties")
+        .select("id")
+        .eq("clinic_id", clinic.id)
+        .eq("slug", slug)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (specialtyRecord.data?.id) {
+        const { data: professionals } = await supabase
+          .from("professionals")
+          .select("id")
+          .eq("clinic_id", clinic.id)
+          .eq("is_active", true);
+
+        if (professionals && professionals.length > 0) {
+          // Insert professional-specialty links (ignore duplicates)
+          const links = professionals.map(p => ({
+            professional_id: p.id,
+            specialty_id: specialtyRecord.data!.id,
+            is_primary: false,
+          }));
+
+          await supabase
+            .from("professional_specialties")
+            .upsert(links, { onConflict: "professional_id,specialty_id", ignoreDuplicates: true });
+        }
+      }
+
       setProvisionResult(data as Record<string, unknown>);
       toast.success(`"${name}" ativada com sucesso!`, {
-        description: `Abas de prontuário e templates provisionados automaticamente.`,
+        description: `Abas de prontuário, templates e vínculos profissionais provisionados automaticamente.`,
       });
 
       invalidateAll();
