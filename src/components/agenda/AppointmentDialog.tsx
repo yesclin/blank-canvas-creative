@@ -241,7 +241,7 @@ export function AppointmentDialog({
       return clinicSpecialties.map(s => ({
         id: s.id,
         name: s.name,
-        area: s.area ?? null,
+        area: null as string | null,
         is_active: true,
       }));
     }
