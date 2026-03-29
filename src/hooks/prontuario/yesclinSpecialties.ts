@@ -131,16 +131,17 @@ export const YESCLIN_SUPPORTED_SPECIALTIES: YesclinSpecialty[] = [
     name: 'Psicologia',
     description: 'Acompanhamento terapêutico com registro de sessões, plano terapêutico e hipóteses diagnósticas',
     enabledBlocks: [
-      'resumo',           // Visão Geral do paciente
-      'anamnese',         // Anamnese Psicológica (história, queixa, contexto)
-      'evolucao',         // Registro de Sessões
-      'diagnostico',      // Hipóteses Diagnósticas (CID-10/DSM-5)
-      'conduta',          // Plano Terapêutico
-      'instrumentos',     // Instrumentos / Testes Psicológicos
-      'timeline',         // Linha do Tempo das sessões
-      'alertas',          // Alertas clínicos (medicamentos, condições)
-      'historico',        // Histórico de atendimentos
-      'termos_consentimentos', // Termos de consentimento
+      'resumo',                // 1. Visão Geral do paciente
+      'anamnese',              // 2. Anamnese Psicológica
+      'evolucao',              // 3. Registro de Sessões / Evoluções
+      'diagnostico',           // 4. Hipóteses Diagnósticas (CID-10/DSM-5)
+      'conduta',               // 5. Plano / Conduta (Plano Terapêutico + Relatórios)
+      'documentos_clinicos',   // 6. Relatórios / Documentos (Relatório Psicológico, Parecer, Declaração, etc.)
+      'instrumentos',          // 7. Instrumentos / Testes Psicológicos
+      'timeline',              // 8. Linha do Tempo das sessões
+      'historico',             // 9. Histórico de atendimentos
+      'termos_consentimentos', // 10. Termos / Consentimentos
+      'alertas',               // 11. Alertas clínicos
     ],
     icon: 'Brain',
   },
