@@ -457,12 +457,30 @@ export function SessoesPsicologiaBlock({
                   onChange={(e) => setFormData(prev => ({ ...prev, intervencoes_realizadas: e.target.value }))} rows={2} className="resize-none" />
               </div>
 
+              {/* Resposta do Paciente */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2"><MessageSquare className="h-4 w-4 text-primary" /> Resposta do Paciente</Label>
+                <Textarea placeholder="Como o paciente respondeu às intervenções, insights demonstrados..."
+                  value={formData.resposta_paciente}
+                  onChange={(e) => setFormData(prev => ({ ...prev, resposta_paciente: e.target.value }))} rows={2} className="resize-none" />
+              </div>
+
               {/* Observações Clínicas */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2"><Eye className="h-4 w-4 text-green-500" /> Observações Clínicas</Label>
                 <Textarea placeholder="Impressões sobre estado emocional, comportamento, resistências, progressos..."
                   value={formData.observacoes_terapeuta}
                   onChange={(e) => setFormData(prev => ({ ...prev, observacoes_terapeuta: e.target.value }))} rows={3} className="resize-none" />
+              </div>
+
+              <Separator />
+
+              {/* Plano Próxima Sessão */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2"><ClipboardCheck className="h-4 w-4 text-primary" /> Plano para Próxima Sessão</Label>
+                <Textarea placeholder="Objetivos e temas planejados para a próxima sessão..."
+                  value={formData.plano_proxima_sessao}
+                  onChange={(e) => setFormData(prev => ({ ...prev, plano_proxima_sessao: e.target.value }))} rows={2} className="resize-none" />
               </div>
 
               <Separator />
