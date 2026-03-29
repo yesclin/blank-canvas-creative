@@ -40,13 +40,22 @@ import {
   File,
   Trash2,
   ExternalLink,
-  FlaskConical
+  FlaskConical,
+  Tag,
+  Microscope,
+  CheckCircle2
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { 
   InstrumentoPsicologico, 
-  InstrumentoFormData 
+  InstrumentoFormData,
+  CategoriaInstrumento,
+  StatusInstrumento
+} from "@/hooks/prontuario/psicologia/useInstrumentosPsicologicosData";
+import {
+  categoriaInstrumentoLabels,
+  statusInstrumentoLabels,
 } from "@/hooks/prontuario/psicologia/useInstrumentosPsicologicosData";
 
 interface InstrumentosPsicologicosBlockProps {
@@ -61,9 +70,15 @@ interface InstrumentosPsicologicosBlockProps {
 
 const EMPTY_FORM: InstrumentoFormData = {
   nome_instrumento: '',
+  categoria_instrumento: 'psicometrico',
+  objetivo_aplicacao: '',
   data_aplicacao: new Date().toISOString().split('T')[0],
+  contexto_aplicacao: '',
   finalidade: '',
   observacoes: '',
+  resultado_resumido: '',
+  interpretacao_inicial: '',
+  status_instrumento: 'aplicado',
   documento: null,
 };
 
