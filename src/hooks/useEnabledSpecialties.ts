@@ -12,7 +12,6 @@ export interface EnabledSpecialty {
   slug: string;
   description: string | null;
   color: string | null;
-  area: string | null;
   is_active: boolean;
   specialty_type: SpecialtyType;
   clinic_id: string | null;
