@@ -63,7 +63,7 @@ import {
   mapStructuredToLegacy,
   type SecaoAnamnese,
 } from "@/hooks/prontuario/clinica-geral/anamneseTemplates";
-import { useAnamnesisTemplatesV2, useAnamnesisRecords, type AnamnesisTemplateV2, type AnamnesisRecord, type TemplateSection } from "@/hooks/useAnamnesisTemplatesV2";
+import { useAnamnesisTemplatesV2, useAnamnesisRecords, type AnamnesisTemplateV2, type AnamnesisRecord } from "@/hooks/useAnamnesisTemplatesV2";
 import { useInstitutionalPdf } from "@/hooks/useInstitutionalPdf";
 import { FileDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -156,6 +156,28 @@ const IDENTIFICATION_SECTION_IDS = new Set([
   'section_identificacao', 'identificacao', 'identificacao_complementar',
 ]);
 
+const SPECIALTY_SLUG_BY_NAME: Record<string, string> = {
+  'clínica geral': 'geral',
+  'clinica geral': 'geral',
+  'psicologia': 'psicologia',
+  'nutrição': 'nutricao',
+  'nutricao': 'nutricao',
+  'fisioterapia': 'fisioterapia',
+  'pilates': 'pilates',
+  'estética / harmonização facial': 'estetica',
+  'estetica / harmonizacao facial': 'estetica',
+  'estética': 'estetica',
+  'estetica': 'estetica',
+  'odontologia': 'odontologia',
+  'dermatologia': 'dermatologia',
+  'pediatria': 'pediatria',
+};
+
+function resolveSpecialtySlug(name?: string | null) {
+  const normalized = name?.trim().toLowerCase();
+  return (normalized && SPECIALTY_SLUG_BY_NAME[normalized]) || 'geral';
+}
+
 function v2TemplateToUnified(t: AnamnesisTemplateV2): UnifiedTemplate {
   return {
     id: t.id,
@@ -228,7 +250,7 @@ export function AnamneseBlock({
   const editingInitialData = useRef<string>('{}');
 
   // ─── Fetch clinic templates from DB (V2) ──────────────────────────
-  const { templates: v2Templates, isLoading: loadingTemplates, createTemplate } = useAnamnesisTemplatesV2({
+  const { templates: v2Templates, isLoading: loadingTemplates } = useAnamnesisTemplatesV2({
     specialtyId: specialtyId,
     activeOnly: true
   });
@@ -413,155 +435,34 @@ export function AnamneseBlock({
             .update({ is_active: true, is_default: true } as any)
             .eq('id', existing.id);
         }
+
+        if (!existing.current_version_id) {
+          const { error: provisionError } = await supabase.rpc('provision_specialty', {
+            _clinic_id: clinic.id,
+            _specialty_slug: resolveSpecialtySlug(specialtyName),
+          });
+
+          if (provisionError) throw provisionError;
+        }
+
         window.location.reload();
         return;
       }
+      const { error: provisionError } = await supabase.rpc('provision_specialty', {
+        _clinic_id: clinic.id,
+        _specialty_slug: resolveSpecialtySlug(specialtyName),
+      });
 
-      const defaultStructure: TemplateSection[] = [
-        {
-          id: 'section_queixa_principal', type: 'section', title: 'Queixa Principal',
-          fields: [
-            { id: 'f_queixa_principal', type: 'textarea', label: 'Queixa principal', required: true, placeholder: 'Descreva a queixa principal do paciente nas palavras dele...' },
-          ],
-        },
-        {
-          id: 'section_hda', type: 'section', title: 'História da Doença Atual (HDA)',
-          fields: [
-            { id: 'f_hda_inicio', type: 'text', label: 'Início dos sintomas', placeholder: 'Ex: Há 3 dias, após esforço físico' },
-            { id: 'f_hda_evolucao', type: 'textarea', label: 'Evolução', placeholder: 'Progressiva, estável, intermitente...' },
-            { id: 'f_hda_localizacao_irradiacao', type: 'text', label: 'Localização / Irradiação', placeholder: 'Ex: Precordial, irradiando para braço esquerdo' },
-            { id: 'f_hda_intensidade', type: 'select', label: 'Intensidade (0-10)', options: ['0','1','2','3','4','5','6','7','8','9','10'] },
-            { id: 'f_hda_sintomas_associados', type: 'textarea', label: 'Sintomas associados', placeholder: 'Náusea, febre, dispneia, sudorese...' },
-            { id: 'f_hda_piora_melhora', type: 'textarea', label: 'Fatores de piora / melhora', placeholder: 'O que piora e o que alivia os sintomas...' },
-            { id: 'f_hda_tratamentos_previos', type: 'textarea', label: 'Tratamentos prévios', placeholder: 'Medicamentos, procedimentos já realizados...' },
-          ],
-        },
-        {
-          id: 'section_revisao_sistemas', type: 'section', title: 'Revisão de Sistemas',
-          fields: [
-            { id: 'f_rs_febre', type: 'select', label: 'Febre', options: ['Não','Sim'] },
-            { id: 'f_rs_febre_obs', type: 'text', label: 'Febre — observação', placeholder: 'Detalhes...' },
-            { id: 'f_rs_perda_peso', type: 'select', label: 'Perda de peso', options: ['Não','Sim'] },
-            { id: 'f_rs_perda_peso_obs', type: 'text', label: 'Perda de peso — observação', placeholder: 'Quanto, em quanto tempo...' },
-            { id: 'f_rs_dispneia', type: 'select', label: 'Dispneia', options: ['Não','Sim'] },
-            { id: 'f_rs_dispneia_obs', type: 'text', label: 'Dispneia — observação', placeholder: 'Aos esforços, em repouso...' },
-            { id: 'f_rs_dor_toracica', type: 'select', label: 'Dor torácica', options: ['Não','Sim'] },
-            { id: 'f_rs_dor_toracica_obs', type: 'text', label: 'Dor torácica — observação', placeholder: 'Tipo, duração...' },
-            { id: 'f_rs_nauseas_vomitos', type: 'select', label: 'Náuseas / Vômitos', options: ['Não','Sim'] },
-            { id: 'f_rs_nauseas_obs', type: 'text', label: 'Náuseas — observação', placeholder: 'Frequência, gatilhos...' },
-            { id: 'f_rs_intestinal', type: 'select', label: 'Alterações intestinais', options: ['Não','Sim'] },
-            { id: 'f_rs_intestinal_obs', type: 'text', label: 'Intestinal — observação', placeholder: 'Constipação, diarreia...' },
-            { id: 'f_rs_urinario', type: 'select', label: 'Alterações urinárias', options: ['Não','Sim'] },
-            { id: 'f_rs_urinario_obs', type: 'text', label: 'Urinário — observação', placeholder: 'Disúria, polaciúria...' },
-            { id: 'f_rs_cefaleia_tontura', type: 'select', label: 'Cefaleia / Tontura', options: ['Não','Sim'] },
-            { id: 'f_rs_cefaleia_obs', type: 'text', label: 'Cefaleia — observação', placeholder: 'Tipo, frequência...' },
-            { id: 'f_rs_edema', type: 'select', label: 'Edema', options: ['Não','Sim'] },
-            { id: 'f_rs_edema_obs', type: 'text', label: 'Edema — observação', placeholder: 'Localização, intensidade...' },
-            { id: 'f_rs_outros', type: 'textarea', label: 'Outros achados na revisão', placeholder: 'Outros sintomas relevantes...' },
-          ],
-        },
-        {
-          id: 'section_antecedentes_pessoais', type: 'section', title: 'Antecedentes Pessoais',
-          fields: [
-            { id: 'f_ap_doencas_preexistentes', type: 'textarea', label: 'Doenças pré-existentes', placeholder: 'HAS, DM, Asma, Cardiopatia...' },
-            { id: 'f_ap_internacoes_previas', type: 'textarea', label: 'Internações prévias', placeholder: 'Motivo, data, duração...' },
-            { id: 'f_ap_cirurgias_previas', type: 'textarea', label: 'Cirurgias prévias', placeholder: 'Tipo, ano, complicações...' },
-            { id: 'f_ap_alergias', type: 'textarea', label: 'Alergias', placeholder: 'Medicamentos, alimentos, contrastes, látex...' },
-            { id: 'f_ap_imunizacoes', type: 'text', label: 'Imunizações', placeholder: 'Em dia, pendências...' },
-            { id: 'f_ap_gineco_obstetrico', type: 'textarea', label: 'Ginecológico / Obstétrico (se aplicável)', placeholder: 'G_P_A_, DUM, contraceptivos...' },
-          ],
-        },
-        {
-          id: 'section_medicamentos', type: 'section', title: 'Medicamentos / Tratamentos',
-          fields: [
-            { id: 'f_med_em_uso', type: 'textarea', label: 'Medicamentos em uso', placeholder: 'Nome, dose, posologia...' },
-            { id: 'f_med_aderencia', type: 'select', label: 'Aderência ao tratamento', options: ['Boa','Irregular','Baixa'] },
-            { id: 'f_med_aderencia_obs', type: 'text', label: 'Observação sobre aderência', placeholder: 'Detalhes...' },
-            { id: 'f_med_suplementos', type: 'textarea', label: 'Suplementos / Fitoterápicos', placeholder: 'Suplementos em uso...' },
-          ],
-        },
-        {
-          id: 'section_antecedentes_familiares', type: 'section', title: 'Antecedentes Familiares',
-          fields: [
-            { id: 'f_af_historico', type: 'textarea', label: 'Histórico familiar', placeholder: 'Pai IAM aos 55a, mãe DM2, irmão HAS...' },
-          ],
-        },
-        {
-          id: 'section_habitos_vida', type: 'section', title: 'Hábitos de Vida',
-          fields: [
-            { id: 'f_hv_tabagismo', type: 'select', label: 'Tabagismo', options: ['Nunca fumou','Ex-fumante','Fumante ativo'] },
-            { id: 'f_hv_tabagismo_macos', type: 'text', label: 'Maços/ano (se aplicável)', placeholder: 'Ex: 20 maços/ano' },
-            { id: 'f_hv_etilismo', type: 'select', label: 'Etilismo', options: ['Não','Ocasional','Frequente'] },
-            { id: 'f_hv_etilismo_qtd', type: 'text', label: 'Quantidade (se aplicável)', placeholder: 'Ex: 2 cervejas/semana' },
-            { id: 'f_hv_drogas', type: 'select', label: 'Uso de drogas ilícitas', options: ['Não','Sim'] },
-            { id: 'f_hv_drogas_quais', type: 'text', label: 'Quais drogas (se aplicável)', placeholder: 'Especificar...' },
-            { id: 'f_hv_atividade_fisica', type: 'text', label: 'Atividade física', placeholder: 'Ex: Caminhada 3x/semana, 30min' },
-            { id: 'f_hv_alimentacao', type: 'textarea', label: 'Padrão alimentar', placeholder: 'Descreva resumidamente...' },
-            { id: 'f_hv_sono', type: 'text', label: 'Sono', placeholder: 'Ex: 7h/noite, fragmentado' },
-            { id: 'f_hv_estresse_trabalho', type: 'textarea', label: 'Estresse / Trabalho', placeholder: 'Nível de estresse, carga de trabalho...' },
-          ],
-        },
-        {
-          id: 'section_exame_fisico', type: 'section', title: 'Exame Físico',
-          fields: [
-            { id: 'f_ef_estado_geral', type: 'text', label: 'Estado geral', placeholder: 'BEG, lúcido, orientado, corado, hidratado...' },
-            { id: 'f_ef_pa', type: 'text', label: 'PA (mmHg)', placeholder: 'Ex: 120x80' },
-            { id: 'f_ef_fc', type: 'text', label: 'FC (bpm)', placeholder: 'Ex: 72' },
-            { id: 'f_ef_fr', type: 'text', label: 'FR (irpm)', placeholder: 'Ex: 16' },
-            { id: 'f_ef_temp', type: 'text', label: 'Temperatura (°C)', placeholder: 'Ex: 36.5' },
-            { id: 'f_ef_spo2', type: 'text', label: 'SpO₂ (%)', placeholder: 'Ex: 98' },
-            { id: 'f_ef_cabeca_pescoco', type: 'textarea', label: 'Cabeça e Pescoço', placeholder: 'Oroscopia, otoscopia, linfonodos...' },
-            { id: 'f_ef_cardio', type: 'textarea', label: 'Cardiovascular', placeholder: 'RCR 2T, BNF, sem sopros...' },
-            { id: 'f_ef_respiratorio', type: 'textarea', label: 'Respiratório', placeholder: 'MV presente bilateralmente, sem RA...' },
-            { id: 'f_ef_abdome', type: 'textarea', label: 'Abdome', placeholder: 'Plano, flácido, indolor à palpação, RHA+...' },
-            { id: 'f_ef_neurologico', type: 'textarea', label: 'Neurológico', placeholder: 'Glasgow 15, pupilas isocóricas, sem déficits...' },
-            { id: 'f_ef_pele_extremidades', type: 'textarea', label: 'Pele e Extremidades', placeholder: 'Sem lesões, pulsos presentes, sem edema...' },
-          ],
-        },
-        {
-          id: 'section_hipoteses', type: 'section', title: 'Hipóteses Diagnósticas',
-          fields: [
-            { id: 'f_hd_principais', type: 'textarea', label: 'Hipóteses principais', placeholder: 'CID-10 e descrição...' },
-            { id: 'f_hd_diferenciais', type: 'textarea', label: 'Diagnósticos diferenciais', placeholder: 'Liste as hipóteses diferenciais...' },
-          ],
-        },
-        {
-          id: 'section_conduta', type: 'section', title: 'Plano / Conduta',
-          fields: [
-            { id: 'f_pc_exames', type: 'textarea', label: 'Exames solicitados', placeholder: 'Hemograma, glicemia, ECG...' },
-            { id: 'f_pc_prescricao_orientacoes', type: 'textarea', label: 'Prescrição e Orientações', placeholder: 'Prescrições, orientações gerais...' },
-            { id: 'f_pc_encaminhamentos', type: 'textarea', label: 'Encaminhamentos', placeholder: 'Especialidades, exames de imagem...' },
-            { id: 'f_pc_retorno', type: 'text', label: 'Retorno', placeholder: 'Ex: em 15 dias, em 1 mês' },
-            { id: 'f_pc_sinais_alarme', type: 'textarea', label: 'Sinais de alarme', placeholder: 'Orientar o paciente a retornar se...' },
-          ],
-        },
-      ];
+      if (provisionError) throw provisionError;
 
-      const name = `Anamnese Padrão - ${specialtyName || 'Geral'} (YesClin)`;
-
-      try {
-        await createTemplate({
-          name,
-          description: 'Modelo padrão criado automaticamente pelo YesClin',
-          specialty_id: specialtyId,
-          icon: 'Stethoscope',
-          is_default: true,
-          structure: defaultStructure,
-        });
-      } catch (createErr: any) {
-        if (createErr?.code === '23505' || createErr?.message?.includes('duplicate')) {
-          window.location.reload();
-          return;
-        }
-        throw createErr;
-      }
+      window.location.reload();
     } catch (err: any) {
       console.error('Erro ao criar modelo padrão:', err);
       toast.error(`Erro ao criar modelo: ${err?.message || 'Erro desconhecido'}`);
     } finally {
       setCreatingDefault(false);
     }
-  }, [specialtyId, specialtyName, clinic?.id, createTemplate, creatingDefault]);
+  }, [specialtyId, specialtyName, clinic?.id, creatingDefault]);
 
   // ─── Auto-provision default template if none exist ──────────────
   const autoProvisionTriggered = useRef(false);
