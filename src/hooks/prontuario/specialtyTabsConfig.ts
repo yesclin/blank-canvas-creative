@@ -102,6 +102,19 @@ export function isTabVisibleForSpecialty(tabKey: string, specialtyKey: Specialty
  * Specialty-specific label overrides for clinical blocks
  */
 const SPECIALTY_BLOCK_LABEL_OVERRIDES: Partial<Record<SpecialtyKey, Partial<Record<ClinicalBlockKey, string>>>> = {
+  psicologia: {
+    resumo: 'Visão Geral',
+    anamnese: 'Anamnese Psicológica',
+    evolucao: 'Sessões / Evoluções',
+    diagnostico: 'Hipóteses Diagnósticas',
+    conduta: 'Plano / Conduta',
+    documentos_clinicos: 'Relatórios / Documentos',
+    instrumentos: 'Instrumentos / Testes',
+    timeline: 'Linha do Tempo',
+    historico: 'Histórico',
+    termos_consentimentos: 'Termos / Consentimentos',
+    alertas: 'Alertas Clínicos',
+  },
   nutricao: {
     resumo: 'Visão Geral',
     anamnese: 'Anamnese Nutricional',
