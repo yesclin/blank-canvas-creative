@@ -32,6 +32,27 @@ import {
   INTERVENCOES_OPTIONS, ENCAMINHAMENTOS_OPTIONS, TECNICAS_OPTIONS,
   tipoAtendimentoLabels, modalidadeLabels, riscoAlertaLabels,
 } from "@/hooks/prontuario/psicologia/useSessoesPsicologiaData";
+import { EvolucaoEmocionalChart } from "./EvolucaoEmocionalChart";
+import { EscalaPHQ9 } from "./EscalaPHQ9";
+import { EscalaGAD7 } from "./EscalaGAD7";
+import { PlanoAcaoCriseModal, PlanoAcaoCriseBadge } from "./PlanoAcaoCriseModal";
+import { useClinicData } from "@/hooks/useClinicData";
+
+interface SessoesPsicologiaBlockProps {
+  sessoes: SessaoPsicologia[];
+  loading?: boolean;
+  saving?: boolean;
+  canEdit?: boolean;
+  currentProfessionalId?: string;
+  currentProfessionalName?: string;
+  onSave: (data: SessaoFormData & { assinar: boolean }) => Promise<string | null>;
+  onSign?: (sessaoId: string) => Promise<void>;
+}
+
+const statusConfig: Record<StatusSessao, { label: string; color: string }> = {
+  rascunho: { label: 'Rascunho', color: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
+  assinada: { label: 'Assinada', color: 'bg-green-100 text-green-700 border-green-300' },
+};
 
 const EMOCOES_OPTIONS = [
   'Ansiedade', 'Tristeza', 'Raiva', 'Culpa', 'Medo', 'Alegria', 'Frustração', 'Apatia',
