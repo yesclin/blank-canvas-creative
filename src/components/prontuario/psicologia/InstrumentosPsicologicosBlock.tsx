@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -40,13 +41,22 @@ import {
   File,
   Trash2,
   ExternalLink,
-  FlaskConical
+  FlaskConical,
+  Tag,
+  Microscope,
+  CheckCircle2
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { 
   InstrumentoPsicologico, 
-  InstrumentoFormData 
+  InstrumentoFormData,
+  CategoriaInstrumento,
+  StatusInstrumento
+} from "@/hooks/prontuario/psicologia/useInstrumentosPsicologicosData";
+import {
+  categoriaInstrumentoLabels,
+  statusInstrumentoLabels,
 } from "@/hooks/prontuario/psicologia/useInstrumentosPsicologicosData";
 
 interface InstrumentosPsicologicosBlockProps {
@@ -61,9 +71,15 @@ interface InstrumentosPsicologicosBlockProps {
 
 const EMPTY_FORM: InstrumentoFormData = {
   nome_instrumento: '',
+  categoria_instrumento: 'psicometrico',
+  objetivo_aplicacao: '',
   data_aplicacao: new Date().toISOString().split('T')[0],
+  contexto_aplicacao: '',
   finalidade: '',
   observacoes: '',
+  resultado_resumido: '',
+  interpretacao_inicial: '',
+  status_instrumento: 'aplicado',
   documento: null,
 };
 
@@ -199,12 +215,20 @@ export function InstrumentosPsicologicosBlock({
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <h4 className="font-medium">{instrumento.nome_instrumento}</h4>
+                      <Badge variant="outline" className="text-xs">
+                        <Tag className="h-3 w-3 mr-1" />
+                        {categoriaInstrumentoLabels[instrumento.categoria_instrumento] || instrumento.categoria_instrumento}
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        {statusInstrumentoLabels[instrumento.status_instrumento] || instrumento.status_instrumento}
+                      </Badge>
                       {instrumento.documento_url && (
                         <Badge variant="outline" className="text-xs">
                           <File className="h-3 w-3 mr-1" />
-                          Documento
+                          Anexo
                         </Badge>
                       )}
                     </div>
@@ -220,9 +244,14 @@ export function InstrumentosPsicologicosBlock({
                       </div>
                     </div>
                     
-                    {instrumento.finalidade && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        <span className="font-medium">Finalidade:</span> {instrumento.finalidade}
+                    {instrumento.objetivo_aplicacao && (
+                      <p className="text-sm text-muted-foreground line-clamp-1 mb-1">
+                        <span className="font-medium">Objetivo:</span> {instrumento.objetivo_aplicacao}
+                      </p>
+                    )}
+                    {instrumento.resultado_resumido && (
+                      <p className="text-sm text-muted-foreground line-clamp-1">
+                        <span className="font-medium">Resultado:</span> {instrumento.resultado_resumido}
                       </p>
                     )}
                   </div>
@@ -253,60 +282,132 @@ export function InstrumentosPsicologicosBlock({
             </div>
           )}
 
+          <ScrollArea className="max-h-[60vh] pr-4">
           <div className="space-y-4">
-            {/* Nome do Instrumento */}
+            {/* Nome e Categoria */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-primary" />
+                  Nome do Instrumento / Teste <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  placeholder="Ex: WISC-IV, BDI-II, HTP, Palográfico..."
+                  value={formData.nome_instrumento}
+                  onChange={(e) => setFormData(prev => ({ ...prev, nome_instrumento: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Tag className="h-4 w-4 text-primary" />
+                  Categoria
+                </Label>
+                <Select value={formData.categoria_instrumento} onValueChange={(v) => setFormData(prev => ({ ...prev, categoria_instrumento: v as CategoriaInstrumento }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(categoriaInstrumentoLabels).map(([k, v]) => (
+                      <SelectItem key={k} value={k}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Data e Status */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-primary" />
+                  Data da Aplicação
+                </Label>
+                <Input
+                  type="date"
+                  value={formData.data_aplicacao}
+                  onChange={(e) => setFormData(prev => ({ ...prev, data_aplicacao: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                  Status
+                </Label>
+                <Select value={formData.status_instrumento} onValueChange={(v) => setFormData(prev => ({ ...prev, status_instrumento: v as StatusInstrumento }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(statusInstrumentoLabels).map(([k, v]) => (
+                      <SelectItem key={k} value={k}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Objetivo e Contexto */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-primary" />
-                Nome do Instrumento / Teste <span className="text-red-500">*</span>
+                <Target className="h-4 w-4 text-primary" />
+                Objetivo da Aplicação
               </Label>
-              <Input
-                placeholder="Ex: WISC-IV, BDI-II, HTP, Palográfico..."
-                value={formData.nome_instrumento}
-                onChange={(e) => setFormData(prev => ({ ...prev, nome_instrumento: e.target.value }))}
+              <Textarea
+                placeholder="Finalidade clínica da aplicação do instrumento..."
+                value={formData.objetivo_aplicacao}
+                onChange={(e) => setFormData(prev => ({ ...prev, objetivo_aplicacao: e.target.value }))}
+                rows={2}
               />
             </div>
 
-            {/* Data da Aplicação */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-blue-500" />
-                Data da Aplicação
+                <Microscope className="h-4 w-4 text-primary" />
+                Contexto da Aplicação
               </Label>
-              <Input
-                type="date"
-                value={formData.data_aplicacao}
-                onChange={(e) => setFormData(prev => ({ ...prev, data_aplicacao: e.target.value }))}
+              <Textarea
+                placeholder="Contexto da avaliação: setting, condições, comportamento do paciente durante a aplicação..."
+                value={formData.contexto_aplicacao}
+                onChange={(e) => setFormData(prev => ({ ...prev, contexto_aplicacao: e.target.value }))}
+                rows={2}
               />
             </div>
 
             <Separator />
 
-            {/* Finalidade */}
+            {/* Resultado e Interpretação */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
-                <Target className="h-4 w-4 text-green-500" />
-                Finalidade
+                <FlaskConical className="h-4 w-4 text-primary" />
+                Resultado Resumido
               </Label>
               <Textarea
-                placeholder="Objetivo da aplicação do instrumento..."
-                value={formData.finalidade}
-                onChange={(e) => setFormData(prev => ({ ...prev, finalidade: e.target.value }))}
+                placeholder="Escore, classificação, principais achados..."
+                value={formData.resultado_resumido}
+                onChange={(e) => setFormData(prev => ({ ...prev, resultado_resumido: e.target.value }))}
                 rows={2}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-primary" />
+                Interpretação Inicial
+              </Label>
+              <Textarea
+                placeholder="Interpretação clínica inicial dos resultados..."
+                value={formData.interpretacao_inicial}
+                onChange={(e) => setFormData(prev => ({ ...prev, interpretacao_inicial: e.target.value }))}
+                rows={3}
               />
             </div>
 
             {/* Observações */}
             <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <MessageSquare className="h-4 w-4 text-purple-500" />
-                Observações do Profissional
-              </Label>
+              <Label>Observações Gerais</Label>
               <Textarea
-                placeholder="Observações sobre a aplicação, comportamento do paciente, condições da avaliação..."
+                placeholder="Observações adicionais..."
                 value={formData.observacoes}
                 onChange={(e) => setFormData(prev => ({ ...prev, observacoes: e.target.value }))}
-                rows={3}
+                rows={2}
               />
             </div>
 
@@ -315,7 +416,7 @@ export function InstrumentosPsicologicosBlock({
             {/* Upload de Documento */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
-                <Upload className="h-4 w-4 text-orange-500" />
+                <Upload className="h-4 w-4 text-primary" />
                 Documento Relacionado
               </Label>
               <p className="text-xs text-muted-foreground">
@@ -351,6 +452,7 @@ export function InstrumentosPsicologicosBlock({
               )}
             </div>
           </div>
+          </ScrollArea>
 
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={handleCloseForm} disabled={saving}>
@@ -379,82 +481,28 @@ export function InstrumentosPsicologicosBlock({
           </DialogHeader>
 
           {selectedInstrumento && (
-            <div className="space-y-4">
-              {/* Metadata */}
-              <div className="flex items-center gap-4 text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  <span>{format(parseISO(selectedInstrumento.data_aplicacao), "dd/MM/yyyy", { locale: ptBR })}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <User className="h-4 w-4" />
-                  <span>{selectedInstrumento.profissional_nome}</span>
-                </div>
-              </div>
-
-              {/* Finalidade */}
-              {selectedInstrumento.finalidade && (
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground">Finalidade</Label>
-                  <p className="text-sm whitespace-pre-wrap bg-muted/50 p-3 rounded-lg">
-                    {selectedInstrumento.finalidade}
-                  </p>
-                </div>
-              )}
-
-              {/* Observações */}
-              {selectedInstrumento.observacoes && (
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground">Observações</Label>
-                  <p className="text-sm whitespace-pre-wrap bg-muted/50 p-3 rounded-lg">
-                    {selectedInstrumento.observacoes}
-                  </p>
-                </div>
-              )}
-
-              {/* Documento */}
-              {selectedInstrumento.documento_url && (
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground">Documento Anexo</Label>
-                  <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-                    <File className="h-4 w-4 text-primary" />
-                    <span className="text-sm flex-1">{selectedInstrumento.documento_nome || 'Documento'}</span>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      asChild
-                    >
-                      <a 
-                        href={selectedInstrumento.documento_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                      >
-                        <ExternalLink className="h-4 w-4 mr-1" />
-                        Abrir
-                      </a>
-                    </Button>
+            <>
+              <ScrollArea className="max-h-[60vh]">
+                <div className="space-y-4 pr-4">
+                  <div className="flex items-center gap-4 flex-wrap text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+                    <div className="flex items-center gap-1"><Calendar className="h-4 w-4" /><span>{format(parseISO(selectedInstrumento.data_aplicacao), "dd/MM/yyyy", { locale: ptBR })}</span></div>
+                    <div className="flex items-center gap-1"><User className="h-4 w-4" /><span>{selectedInstrumento.profissional_nome}</span></div>
+                    <Badge variant="outline" className="text-xs">{categoriaInstrumentoLabels[selectedInstrumento.categoria_instrumento]}</Badge>
+                    <Badge variant="secondary" className="text-xs">{statusInstrumentoLabels[selectedInstrumento.status_instrumento]}</Badge>
                   </div>
+                  {selectedInstrumento.objetivo_aplicacao && (<div className="space-y-1"><Label className="text-muted-foreground">Objetivo da Aplicação</Label><p className="text-sm whitespace-pre-wrap bg-muted/50 p-3 rounded-lg">{selectedInstrumento.objetivo_aplicacao}</p></div>)}
+                  {selectedInstrumento.contexto_aplicacao && (<div className="space-y-1"><Label className="text-muted-foreground">Contexto da Aplicação</Label><p className="text-sm whitespace-pre-wrap bg-muted/50 p-3 rounded-lg">{selectedInstrumento.contexto_aplicacao}</p></div>)}
+                  {selectedInstrumento.resultado_resumido && (<div className="space-y-1"><Label className="text-muted-foreground">Resultado Resumido</Label><p className="text-sm whitespace-pre-wrap bg-muted/50 p-3 rounded-lg font-medium">{selectedInstrumento.resultado_resumido}</p></div>)}
+                  {selectedInstrumento.interpretacao_inicial && (<div className="space-y-1"><Label className="text-muted-foreground">Interpretação Inicial</Label><p className="text-sm whitespace-pre-wrap bg-muted/50 p-3 rounded-lg">{selectedInstrumento.interpretacao_inicial}</p></div>)}
+                  {selectedInstrumento.observacoes && (<div className="space-y-1"><Label className="text-muted-foreground">Observações</Label><p className="text-sm whitespace-pre-wrap bg-muted/50 p-3 rounded-lg">{selectedInstrumento.observacoes}</p></div>)}
+                  {selectedInstrumento.documento_url && (<div className="space-y-1"><Label className="text-muted-foreground">Documento Anexo</Label><div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg"><File className="h-4 w-4 text-primary" /><span className="text-sm flex-1">{selectedInstrumento.documento_nome || 'Documento'}</span><Button variant="outline" size="sm" asChild><a href={selectedInstrumento.documento_url} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4 mr-1" /> Abrir</a></Button></div></div>)}
                 </div>
-              )}
-
+              </ScrollArea>
               <DialogFooter className="gap-2">
-                {canEdit && onDelete && (
-                  <Button 
-                    variant="destructive" 
-                    onClick={() => {
-                      setDeleteId(selectedInstrumento.id);
-                      setSelectedInstrumento(null);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    Excluir
-                  </Button>
-                )}
-                <Button variant="outline" onClick={() => setSelectedInstrumento(null)}>
-                  Fechar
-                </Button>
+                {canEdit && onDelete && (<Button variant="destructive" onClick={() => { setDeleteId(selectedInstrumento.id); setSelectedInstrumento(null); }}><Trash2 className="h-4 w-4 mr-1" /> Excluir</Button>)}
+                <Button variant="outline" onClick={() => setSelectedInstrumento(null)}>Fechar</Button>
               </DialogFooter>
-            </div>
+            </>
           )}
         </DialogContent>
       </Dialog>

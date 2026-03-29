@@ -3,17 +3,41 @@ import { supabase } from '@/integrations/supabase/client';
 import { useClinicData } from '@/hooks/useClinicData';
 import { toast } from 'sonner';
 
-/**
- * Estrutura de dados do Instrumento Psicológico
- */
+export type CategoriaInstrumento = 'projetivo' | 'psicometrico' | 'neuropsicologico' | 'comportamental' | 'personalidade' | 'inteligencia' | 'outro';
+export type StatusInstrumento = 'aplicado' | 'em_correcao' | 'corrigido' | 'laudado' | 'cancelado';
+
+export const categoriaInstrumentoLabels: Record<CategoriaInstrumento, string> = {
+  projetivo: 'Projetivo',
+  psicometrico: 'Psicométrico',
+  neuropsicologico: 'Neuropsicológico',
+  comportamental: 'Comportamental',
+  personalidade: 'Personalidade',
+  inteligencia: 'Inteligência',
+  outro: 'Outro',
+};
+
+export const statusInstrumentoLabels: Record<StatusInstrumento, string> = {
+  aplicado: 'Aplicado',
+  em_correcao: 'Em Correção',
+  corrigido: 'Corrigido',
+  laudado: 'Laudado',
+  cancelado: 'Cancelado',
+};
+
 export interface InstrumentoPsicologico {
   id: string;
   patient_id: string;
   clinic_id: string;
   nome_instrumento: string;
+  categoria_instrumento: CategoriaInstrumento;
+  objetivo_aplicacao: string;
   data_aplicacao: string;
+  contexto_aplicacao: string;
   finalidade: string;
   observacoes: string;
+  resultado_resumido: string;
+  interpretacao_inicial: string;
+  status_instrumento: StatusInstrumento;
   documento_url: string | null;
   documento_nome: string | null;
   profissional_id: string;
@@ -23,9 +47,15 @@ export interface InstrumentoPsicologico {
 
 export interface InstrumentoFormData {
   nome_instrumento: string;
+  categoria_instrumento: CategoriaInstrumento;
+  objetivo_aplicacao: string;
   data_aplicacao: string;
+  contexto_aplicacao: string;
   finalidade: string;
   observacoes: string;
+  resultado_resumido: string;
+  interpretacao_inicial: string;
+  status_instrumento: StatusInstrumento;
   documento?: File | null;
 }
 
@@ -39,14 +69,6 @@ interface UseInstrumentosPsicologicosDataResult {
   refetch: () => Promise<void>;
 }
 
-/**
- * Hook para gerenciar Instrumentos / Testes Psicológicos
- * 
- * Regras:
- * - Registro de aplicação de testes psicológicos
- * - Suporte a upload de documentos relacionados
- * - Não realiza correção automática de testes
- */
 export function useInstrumentosPsicologicosData(
   patientId: string | null,
   currentProfessionalId?: string
@@ -71,7 +93,7 @@ export function useInstrumentosPsicologicosData(
         .from('instrumentos_psicologicos')
         .select(`
           *,
-          professionals:profissional_id (
+          professionals:professional_id (
             id,
             profiles:user_id (full_name)
           )
@@ -82,17 +104,23 @@ export function useInstrumentosPsicologicosData(
 
       if (fetchError) throw fetchError;
 
-      const mapped: InstrumentoPsicologico[] = (data || []).map(item => ({
+      const mapped: InstrumentoPsicologico[] = (data || []).map((item: any) => ({
         id: item.id,
         patient_id: item.patient_id,
         clinic_id: item.clinic_id,
-        nome_instrumento: item.nome_instrumento,
-        data_aplicacao: item.data_aplicacao,
+        nome_instrumento: item.nome_instrumento || item.nome || '',
+        categoria_instrumento: item.categoria_instrumento || item.tipo || 'outro',
+        objetivo_aplicacao: item.objetivo_aplicacao || '',
+        data_aplicacao: item.data_aplicacao || item.created_at,
+        contexto_aplicacao: item.contexto_aplicacao || '',
         finalidade: item.finalidade || '',
         observacoes: item.observacoes || '',
+        resultado_resumido: item.resultado_resumido || '',
+        interpretacao_inicial: item.interpretacao_inicial || '',
+        status_instrumento: item.status_instrumento || 'aplicado',
         documento_url: item.documento_url,
         documento_nome: item.documento_nome,
-        profissional_id: item.profissional_id,
+        profissional_id: item.profissional_id || item.professional_id,
         profissional_nome: (item.professionals as any)?.profiles?.full_name || 'Profissional',
         created_at: item.created_at,
       }));
@@ -144,7 +172,6 @@ export function useInstrumentosPsicologicosData(
       let documentoUrl: string | null = null;
       let documentoNome: string | null = null;
 
-      // Upload document if provided
       if (data.documento) {
         const uploadResult = await uploadDocumento(data.documento);
         if (uploadResult) {
@@ -153,14 +180,23 @@ export function useInstrumentosPsicologicosData(
         }
       }
 
-      const insertData = {
+      const insertData: any = {
         patient_id: patientId,
         clinic_id: clinic.id,
+        professional_id: currentProfessionalId,
         profissional_id: currentProfessionalId,
+        nome: data.nome_instrumento,
         nome_instrumento: data.nome_instrumento,
+        categoria_instrumento: data.categoria_instrumento,
+        tipo: data.categoria_instrumento,
+        objetivo_aplicacao: data.objetivo_aplicacao,
         data_aplicacao: data.data_aplicacao,
+        contexto_aplicacao: data.contexto_aplicacao,
         finalidade: data.finalidade,
         observacoes: data.observacoes,
+        resultado_resumido: data.resultado_resumido,
+        interpretacao_inicial: data.interpretacao_inicial,
+        status_instrumento: data.status_instrumento,
         documento_url: documentoUrl,
         documento_nome: documentoNome,
       };
@@ -188,10 +224,8 @@ export function useInstrumentosPsicologicosData(
     setError(null);
 
     try {
-      // Find the instrumento to get document URL
       const instrumento = instrumentos.find(i => i.id === id);
       
-      // Delete document from storage if exists
       if (instrumento?.documento_url && clinic?.id) {
         const path = instrumento.documento_url.split('/').slice(-3).join('/');
         await supabase.storage

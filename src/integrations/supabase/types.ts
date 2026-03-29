@@ -2258,39 +2258,75 @@ export type Database = {
       }
       instrumentos_psicologicos: {
         Row: {
+          categoria_instrumento: string | null
           clinic_id: string
+          contexto_aplicacao: string | null
           created_at: string
           data_aplicacao: string | null
+          documento_nome: string | null
+          documento_url: string | null
+          finalidade: string | null
           id: string
+          interpretacao_inicial: string | null
           nome: string
+          nome_instrumento: string | null
+          objetivo_aplicacao: string | null
           observacoes: string | null
           patient_id: string
           professional_id: string | null
+          profissional_id: string | null
+          profissional_nome: string | null
           resultado: Json | null
+          resultado_resumido: string | null
+          status_instrumento: string | null
           tipo: string | null
         }
         Insert: {
+          categoria_instrumento?: string | null
           clinic_id: string
+          contexto_aplicacao?: string | null
           created_at?: string
           data_aplicacao?: string | null
+          documento_nome?: string | null
+          documento_url?: string | null
+          finalidade?: string | null
           id?: string
+          interpretacao_inicial?: string | null
           nome: string
+          nome_instrumento?: string | null
+          objetivo_aplicacao?: string | null
           observacoes?: string | null
           patient_id: string
           professional_id?: string | null
+          profissional_id?: string | null
+          profissional_nome?: string | null
           resultado?: Json | null
+          resultado_resumido?: string | null
+          status_instrumento?: string | null
           tipo?: string | null
         }
         Update: {
+          categoria_instrumento?: string | null
           clinic_id?: string
+          contexto_aplicacao?: string | null
           created_at?: string
           data_aplicacao?: string | null
+          documento_nome?: string | null
+          documento_url?: string | null
+          finalidade?: string | null
           id?: string
+          interpretacao_inicial?: string | null
           nome?: string
+          nome_instrumento?: string | null
+          objetivo_aplicacao?: string | null
           observacoes?: string | null
           patient_id?: string
           professional_id?: string | null
+          profissional_id?: string | null
+          profissional_nome?: string | null
           resultado?: Json | null
+          resultado_resumido?: string | null
+          status_instrumento?: string | null
           tipo?: string | null
         }
         Relationships: [
@@ -2311,6 +2347,13 @@ export type Database = {
           {
             foreignKeyName: "instrumentos_psicologicos_professional_id_fkey"
             columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instrumentos_psicologicos_profissional_id_fkey"
+            columns: ["profissional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
             referencedColumns: ["id"]
@@ -6309,54 +6352,135 @@ export type Database = {
       }
       sessoes_psicologia: {
         Row: {
+          abordagem_terapeutica: string | null
           adesao_terapeutica: string | null
+          assinada_em: string | null
           clinic_id: string
           created_at: string
           data_sessao: string | null
+          demanda_principal: string | null
+          duracao_minutos: number | null
           emocoes_predominantes: string | null
+          emocoes_tags: string[] | null
+          encaminhamentos_tags: string[] | null
+          encaminhamentos_tarefas: string | null
           evolucao_caso: string | null
+          gad7_respostas: Json | null
+          gad7_total: number | null
           humor_paciente: string | null
           id: string
+          intervencoes_realizadas: string | null
+          intervencoes_tags: string[] | null
+          modalidade: string | null
           numero_sessao: number | null
+          objetivo_sessao: string | null
           observacoes: string | null
+          observacoes_terapeuta: string | null
           patient_id: string
+          phq9_respostas: Json | null
+          phq9_total: number | null
+          plano_proxima_sessao: string | null
           professional_id: string | null
+          profissional_nome: string | null
+          proximo_foco: string | null
+          relato_paciente: string | null
+          resposta_paciente: string | null
+          risco_alerta_clinico: string | null
+          risco_atual: string | null
+          risco_interno: string | null
+          status: string | null
+          tarefa_casa: string | null
           tecnicas_utilizadas: string | null
           tema_central: string | null
+          tipo_atendimento: string | null
           updated_at: string
         }
         Insert: {
+          abordagem_terapeutica?: string | null
           adesao_terapeutica?: string | null
+          assinada_em?: string | null
           clinic_id: string
           created_at?: string
           data_sessao?: string | null
+          demanda_principal?: string | null
+          duracao_minutos?: number | null
           emocoes_predominantes?: string | null
+          emocoes_tags?: string[] | null
+          encaminhamentos_tags?: string[] | null
+          encaminhamentos_tarefas?: string | null
           evolucao_caso?: string | null
+          gad7_respostas?: Json | null
+          gad7_total?: number | null
           humor_paciente?: string | null
           id?: string
+          intervencoes_realizadas?: string | null
+          intervencoes_tags?: string[] | null
+          modalidade?: string | null
           numero_sessao?: number | null
+          objetivo_sessao?: string | null
           observacoes?: string | null
+          observacoes_terapeuta?: string | null
           patient_id: string
+          phq9_respostas?: Json | null
+          phq9_total?: number | null
+          plano_proxima_sessao?: string | null
           professional_id?: string | null
+          profissional_nome?: string | null
+          proximo_foco?: string | null
+          relato_paciente?: string | null
+          resposta_paciente?: string | null
+          risco_alerta_clinico?: string | null
+          risco_atual?: string | null
+          risco_interno?: string | null
+          status?: string | null
+          tarefa_casa?: string | null
           tecnicas_utilizadas?: string | null
           tema_central?: string | null
+          tipo_atendimento?: string | null
           updated_at?: string
         }
         Update: {
+          abordagem_terapeutica?: string | null
           adesao_terapeutica?: string | null
+          assinada_em?: string | null
           clinic_id?: string
           created_at?: string
           data_sessao?: string | null
+          demanda_principal?: string | null
+          duracao_minutos?: number | null
           emocoes_predominantes?: string | null
+          emocoes_tags?: string[] | null
+          encaminhamentos_tags?: string[] | null
+          encaminhamentos_tarefas?: string | null
           evolucao_caso?: string | null
+          gad7_respostas?: Json | null
+          gad7_total?: number | null
           humor_paciente?: string | null
           id?: string
+          intervencoes_realizadas?: string | null
+          intervencoes_tags?: string[] | null
+          modalidade?: string | null
           numero_sessao?: number | null
+          objetivo_sessao?: string | null
           observacoes?: string | null
+          observacoes_terapeuta?: string | null
           patient_id?: string
+          phq9_respostas?: Json | null
+          phq9_total?: number | null
+          plano_proxima_sessao?: string | null
           professional_id?: string | null
+          profissional_nome?: string | null
+          proximo_foco?: string | null
+          relato_paciente?: string | null
+          resposta_paciente?: string | null
+          risco_alerta_clinico?: string | null
+          risco_atual?: string | null
+          risco_interno?: string | null
+          status?: string | null
+          tarefa_casa?: string | null
           tecnicas_utilizadas?: string | null
           tema_central?: string | null
+          tipo_atendimento?: string | null
           updated_at?: string
         }
         Relationships: [
