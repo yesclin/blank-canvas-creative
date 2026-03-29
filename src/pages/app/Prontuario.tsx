@@ -1595,7 +1595,56 @@ export default function Prontuario() {
         );
 
       case 'documentos_clinicos':
-        // Documentos Clínicos (Receituário / Atestado / Declaração / Relatório)
+        // Psicologia - Relatórios / Documentos específicos
+        if (activeSpecialtyKey === 'psicologia') {
+          return (
+            <div className="space-y-6">
+              <RelatorioPsicologicoBlock
+                patientId={patientId}
+                patientName={patient?.full_name}
+                canEdit={canEditCurrentTab}
+              />
+              <Separator />
+              <RelatorioEscolarBlock
+                patientId={patientId}
+                patientName={patient?.full_name}
+                canEdit={canEditCurrentTab}
+              />
+              <Separator />
+              <RelatorioJudicialBlock
+                patientId={patientId}
+                patientName={patient?.full_name}
+                canEdit={canEditCurrentTab}
+              />
+              <Separator />
+              <LaudoPsicologicoBlock
+                patientId={patientId}
+                patientName={patient?.full_name}
+                canEdit={canEditCurrentTab}
+              />
+              <Separator />
+              <DocumentosClinicosBlock
+                documentos={documentosClinicos}
+                loading={documentosClinicosLoading}
+                saving={documentosClinicosSaving}
+                canEdit={canEditCurrentTab}
+                currentProfessionalName={docClinicoProfName || undefined}
+                currentProfessionalRegistration={docClinicoProfReg || undefined}
+                currentProfessionalSignatureUrl={docClinicoProfSig || undefined}
+                modelosPessoais={docModelosPessoais}
+                modelosDocumento={docModelosDocumento}
+                medicamentoSuggestions={docMedSuggestions}
+                activeSpecialtyId={activeSpecialtyId || undefined}
+                patientName={patient?.full_name}
+                onSave={(tipo, conteudo, options) => saveDocumentoClinico(tipo, conteudo, activeSpecialtyId || undefined, options)}
+                onCancel={cancelDocumentoClinico}
+                onSaveModeloPessoal={saveModeloPessoalClinico}
+                onDeleteModeloPessoal={deleteModeloPessoalClinico}
+              />
+            </div>
+          );
+        }
+        // Default: Documentos Clínicos (Receituário / Atestado / Declaração / Relatório)
         return (
           <DocumentosClinicosBlock
             documentos={documentosClinicos}
