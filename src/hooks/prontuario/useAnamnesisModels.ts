@@ -118,6 +118,7 @@ export function useAnamnesisModels(specialtyId: string | null | undefined) {
       .from('anamnesis_template_versions')
       .insert({
         template_id: templateId,
+        version: nextVersion,
         version_number: nextVersion,
         structure: structure,
         created_by: user?.user?.id || null,
