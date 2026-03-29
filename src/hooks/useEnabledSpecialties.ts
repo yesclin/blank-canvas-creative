@@ -140,7 +140,7 @@ export function useCustomSpecialties() {
       
       const { data, error } = await supabase
         .from("specialties")
-        .select("id, name, description, color, area, is_active, specialty_type, clinic_id, created_at")
+        .select("id, name, slug, description, color, is_active, specialty_type, clinic_id, created_at")
         .eq("clinic_id", clinic.id)
         .eq("specialty_type", "personalizada")
         .order("name");
