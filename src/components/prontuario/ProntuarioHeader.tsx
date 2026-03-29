@@ -153,7 +153,7 @@ export function ProntuarioHeader({
   const gender = patient ? formatGender(patient.gender) : '';
   const displaySpecialty = specialtyLoading
     ? 'Carregando especialidade...'
-    : activeSpecialtyName?.trim() || 'Especialidade não definida';
+    : activeSpecialtyName?.trim() || null;
 
   const hasClinicalData = clinicalSummary && (
     clinicalSummary.allergies.length > 0 ||
