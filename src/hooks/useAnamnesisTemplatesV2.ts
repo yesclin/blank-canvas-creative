@@ -341,6 +341,7 @@ export function useAnamnesisTemplatesV2(options?: {
           .from('anamnesis_template_versions')
           .insert({
             template_id: input.id,
+            version: nextVersion,
             version_number: nextVersion,
             structure: input.structure as unknown as Json,
             created_by: userData.user?.id,
