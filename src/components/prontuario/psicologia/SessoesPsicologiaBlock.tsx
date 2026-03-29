@@ -26,53 +26,43 @@ import {
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { 
-  SessaoPsicologia, SessaoFormData, StatusSessao,
+  SessaoPsicologia, SessaoFormData, StatusSessao, Modalidade,
 } from "@/hooks/prontuario/psicologia/useSessoesPsicologiaData";
-import { INTERVENCOES_OPTIONS, ENCAMINHAMENTOS_OPTIONS } from "@/hooks/prontuario/psicologia/useSessoesPsicologiaData";
-import { EvolucaoEmocionalChart } from "./EvolucaoEmocionalChart";
-import { EscalaPHQ9 } from "./EscalaPHQ9";
-import { EscalaGAD7 } from "./EscalaGAD7";
-import { PlanoAcaoCriseModal, PlanoAcaoCriseBadge } from "./PlanoAcaoCriseModal";
-import { useClinicData } from "@/hooks/useClinicData";
-
-interface SessoesPsicologiaBlockProps {
-  sessoes: SessaoPsicologia[];
-  loading?: boolean;
-  saving?: boolean;
-  canEdit?: boolean;
-  currentProfessionalId?: string;
-  currentProfessionalName?: string;
-  onSave: (data: SessaoFormData & { assinar: boolean }) => Promise<string | null>;
-  onSign?: (sessaoId: string) => Promise<void>;
-}
-
-const statusConfig: Record<StatusSessao, { label: string; color: string }> = {
-  rascunho: { label: 'Rascunho', color: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
-  assinada: { label: 'Assinada', color: 'bg-green-100 text-green-700 border-green-300' },
-};
+import { 
+  INTERVENCOES_OPTIONS, ENCAMINHAMENTOS_OPTIONS, TECNICAS_OPTIONS,
+  tipoAtendimentoLabels, modalidadeLabels, riscoAlertaLabels,
+} from "@/hooks/prontuario/psicologia/useSessoesPsicologiaData";
 
 const EMOCOES_OPTIONS = [
   'Ansiedade', 'Tristeza', 'Raiva', 'Culpa', 'Medo', 'Alegria', 'Frustração', 'Apatia',
+  'Vergonha', 'Esperança', 'Confusão', 'Solidão',
 ];
 
 const EMPTY_FORM: SessaoFormData = {
   data_sessao: new Date().toISOString(),
-  duracao_minutos: 50,
+  tipo_atendimento: 'sessao_terapeutica',
   modalidade: 'presencial',
+  duracao_minutos: 50,
+  demanda_principal: '',
+  objetivo_sessao: '',
   tema_central: '',
   abordagem_terapeutica: '',
   relato_paciente: '',
   intervencoes_realizadas: '',
   intervencoes_tags: [],
+  tecnicas_utilizadas: '',
+  resposta_paciente: '',
   observacoes_terapeuta: '',
-  encaminhamentos_tarefas: '',
-  encaminhamentos_tags: [],
+  risco_alerta_clinico: 'nenhum',
   risco_interno: '',
   risco_atual: 'ausente',
+  encaminhamentos_tarefas: '',
+  encaminhamentos_tags: [],
   humor_paciente: null,
   emocoes_predominantes: [],
   evolucao_caso: '',
   adesao_terapeutica: '',
+  plano_proxima_sessao: '',
   phq9_respostas: null,
   phq9_total: null,
   gad7_respostas: null,
@@ -331,32 +321,60 @@ export function SessoesPsicologiaBlock({
               {/* 1. Identificação */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2"><Calendar className="h-4 w-4 text-primary" /> Data</Label>
+                  <Label className="flex items-center gap-2"><Calendar className="h-4 w-4 text-primary" /> Data/Hora</Label>
                   <Input type="datetime-local" value={formData.data_sessao.slice(0, 16)}
                     onChange={(e) => setFormData(prev => ({ ...prev, data_sessao: new Date(e.target.value).toISOString() }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Tipo de Atendimento</Label>
+                  <Select value={formData.tipo_atendimento} onValueChange={(v) => setFormData(prev => ({ ...prev, tipo_atendimento: v as any }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(tipoAtendimentoLabels).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Modalidade</Label>
+                  <Select value={formData.modalidade} onValueChange={(v) => setFormData(prev => ({ ...prev, modalidade: v as Modalidade }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(modalidadeLabels).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2"><Timer className="h-4 w-4 text-primary" /> Duração (min)</Label>
                   <Input type="number" min={15} max={180} value={formData.duracao_minutos}
                     onChange={(e) => setFormData(prev => ({ ...prev, duracao_minutos: parseInt(e.target.value) || 50 }))} />
                 </div>
+              </div>
+
+              {/* Demanda e Objetivo */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Modalidade</Label>
-                  <Select value={formData.modalidade} onValueChange={(v) => setFormData(prev => ({ ...prev, modalidade: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="presencial"><span className="flex items-center gap-2"><MapPin className="h-3 w-3" /> Presencial</span></SelectItem>
-                      <SelectItem value="online"><span className="flex items-center gap-2"><Video className="h-3 w-3" /> Online</span></SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label className="flex items-center gap-2"><MessageSquare className="h-4 w-4 text-red-500" /> Demanda Principal</Label>
+                  <Input placeholder="Queixa ou demanda trazida pelo paciente..." value={formData.demanda_principal}
+                    onChange={(e) => setFormData(prev => ({ ...prev, demanda_principal: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2"><SmilePlus className="h-4 w-4 text-yellow-500" /> Humor (1-10)</Label>
-                  <div className="flex items-center gap-2">
-                    <Slider min={1} max={10} step={1} value={formData.humor_paciente ? [formData.humor_paciente] : [5]}
-                      onValueChange={([v]) => setFormData(prev => ({ ...prev, humor_paciente: v }))} className="flex-1" />
-                    <Badge variant="outline" className="min-w-[32px] text-center">{formData.humor_paciente || '—'}</Badge>
-                  </div>
+                  <Label className="flex items-center gap-2"><Lightbulb className="h-4 w-4 text-primary" /> Objetivo da Sessão</Label>
+                  <Input placeholder="Objetivo terapêutico desta sessão..." value={formData.objetivo_sessao}
+                    onChange={(e) => setFormData(prev => ({ ...prev, objetivo_sessao: e.target.value }))} />
+                </div>
+              </div>
+
+              {/* Humor */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2"><SmilePlus className="h-4 w-4 text-yellow-500" /> Humor do Paciente (1-10)</Label>
+                <div className="flex items-center gap-2">
+                  <Slider min={1} max={10} step={1} value={formData.humor_paciente ? [formData.humor_paciente] : [5]}
+                    onValueChange={([v]) => setFormData(prev => ({ ...prev, humor_paciente: v }))} className="flex-1" />
+                  <Badge variant="outline" className="min-w-[32px] text-center">{formData.humor_paciente || '—'}</Badge>
                 </div>
               </div>
 
@@ -364,10 +382,10 @@ export function SessoesPsicologiaBlock({
 
               {/* 2. Tema Central */}
               <div className="space-y-2">
-                <Label className="flex items-center gap-2"><MessageSquare className="h-4 w-4 text-blue-500" /> Tema Central da Sessão *</Label>
+                <Label className="flex items-center gap-2"><MessageSquare className="h-4 w-4 text-blue-500" /> Temas Trabalhados *</Label>
                 <Input placeholder="Ex: Ansiedade social, Luto, Conflito familiar..." value={formData.tema_central}
                   onChange={(e) => setFormData(prev => ({ ...prev, tema_central: e.target.value }))} />
-                <Textarea placeholder="Resumo da sessão (opcional)..." value={formData.abordagem_terapeutica}
+                <Textarea placeholder="Abordagem / resumo da sessão (opcional)..." value={formData.abordagem_terapeutica}
                   onChange={(e) => setFormData(prev => ({ ...prev, abordagem_terapeutica: e.target.value }))} rows={2} className="resize-none" />
               </div>
 
