@@ -63,7 +63,7 @@ import {
   mapStructuredToLegacy,
   type SecaoAnamnese,
 } from "@/hooks/prontuario/clinica-geral/anamneseTemplates";
-import { useAnamnesisTemplatesV2, useAnamnesisRecords, type AnamnesisTemplateV2, type AnamnesisRecord, type TemplateSection } from "@/hooks/useAnamnesisTemplatesV2";
+import { useAnamnesisTemplatesV2, useAnamnesisRecords, type AnamnesisTemplateV2, type AnamnesisRecord } from "@/hooks/useAnamnesisTemplatesV2";
 import { useInstitutionalPdf } from "@/hooks/useInstitutionalPdf";
 import { FileDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -155,6 +155,28 @@ const IDENTIFICATION_FIELD_IDS = new Set([
 const IDENTIFICATION_SECTION_IDS = new Set([
   'section_identificacao', 'identificacao', 'identificacao_complementar',
 ]);
+
+const SPECIALTY_SLUG_BY_NAME: Record<string, string> = {
+  'clínica geral': 'geral',
+  'clinica geral': 'geral',
+  'psicologia': 'psicologia',
+  'nutrição': 'nutricao',
+  'nutricao': 'nutricao',
+  'fisioterapia': 'fisioterapia',
+  'pilates': 'pilates',
+  'estética / harmonização facial': 'estetica',
+  'estetica / harmonizacao facial': 'estetica',
+  'estética': 'estetica',
+  'estetica': 'estetica',
+  'odontologia': 'odontologia',
+  'dermatologia': 'dermatologia',
+  'pediatria': 'pediatria',
+};
+
+function resolveSpecialtySlug(name?: string | null) {
+  const normalized = name?.trim().toLowerCase();
+  return (normalized && SPECIALTY_SLUG_BY_NAME[normalized]) || 'geral';
+}
 
 function v2TemplateToUnified(t: AnamnesisTemplateV2): UnifiedTemplate {
   return {
