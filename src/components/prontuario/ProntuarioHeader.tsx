@@ -233,8 +233,12 @@ export function ProntuarioHeader({
 
         {/* Row 2: Specialty + Professional */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
-          <Stethoscope className="h-3 w-3 text-primary flex-shrink-0" />
-          <span className="font-medium text-primary">{displaySpecialty}</span>
+          {displaySpecialty && (
+            <>
+              <Stethoscope className="h-3 w-3 text-primary flex-shrink-0" />
+              <span className="font-medium text-primary">{displaySpecialty}</span>
+            </>
+          )}
           {professionalName && (
             <>
               <span className="text-muted-foreground">|</span>
@@ -386,8 +390,12 @@ export function ProntuarioHeader({
       {/* Linha 2: Contexto Clínico + Ações */}
       <div className="flex items-center justify-between px-4 py-1">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Stethoscope className="h-4 w-4 text-primary flex-shrink-0" />
-          <span className="font-medium text-primary">{displaySpecialty}</span>
+          {displaySpecialty && (
+            <>
+              <Stethoscope className="h-4 w-4 text-primary flex-shrink-0" />
+              <span className="font-medium text-primary">{displaySpecialty}</span>
+            </>
+          )}
           {professionalName && (
             <>
               <span className="text-muted-foreground/50">|</span>
