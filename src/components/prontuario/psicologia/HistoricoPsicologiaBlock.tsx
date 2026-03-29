@@ -165,21 +165,29 @@ export function HistoricoPsicologiaBlock({
 
     // Sessões
     sessoes.forEach(item => {
-      const statusLabels: Record<string, string> = {
-        rascunho: 'Rascunho',
-        assinada: 'Assinada',
-      };
+      const statusLabels: Record<string, string> = { rascunho: 'Rascunho', assinada: 'Assinada' };
+      const tipoLabels: Record<string, string> = { consulta: 'Consulta', retorno: 'Retorno', sessao_terapeutica: 'Sessão Terapêutica', acolhimento: 'Acolhimento', avaliacao: 'Avaliação' };
+      const modalidadeLabels: Record<string, string> = { presencial: 'Presencial', online: 'Online', hibrido: 'Híbrido' };
       events.push({
         id: `sessao-${item.id}`,
         type: 'sessao',
         date: item.data_sessao,
-        title: `Sessão de Psicoterapia`,
-        subtitle: item.relato_paciente ? item.relato_paciente.substring(0, 80) + '...' : undefined,
+        title: `${tipoLabels[item.tipo_atendimento] || 'Sessão'} #${item.numero_sessao || '—'}`,
+        subtitle: item.demanda_principal 
+          ? `Demanda: ${item.demanda_principal.substring(0, 80)}` 
+          : item.tema_central 
+            ? `Tema: ${item.tema_central.substring(0, 80)}`
+            : item.relato_paciente 
+              ? item.relato_paciente.substring(0, 80) + '...' 
+              : undefined,
         description: item.observacoes_terapeuta || undefined,
         status: statusLabels[item.status] || item.status,
         metadata: {
-          ...(item.abordagem_terapeutica ? { 'Abordagem': item.abordagem_terapeutica.substring(0, 30) } : {}),
+          ...(item.modalidade ? { 'Modalidade': modalidadeLabels[item.modalidade] || item.modalidade } : {}),
           ...(item.duracao_minutos ? { 'Duração': `${item.duracao_minutos} min` } : {}),
+          ...(item.risco_atual && item.risco_atual !== 'ausente' ? { 'Risco': item.risco_atual } : {}),
+          ...(item.evolucao_caso ? { 'Evolução': item.evolucao_caso } : {}),
+          ...(item.humor_paciente ? { 'Humor': `${item.humor_paciente}/10` } : {}),
         },
         professionalName: item.profissional_nome,
       });
@@ -210,9 +218,11 @@ export function HistoricoPsicologiaBlock({
         type: 'instrumento',
         date: item.data_aplicacao,
         title: item.nome_instrumento,
-        subtitle: item.finalidade || undefined,
-        description: item.observacoes || undefined,
+        subtitle: item.objetivo_aplicacao || item.finalidade || undefined,
+        description: item.resultado_resumido || item.observacoes || undefined,
+        status: item.status_instrumento ? (item.status_instrumento.charAt(0).toUpperCase() + item.status_instrumento.slice(1)).replace('_', ' ') : undefined,
         metadata: {
+          ...(item.categoria_instrumento ? { 'Categoria': item.categoria_instrumento } : {}),
           ...(item.documento_url ? { 'Anexo': 'Disponível' } : {}),
         },
         professionalName: item.profissional_nome,
