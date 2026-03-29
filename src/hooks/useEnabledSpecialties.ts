@@ -79,11 +79,10 @@ export function useStandardSpecialties() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("specialties")
-        .select("id, name, description, color, area, is_active, specialty_type, clinic_id")
+        .select("id, name, slug, description, color, is_active, specialty_type, clinic_id")
         .is("clinic_id", null)
         .eq("specialty_type", "padrao")
         .eq("is_active", true)
-        .order("area")
         .order("name");
       
       if (error) {
@@ -112,10 +111,9 @@ export function useAllSpecialties() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("specialties")
-        .select("id, name, description, color, area, is_active, specialty_type, clinic_id, created_at")
+        .select("id, name, slug, description, color, is_active, specialty_type, clinic_id, created_at")
         .or(`clinic_id.is.null,clinic_id.eq.${clinic?.id}`)
-        .order("specialty_type", { ascending: true }) // padrao first
-        .order("area")
+        .order("specialty_type", { ascending: true })
         .order("name");
       
       if (error) {
@@ -239,7 +237,6 @@ export function useCreateSpecialty() {
         .insert({
           clinic_id: clinic.id,
           name: data.name.trim(),
-          area: data.area?.trim() || null,
           description: data.description?.trim() || null,
           color: data.color || null,
           is_active: data.is_active ?? true,
@@ -316,7 +313,6 @@ export function useUpdateSpecialty() {
       const updateData: Record<string, unknown> = {};
       
       if (data.name !== undefined) updateData.name = data.name.trim();
-      if (data.area !== undefined) updateData.area = data.area.trim() || null;
       if (data.description !== undefined) updateData.description = data.description.trim() || null;
       if (data.color !== undefined) updateData.color = data.color || null;
       if (data.is_active !== undefined) updateData.is_active = data.is_active;
