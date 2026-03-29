@@ -481,9 +481,10 @@ export function InstrumentosPsicologicosBlock({
           </DialogHeader>
 
           {selectedInstrumento && (
-            <div className="space-y-4">
+            <ScrollArea className="max-h-[60vh]">
+            <div className="space-y-4 pr-4">
               {/* Metadata */}
-              <div className="flex items-center gap-4 text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+              <div className="flex items-center gap-4 flex-wrap text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
                 <div className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
                   <span>{format(parseISO(selectedInstrumento.data_aplicacao), "dd/MM/yyyy", { locale: ptBR })}</span>
@@ -492,14 +493,50 @@ export function InstrumentosPsicologicosBlock({
                   <User className="h-4 w-4" />
                   <span>{selectedInstrumento.profissional_nome}</span>
                 </div>
+                <Badge variant="outline" className="text-xs">
+                  {categoriaInstrumentoLabels[selectedInstrumento.categoria_instrumento]}
+                </Badge>
+                <Badge variant="secondary" className="text-xs">
+                  {statusInstrumentoLabels[selectedInstrumento.status_instrumento]}
+                </Badge>
               </div>
 
-              {/* Finalidade */}
-              {selectedInstrumento.finalidade && (
+              {/* Objetivo */}
+              {selectedInstrumento.objetivo_aplicacao && (
                 <div className="space-y-1">
-                  <Label className="text-muted-foreground">Finalidade</Label>
+                  <Label className="text-muted-foreground">Objetivo da Aplicação</Label>
                   <p className="text-sm whitespace-pre-wrap bg-muted/50 p-3 rounded-lg">
-                    {selectedInstrumento.finalidade}
+                    {selectedInstrumento.objetivo_aplicacao}
+                  </p>
+                </div>
+              )}
+
+              {/* Contexto */}
+              {selectedInstrumento.contexto_aplicacao && (
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground">Contexto da Aplicação</Label>
+                  <p className="text-sm whitespace-pre-wrap bg-muted/50 p-3 rounded-lg">
+                    {selectedInstrumento.contexto_aplicacao}
+                  </p>
+                </div>
+              )}
+
+              {/* Resultado */}
+              {selectedInstrumento.resultado_resumido && (
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground">Resultado Resumido</Label>
+                  <p className="text-sm whitespace-pre-wrap bg-muted/50 p-3 rounded-lg font-medium">
+                    {selectedInstrumento.resultado_resumido}
+                  </p>
+                </div>
+              )}
+
+              {/* Interpretação */}
+              {selectedInstrumento.interpretacao_inicial && (
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground">Interpretação Inicial</Label>
+                  <p className="text-sm whitespace-pre-wrap bg-muted/50 p-3 rounded-lg">
+                    {selectedInstrumento.interpretacao_inicial}
                   </p>
                 </div>
               )}
@@ -521,18 +558,9 @@ export function InstrumentosPsicologicosBlock({
                   <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
                     <File className="h-4 w-4 text-primary" />
                     <span className="text-sm flex-1">{selectedInstrumento.documento_nome || 'Documento'}</span>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      asChild
-                    >
-                      <a 
-                        href={selectedInstrumento.documento_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                      >
-                        <ExternalLink className="h-4 w-4 mr-1" />
-                        Abrir
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={selectedInstrumento.documento_url} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-4 w-4 mr-1" /> Abrir
                       </a>
                     </Button>
                   </div>
