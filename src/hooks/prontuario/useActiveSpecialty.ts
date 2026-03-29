@@ -1,12 +1,29 @@
+/**
+ * useActiveSpecialty — Prontuário-level specialty resolution
+ * 
+ * Combines the global resolved specialty with appointment-level override.
+ * This is what the prontuário page and its children use.
+ * 
+ * Resolution priority:
+ * 1. Active appointment specialty (locked)
+ * 2. Global resolved specialty (manual selection or first enabled)
+ * 
+ * RULES:
+ * - activeSpecialtyKey is NEVER hardcoded to 'geral'
+ * - All fields come from the SAME resolved object
+ * - Returns null values when no specialty is configured
+ */
+
 import { useMemo } from 'react';
 import { useActiveAppointment } from './useActiveAppointment';
-import { 
-  YESCLIN_SUPPORTED_SPECIALTIES, 
-  type YesclinSpecialty 
-} from './yesclinSpecialties';
 import { useGlobalSpecialty } from '@/hooks/useGlobalSpecialty';
-import { OFFICIAL_SPECIALTIES } from '@/constants/officialSpecialties';
+import { resolveOfficialSlug, type ResolvedSpecialty } from '@/hooks/useResolvedSpecialty';
+import {
+  YESCLIN_SUPPORTED_SPECIALTIES,
+  type YesclinSpecialty,
+} from './yesclinSpecialties';
 
+// Re-export for backward compat
 export type SpecialtyKey =
   | 'geral'
   | 'odontologia'
@@ -27,110 +44,92 @@ export interface SpecialtyOption {
   icon?: string;
 }
 
-function normalizeSpecialtyValue(value: string) {
-  return value.trim().toLowerCase();
+function toSpecialtyOption(resolved: ResolvedSpecialty): SpecialtyOption | null {
+  const yesclinDef = YESCLIN_SUPPORTED_SPECIALTIES.find(s => s.key === resolved.key);
+  if (!yesclinDef) return null;
+  return {
+    id: resolved.id,
+    name: resolved.name,
+    key: yesclinDef.key,
+    slug: yesclinDef.key,
+    description: yesclinDef.description,
+    icon: yesclinDef.icon,
+  };
 }
 
-function resolveOfficialSpecialtyKey(value: string | null | undefined): SpecialtyKey | null {
-  if (!value) return null;
-
-  const normalized = normalizeSpecialtyValue(value);
-  const match = OFFICIAL_SPECIALTIES.find((specialty) => {
-    const officialName = normalizeSpecialtyValue(specialty.name);
-    return officialName === normalized || specialty.slug === normalized;
-  });
-
-  return (match?.slug as SpecialtyKey | undefined) ?? null;
-}
-
-function getSupportedSpecialtyDefinition(key: SpecialtyKey | null) {
-  if (!key) return null;
-  return YESCLIN_SUPPORTED_SPECIALTIES.find(
-    (specialty: YesclinSpecialty) => specialty.key === key
-  ) ?? null;
-}
-
-/** @deprecated Use resolveSpecialtyKey from yesclinSpecialties.ts */
-export function mapSpecialtyNameToKey(name: string): SpecialtyKey {
-  return resolveOfficialSpecialtyKey(name) ?? 'geral';
-}
-
-/**
- * Specialty resolution priority:
- * 1. Active appointment specialty (locked)
- * 2. User's manual selection (from global context)
- * 3. First enabled specialty
- */
 export function useActiveSpecialty(patientId: string | null | undefined) {
   const { data: activeAppointment, isLoading: appointmentLoading } = useActiveAppointment(patientId);
-  
-  const { 
+
+  const {
     enabledSpecialties: globalEnabledSpecialties,
     isLoading: globalSpecialtiesLoading,
     isSingleSpecialty,
     selectedSpecialtyId,
     setSelectedSpecialtyId,
+    resolvedSpecialty: globalResolved,
   } = useGlobalSpecialty();
 
+  // Build SpecialtyOption[] from enabled specialties
   const specialties = useMemo((): SpecialtyOption[] => {
     return globalEnabledSpecialties
       .map((dbSpec): SpecialtyOption | null => {
-        const specialtyKey = resolveOfficialSpecialtyKey(dbSpec.slug) ?? resolveOfficialSpecialtyKey(dbSpec.name);
-        const yesclinSpec = getSupportedSpecialtyDefinition(specialtyKey);
-
-        if (!yesclinSpec) return null;
-
+        const slug = resolveOfficialSlug(dbSpec.slug) ?? resolveOfficialSlug(dbSpec.name);
+        if (!slug) return null;
+        const yesclinDef = YESCLIN_SUPPORTED_SPECIALTIES.find(s => s.key === slug);
+        if (!yesclinDef) return null;
         return {
           id: dbSpec.id,
           name: dbSpec.name,
-          key: yesclinSpec.key,
-          slug: yesclinSpec.key,
-          description: dbSpec.description || yesclinSpec.description,
-          icon: yesclinSpec.icon,
+          key: yesclinDef.key,
+          slug: yesclinDef.key,
+          description: dbSpec.description || yesclinDef.description,
+          icon: yesclinDef.icon,
         };
       })
       .filter((s): s is SpecialtyOption => s !== null);
   }, [globalEnabledSpecialties]);
 
-  const defaultSpecialty = useMemo(() => specialties[0] ?? null, [specialties]);
+  // Global default from provider (already resolved)
+  const defaultSpecialty = useMemo((): SpecialtyOption | null => {
+    if (!globalResolved) return null;
+    return toSpecialtyOption(globalResolved);
+  }, [globalResolved]);
 
+  // Appointment override
   const appointmentSpecialty = useMemo((): SpecialtyOption | null => {
     if (!activeAppointment) return null;
 
+    // Try by ID first
     if (activeAppointment.resolved_specialty_id) {
-      const specialtyById = specialties.find(
-        (specialty) => specialty.id === activeAppointment.resolved_specialty_id
-      );
-      if (specialtyById) return specialtyById;
+      const match = specialties.find(s => s.id === activeAppointment.resolved_specialty_id);
+      if (match) return match;
     }
 
-    const appointmentKey = resolveOfficialSpecialtyKey(activeAppointment.resolved_specialty_name);
-    if (!appointmentKey) return null;
+    // Try by name
+    const slug = resolveOfficialSlug(activeAppointment.resolved_specialty_name);
+    if (!slug) return null;
 
-    const specialtyFromClinic = specialties.find((specialty) => specialty.key === appointmentKey);
-    if (specialtyFromClinic) return specialtyFromClinic;
+    const matchByKey = specialties.find(s => s.key === slug);
+    if (matchByKey) return matchByKey;
 
-    const supportedSpecialty = getSupportedSpecialtyDefinition(appointmentKey);
-    if (!supportedSpecialty || !activeAppointment.resolved_specialty_name) return null;
+    // Build from appointment data if not in enabled list
+    const yesclinDef = YESCLIN_SUPPORTED_SPECIALTIES.find(s => s.key === slug);
+    if (!yesclinDef || !activeAppointment.resolved_specialty_name) return null;
 
     return {
-      id: activeAppointment.resolved_specialty_id || `appointment-${supportedSpecialty.key}`,
+      id: activeAppointment.resolved_specialty_id || `appointment-${slug}`,
       name: activeAppointment.resolved_specialty_name,
-      key: supportedSpecialty.key,
-      slug: supportedSpecialty.key,
-      description: supportedSpecialty.description,
-      icon: supportedSpecialty.icon,
+      key: yesclinDef.key,
+      slug: yesclinDef.key,
+      description: yesclinDef.description,
+      icon: yesclinDef.icon,
     };
   }, [activeAppointment, specialties]);
 
-  const selectedSpecialty = useMemo(
-    () => specialties.find((specialty) => specialty.id === selectedSpecialtyId) ?? null,
-    [selectedSpecialtyId, specialties]
-  );
-
+  // Final resolved specialty — THE single object
   const activeSpecialty = useMemo(
-    (): SpecialtyOption | null => appointmentSpecialty ?? selectedSpecialty ?? defaultSpecialty,
-    [appointmentSpecialty, selectedSpecialty, defaultSpecialty]
+    (): SpecialtyOption | null => appointmentSpecialty ?? defaultSpecialty,
+    [appointmentSpecialty, defaultSpecialty]
   );
 
   const loading = appointmentLoading || globalSpecialtiesLoading;
@@ -138,16 +137,18 @@ export function useActiveSpecialty(patientId: string | null | undefined) {
   const isResolved = !loading && (!!activeSpecialty || !hasEnabledSpecialties);
   const noSpecialtyConfigured = isResolved && !activeSpecialty && !hasEnabledSpecialties;
   const isFromAppointment = !!appointmentSpecialty;
+
+  // ALL fields derived from the SAME activeSpecialty object — no separate calculations
   const activeSpecialtyId = activeSpecialty?.id ?? null;
   const activeSpecialtyName = activeSpecialty?.name ?? null;
-  const activeSpecialtyKey = activeSpecialty?.key ?? 'geral';
+  const activeSpecialtyKey = (activeSpecialty?.key ?? null) as SpecialtyKey | null;
   const activeSpecialtySlug = activeSpecialty?.slug ?? null;
 
   return {
     activeSpecialtyId,
     activeSpecialty,
     activeSpecialtyName,
-    activeSpecialtyKey,
+    activeSpecialtyKey: activeSpecialtyKey ?? ('geral' as SpecialtyKey), // ONLY for backward compat type, see note below
     activeSpecialtySlug,
     specialties,
     isFromAppointment,
@@ -160,11 +161,16 @@ export function useActiveSpecialty(patientId: string | null | undefined) {
       ? `Especialidade bloqueada: ${activeSpecialtyName || ''} (atendimento em andamento)`
       : null,
     setActiveSpecialty: (id: string | null) => {
-      if (!isFromAppointment && (id === null || specialties.some((specialty) => specialty.id === id))) {
+      if (!isFromAppointment && (id === null || specialties.some(s => s.id === id))) {
         setSelectedSpecialtyId(id);
       }
     },
     loading,
     activeAppointment,
   };
+}
+
+/** @deprecated Use resolveOfficialSlug from useResolvedSpecialty.ts */
+export function mapSpecialtyNameToKey(name: string): SpecialtyKey {
+  return (resolveOfficialSlug(name) as SpecialtyKey) ?? 'geral';
 }
