@@ -267,6 +267,7 @@ export function useAnamnesisTemplatesV2(options?: {
         .from('anamnesis_template_versions')
         .insert({
           template_id: tmpl.id,
+          version: 1,
           version_number: 1,
           structure: input.structure as unknown as Json,
           created_by: userData.user?.id,
@@ -402,6 +403,7 @@ export function useAnamnesisTemplatesV2(options?: {
         .from('anamnesis_template_versions')
         .insert({
           template_id: tmpl.id,
+          version: 1,
           version_number: 1,
           structure: source.structure as unknown as Json,
           created_by: userData.user?.id,
