@@ -141,14 +141,14 @@ export function useActiveSpecialty(patientId: string | null | undefined) {
   // ALL fields derived from the SAME activeSpecialty object — no separate calculations
   const activeSpecialtyId = activeSpecialty?.id ?? null;
   const activeSpecialtyName = activeSpecialty?.name ?? null;
-  const activeSpecialtyKey = (activeSpecialty?.key ?? null) as SpecialtyKey | null;
+  const activeSpecialtyKey = activeSpecialty?.key ?? null;
   const activeSpecialtySlug = activeSpecialty?.slug ?? null;
 
   return {
     activeSpecialtyId,
     activeSpecialty,
     activeSpecialtyName,
-    activeSpecialtyKey: activeSpecialtyKey as SpecialtyKey,
+    activeSpecialtyKey: (activeSpecialtyKey ?? 'geral') as SpecialtyKey,
     activeSpecialtySlug,
     specialties,
     isFromAppointment,

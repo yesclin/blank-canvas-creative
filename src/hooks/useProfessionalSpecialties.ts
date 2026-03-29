@@ -12,7 +12,6 @@ export interface ProfessionalSpecialty {
   specialty?: {
     id: string;
     name: string;
-    area: string | null;
     is_active: boolean;
   };
 }
@@ -36,7 +35,7 @@ export function useProfessionalSpecialties(professionalId: string | null) {
           specialty_id,
           is_primary,
           created_at,
-          specialty:specialties(id, name, area, is_active)
+          specialty:specialties(id, name, is_active)
         `)
         .eq("professional_id", professionalId)
         .order("is_primary", { ascending: false });

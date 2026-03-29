@@ -114,7 +114,7 @@ export default function ConfigProntuario() {
           )}
           {selectedSpecialty && (
             <Badge variant="secondary" className="text-xs">
-              {selectedSpecialty.area || 'Geral'}
+              {selectedSpecialty.name || 'Geral'}
             </Badge>
           )}
         </CardContent>
