@@ -7396,6 +7396,10 @@ export type Database = {
         Returns: boolean
       }
       is_recepcionista: { Args: { _user_id?: string }; Returns: boolean }
+      provision_psicologia_anamnesis_templates: {
+        Args: { _clinic_id: string; _specialty_id: string }
+        Returns: number
+      }
       provision_specialty: {
         Args: { _clinic_id: string; _specialty_slug: string }
         Returns: Json
