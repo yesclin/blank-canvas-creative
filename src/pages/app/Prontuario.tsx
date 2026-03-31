@@ -1470,6 +1470,17 @@ export default function Prontuario() {
         );
 
       case 'diagnostico':
+        // Psicologia - Hipóteses Diagnósticas
+        if (activeSpecialtyKey === 'psicologia') {
+          return (
+            <HipotesesDiagnosticasPsicologiaBlock
+              patientId={patientId!}
+              canEdit={canEditCurrentTab}
+              professionalId={currentProfessionalId}
+              professionalName={currentProfessionalName}
+            />
+          );
+        }
         // Fisioterapia - Diagnóstico Funcional
         if (activeSpecialtyKey === 'fisioterapia') {
           return (
