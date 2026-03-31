@@ -139,6 +139,30 @@ export function SpecialtiesSection() {
     setTogglingSlug(slug);
 
     try {
+      // Ensure the specialty row exists before calling provision RPC
+      const { data: existing } = await supabase
+        .from("specialties")
+        .select("id")
+        .eq("clinic_id", clinic.id)
+        .eq("slug", slug)
+        .maybeSingle();
+
+      if (!existing) {
+        // Create the specialty row if it doesn't exist yet
+        const { error: insertErr } = await supabase
+          .from("specialties")
+          .insert({
+            name,
+            slug,
+            description: SPECIALTY_DESCRIPTIONS[slug] || null,
+            clinic_id: clinic.id,
+            specialty_type: "padrao",
+            is_active: false, // Will be activated by provision_specialty
+          });
+        if (insertErr && insertErr.code !== "23505") throw insertErr;
+      }
+
+      // Provision tabs, templates, and activate the specialty
       const { data, error } = await supabase.rpc("provision_specialty", {
         _clinic_id: clinic.id,
         _specialty_slug: slug,
@@ -146,13 +170,12 @@ export function SpecialtiesSection() {
 
       if (error) throw error;
 
-      // Auto-link all active professionals to the new specialty
+      // Auto-link all active professionals to the newly activated specialty
       const specialtyRecord = await supabase
         .from("specialties")
         .select("id")
         .eq("clinic_id", clinic.id)
         .eq("slug", slug)
-        .eq("is_active", true)
         .maybeSingle();
 
       if (specialtyRecord.data?.id) {
@@ -163,7 +186,6 @@ export function SpecialtiesSection() {
           .eq("is_active", true);
 
         if (professionals && professionals.length > 0) {
-          // Insert professional-specialty links (ignore duplicates)
           const links = professionals.map(p => ({
             professional_id: p.id,
             specialty_id: specialtyRecord.data!.id,
