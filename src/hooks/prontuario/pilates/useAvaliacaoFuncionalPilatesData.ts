@@ -317,6 +317,14 @@ export function getEmptyAvaliacaoFormPilates(): AvaliacaoFuncionalPilatesFormDat
     postura_observacoes: '',
     objetivos_pilates: '',
     observacoes_gerais: '',
+    // v2 fields
+    postura_global: '',
+    alinhamento_corporal: '',
+    flexibilidade: '',
+    flexibilidade_obs: '',
+    encurtamentos: '',
+    compensacoes: '',
+    limitacoes_funcionais: '',
   };
 }
 
