@@ -116,6 +116,15 @@ export interface AvaliacaoFuncionalPilatesFormData {
   postura_observacoes: string;
   objetivos_pilates: string;
   observacoes_gerais: string;
+
+  // Campos adicionais v2
+  postura_global: string;
+  alinhamento_corporal: string;
+  flexibilidade: string;
+  flexibilidade_obs: string;
+  encurtamentos: string;
+  compensacoes: string;
+  limitacoes_funcionais: string;
 }
 
 interface UseAvaliacaoFuncionalPilatesDataParams {
