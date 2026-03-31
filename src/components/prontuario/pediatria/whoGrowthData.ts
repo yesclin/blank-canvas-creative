@@ -197,10 +197,10 @@ export function estimatePercentile(value: number, ageMonths: number, data: WHODa
   return 99;
 }
 
-export function getGrowthClassification(percentile: number): { label: string; color: string; severity: 'normal' | 'attention' | 'alert' } {
-  if (percentile < 3) return { label: 'Muito baixo', color: 'text-red-600', severity: 'alert' };
-  if (percentile < 15) return { label: 'Baixo', color: 'text-orange-600', severity: 'attention' };
-  if (percentile <= 85) return { label: 'Adequado', color: 'text-green-600', severity: 'normal' };
-  if (percentile <= 97) return { label: 'Alto', color: 'text-orange-600', severity: 'attention' };
-  return { label: 'Muito alto', color: 'text-red-600', severity: 'alert' };
+export function getGrowthClassification(percentile: number): { label: string; severity: 'normal' | 'attention' | 'alert' } {
+  if (percentile < 3) return { label: 'Muito baixo', severity: 'alert' };
+  if (percentile < 15) return { label: 'Baixo', severity: 'attention' };
+  if (percentile <= 85) return { label: 'Adequado', severity: 'normal' };
+  if (percentile <= 97) return { label: 'Alto', severity: 'attention' };
+  return { label: 'Muito alto', severity: 'alert' };
 }
