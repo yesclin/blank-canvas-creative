@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertTriangle, Baby, Plus, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
+import { v4 as uuidv4 } from 'uuid';
 import {
   CrescimentoDesenvolvimentoBlock,
   DEFAULT_MILESTONES,
