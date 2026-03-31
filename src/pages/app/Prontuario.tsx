@@ -123,6 +123,7 @@ import {
 } from "@/components/prontuario/aesthetics";
 import { VisaoGeralBlock, AnamneseBlock, EvolucoesBlock, ExameFisicoBlock, CondutaBlock, DocumentosBlock, AlertasBlock, AlertasBanner, LinhaTempoBlock, DiagnosticosBlock, PrescricoesBlock, DocumentosClinicosBlock } from "@/components/prontuario/clinica-geral";
 import { VisaoGeralPsicologiaBlock, AnamnesePsicologiaBlock, SessoesPsicologiaBlock, EvolucaoCasalBlock, PlanoTerapeuticoBlock, MetasTerapeuticasBlock, InstrumentosPsicologicosBlock, TermosConsentimentosPsicologiaBlock, AlertasPsicologiaBlock, AlertasBannerPsicologia, HistoricoPsicologiaBlock, RelatorioPsicologicoBlock, RelatorioEscolarBlock, RelatorioJudicialBlock, GraficosEvolucaoPsicologia, AnaliseTendenciaPsicologia, LaudoPsicologicoBlock } from "@/components/prontuario/psicologia";
+import { HipotesesDiagnosticasPsicologiaBlock } from "@/components/prontuario/psicologia/HipotesesDiagnosticasPsicologiaBlock";
 import { useVisaoGeralData, useAnamneseData, useEvolucoesData, useExameFisicoData, useCondutaData, useDocumentosData, useAlertasData, useLinhaTempoData, useDiagnosticosData, usePrescricoesData } from "@/hooks/prontuario/clinica-geral";
 import { useDocumentosClinicosData } from "@/hooks/prontuario/clinica-geral/useDocumentosClinicosData";
 import { useVisaoGeralPsicologiaData, useAnamnesePsicologiaData, useSessoesPsicologiaData, usePlanoTerapeuticoData, useMetasTerapeuticasData, useInstrumentosPsicologicosData, useAlertasPsicologiaData } from "@/hooks/prontuario/psicologia";
@@ -1469,6 +1470,17 @@ export default function Prontuario() {
         );
 
       case 'diagnostico':
+        // Psicologia - Hipóteses Diagnósticas
+        if (activeSpecialtyKey === 'psicologia') {
+          return (
+            <HipotesesDiagnosticasPsicologiaBlock
+              patientId={patientId!}
+              canEdit={canEditCurrentTab}
+              professionalId={currentProfessionalId}
+              professionalName={currentProfessionalName}
+            />
+          );
+        }
         // Fisioterapia - Diagnóstico Funcional
         if (activeSpecialtyKey === 'fisioterapia') {
           return (
