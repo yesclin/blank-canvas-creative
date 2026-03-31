@@ -29,6 +29,7 @@
    isEditing = false,
    selectedMuscle,
    className,
+   baseImageUrl,
  }: FacialMapSVGProps) {
    const filteredApplications = applications.filter(a => a.view_type === viewType);
  
