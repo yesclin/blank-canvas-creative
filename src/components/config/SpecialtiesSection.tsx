@@ -146,13 +146,12 @@ export function SpecialtiesSection() {
 
       if (error) throw error;
 
-      // Auto-link all active professionals to the new specialty
+      // Auto-link all active professionals to the newly activated specialty
       const specialtyRecord = await supabase
         .from("specialties")
         .select("id")
         .eq("clinic_id", clinic.id)
         .eq("slug", slug)
-        .eq("is_active", true)
         .maybeSingle();
 
       if (specialtyRecord.data?.id) {
@@ -163,7 +162,6 @@ export function SpecialtiesSection() {
           .eq("is_active", true);
 
         if (professionals && professionals.length > 0) {
-          // Insert professional-specialty links (ignore duplicates)
           const links = professionals.map(p => ({
             professional_id: p.id,
             specialty_id: specialtyRecord.data!.id,
