@@ -215,16 +215,17 @@ export function FacialMapModule({
          {/* Left Column - Face Map (2/3 width) */}
          <div className="lg:col-span-2 bg-gradient-to-b from-muted/20 to-muted/5 rounded-xl border p-4">
            <div className="h-full flex items-center justify-center">
-             <FacialMapSVG
-               viewType={viewType}
-               applications={displayApplications}
-               selectedPointId={selectedPoint?.id}
-               onPointClick={handlePointClick}
-               onMapClick={handleMapClick}
-               isEditing={isEditing}
-               selectedMuscle={selectedMuscle}
-               className="max-h-[560px]"
-             />
+              <FacialMapSVG
+                viewType={viewType}
+                applications={displayApplications}
+                selectedPointId={selectedPoint?.id}
+                onPointClick={handlePointClick}
+                onMapClick={handleMapClick}
+                isEditing={isEditing}
+                selectedMuscle={selectedMuscle}
+                className="max-h-[560px]"
+                baseImageUrl={viewType === 'frontal' ? facialMapToxinaFrontal : undefined}
+              />
            </div>
          </div>
  
