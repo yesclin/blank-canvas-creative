@@ -88,7 +88,7 @@ export const SPECIALTY_CAPABILITIES: Record<SpecialtyKey, SpecialtyCapability> =
     label: 'Pilates',
     anamnesisSlug: 'pilates',
     enabledBlocks: [
-      'resumo', 'anamnese', 'avaliacao_funcional', 'conduta',
+      'resumo', 'anamnese', 'avaliacao_funcional', 'avaliacao_dor', 'conduta',
       'evolucao', 'exames', 'alertas', 'timeline',
     ],
     defaultModules: [...CORE_MODULES, 'recurring_sessions', 'body_measurements', 'therapeutic_plan', 'interactive_map'],

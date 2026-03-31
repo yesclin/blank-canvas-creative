@@ -60,7 +60,7 @@ export interface AvaliacaoFuncionalPilatesData {
   // Campos específicos Pilates
   mobilidade_articular: string | null;
   mobilidade_obs: string | null;
-  mobilidade_regioes: Record<string, string> | null; // ex: { coluna: 'leve_restricao', quadril: 'normal' }
+  mobilidade_regioes: Record<string, string> | null;
   
   forca_funcional: string | null;
   forca_obs: string | null;
@@ -80,6 +80,15 @@ export interface AvaliacaoFuncionalPilatesData {
   postura_observacoes: string | null;
   objetivos_pilates: string | null;
   observacoes_gerais: string | null;
+
+  // Campos adicionais v2
+  postura_global: string | null;
+  alinhamento_corporal: string | null;
+  flexibilidade: string | null;
+  flexibilidade_obs: string | null;
+  encurtamentos: string | null;
+  compensacoes: string | null;
+  limitacoes_funcionais: string | null;
   
   created_at: string;
 }
@@ -107,6 +116,15 @@ export interface AvaliacaoFuncionalPilatesFormData {
   postura_observacoes: string;
   objetivos_pilates: string;
   observacoes_gerais: string;
+
+  // Campos adicionais v2
+  postura_global: string;
+  alinhamento_corporal: string;
+  flexibilidade: string;
+  flexibilidade_obs: string;
+  encurtamentos: string;
+  compensacoes: string;
+  limitacoes_funcionais: string;
 }
 
 interface UseAvaliacaoFuncionalPilatesDataParams {
@@ -178,6 +196,15 @@ export function useAvaliacaoFuncionalPilatesData({
           postura_observacoes: (content?.postura_observacoes as string) || null,
           objetivos_pilates: (content?.objetivos_pilates as string) || null,
           observacoes_gerais: (content?.observacoes_gerais as string) || null,
+
+          // v2 fields
+          postura_global: (content?.postura_global as string) || null,
+          alinhamento_corporal: (content?.alinhamento_corporal as string) || null,
+          flexibilidade: (content?.flexibilidade as string) || null,
+          flexibilidade_obs: (content?.flexibilidade_obs as string) || null,
+          encurtamentos: (content?.encurtamentos as string) || null,
+          compensacoes: (content?.compensacoes as string) || null,
+          limitacoes_funcionais: (content?.limitacoes_funcionais as string) || null,
           
           created_at: record.created_at,
         } as AvaliacaoFuncionalPilatesData;
@@ -220,6 +247,15 @@ export function useAvaliacaoFuncionalPilatesData({
         postura_observacoes: formData.postura_observacoes || null,
         objetivos_pilates: formData.objetivos_pilates || null,
         observacoes_gerais: formData.observacoes_gerais || null,
+        
+        // v2 fields
+        postura_global: formData.postura_global || null,
+        alinhamento_corporal: formData.alinhamento_corporal || null,
+        flexibilidade: formData.flexibilidade || null,
+        flexibilidade_obs: formData.flexibilidade_obs || null,
+        encurtamentos: formData.encurtamentos || null,
+        compensacoes: formData.compensacoes || null,
+        limitacoes_funcionais: formData.limitacoes_funcionais || null,
       };
 
       const { data, error } = await supabase
@@ -281,6 +317,14 @@ export function getEmptyAvaliacaoFormPilates(): AvaliacaoFuncionalPilatesFormDat
     postura_observacoes: '',
     objetivos_pilates: '',
     observacoes_gerais: '',
+    // v2 fields
+    postura_global: '',
+    alinhamento_corporal: '',
+    flexibilidade: '',
+    flexibilidade_obs: '',
+    encurtamentos: '',
+    compensacoes: '',
+    limitacoes_funcionais: '',
   };
 }
 

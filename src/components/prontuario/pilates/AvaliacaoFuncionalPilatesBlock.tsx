@@ -201,9 +201,10 @@ function AvaliacaoForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       <ScrollArea className="h-[60vh] pr-4">
         <Tabs defaultValue="mobilidade" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-4">
+          <TabsList className="grid w-full grid-cols-4 mb-4">
             <TabsTrigger value="mobilidade" className="text-xs">Mobilidade / Força</TabsTrigger>
             <TabsTrigger value="core" className="text-xs">Core / Equilíbrio</TabsTrigger>
+            <TabsTrigger value="complementar" className="text-xs">Complementar</TabsTrigger>
             <TabsTrigger value="testes" className="text-xs">Testes Funcionais</TabsTrigger>
           </TabsList>
 
@@ -329,6 +330,93 @@ function AvaliacaoForm({
                 value={formData.postura_observacoes}
                 onChange={(e) => handleChange('postura_observacoes', e.target.value)}
                 rows={4}
+              />
+            </div>
+          </TabsContent>
+
+          {/* Aba Complementar - v2 fields */}
+          <TabsContent value="complementar" className="space-y-6 mt-4">
+            {/* Postura Global */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-primary" />
+                <Label className="font-semibold">Postura Global</Label>
+              </div>
+              <Textarea
+                placeholder="Avaliação da postura global (vista anterior, posterior, lateral)..."
+                value={formData.postura_global}
+                onChange={(e) => handleChange('postura_global', e.target.value)}
+                rows={3}
+              />
+            </div>
+
+            {/* Alinhamento Corporal */}
+            <div className="space-y-4 pt-4 border-t">
+              <Label className="font-semibold">Alinhamento Corporal</Label>
+              <Textarea
+                placeholder="Simetria, desvios, alinhamento de ombros, pelve, joelhos..."
+                value={formData.alinhamento_corporal}
+                onChange={(e) => handleChange('alinhamento_corporal', e.target.value)}
+                rows={3}
+              />
+            </div>
+
+            {/* Flexibilidade */}
+            <div className="space-y-4 pt-4 border-t">
+              <Label className="font-semibold">Flexibilidade</Label>
+              <div className="grid gap-3 md:grid-cols-2">
+                <Select
+                  value={formData.flexibilidade}
+                  onValueChange={(value) => handleChange('flexibilidade', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Avaliação geral..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MOBILIDADE_OPTIONS.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Textarea
+                  placeholder="Detalhes sobre flexibilidade..."
+                  value={formData.flexibilidade_obs}
+                  onChange={(e) => handleChange('flexibilidade_obs', e.target.value)}
+                  rows={2}
+                />
+              </div>
+            </div>
+
+            {/* Encurtamentos */}
+            <div className="space-y-4 pt-4 border-t">
+              <Label className="font-semibold">Encurtamentos Musculares</Label>
+              <Textarea
+                placeholder="Isquiotibiais, iliopsoas, peitoral, trapézio superior..."
+                value={formData.encurtamentos}
+                onChange={(e) => handleChange('encurtamentos', e.target.value)}
+                rows={3}
+              />
+            </div>
+
+            {/* Compensações */}
+            <div className="space-y-4 pt-4 border-t">
+              <Label className="font-semibold">Compensações Observadas</Label>
+              <Textarea
+                placeholder="Padrões compensatórios durante movimentos funcionais..."
+                value={formData.compensacoes}
+                onChange={(e) => handleChange('compensacoes', e.target.value)}
+                rows={3}
+              />
+            </div>
+
+            {/* Limitações Funcionais */}
+            <div className="space-y-4 pt-4 border-t">
+              <Label className="font-semibold">Limitações Funcionais</Label>
+              <Textarea
+                placeholder="Movimentos limitados, atividades afetadas, restrições..."
+                value={formData.limitacoes_funcionais}
+                onChange={(e) => handleChange('limitacoes_funcionais', e.target.value)}
+                rows={3}
               />
             </div>
           </TabsContent>
@@ -847,6 +935,14 @@ export function AvaliacaoFuncionalPilatesBlock({
         postura_observacoes: currentAvaliacao.postura_observacoes || '',
         objetivos_pilates: currentAvaliacao.objetivos_pilates || '',
         observacoes_gerais: currentAvaliacao.observacoes_gerais || '',
+        // v2 fields
+        postura_global: currentAvaliacao.postura_global || '',
+        alinhamento_corporal: currentAvaliacao.alinhamento_corporal || '',
+        flexibilidade: currentAvaliacao.flexibilidade || '',
+        flexibilidade_obs: currentAvaliacao.flexibilidade_obs || '',
+        encurtamentos: currentAvaliacao.encurtamentos || '',
+        compensacoes: currentAvaliacao.compensacoes || '',
+        limitacoes_funcionais: currentAvaliacao.limitacoes_funcionais || '',
       };
     }
     return getEmptyAvaliacaoFormPilates();

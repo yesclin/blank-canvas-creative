@@ -159,6 +159,7 @@ import {
   AnamneseFuncionalPilatesBlock,
   AvaliacaoFuncionalPilatesBlock,
   AvaliacaoPosturalPilatesBlock,
+  AvaliacaoDorPilatesBlock,
   PlanoExerciciosPilatesBlock,
   SessoesPilatesBlock,
   ExamesDocumentosPilatesBlock,
@@ -1247,6 +1248,17 @@ export default function Prontuario() {
         );
 
       case 'avaliacao_dor':
+        // Pilates - Avaliação de Dor
+        if (activeSpecialtyKey === 'pilates') {
+          return (
+            <AvaliacaoDorPilatesBlock
+              patientId={patientId}
+              clinicId={clinicIdForFisio || null}
+              professionalId={currentProfessionalId || null}
+              canEdit={canEditCurrentTab}
+            />
+          );
+        }
         // Fisioterapia - Avaliação de Dor (EVA, localização)
         return (
           <AvaliacaoDorBlock
