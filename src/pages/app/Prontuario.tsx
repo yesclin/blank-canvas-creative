@@ -1343,6 +1343,7 @@ export default function Prontuario() {
             professionalId={currentProfessionalId || null}
             appointmentId={activeAppointment?.id}
             birthDate={patient?.birth_date}
+            gender={(patient?.gender as 'M' | 'F') || undefined}
             canEdit={canEditCurrentTab}
           />
         );
