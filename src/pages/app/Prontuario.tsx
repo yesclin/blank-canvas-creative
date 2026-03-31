@@ -1335,14 +1335,15 @@ export default function Prontuario() {
 
       case 'crescimento_desenvolvimento':
         // Pediatria - Crescimento e Desenvolvimento
-        if (!patientId || !patient?.birth_date) return null;
+        if (!patientId) return null;
         return (
-          <CrescimentoDesenvolvimentoBlock
+          <CrescimentoDesenvolvimentoWrapper
             patientId={patientId}
-            birthDate={patient.birth_date}
-            measurements={[]}
-            milestones={[]}
-            isEditable={canEditCurrentTab}
+            clinicId={clinicIdForFisio || null}
+            professionalId={currentProfessionalId || null}
+            appointmentId={activeAppointment?.id}
+            birthDate={patient?.birth_date}
+            canEdit={canEditCurrentTab}
           />
         );
 
