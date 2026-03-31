@@ -10,6 +10,8 @@
    isEditing?: boolean;
    selectedMuscle?: string | null;
    className?: string;
+   /** Optional base image URL to use instead of SVG drawing for frontal view */
+   baseImageUrl?: string;
  }
  
  const PROCEDURE_COLORS: Record<ProcedureType, string> = {
@@ -27,6 +29,7 @@
    isEditing = false,
    selectedMuscle,
    className,
+   baseImageUrl,
  }: FacialMapSVGProps) {
    const filteredApplications = applications.filter(a => a.view_type === viewType);
  
@@ -62,202 +65,211 @@
          </filter>
        </defs>
        
-       {/* Face - Frontal View */}
-       {viewType === 'frontal' && (
-         <g className="face-frontal" filter="url(#softShadow)">
-           {/* Face oval */}
-           <ellipse 
-             cx="200" cy="250" rx="130" ry="170" 
-             fill="url(#skinGradient)" 
-             stroke="hsl(var(--border))" 
-             strokeWidth="1.5" 
-           />
-           
-           {/* Hairline */}
-           <path 
-             d="M 85 180 Q 100 80 200 60 Q 300 80 315 180" 
-             fill="none" 
-             stroke="hsl(var(--muted-foreground))" 
-             strokeWidth="1"
-             opacity="0.4"
-           />
-           
-           {/* Forehead region indicator */}
-           <ellipse 
-             cx="200" cy="140" rx="70" ry="35"
-             fill="none"
-             stroke="hsl(var(--muted-foreground))"
-             strokeWidth="0.5"
-             strokeDasharray="4 2"
-             opacity="0.3"
-           />
-           
-           {/* Eyebrows - thicker, more natural */}
-           <path 
-             d="M 120 175 Q 140 165 175 172" 
-             fill="none" 
-             stroke="hsl(var(--foreground))" 
-             strokeWidth="4" 
-             strokeLinecap="round"
-             opacity="0.7"
-           />
-           <path 
-             d="M 225 172 Q 260 165 280 175" 
-             fill="none" 
-             stroke="hsl(var(--foreground))" 
-             strokeWidth="4" 
-             strokeLinecap="round"
-             opacity="0.7"
-           />
-           
-           {/* Glabela region */}
-           <path 
-             d="M 178 175 Q 200 168 222 175"
-             fill="none"
-             stroke="hsl(var(--muted-foreground))"
-             strokeWidth="0.5"
-             strokeDasharray="3 2"
-             opacity="0.4"
-           />
-           
-           {/* Eyes - almond shaped */}
-           <ellipse cx="150" cy="200" rx="28" ry="14" fill="none" stroke="hsl(var(--foreground))" strokeWidth="1.5" opacity="0.8" />
-           <ellipse cx="250" cy="200" rx="28" ry="14" fill="none" stroke="hsl(var(--foreground))" strokeWidth="1.5" opacity="0.8" />
-           <circle cx="150" cy="200" r="8" fill="hsl(var(--foreground))" opacity="0.6" />
-           <circle cx="250" cy="200" r="8" fill="hsl(var(--foreground))" opacity="0.6" />
-           
-           {/* Crow's feet regions */}
-           <path 
-             d="M 105 195 L 115 200 M 105 200 L 115 200 M 105 205 L 115 200"
-             fill="none"
-             stroke="hsl(var(--muted-foreground))"
-             strokeWidth="0.5"
-             opacity="0.3"
-           />
-           <path 
-             d="M 295 195 L 285 200 M 295 200 L 285 200 M 295 205 L 285 200"
-             fill="none"
-             stroke="hsl(var(--muted-foreground))"
-             strokeWidth="0.5"
-             opacity="0.3"
-           />
-           
-           {/* Nose */}
-           <path 
-             d="M 200 185 L 200 260 M 180 265 Q 200 280 220 265" 
-             fill="none" 
-             stroke="hsl(var(--foreground))" 
-             strokeWidth="1.5" 
-             opacity="0.6"
-           />
-           
-           {/* Nasolabial fold indicators */}
-           <path 
-             d="M 170 260 Q 160 295 155 320"
-             fill="none"
-             stroke="hsl(var(--muted-foreground))"
-             strokeWidth="0.5"
-             strokeDasharray="3 2"
-             opacity="0.3"
-           />
-           <path 
-             d="M 230 260 Q 240 295 245 320"
-             fill="none"
-             stroke="hsl(var(--muted-foreground))"
-             strokeWidth="0.5"
-             strokeDasharray="3 2"
-             opacity="0.3"
-           />
-           
-           {/* Cheekbone area */}
-           <ellipse 
-             cx="120" cy="265" rx="30" ry="20"
-             fill="none"
-             stroke="hsl(var(--muted-foreground))"
-             strokeWidth="0.5"
-             strokeDasharray="4 2"
-             opacity="0.2"
-           />
-           <ellipse 
-             cx="280" cy="265" rx="30" ry="20"
-             fill="none"
-             stroke="hsl(var(--muted-foreground))"
-             strokeWidth="0.5"
-             strokeDasharray="4 2"
-             opacity="0.2"
-           />
-           
-           {/* Mouth */}
-           <path 
-             d="M 160 330 Q 200 348 240 330" 
-             fill="none" 
-             stroke="hsl(var(--foreground))" 
-             strokeWidth="2" 
-             opacity="0.7"
-           />
-           <line 
-             x1="160" y1="330" x2="240" y2="330" 
-             stroke="hsl(var(--foreground))" 
-             strokeWidth="1.5" 
-             opacity="0.6"
-           />
-           
-           {/* Marionette region */}
-           <path 
-             d="M 155 340 Q 150 360 148 380"
-             fill="none"
-             stroke="hsl(var(--muted-foreground))"
-             strokeWidth="0.5"
-             strokeDasharray="3 2"
-             opacity="0.3"
-           />
-           <path 
-             d="M 245 340 Q 250 360 252 380"
-             fill="none"
-             stroke="hsl(var(--muted-foreground))"
-             strokeWidth="0.5"
-             strokeDasharray="3 2"
-             opacity="0.3"
-           />
-           
-           {/* Chin */}
-           <ellipse 
-             cx="200" cy="385" rx="25" ry="15"
-             fill="none"
-             stroke="hsl(var(--muted-foreground))"
-             strokeWidth="0.5"
-             strokeDasharray="4 2"
-             opacity="0.2"
-           />
-           
-           {/* Jawline / Masseter region */}
-           <ellipse 
-             cx="100" cy="330" rx="25" ry="35"
-             fill="none"
-             stroke="hsl(var(--muted-foreground))"
-             strokeWidth="0.5"
-             strokeDasharray="4 2"
-             opacity="0.2"
-           />
-           <ellipse 
-             cx="300" cy="330" rx="25" ry="35"
-             fill="none"
-             stroke="hsl(var(--muted-foreground))"
-             strokeWidth="0.5"
-             strokeDasharray="4 2"
-             opacity="0.2"
-           />
-           
-           {/* Neck indication */}
-           <path 
-             d="M 160 415 L 160 480 M 240 415 L 240 480"
-             fill="none"
-             stroke="hsl(var(--border))"
-             strokeWidth="1"
-             opacity="0.3"
-           />
-         </g>
-       )}
+        {/* Face - Frontal View */}
+        {viewType === 'frontal' && baseImageUrl ? (
+          <image
+            href={baseImageUrl}
+            x="0"
+            y="0"
+            width="400"
+            height="520"
+            preserveAspectRatio="xMidYMid meet"
+          />
+        ) : viewType === 'frontal' && (
+          <g className="face-frontal" filter="url(#softShadow)">
+            {/* Face oval */}
+            <ellipse 
+              cx="200" cy="250" rx="130" ry="170" 
+              fill="url(#skinGradient)" 
+              stroke="hsl(var(--border))" 
+              strokeWidth="1.5" 
+            />
+            
+            {/* Hairline */}
+            <path 
+              d="M 85 180 Q 100 80 200 60 Q 300 80 315 180" 
+              fill="none" 
+              stroke="hsl(var(--muted-foreground))" 
+              strokeWidth="1"
+              opacity="0.4"
+            />
+            
+            {/* Forehead region indicator */}
+            <ellipse 
+              cx="200" cy="140" rx="70" ry="35"
+              fill="none"
+              stroke="hsl(var(--muted-foreground))"
+              strokeWidth="0.5"
+              strokeDasharray="4 2"
+              opacity="0.3"
+            />
+            
+            {/* Eyebrows */}
+            <path 
+              d="M 120 175 Q 140 165 175 172" 
+              fill="none" 
+              stroke="hsl(var(--foreground))" 
+              strokeWidth="4" 
+              strokeLinecap="round"
+              opacity="0.7"
+            />
+            <path 
+              d="M 225 172 Q 260 165 280 175" 
+              fill="none" 
+              stroke="hsl(var(--foreground))" 
+              strokeWidth="4" 
+              strokeLinecap="round"
+              opacity="0.7"
+            />
+            
+            {/* Glabela region */}
+            <path 
+              d="M 178 175 Q 200 168 222 175"
+              fill="none"
+              stroke="hsl(var(--muted-foreground))"
+              strokeWidth="0.5"
+              strokeDasharray="3 2"
+              opacity="0.4"
+            />
+            
+            {/* Eyes */}
+            <ellipse cx="150" cy="200" rx="28" ry="14" fill="none" stroke="hsl(var(--foreground))" strokeWidth="1.5" opacity="0.8" />
+            <ellipse cx="250" cy="200" rx="28" ry="14" fill="none" stroke="hsl(var(--foreground))" strokeWidth="1.5" opacity="0.8" />
+            <circle cx="150" cy="200" r="8" fill="hsl(var(--foreground))" opacity="0.6" />
+            <circle cx="250" cy="200" r="8" fill="hsl(var(--foreground))" opacity="0.6" />
+            
+            {/* Crow's feet regions */}
+            <path 
+              d="M 105 195 L 115 200 M 105 200 L 115 200 M 105 205 L 115 200"
+              fill="none"
+              stroke="hsl(var(--muted-foreground))"
+              strokeWidth="0.5"
+              opacity="0.3"
+            />
+            <path 
+              d="M 295 195 L 285 200 M 295 200 L 285 200 M 295 205 L 285 200"
+              fill="none"
+              stroke="hsl(var(--muted-foreground))"
+              strokeWidth="0.5"
+              opacity="0.3"
+            />
+            
+            {/* Nose */}
+            <path 
+              d="M 200 185 L 200 260 M 180 265 Q 200 280 220 265" 
+              fill="none" 
+              stroke="hsl(var(--foreground))" 
+              strokeWidth="1.5" 
+              opacity="0.6"
+            />
+            
+            {/* Nasolabial fold indicators */}
+            <path 
+              d="M 170 260 Q 160 295 155 320"
+              fill="none"
+              stroke="hsl(var(--muted-foreground))"
+              strokeWidth="0.5"
+              strokeDasharray="3 2"
+              opacity="0.3"
+            />
+            <path 
+              d="M 230 260 Q 240 295 245 320"
+              fill="none"
+              stroke="hsl(var(--muted-foreground))"
+              strokeWidth="0.5"
+              strokeDasharray="3 2"
+              opacity="0.3"
+            />
+            
+            {/* Cheekbone area */}
+            <ellipse 
+              cx="120" cy="265" rx="30" ry="20"
+              fill="none"
+              stroke="hsl(var(--muted-foreground))"
+              strokeWidth="0.5"
+              strokeDasharray="4 2"
+              opacity="0.2"
+            />
+            <ellipse 
+              cx="280" cy="265" rx="30" ry="20"
+              fill="none"
+              stroke="hsl(var(--muted-foreground))"
+              strokeWidth="0.5"
+              strokeDasharray="4 2"
+              opacity="0.2"
+            />
+            
+            {/* Mouth */}
+            <path 
+              d="M 160 330 Q 200 348 240 330" 
+              fill="none" 
+              stroke="hsl(var(--foreground))" 
+              strokeWidth="2" 
+              opacity="0.7"
+            />
+            <line 
+              x1="160" y1="330" x2="240" y2="330" 
+              stroke="hsl(var(--foreground))" 
+              strokeWidth="1.5" 
+              opacity="0.6"
+            />
+            
+            {/* Marionette region */}
+            <path 
+              d="M 155 340 Q 150 360 148 380"
+              fill="none"
+              stroke="hsl(var(--muted-foreground))"
+              strokeWidth="0.5"
+              strokeDasharray="3 2"
+              opacity="0.3"
+            />
+            <path 
+              d="M 245 340 Q 250 360 252 380"
+              fill="none"
+              stroke="hsl(var(--muted-foreground))"
+              strokeWidth="0.5"
+              strokeDasharray="3 2"
+              opacity="0.3"
+            />
+            
+            {/* Chin */}
+            <ellipse 
+              cx="200" cy="385" rx="25" ry="15"
+              fill="none"
+              stroke="hsl(var(--muted-foreground))"
+              strokeWidth="0.5"
+              strokeDasharray="4 2"
+              opacity="0.2"
+            />
+            
+            {/* Jawline / Masseter region */}
+            <ellipse 
+              cx="100" cy="330" rx="25" ry="35"
+              fill="none"
+              stroke="hsl(var(--muted-foreground))"
+              strokeWidth="0.5"
+              strokeDasharray="4 2"
+              opacity="0.2"
+            />
+            <ellipse 
+              cx="300" cy="330" rx="25" ry="35"
+              fill="none"
+              stroke="hsl(var(--muted-foreground))"
+              strokeWidth="0.5"
+              strokeDasharray="4 2"
+              opacity="0.2"
+            />
+            
+            {/* Neck indication */}
+            <path 
+              d="M 160 415 L 160 480 M 240 415 L 240 480"
+              fill="none"
+              stroke="hsl(var(--border))"
+              strokeWidth="1"
+              opacity="0.3"
+            />
+          </g>
+        )}
        
        {/* Face - Left Lateral View */}
        {viewType === 'left_lateral' && (
