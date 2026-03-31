@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertTriangle, Baby, Plus, RefreshCw } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { AlertTriangle, Baby, RefreshCw, Scale, Ruler, Activity, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { differenceInMonths, parseISO } from 'date-fns';
 
 import {
   CrescimentoDesenvolvimentoBlock,
@@ -12,6 +14,13 @@ import {
   type GrowthMeasurement,
   type DevelopmentMilestone,
 } from './CrescimentoDesenvolvimentoBlock';
+import { PediatricGrowthChart } from './PediatricGrowthChart';
+import {
+  WEIGHT_BOYS, WEIGHT_GIRLS,
+  HEIGHT_BOYS, HEIGHT_GIRLS,
+  HC_BOYS, HC_GIRLS,
+  estimatePercentile, getGrowthClassification,
+} from './whoGrowthData';
 
 interface CrescimentoDesenvolvimentoWrapperProps {
   patientId: string;
@@ -19,6 +28,7 @@ interface CrescimentoDesenvolvimentoWrapperProps {
   professionalId: string | null;
   appointmentId?: string;
   birthDate?: string | null;
+  gender?: 'M' | 'F';
   canEdit?: boolean;
 }
 
@@ -28,6 +38,7 @@ export function CrescimentoDesenvolvimentoWrapper({
   professionalId,
   appointmentId,
   birthDate,
+  gender,
   canEdit = true,
 }: CrescimentoDesenvolvimentoWrapperProps) {
   const { toast } = useToast();
@@ -36,6 +47,50 @@ export function CrescimentoDesenvolvimentoWrapper({
   const [measurements, setMeasurements] = useState<GrowthMeasurement[]>([]);
   const [milestones, setMilestones] = useState<DevelopmentMilestone[]>([]);
 
+  const patientGender = gender || 'M';
+
+  const currentAgeMonths = useMemo(() => {
+    if (!birthDate) return 0;
+    return differenceInMonths(new Date(), parseISO(birthDate));
+  }, [birthDate]);
+
+  // Clinical interpretation of latest measurement
+  const clinicalInterpretation = useMemo(() => {
+    if (!measurements.length) return null;
+    const sorted = [...measurements].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const latest = sorted[0];
+    const result: { label: string; value: string; classification: ReturnType<typeof getGrowthClassification> | null }[] = [];
+
+    if (latest.weight_kg) {
+      const wData = patientGender === 'M' ? WEIGHT_BOYS : WEIGHT_GIRLS;
+      const p = estimatePercentile(latest.weight_kg, latest.age_months, wData);
+      result.push({
+        label: 'Peso/Idade',
+        value: p !== undefined ? `P${Math.round(p)}` : '—',
+        classification: p !== undefined ? getGrowthClassification(p) : null,
+      });
+    }
+    if (latest.height_cm) {
+      const hData = patientGender === 'M' ? HEIGHT_BOYS : HEIGHT_GIRLS;
+      const p = estimatePercentile(latest.height_cm, latest.age_months, hData);
+      result.push({
+        label: 'Altura/Idade',
+        value: p !== undefined ? `P${Math.round(p)}` : '—',
+        classification: p !== undefined ? getGrowthClassification(p) : null,
+      });
+    }
+    if (latest.head_circumference_cm) {
+      const hcData = patientGender === 'M' ? HC_BOYS : HC_GIRLS;
+      const p = estimatePercentile(latest.head_circumference_cm, latest.age_months, hcData);
+      result.push({
+        label: 'PC/Idade',
+        value: p !== undefined ? `P${Math.round(p)}` : '—',
+        classification: p !== undefined ? getGrowthClassification(p) : null,
+      });
+    }
+    return result;
+  }, [measurements, patientGender]);
+
   // Fetch data
   const fetchData = useCallback(async () => {
     if (!patientId || !clinicId) return;
@@ -43,7 +98,6 @@ export function CrescimentoDesenvolvimentoWrapper({
     setError(null);
 
     try {
-      // Fetch growth measurements
       const { data: measurementsData, error: mError } = await supabase
         .from('body_measurements')
         .select('*')
@@ -174,7 +228,6 @@ export function CrescimentoDesenvolvimentoWrapper({
       );
       setMilestones(updatedMilestones);
 
-      // Upsert milestones record
       const { data: existing } = await supabase
         .from('body_measurements')
         .select('id')
@@ -219,7 +272,6 @@ export function CrescimentoDesenvolvimentoWrapper({
         description: err.message || 'Não foi possível atualizar o marco.',
         variant: 'destructive',
       });
-      // Revert
       await fetchData();
     }
   };
@@ -278,14 +330,54 @@ export function CrescimentoDesenvolvimentoWrapper({
   }
 
   return (
-    <CrescimentoDesenvolvimentoBlock
-      patientId={patientId}
-      birthDate={birthDate}
-      measurements={measurements}
-      milestones={milestones}
-      onAddMeasurement={canEdit ? handleAddMeasurement : undefined}
-      onUpdateMilestone={canEdit ? handleUpdateMilestone : undefined}
-      isEditable={canEdit}
-    />
+    <div className="space-y-4">
+      {/* Clinical Interpretation Summary */}
+      {clinicalInterpretation && clinicalInterpretation.length > 0 && (
+        <Card>
+          <CardContent className="py-4">
+            <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+              <Activity className="h-4 w-4 text-primary" />
+              Leitura Clínica Atual
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {clinicalInterpretation.map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                  <span className="text-xs text-muted-foreground">{item.label}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-medium">{item.value}</span>
+                    {item.classification && (
+                      <Badge variant="outline" className={`text-xs ${item.classification.color}`}>
+                        {item.classification.severity === 'normal' && <CheckCircle2 className="h-3 w-3 mr-0.5" />}
+                        {item.classification.severity === 'attention' && <AlertCircle className="h-3 w-3 mr-0.5" />}
+                        {item.classification.severity === 'alert' && <AlertTriangle className="h-3 w-3 mr-0.5" />}
+                        {item.classification.label}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Growth Charts */}
+      <PediatricGrowthChart
+        measurements={measurements}
+        gender={patientGender}
+        currentAgeMonths={currentAgeMonths}
+      />
+
+      {/* Growth Block (form, history, milestones) */}
+      <CrescimentoDesenvolvimentoBlock
+        patientId={patientId}
+        birthDate={birthDate}
+        measurements={measurements}
+        milestones={milestones}
+        onAddMeasurement={canEdit ? handleAddMeasurement : undefined}
+        onUpdateMilestone={canEdit ? handleUpdateMilestone : undefined}
+        isEditable={canEdit}
+      />
+    </div>
   );
 }
