@@ -5917,6 +5917,88 @@ export type Database = {
           },
         ]
       }
+      psychology_diagnostic_hypotheses: {
+        Row: {
+          clinic_id: string
+          comportamentos_observados: string | null
+          created_at: string
+          data_registro: string
+          descricao_clinica: string | null
+          fatores_desencadeantes: string | null
+          gravidade_impacto: string | null
+          hipotese_principal: string
+          hipoteses_secundarias: string | null
+          id: string
+          observacoes: string | null
+          patient_id: string
+          professional_id: string | null
+          professional_name: string | null
+          sintomas_observados: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          comportamentos_observados?: string | null
+          created_at?: string
+          data_registro?: string
+          descricao_clinica?: string | null
+          fatores_desencadeantes?: string | null
+          gravidade_impacto?: string | null
+          hipotese_principal: string
+          hipoteses_secundarias?: string | null
+          id?: string
+          observacoes?: string | null
+          patient_id: string
+          professional_id?: string | null
+          professional_name?: string | null
+          sintomas_observados?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          comportamentos_observados?: string | null
+          created_at?: string
+          data_registro?: string
+          descricao_clinica?: string | null
+          fatores_desencadeantes?: string | null
+          gravidade_impacto?: string | null
+          hipotese_principal?: string
+          hipoteses_secundarias?: string | null
+          id?: string
+          observacoes?: string | null
+          patient_id?: string
+          professional_id?: string | null
+          professional_name?: string | null
+          sintomas_observados?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "psychology_diagnostic_hypotheses_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "psychology_diagnostic_hypotheses_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "psychology_diagnostic_hypotheses_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recurring_session_entries: {
         Row: {
           appointment_id: string | null
