@@ -125,7 +125,7 @@ export function useDynamicAnamnesisRecords(patientId: string | null) {
         template_id: r.template_id,
         template_version_id: r.template_version_id,
         specialty_id: r.specialty_id,
-        procedure_id: r.procedure_id,
+        procedure_id: null,
         appointment_id: r.appointment_id,
         responses: (r.responses as Record<string, unknown>) || {},
         structure_snapshot: r.structure_snapshot,
@@ -166,15 +166,26 @@ export function useDynamicAnamnesisRecords(patientId: string | null) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
+      // Resolve professional_id from profiles
+      let professionalId: string | null = null;
+      const { data: prof } = await supabase
+        .from('professionals')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('clinic_id', clinic.id)
+        .maybeSingle();
+      professionalId = prof?.id || null;
+
       const { data, error } = await supabase
         .from('anamnesis_records')
         .insert({
           patient_id: patientId,
           clinic_id: clinic.id,
+          professional_id: professionalId || user.id,
           template_id: params.templateId,
           template_version_id: params.templateVersionId,
           specialty_id: params.specialtyId || null,
-          procedure_id: params.procedureId || null,
+          // procedure_id is not a column in anamnesis_records
           appointment_id: params.appointmentId || null,
           responses: params.responses as unknown as Json,
           structure_snapshot: params.structureSnapshot as unknown as Json,

@@ -1,0 +1,1 @@
+ALTER TABLE public.anamnesis_records ADD COLUMN IF NOT EXISTS structure_snapshot jsonb DEFAULT NULL;
