@@ -76,6 +76,7 @@ export type Database = {
           signed_by: string | null
           specialty_id: string | null
           status: Database["public"]["Enums"]["document_status"]
+          structure_snapshot: Json | null
           template_id: string | null
           template_version_id: string | null
           updated_at: string
@@ -95,6 +96,7 @@ export type Database = {
           signed_by?: string | null
           specialty_id?: string | null
           status?: Database["public"]["Enums"]["document_status"]
+          structure_snapshot?: Json | null
           template_id?: string | null
           template_version_id?: string | null
           updated_at?: string
@@ -114,6 +116,7 @@ export type Database = {
           signed_by?: string | null
           specialty_id?: string | null
           status?: Database["public"]["Enums"]["document_status"]
+          structure_snapshot?: Json | null
           template_id?: string | null
           template_version_id?: string | null
           updated_at?: string
