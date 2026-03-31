@@ -346,7 +346,7 @@ export function CrescimentoDesenvolvimentoWrapper({
                   <div className="flex items-center gap-1.5">
                     <span className="text-sm font-medium">{item.value}</span>
                     {item.classification && (
-                      <Badge variant="outline" className={`text-xs ${item.classification.color}`}>
+                      <Badge variant="outline" className={`text-xs ${item.classification.severity === 'normal' ? 'text-green-600 border-green-300' : item.classification.severity === 'attention' ? 'text-amber-600 border-amber-300' : 'text-red-600 border-red-300'}`}>
                         {item.classification.severity === 'normal' && <CheckCircle2 className="h-3 w-3 mr-0.5" />}
                         {item.classification.severity === 'attention' && <AlertCircle className="h-3 w-3 mr-0.5" />}
                         {item.classification.severity === 'alert' && <AlertTriangle className="h-3 w-3 mr-0.5" />}
