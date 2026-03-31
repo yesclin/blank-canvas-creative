@@ -190,11 +190,11 @@ export function AnamneseFieldRenderer({
       case 'imagem_interativa':
         return (
           <InteractiveImageCanvas
-            baseImageUrl={campo.baseImageUrl}
+            baseImageUrl={campo.baseImageUrl || FIELD_BASE_IMAGES[campo.id]}
             drawingData={(value as string) || ''}
             onChange={(data) => onChange(data)}
             readOnly={readOnly}
-            height={350}
+            height={450}
           />
         );
 
