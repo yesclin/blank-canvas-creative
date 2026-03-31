@@ -247,6 +247,15 @@ export function useAvaliacaoFuncionalPilatesData({
         postura_observacoes: formData.postura_observacoes || null,
         objetivos_pilates: formData.objetivos_pilates || null,
         observacoes_gerais: formData.observacoes_gerais || null,
+        
+        // v2 fields
+        postura_global: formData.postura_global || null,
+        alinhamento_corporal: formData.alinhamento_corporal || null,
+        flexibilidade: formData.flexibilidade || null,
+        flexibilidade_obs: formData.flexibilidade_obs || null,
+        encurtamentos: formData.encurtamentos || null,
+        compensacoes: formData.compensacoes || null,
+        limitacoes_funcionais: formData.limitacoes_funcionais || null,
       };
 
       const { data, error } = await supabase
