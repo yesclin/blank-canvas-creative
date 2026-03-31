@@ -452,7 +452,7 @@ export function InstrumentosPsicologicosBlock({
               )}
             </div>
           </div>
-          </ScrollArea>
+          </div>
 
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={handleCloseForm} disabled={saving}>
