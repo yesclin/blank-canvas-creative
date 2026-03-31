@@ -10,6 +10,8 @@
    isEditing?: boolean;
    selectedMuscle?: string | null;
    className?: string;
+   /** Optional base image URL to use instead of SVG drawing for frontal view */
+   baseImageUrl?: string;
  }
  
  const PROCEDURE_COLORS: Record<ProcedureType, string> = {
