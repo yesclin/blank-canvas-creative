@@ -19,6 +19,15 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { CampoAnamnese } from '@/hooks/prontuario/estetica/anamneseTemplates';
 import { InteractiveImageCanvas } from './InteractiveImageCanvas';
+import facialMapToxinaFrontal from '@/assets/facial-map-toxina-frontal.png';
+
+/** Maps field IDs to bundled base images for interactive canvases */
+const FIELD_BASE_IMAGES: Record<string, string> = {
+  mapa_facial_toxina: facialMapToxinaFrontal,
+  mapa_facial_ah: facialMapToxinaFrontal,
+  mapa_aplicacao_bio: facialMapToxinaFrontal,
+  mapa_facial_comb: facialMapToxinaFrontal,
+};
 
 interface AnamneseFieldRendererProps {
   campo: CampoAnamnese;
