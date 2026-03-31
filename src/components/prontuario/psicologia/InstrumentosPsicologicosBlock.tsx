@@ -454,7 +454,7 @@ export function InstrumentosPsicologicosBlock({
           </div>
           </div>
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2 shrink-0 pt-4 border-t">
             <Button variant="outline" onClick={handleCloseForm} disabled={saving}>
               <X className="h-4 w-4 mr-1" />
               Cancelar
