@@ -125,7 +125,7 @@ export function useDynamicAnamnesisRecords(patientId: string | null) {
         template_id: r.template_id,
         template_version_id: r.template_version_id,
         specialty_id: r.specialty_id,
-        procedure_id: r.procedure_id,
+        procedure_id: null,
         appointment_id: r.appointment_id,
         responses: (r.responses as Record<string, unknown>) || {},
         structure_snapshot: r.structure_snapshot,
