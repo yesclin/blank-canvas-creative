@@ -201,9 +201,10 @@ function AvaliacaoForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       <ScrollArea className="h-[60vh] pr-4">
         <Tabs defaultValue="mobilidade" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-4">
+          <TabsList className="grid w-full grid-cols-4 mb-4">
             <TabsTrigger value="mobilidade" className="text-xs">Mobilidade / Força</TabsTrigger>
             <TabsTrigger value="core" className="text-xs">Core / Equilíbrio</TabsTrigger>
+            <TabsTrigger value="complementar" className="text-xs">Complementar</TabsTrigger>
             <TabsTrigger value="testes" className="text-xs">Testes Funcionais</TabsTrigger>
           </TabsList>
 
