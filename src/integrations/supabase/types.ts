@@ -7479,8 +7479,8 @@ export type Database = {
       }
       is_recepcionista: { Args: { _user_id?: string }; Returns: boolean }
       provision_fisioterapia_anamnesis_templates: {
-        Args: { _clinic_id: string; _specialty_id: string }
-        Returns: number
+        Args: { p_clinic_id: string; p_specialty_id: string }
+        Returns: undefined
       }
       provision_nutricao_anamnesis_templates: {
         Args: { _clinic_id: string; _specialty_id: string }
