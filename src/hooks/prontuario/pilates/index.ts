@@ -94,3 +94,13 @@ export {
   type TimelineItem,
   type TimelineType,
 } from './useHistoricoPilatesData';
+
+export {
+  useAvaliacaoDorPilatesData,
+  getEmptyAvaliacaoDorPilatesForm,
+  INTENSIDADE_DOR_OPTIONS,
+  FREQUENCIA_DOR_OPTIONS,
+  LOCAIS_DOR_PILATES,
+  type AvaliacaoDorPilatesData,
+  type AvaliacaoDorPilatesFormData,
+} from './useAvaliacaoDorPilatesData';
