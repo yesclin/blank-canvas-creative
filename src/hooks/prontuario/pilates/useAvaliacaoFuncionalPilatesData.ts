@@ -60,7 +60,7 @@ export interface AvaliacaoFuncionalPilatesData {
   // Campos específicos Pilates
   mobilidade_articular: string | null;
   mobilidade_obs: string | null;
-  mobilidade_regioes: Record<string, string> | null; // ex: { coluna: 'leve_restricao', quadril: 'normal' }
+  mobilidade_regioes: Record<string, string> | null;
   
   forca_funcional: string | null;
   forca_obs: string | null;
@@ -80,6 +80,15 @@ export interface AvaliacaoFuncionalPilatesData {
   postura_observacoes: string | null;
   objetivos_pilates: string | null;
   observacoes_gerais: string | null;
+
+  // Campos adicionais v2
+  postura_global: string | null;
+  alinhamento_corporal: string | null;
+  flexibilidade: string | null;
+  flexibilidade_obs: string | null;
+  encurtamentos: string | null;
+  compensacoes: string | null;
+  limitacoes_funcionais: string | null;
   
   created_at: string;
 }
