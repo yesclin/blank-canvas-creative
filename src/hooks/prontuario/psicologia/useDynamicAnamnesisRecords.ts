@@ -166,11 +166,22 @@ export function useDynamicAnamnesisRecords(patientId: string | null) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
+      // Resolve professional_id from profiles
+      let professionalId: string | null = null;
+      const { data: prof } = await supabase
+        .from('professionals')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('clinic_id', clinic.id)
+        .maybeSingle();
+      professionalId = prof?.id || null;
+
       const { data, error } = await supabase
         .from('anamnesis_records')
         .insert({
           patient_id: patientId,
           clinic_id: clinic.id,
+          professional_id: professionalId || user.id,
           template_id: params.templateId,
           template_version_id: params.templateVersionId,
           specialty_id: params.specialtyId || null,
