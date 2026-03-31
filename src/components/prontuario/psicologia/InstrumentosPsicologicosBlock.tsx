@@ -264,8 +264,8 @@ export function InstrumentosPsicologicosBlock({
 
       {/* New Instrumento Dialog */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <ClipboardList className="h-5 w-5 text-primary" />
               Registrar Instrumento / Teste
@@ -276,13 +276,13 @@ export function InstrumentosPsicologicosBlock({
           </DialogHeader>
 
           {currentProfessionalName && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg shrink-0">
               <User className="h-4 w-4" />
               <span>Profissional: <strong>{currentProfessionalName}</strong></span>
             </div>
           )}
 
-          <ScrollArea className="max-h-[60vh] pr-4">
+          <div className="flex-1 overflow-y-auto min-h-0 pr-2">
           <div className="space-y-4">
             {/* Nome e Categoria */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -452,9 +452,9 @@ export function InstrumentosPsicologicosBlock({
               )}
             </div>
           </div>
-          </ScrollArea>
+          </div>
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2 shrink-0 pt-4 border-t">
             <Button variant="outline" onClick={handleCloseForm} disabled={saving}>
               <X className="h-4 w-4 mr-1" />
               Cancelar
