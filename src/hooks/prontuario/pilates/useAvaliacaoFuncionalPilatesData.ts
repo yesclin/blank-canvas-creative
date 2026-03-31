@@ -196,6 +196,15 @@ export function useAvaliacaoFuncionalPilatesData({
           postura_observacoes: (content?.postura_observacoes as string) || null,
           objetivos_pilates: (content?.objetivos_pilates as string) || null,
           observacoes_gerais: (content?.observacoes_gerais as string) || null,
+
+          // v2 fields
+          postura_global: (content?.postura_global as string) || null,
+          alinhamento_corporal: (content?.alinhamento_corporal as string) || null,
+          flexibilidade: (content?.flexibilidade as string) || null,
+          flexibilidade_obs: (content?.flexibilidade_obs as string) || null,
+          encurtamentos: (content?.encurtamentos as string) || null,
+          compensacoes: (content?.compensacoes as string) || null,
+          limitacoes_funcionais: (content?.limitacoes_funcionais as string) || null,
           
           created_at: record.created_at,
         } as AvaliacaoFuncionalPilatesData;
