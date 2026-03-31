@@ -192,6 +192,7 @@ import {
   LinhaDoTempoDermatoBlock,
 } from "@/components/prontuario/dermatologia";
 import { AnamnesePediatriaWrapper } from "@/components/prontuario/pediatria/AnamnesePediatriaWrapper";
+import { CrescimentoDesenvolvimentoWrapper } from "@/components/prontuario/pediatria/CrescimentoDesenvolvimentoWrapper";
 import { PlanoCondutaDermatoBlock } from "@/components/prontuario/dermatologia/PlanoCondutaDermatoBlock";
 import { DiagnosticoDermatoWrapper } from "@/components/prontuario/dermatologia/DiagnosticoDermatoWrapper";
 import { DiagnosticoOdontologicoWrapper } from "@/components/prontuario/odontology/DiagnosticoOdontologicoWrapper";
@@ -1334,14 +1335,15 @@ export default function Prontuario() {
 
       case 'crescimento_desenvolvimento':
         // Pediatria - Crescimento e Desenvolvimento
-        if (!patientId || !patient?.birth_date) return null;
+        if (!patientId) return null;
         return (
-          <CrescimentoDesenvolvimentoBlock
+          <CrescimentoDesenvolvimentoWrapper
             patientId={patientId}
-            birthDate={patient.birth_date}
-            measurements={[]}
-            milestones={[]}
-            isEditable={canEditCurrentTab}
+            clinicId={clinicIdForFisio || null}
+            professionalId={currentProfessionalId || null}
+            appointmentId={activeAppointment?.id}
+            birthDate={patient?.birth_date}
+            canEdit={canEditCurrentTab}
           />
         );
 
