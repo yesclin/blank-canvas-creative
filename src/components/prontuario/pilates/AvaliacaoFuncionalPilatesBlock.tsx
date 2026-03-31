@@ -847,6 +847,14 @@ export function AvaliacaoFuncionalPilatesBlock({
         postura_observacoes: currentAvaliacao.postura_observacoes || '',
         objetivos_pilates: currentAvaliacao.objetivos_pilates || '',
         observacoes_gerais: currentAvaliacao.observacoes_gerais || '',
+        // v2 fields
+        postura_global: currentAvaliacao.postura_global || '',
+        alinhamento_corporal: currentAvaliacao.alinhamento_corporal || '',
+        flexibilidade: currentAvaliacao.flexibilidade || '',
+        flexibilidade_obs: currentAvaliacao.flexibilidade_obs || '',
+        encurtamentos: currentAvaliacao.encurtamentos || '',
+        compensacoes: currentAvaliacao.compensacoes || '',
+        limitacoes_funcionais: currentAvaliacao.limitacoes_funcionais || '',
       };
     }
     return getEmptyAvaliacaoFormPilates();
