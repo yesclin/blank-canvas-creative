@@ -126,7 +126,7 @@ export function CrescimentoDesenvolvimentoWrapper({
       const { error: insertError } = await supabase
         .from('body_measurements')
         .insert({
-          id: uuidv4(),
+          id: crypto.randomUUID(),
           patient_id: patientId,
           clinic_id: clinicId,
           professional_id: professionalId,
