@@ -17,7 +17,7 @@ export type TipoAnamneseEstetica =
 export interface CampoAnamnese {
   id: string;
   label: string;
-  type: 'text' | 'textarea' | 'select' | 'multiselect' | 'checkbox' | 'radio' | 'date' | 'number' | 'imagem_interativa';
+  type: 'text' | 'textarea' | 'select' | 'multiselect' | 'checkbox' | 'radio' | 'date' | 'number' | 'imagem_interativa' | 'link_mapa_facial';
   placeholder?: string;
   options?: string[];
   required?: boolean;
