@@ -157,6 +157,8 @@ export function AppointmentDialog({
       expected_value: appointment?.expected_value || 0,
       notes: appointment?.notes || "",
       is_fit_in: mode === 'fitIn',
+      care_mode: appointment?.care_mode || "presencial",
+      meeting_provider: appointment?.meeting_provider || "",
     },
   });
 
