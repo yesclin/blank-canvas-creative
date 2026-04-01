@@ -42,6 +42,10 @@ interface ConsolidatedPdfParams {
   patient: PatientForPdf;
   professionalName?: string | null;
   professionalRegistration?: string | null;
+  /** Pass the current record's responses directly so the PDF reads from the active record */
+  recordResponses?: Record<string, any> | null;
+  /** Pass the current record's data directly */
+  recordData?: Record<string, any> | null;
 }
 
 function getMuscleName(id: string): string {
@@ -66,6 +70,8 @@ export function useConsolidatedFillerPdf() {
     patient,
     professionalName,
     professionalRegistration,
+    recordResponses,
+    recordData,
   }: ConsolidatedPdfParams) => {
     setExporting(true);
     try {
@@ -80,9 +86,15 @@ export function useConsolidatedFillerPdf() {
         docSettings = data;
       }
 
-      // 2. Fetch anamnesis record for this patient (latest for aesthetics)
+      // 2. Build anamnesis data from the current record's responses/data (passed directly)
+      //    Falls back to fetching latest record only if nothing was passed.
       let anamnesisData: Record<string, any> = {};
-      if (clinic?.id) {
+      if (recordResponses || recordData) {
+        anamnesisData = {
+          ...(typeof recordData === 'object' && recordData ? recordData : {}),
+          ...(typeof recordResponses === 'object' && recordResponses ? recordResponses : {}),
+        };
+      } else if (clinic?.id) {
         const { data: anamnesisRecords } = await supabase
           .from('anamnesis_records')
           .select('data, responses')
@@ -281,6 +293,7 @@ export function useConsolidatedFillerPdf() {
       ${buildFieldRow('Histórico prévio', anamnesisData.historico_previo || anamnesisData.historico_estetico)}
       ${buildFieldRow('Observações clínicas', anamnesisData.observacoes_clinicas)}
       ${buildFieldRow('Plano terapêutico inicial', anamnesisData.plano_terapeutico_ah || anamnesisData.plano_terapeutico)}
+      ${buildDynamicFields(anamnesisData)}
     </div>
   </div>
 
@@ -429,7 +442,41 @@ export function useConsolidatedFillerPdf() {
 }
 
 function buildFieldRow(label: string, value: unknown): string {
-  const val = typeof value === 'string' ? value : '';
-  if (!val) return '';
+  if (value == null) return '';
+  if (Array.isArray(value)) {
+    const items = value.map(v => typeof v === 'string' ? v : JSON.stringify(v)).filter(Boolean);
+    if (!items.length) return '';
+    return `<div class="field-row"><span class="field-label">${escapeHtml(label)}:</span> <span class="field-value">${items.map(i => escapeHtml(i)).join(', ')}</span></div>`;
+  }
+  if (typeof value === 'boolean') {
+    return `<div class="field-row"><span class="field-label">${escapeHtml(label)}:</span> <span class="field-value">${value ? 'Sim' : 'Não'}</span></div>`;
+  }
+  const val = typeof value === 'string' ? value : String(value);
+  if (!val || val === 'undefined') return '';
   return `<div class="field-row"><span class="field-label">${escapeHtml(label)}:</span> <span class="field-value">${escapeHtml(val)}</span></div>`;
+}
+
+/** Known keys already rendered in the hardcoded section */
+const KNOWN_KEYS = new Set([
+  'objetivo_procedimento_ah', 'objetivo_procedimento',
+  'queixa_principal',
+  'areas_interesse_ah', 'areas_interesse',
+  'contraindicacoes',
+  'historico_previo', 'historico_estetico',
+  'observacoes_clinicas',
+  'plano_terapeutico_ah', 'plano_terapeutico',
+]);
+
+function humanizeKey(key: string): string {
+  return key
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+
+/** Render any dynamic fields from responses that aren't in the hardcoded list */
+function buildDynamicFields(data: Record<string, any>): string {
+  return Object.entries(data)
+    .filter(([key, val]) => !KNOWN_KEYS.has(key) && val != null && val !== '')
+    .map(([key, val]) => buildFieldRow(humanizeKey(key), val))
+    .join('');
 }

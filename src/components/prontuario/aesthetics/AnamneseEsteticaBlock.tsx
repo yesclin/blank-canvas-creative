@@ -118,6 +118,8 @@ export function AnamneseEsteticaBlock({
       },
       professionalName,
       professionalRegistration,
+      recordResponses: current.content as unknown as Record<string, any>,
+      recordData: current.content as unknown as Record<string, any>,
     });
   };
 
