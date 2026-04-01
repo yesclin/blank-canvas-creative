@@ -20,6 +20,7 @@ import { VIEW_TYPE_LABELS, FACIAL_MUSCLES, COMMON_PRODUCTS } from "./types";
 import facialMapToxinaFrontal from "@/assets/facial-map-toxina-frontal.png";
 import facialMapToxinaLateralEsquerda from "@/assets/facial-map-toxina-lateral-esquerda.png";
 import facialMapToxinaLateralDireita from "@/assets/facial-map-toxina-lateral-direita.png";
+import facialMapFillerFrontal from "@/assets/facial-map-filler-frontal.png";
 import { toast } from "sonner";
 
 interface FacialMapModuleProps {
@@ -29,6 +30,8 @@ interface FacialMapModuleProps {
   canEdit?: boolean;
   professionalId?: string | null;
   specialtyKey?: string;
+  /** Tipo de procedimento ativo - determina qual imagem-base usar */
+  procedureType?: ProcedureType;
 }
  
 export function FacialMapModule({ 
@@ -38,10 +41,12 @@ export function FacialMapModule({
   canEdit = false,
   professionalId,
   specialtyKey = 'estetica',
+  procedureType: activeProcedureType = 'toxin',
 }: FacialMapModuleProps) {
    const [viewType, setViewType] = useState<ViewType>('frontal');
    const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
    const [selectedPoint, setSelectedPoint] = useState<FacialMapApplication | null>(null);
+   const [activeProcedure, setActiveProcedure] = useState<ProcedureType>(activeProcedureType);
    const [newPointPosition, setNewPointPosition] = useState<{ x: number; y: number } | null>(null);
    const [dialogOpen, setDialogOpen] = useState(false);
    const [showHistory, setShowHistory] = useState(false);
@@ -175,8 +180,25 @@ export function FacialMapModule({
                  {label}
                </button>
              ))}
-           </div>
-         </div>
+            </div>
+
+            {/* Procedure Type Switcher */}
+            <div className="flex bg-muted rounded-lg p-1 ml-2">
+              {([['toxin', 'Toxina'], ['filler', 'Preenchimento'], ['biostimulator', 'Bioestimulador']] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setActiveProcedure(key)}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    activeProcedure === key 
+                      ? 'bg-background text-foreground shadow-sm' 
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
  
          <div className="flex items-center gap-2">
            {/* Totals Summary */}
@@ -251,7 +273,8 @@ export function FacialMapModule({
                 selectedMuscle={selectedMuscle}
                 className="max-h-[700px]"
                 baseImageUrl={
-                  viewType === 'frontal' ? facialMapToxinaFrontal 
+                  viewType === 'frontal' 
+                    ? (activeProcedure === 'filler' ? facialMapFillerFrontal : facialMapToxinaFrontal)
                   : viewType === 'left_lateral' ? facialMapToxinaLateralEsquerda 
                   : viewType === 'right_lateral' ? facialMapToxinaLateralDireita
                   : undefined
