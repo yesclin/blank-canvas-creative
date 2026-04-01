@@ -96,7 +96,8 @@ export const ANAMNESE_ESTETICA_TEMPLATES: TemplateAnamneseEstetica[] = [
     campos: [
       { id: 'uso_anterior_bio', label: 'Já realizou tratamento com bioestimulador?', type: 'radio', options: ['Sim', 'Não'], required: true, section: 'Histórico' },
       { id: 'areas_interesse', label: 'Áreas de Interesse', type: 'multiselect', options: ['Face', 'Malar', 'Mandíbula', 'Pescoço', 'Colo', 'Mãos', 'Glúteos', 'Braços', 'Coxas', 'Abdômen', 'Outra'], required: true, section: 'Áreas de Interesse' },
-      { id: 'mapa_aplicacao_bio', label: 'Mapa de Aplicação', type: 'imagem_interativa', section: 'Mapa de Aplicação' },
+      { id: 'plano_terapeutico_bio', label: 'Plano Terapêutico', type: 'textarea', section: 'Planejamento' },
+      { id: 'link_mapa_bio', label: 'Mapa de Aplicação', type: 'link_mapa_facial', section: 'Mapa de Aplicação' },
       { id: 'gestante_lactante', label: 'Gestante ou Lactante', type: 'radio', options: ['Sim', 'Não'], section: 'Contraindicações' },
       { id: 'observacoes', label: 'Observações Adicionais', type: 'textarea', section: 'Observações' },
     ],
