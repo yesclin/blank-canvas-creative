@@ -1202,7 +1202,59 @@ export function AnamneseBlock({
               {format(parseISO(selectedRecord?.created_at || currentAnamnese!.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
             </span>
           )}
-          {currentAnamnese && (
+          {/* Estética: consolidated PDF with map + products */}
+          {isEstetica && (selectedRecord || currentAnamnese) && patientData?.id && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={exportingConsolidated}
+                onClick={() => {
+                  generateConsolidatedPdf({
+                    patientId: patientData.id,
+                    appointmentId: appointmentId,
+                    patient: {
+                      full_name: patientName || 'Paciente',
+                      birth_date: patientData?.birth_date || patientData?.data_nascimento,
+                      phone: patientData?.phone || patientData?.telefone,
+                      cpf: patientCpf,
+                    },
+                    professionalName,
+                    professionalRegistration,
+                  });
+                }}
+                title="Gerar ficha consolidada com plano + mapa facial + produtos"
+              >
+                <Printer className="h-4 w-4 mr-1" />
+                {exportingConsolidated ? 'Gerando...' : 'Imprimir Registro'}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={exportingConsolidated}
+                onClick={() => {
+                  generateConsolidatedPdf({
+                    patientId: patientData.id,
+                    appointmentId: appointmentId,
+                    patient: {
+                      full_name: patientName || 'Paciente',
+                      birth_date: patientData?.birth_date || patientData?.data_nascimento,
+                      phone: patientData?.phone || patientData?.telefone,
+                      cpf: patientCpf,
+                    },
+                    professionalName,
+                    professionalRegistration,
+                  });
+                }}
+                title="Gerar PDF consolidado deste registro"
+              >
+                <Download className="h-4 w-4 mr-1" />
+                {exportingConsolidated ? 'Gerando...' : 'Gerar PDF'}
+              </Button>
+            </>
+          )}
+          {/* Non-Estética: standard anamnesis PDF */}
+          {!isEstetica && currentAnamnese && (
             <Button variant="ghost" size="sm" disabled={generating} onClick={() => {
               generateAnamnesisPdf(
                 {
