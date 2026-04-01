@@ -2113,7 +2113,7 @@ export default function Prontuario() {
   }, [handlePrint]);
 
   // Export handler - consolidated PDF for Estética/filler, default for others
-  const isEsteticaSpecialty = activeSpecialtyKey === 'aesthetics' || activeSpecialtyKey === 'estetica';
+  const isEsteticaSpecialty = activeSpecialtyKey === 'estetica';
   const onExportClick = useCallback(() => {
     if (!patientId || !patient) return;
     if (isEsteticaSpecialty) {
