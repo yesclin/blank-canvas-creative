@@ -80,6 +80,10 @@ const App = () => (
           
           <Route path="/aceitar-convite" element={<AceitarConvite />} />
           
+          {/* Teleconsulta - Páginas Públicas */}
+          <Route path="/teleconsulta/:token/precheck" element={<PrecheckPage />} />
+          <Route path="/teleconsulta/:token/sala" element={<PatientRoomPage />} />
+          
           {/* Área do App (protegida) */}
           <Route
             path="/app"
