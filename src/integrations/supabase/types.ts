@@ -3614,18 +3614,22 @@ export type Database = {
           appointment_id: string | null
           attempts: number
           automation_rule_id: string | null
+          campaign_id: string | null
           channel: string
           clinic_id: string
           created_at: string
           error_message: string | null
           id: string
           message_body: string
+          notes: string | null
+          origin: string
           patient_id: string | null
           phone: string
           provider_response: Json | null
           rendered_message: string | null
           scheduled_for: string | null
           sent_at: string | null
+          sent_by: string | null
           status: string
           template_id: string | null
         }
@@ -3633,18 +3637,22 @@ export type Database = {
           appointment_id?: string | null
           attempts?: number
           automation_rule_id?: string | null
+          campaign_id?: string | null
           channel?: string
           clinic_id: string
           created_at?: string
           error_message?: string | null
           id?: string
           message_body?: string
+          notes?: string | null
+          origin?: string
           patient_id?: string | null
           phone?: string
           provider_response?: Json | null
           rendered_message?: string | null
           scheduled_for?: string | null
           sent_at?: string | null
+          sent_by?: string | null
           status?: string
           template_id?: string | null
         }
@@ -3652,18 +3660,22 @@ export type Database = {
           appointment_id?: string | null
           attempts?: number
           automation_rule_id?: string | null
+          campaign_id?: string | null
           channel?: string
           clinic_id?: string
           created_at?: string
           error_message?: string | null
           id?: string
           message_body?: string
+          notes?: string | null
+          origin?: string
           patient_id?: string | null
           phone?: string
           provider_response?: Json | null
           rendered_message?: string | null
           scheduled_for?: string | null
           sent_at?: string | null
+          sent_by?: string | null
           status?: string
           template_id?: string | null
         }
@@ -6511,6 +6523,50 @@ export type Database = {
             columns: ["transaction_id"]
             isOneToOne: false
             referencedRelation: "finance_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saved_segments: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          filters: Json
+          id: string
+          is_system: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          filters?: Json
+          id?: string
+          is_system?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          filters?: Json
+          id?: string
+          is_system?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_segments_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
