@@ -65,6 +65,7 @@ export function AgendaFiltersSheet({
     filters.roomId,
     filters.appointmentType,
     filters.status,
+    filters.careMode,
   ].filter(Boolean).length;
 
   const draftFiltersCount = [
