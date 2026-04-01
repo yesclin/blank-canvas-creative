@@ -17,7 +17,7 @@ export type TipoAnamneseEstetica =
 export interface CampoAnamnese {
   id: string;
   label: string;
-  type: 'text' | 'textarea' | 'select' | 'multiselect' | 'checkbox' | 'radio' | 'date' | 'number' | 'imagem_interativa';
+  type: 'text' | 'textarea' | 'select' | 'multiselect' | 'checkbox' | 'radio' | 'date' | 'number' | 'imagem_interativa' | 'link_mapa_facial';
   placeholder?: string;
   options?: string[];
   required?: boolean;
@@ -68,7 +68,8 @@ export const ANAMNESE_ESTETICA_TEMPLATES: TemplateAnamneseEstetica[] = [
       { id: 'uso_anterior_toxina', label: 'Já realizou aplicação de toxina botulínica?', type: 'radio', options: ['Sim', 'Não'], required: true, section: 'Histórico com Toxina' },
       { id: 'data_ultima_aplicacao', label: 'Data da Última Aplicação', type: 'date', section: 'Histórico com Toxina' },
       { id: 'areas_interesse', label: 'Áreas de Interesse', type: 'multiselect', options: ['Testa', 'Glabela', 'Pés de galinha', 'Bunny lines', 'Masseter', 'Platisma', 'Sorriso gengival', 'Outra'], required: true, section: 'Áreas de Interesse' },
-      { id: 'mapa_facial_toxina', label: 'Mapa Facial de Aplicação', type: 'imagem_interativa', section: 'Mapa de Aplicação' },
+      { id: 'plano_terapeutico_toxina', label: 'Plano Terapêutico', type: 'textarea', section: 'Planejamento' },
+      { id: 'link_mapa_toxina', label: 'Mapa de Aplicação de Toxina', type: 'link_mapa_facial', section: 'Mapa de Aplicação' },
       { id: 'gestante_lactante', label: 'Gestante ou Lactante', type: 'radio', options: ['Sim', 'Não'], section: 'Contraindicações' },
       { id: 'observacoes', label: 'Observações Adicionais', type: 'textarea', section: 'Observações' },
     ],
@@ -81,7 +82,8 @@ export const ANAMNESE_ESTETICA_TEMPLATES: TemplateAnamneseEstetica[] = [
     campos: [
       { id: 'uso_anterior_ah', label: 'Já realizou preenchimento?', type: 'radio', options: ['Sim', 'Não'], required: true, section: 'Histórico com Preenchimento' },
       { id: 'areas_desejadas', label: 'Áreas de Interesse para Tratamento', type: 'multiselect', options: ['Lábios', 'Sulco nasogeniano', 'Malar', 'Mandíbula', 'Queixo', 'Olheiras', 'Têmporas', 'Nariz', 'Outra'], required: true, section: 'Áreas Desejadas' },
-      { id: 'mapa_facial_ah', label: 'Mapa Facial de Preenchimento', type: 'imagem_interativa', section: 'Mapa de Aplicação' },
+      { id: 'plano_terapeutico_ah', label: 'Plano Terapêutico de Preenchimento', type: 'textarea', placeholder: 'Descreva o plano de volumização por área, técnica e volume estimado...', section: 'Planejamento' },
+      { id: 'link_mapa_ah', label: 'Mapa Facial de Preenchimento', type: 'link_mapa_facial', section: 'Mapa de Aplicação' },
       { id: 'gestante_lactante', label: 'Gestante ou Lactante', type: 'radio', options: ['Sim', 'Não'], section: 'Contraindicações' },
       { id: 'observacoes', label: 'Observações Adicionais', type: 'textarea', section: 'Observações' },
     ],
@@ -94,7 +96,8 @@ export const ANAMNESE_ESTETICA_TEMPLATES: TemplateAnamneseEstetica[] = [
     campos: [
       { id: 'uso_anterior_bio', label: 'Já realizou tratamento com bioestimulador?', type: 'radio', options: ['Sim', 'Não'], required: true, section: 'Histórico' },
       { id: 'areas_interesse', label: 'Áreas de Interesse', type: 'multiselect', options: ['Face', 'Malar', 'Mandíbula', 'Pescoço', 'Colo', 'Mãos', 'Glúteos', 'Braços', 'Coxas', 'Abdômen', 'Outra'], required: true, section: 'Áreas de Interesse' },
-      { id: 'mapa_aplicacao_bio', label: 'Mapa de Aplicação', type: 'imagem_interativa', section: 'Mapa de Aplicação' },
+      { id: 'plano_terapeutico_bio', label: 'Plano Terapêutico', type: 'textarea', section: 'Planejamento' },
+      { id: 'link_mapa_bio', label: 'Mapa de Aplicação', type: 'link_mapa_facial', section: 'Mapa de Aplicação' },
       { id: 'gestante_lactante', label: 'Gestante ou Lactante', type: 'radio', options: ['Sim', 'Não'], section: 'Contraindicações' },
       { id: 'observacoes', label: 'Observações Adicionais', type: 'textarea', section: 'Observações' },
     ],
@@ -106,8 +109,7 @@ export const ANAMNESE_ESTETICA_TEMPLATES: TemplateAnamneseEstetica[] = [
     icon: 'User',
     campos: [
       { id: 'objetivo_corporal', label: 'Objetivo corporal principal', type: 'textarea', required: true, section: 'Consulta' },
-      { id: 'mapa_corporal_frente', label: 'Mapa Corporal (frente)', type: 'imagem_interativa', section: 'Mapa Corporal' },
-      { id: 'mapa_corporal_costas', label: 'Mapa Corporal (costas)', type: 'imagem_interativa', section: 'Mapa Corporal' },
+      { id: 'link_mapa_corporal', label: 'Mapa Corporal', type: 'link_mapa_facial', section: 'Mapa Corporal' },
       { id: 'peso', label: 'Peso (kg)', type: 'number', section: 'Medições' },
       { id: 'altura', label: 'Altura (cm)', type: 'number', section: 'Medições' },
       { id: 'observacoes', label: 'Observações', type: 'textarea', section: 'Observações' },
@@ -134,8 +136,7 @@ export const ANAMNESE_ESTETICA_TEMPLATES: TemplateAnamneseEstetica[] = [
     campos: [
       { id: 'objetivo_geral', label: 'Objetivo geral', type: 'textarea', required: true, section: 'Consulta' },
       { id: 'procedimentos_planejados', label: 'Procedimentos planejados', type: 'textarea', required: true, section: 'Consulta' },
-      { id: 'mapa_facial_comb', label: 'Mapa Facial (se aplicável)', type: 'imagem_interativa', section: 'Mapas' },
-      { id: 'mapa_corporal_comb', label: 'Mapa Corporal (se aplicável)', type: 'imagem_interativa', section: 'Mapas' },
+      { id: 'link_mapa_comb', label: 'Mapa Facial / Corporal', type: 'link_mapa_facial', section: 'Mapas' },
       { id: 'observacoes', label: 'Observações finais', type: 'textarea', section: 'Observações' },
     ],
   },

@@ -1,6 +1,6 @@
 /**
  * Componente para renderizar campos de anamnese com base no tipo
- * Suporta: text, textarea, select, multiselect, checkbox, radio, date, number, imagem_interativa
+ * Suporta: text, textarea, select, multiselect, checkbox, radio, date, number, imagem_interativa, link_mapa_facial
  */
 
 import { Input } from '@/components/ui/input';
@@ -16,7 +16,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { MapPin } from 'lucide-react';
 import type { CampoAnamnese } from '@/hooks/prontuario/estetica/anamneseTemplates';
 import { InteractiveImageCanvas } from './InteractiveImageCanvas';
 import facialMapToxinaFrontal from '@/assets/facial-map-toxina-frontal.png';
@@ -36,6 +38,8 @@ interface AnamneseFieldRendererProps {
   onChange: (value: unknown) => void;
   readOnly?: boolean;
   className?: string;
+  /** Callback to navigate to a specific prontuário tab (e.g. 'facial_map') */
+  onNavigateToTab?: (tabKey: string) => void;
 }
 
 export function AnamneseFieldRenderer({
@@ -44,6 +48,7 @@ export function AnamneseFieldRenderer({
   onChange,
   readOnly = false,
   className,
+  onNavigateToTab,
 }: AnamneseFieldRendererProps) {
   const renderField = () => {
     switch (campo.type) {
@@ -197,6 +202,29 @@ export function AnamneseFieldRenderer({
             readOnly={readOnly}
             height={450}
           />
+        );
+
+      case 'link_mapa_facial':
+        return (
+          <div className="flex items-center gap-3 p-4 rounded-lg border border-dashed bg-muted/30">
+            <MapPin className="h-5 w-5 text-primary shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium">{campo.label}</p>
+              <p className="text-xs text-muted-foreground">
+                Use o módulo Mapa Facial para marcações interativas, registro de pontos e rastreabilidade de produtos.
+              </p>
+            </div>
+            {onNavigateToTab && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onNavigateToTab('facial_map')}
+              >
+                Abrir Mapa Facial
+              </Button>
+            )}
+          </div>
         );
 
       default:
