@@ -796,7 +796,7 @@ export function useFacialMap(
       if (appsError) throw appsError;
       
       // Create a new map for this appointment
-      const newMap = await createNewFacialMap(preferredMapType);
+      const newMap = await createNewFacialMap(preferredMapType, sourceMapId);
       
       // Copy applications to new map
       if (sourceApps && sourceApps.length > 0) {
