@@ -18,6 +18,7 @@ import { useFacialMapPdf } from "./useFacialMapPdf";
 import type { FacialMapApplication, ViewType, ProcedureType } from "./types";
 import { VIEW_TYPE_LABELS, FACIAL_MUSCLES, COMMON_PRODUCTS } from "./types";
 import facialMapToxinaFrontal from "@/assets/facial-map-toxina-frontal.png";
+import facialMapToxinaLateralEsquerda from "@/assets/facial-map-toxina-lateral-esquerda.png";
 import { toast } from "sonner";
 
 interface FacialMapModuleProps {
