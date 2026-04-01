@@ -303,28 +303,37 @@
           </g>
         )}
        
-       {/* Face - Right Lateral View */}
-       {viewType === 'right_lateral' && (
-         <g className="face-right-lateral" filter="url(#softShadow)">
-           <ellipse 
-             cx="180" cy="250" rx="100" ry="170" 
-             fill="url(#skinGradient)" 
-             stroke="hsl(var(--border))" 
-             strokeWidth="1.5" 
-           />
-           <path 
-             d="M 220 180 Q 280 200 260 280 Q 280 320 220 360" 
-             fill="none" 
-             stroke="hsl(var(--foreground))" 
-             strokeWidth="1.5"
-             opacity="0.6"
-           />
-           <ellipse cx="240" cy="200" rx="18" ry="10" fill="none" stroke="hsl(var(--foreground))" strokeWidth="1.5" opacity="0.8" />
-           <circle cx="240" cy="200" r="5" fill="hsl(var(--foreground))" opacity="0.6" />
-           <path d="M 200 172 Q 220 165 250 175" fill="none" stroke="hsl(var(--foreground))" strokeWidth="3" strokeLinecap="round" opacity="0.7" />
-           <path d="M 255 335 L 270 265" fill="none" stroke="hsl(var(--foreground))" strokeWidth="1.5" opacity="0.6" />
-         </g>
-       )}
+        {/* Face - Right Lateral View */}
+        {viewType === 'right_lateral' && baseImageUrl ? (
+          <image
+            href={baseImageUrl}
+            x="0"
+            y="0"
+            width="500"
+            height="650"
+            preserveAspectRatio="xMidYMid meet"
+          />
+        ) : viewType === 'right_lateral' && (
+          <g className="face-right-lateral" filter="url(#softShadow)">
+            <ellipse 
+              cx="180" cy="250" rx="100" ry="170" 
+              fill="url(#skinGradient)" 
+              stroke="hsl(var(--border))" 
+              strokeWidth="1.5" 
+            />
+            <path 
+              d="M 220 180 Q 280 200 260 280 Q 280 320 220 360" 
+              fill="none" 
+              stroke="hsl(var(--foreground))" 
+              strokeWidth="1.5"
+              opacity="0.6"
+            />
+            <ellipse cx="240" cy="200" rx="18" ry="10" fill="none" stroke="hsl(var(--foreground))" strokeWidth="1.5" opacity="0.8" />
+            <circle cx="240" cy="200" r="5" fill="hsl(var(--foreground))" opacity="0.6" />
+            <path d="M 200 172 Q 220 165 250 175" fill="none" stroke="hsl(var(--foreground))" strokeWidth="3" strokeLinecap="round" opacity="0.7" />
+            <path d="M 255 335 L 270 265" fill="none" stroke="hsl(var(--foreground))" strokeWidth="1.5" opacity="0.6" />
+          </g>
+        )}
        
        {/* Editing indicator */}
        {isEditing && selectedMuscle && (
