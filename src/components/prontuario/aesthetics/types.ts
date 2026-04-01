@@ -42,6 +42,20 @@ export interface FacialMap {
    created_at: string;
    created_by?: string | null;
    updated_at: string;
+   // Extended fields (stored in data JSON)
+   manufacturer?: string | null;
+   lot_number?: string | null;
+   expiry_date?: string | null;
+   dilution?: string | null;
+   technique?: string | null;
+   depth?: string | null;
+   planned_volume?: number | null;
+   applied_volume?: number | null;
+   application_plan?: string | null;
+   session_number?: number | null;
+   total_sessions?: number | null;
+   session_interval?: string | null;
+   protocol?: string | null;
  }
  
 // Imagens vinculadas ao mapa facial

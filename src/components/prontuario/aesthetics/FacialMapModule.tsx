@@ -2,14 +2,18 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { 
   Download, 
   History,
-  Eye,
   Save,
   FileText,
   RotateCcw,
   AlertCircle,
+  Syringe,
+  Droplets,
+  Sparkles,
+  Plus,
 } from "lucide-react";
 import { FacialMapSVG } from "./FacialMapSVG";
 import { MuscleList } from "./MuscleList";
@@ -17,12 +21,13 @@ import { ApplicationPointDialog } from "./ApplicationPointDialog";
 import { useFacialMap } from "@/hooks/aesthetics";
 import { useFacialMapPdf } from "./useFacialMapPdf";
 import type { FacialMapApplication, ViewType, ProcedureType } from "./types";
-import { VIEW_TYPE_LABELS, COMMON_PRODUCTS, getDefaultUnit, getRegionLabel } from "./types";
+import { VIEW_TYPE_LABELS, COMMON_PRODUCTS, getDefaultUnit, getRegionsForProcedure } from "./types";
 import facialMapToxinaFrontal from "@/assets/facial-map-toxina-frontal.png";
 import facialMapToxinaLateralEsquerda from "@/assets/facial-map-toxina-lateral-esquerda.png";
 import facialMapToxinaLateralDireita from "@/assets/facial-map-toxina-lateral-direita.png";
 import facialMapFillerFrontal from "@/assets/facial-map-filler-frontal.png";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
 interface FacialMapModuleProps {
   patientId: string;
@@ -33,6 +38,12 @@ interface FacialMapModuleProps {
   specialtyKey?: string;
   procedureType?: ProcedureType;
 }
+
+const PROCEDURE_CONFIG = {
+  toxin: { label: 'Toxina', icon: Syringe, color: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 border-red-200 dark:border-red-800' },
+  filler: { label: 'Preenchimento', icon: Droplets, color: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border-blue-200 dark:border-blue-800' },
+  biostimulator: { label: 'Bioestimulador', icon: Sparkles, color: 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300 border-green-200 dark:border-green-800' },
+} as const;
  
 export function FacialMapModule({ 
   patientId, 
@@ -62,6 +73,7 @@ export function FacialMapModule({
      updateApplication,
      deleteApplication,
      updateMapNotes,
+     createMap,
    } = useFacialMap(patientId, showHistory ? null : appointmentId, {
      professionalId: professionalId || null,
      specialtyKey,
@@ -69,20 +81,15 @@ export function FacialMapModule({
    });
 
   // === CORE FILTERING ===
-  // Default: only current appointment + current procedure type
-  // History mode: all applications across all appointments
   const displayApplications = useMemo(() => {
     if (showHistory) {
-      // In history mode show all points but still filter by active procedure
       return allApplications.filter(a => a.procedure_type === activeProcedure);
     }
-    // Current appointment only + current procedure type
     return applications.filter(a => a.procedure_type === activeProcedure);
   }, [showHistory, allApplications, applications, activeProcedure]);
 
   const isEditing = canEdit && selectedMuscle !== null;
 
-  // PDF export hook
   const { generatePdf } = useFacialMapPdf({
     patientName,
     patientId,
@@ -90,12 +97,29 @@ export function FacialMapModule({
     applications: displayApplications,
   });
  
-   // Calculate totals for current procedure only
-   const currentTotal = useMemo(() => {
-     return displayApplications.reduce((sum, app) => sum + app.quantity, 0);
-   }, [displayApplications]);
+  // Totals
+  const currentTotal = useMemo(() => {
+    return displayApplications.reduce((sum, app) => sum + app.quantity, 0);
+  }, [displayApplications]);
 
-   const unitLabel = getDefaultUnit(activeProcedure);
+  // Region-based totals
+  const regionTotals = useMemo(() => {
+    const regions = getRegionsForProcedure(activeProcedure);
+    const map = new Map<string, { name: string; total: number; count: number }>();
+    for (const app of displayApplications) {
+      const regionInfo = regions.find(r => r.id === app.muscle);
+      const key = app.muscle || 'other';
+      const existing = map.get(key) || { name: regionInfo?.name || app.muscle || 'Outro', total: 0, count: 0 };
+      existing.total += app.quantity;
+      existing.count += 1;
+      map.set(key, existing);
+    }
+    return Array.from(map.entries()).map(([id, data]) => ({ id, ...data }));
+  }, [displayApplications, activeProcedure]);
+
+  const unitLabel = getDefaultUnit(activeProcedure);
+  const procConfig = PROCEDURE_CONFIG[activeProcedure];
+  const ProcIcon = procConfig.icon;
  
    const handleMapClick = (x: number, y: number) => {
      if (!canEdit) return;
@@ -104,7 +128,6 @@ export function FacialMapModule({
        return;
      }
      if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 100 || y < 0 || y > 100) {
-       console.warn('Invalid click coordinates:', { x, y });
        return;
      }
      setNewPointPosition({ x, y });
@@ -158,10 +181,17 @@ export function FacialMapModule({
      setEditingNotes(false);
    };
 
-   // Clear muscle selection when switching procedure type
    const handleProcedureChange = (proc: ProcedureType) => {
      setActiveProcedure(proc);
      setSelectedMuscle(null);
+   };
+
+   const handleCreateMap = async () => {
+     try {
+       await createMap('general');
+     } catch (err) {
+       console.error('Create map failed:', err);
+     }
    };
  
    if (isLoading) {
@@ -176,19 +206,69 @@ export function FacialMapModule({
      );
    }
 
-   // No appointment context warning
    const noAppointment = !appointmentId;
+   const noMap = !facialMap && !noAppointment;
+
+   // Base image per procedure + view
+   const getBaseImage = () => {
+     if (activeProcedure === 'filler' && viewType === 'frontal') return facialMapFillerFrontal;
+     if (viewType === 'frontal') return facialMapToxinaFrontal;
+     if (viewType === 'left_lateral') return facialMapToxinaLateralEsquerda;
+     if (viewType === 'right_lateral') return facialMapToxinaLateralDireita;
+     return undefined;
+   };
  
    return (
      <div className="space-y-4">
+       {/* Context Indicator */}
+       <div className="flex items-center justify-between flex-wrap gap-2 p-3 rounded-lg border bg-muted/30">
+         <div className="flex items-center gap-3 flex-wrap">
+           <Badge variant="outline" className={`${procConfig.color} border gap-1.5 font-semibold`}>
+             <ProcIcon className="h-3.5 w-3.5" />
+             {procConfig.label}
+           </Badge>
+           {appointmentId && (
+             <span className="text-xs text-muted-foreground">
+               Atendimento: <span className="font-medium text-foreground">{format(new Date(), 'dd/MM/yyyy')}</span>
+             </span>
+           )}
+           {currentTotal > 0 && (
+             <span className="text-sm font-semibold">
+               Total: {currentTotal} {unitLabel}
+             </span>
+           )}
+         </div>
+         <div className="flex items-center gap-2">
+           {showHistory && (
+             <Badge variant="secondary" className="gap-1">
+               <History className="h-3 w-3" />
+               Histórico
+             </Badge>
+           )}
+         </div>
+       </div>
+
        {/* No appointment warning */}
        {noAppointment && (
          <div className="flex items-center gap-2 p-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
            <AlertCircle className="h-4 w-4 shrink-0" />
            <p className="text-sm">
              Nenhum atendimento ativo. Inicie um atendimento para registrar novas marcações.
-             {' '}Visualizando histórico disponível.
            </p>
+         </div>
+       )}
+
+       {/* No map for current appointment */}
+       {noMap && canEdit && (
+         <div className="flex items-center justify-between gap-2 p-3 rounded-lg border border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-200">
+           <div className="flex items-center gap-2">
+             <Plus className="h-4 w-4 shrink-0" />
+             <p className="text-sm">Nenhum mapa facial neste atendimento.</p>
+           </div>
+           <Button size="sm" variant="outline" onClick={handleCreateMap} className="shrink-0">
+             <Plus className="h-3.5 w-3.5 mr-1" />
+             Novo Mapa da Sessão
+           </Button>
          </div>
        )}
 
@@ -214,30 +294,27 @@ export function FacialMapModule({
 
             {/* Procedure Type Switcher */}
             <div className="flex bg-muted rounded-lg p-1 ml-2">
-              {([['toxin', 'Toxina'], ['filler', 'Preenchimento'], ['biostimulator', 'Bioestimulador']] as const).map(([key, label]) => (
-                <button
-                  key={key}
-                  onClick={() => handleProcedureChange(key)}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                    activeProcedure === key 
-                      ? 'bg-background text-foreground shadow-sm' 
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
+              {(Object.entries(PROCEDURE_CONFIG) as [ProcedureType, typeof PROCEDURE_CONFIG[ProcedureType]][]).map(([key, config]) => {
+                const Icon = config.icon;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => handleProcedureChange(key)}
+                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                      activeProcedure === key 
+                        ? 'bg-background text-foreground shadow-sm' 
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {config.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
  
          <div className="flex items-center gap-2">
-           {/* Current procedure total */}
-           {currentTotal > 0 && (
-             <span className="text-sm text-muted-foreground mr-2">
-               Total: <span className="font-semibold text-foreground">{currentTotal} {unitLabel}</span>
-             </span>
-           )}
- 
            <Button
              variant="ghost"
              size="sm"
@@ -274,7 +351,7 @@ export function FacialMapModule({
          <div className="flex items-center gap-2 p-3 rounded-lg border border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-200">
            <History className="h-4 w-4 shrink-0" />
            <p className="text-sm">
-             Modo Histórico — exibindo todas as marcações de <strong>{activeProcedure === 'toxin' ? 'Toxina' : activeProcedure === 'filler' ? 'Preenchimento' : 'Bioestimulador'}</strong> do paciente.
+             Modo Histórico — exibindo todas as marcações de <strong>{procConfig.label}</strong> do paciente.
            </p>
          </div>
        )}
@@ -293,13 +370,7 @@ export function FacialMapModule({
                 isEditing={isEditing}
                 selectedMuscle={selectedMuscle}
                 className="max-h-[700px]"
-                baseImageUrl={
-                  viewType === 'frontal' 
-                    ? (activeProcedure === 'filler' ? facialMapFillerFrontal : facialMapToxinaFrontal)
-                  : viewType === 'left_lateral' ? facialMapToxinaLateralEsquerda 
-                  : viewType === 'right_lateral' ? facialMapToxinaLateralDireita
-                  : undefined
-                }
+                baseImageUrl={getBaseImage()}
               />
             </div>
           </div>
@@ -309,12 +380,40 @@ export function FacialMapModule({
             <div className="text-center py-6 text-muted-foreground">
               <p className="text-sm">
                 {showHistory 
-                  ? `Nenhuma marcação de ${activeProcedure === 'toxin' ? 'Toxina' : activeProcedure === 'filler' ? 'Preenchimento' : 'Bioestimulador'} encontrada no histórico.`
+                  ? `Nenhuma marcação de ${procConfig.label} encontrada no histórico.`
                   : canEdit 
                     ? `Selecione ${activeProcedure === 'toxin' ? 'um músculo' : 'uma região'} abaixo e clique no mapa para começar.`
                     : 'Nenhuma marcação neste atendimento.'
                 }
               </p>
+            </div>
+          )}
+
+          {/* Region Totals Summary */}
+          {regionTotals.length > 0 && (
+            <div className="bg-muted/20 rounded-xl border p-4">
+              <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                <ProcIcon className="h-4 w-4" />
+                Resumo por {activeProcedure === 'toxin' ? 'Músculo' : 'Região'}
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                {regionTotals.map((rt) => (
+                  <div key={rt.id} className="flex items-center justify-between p-2 rounded-lg bg-background border text-sm">
+                    <span className="truncate text-muted-foreground">{rt.name}</span>
+                    <span className="font-semibold ml-2 shrink-0">{rt.total} {unitLabel}</span>
+                  </div>
+                ))}
+              </div>
+              {activeProcedure === 'biostimulator' && displayApplications.length > 0 && (
+                <div className="mt-3 pt-3 border-t text-sm text-muted-foreground space-y-1">
+                  {displayApplications[0]?.session_number && (
+                    <p>Sessão: <span className="font-medium text-foreground">{displayApplications[0].session_number} de {displayApplications[0].total_sessions || '?'}</span></p>
+                  )}
+                  {displayApplications[0]?.protocol && (
+                    <p>Protocolo: <span className="font-medium text-foreground">{displayApplications[0].protocol}</span></p>
+                  )}
+                </div>
+              )}
             </div>
           )}
  
