@@ -893,6 +893,13 @@ export function useFacialMap(
     isAddingImage: addImageMutation.isPending,
     isDeletingImage: deleteImageMutation.isPending,
     
+    // Session lifecycle
+    concludeSession: concludeSessionMutation.mutateAsync,
+    isConcluding: concludeSessionMutation.isPending,
+    duplicateSession: duplicateSessionMutation.mutateAsync,
+    isDuplicating: duplicateSessionMutation.isPending,
+    loadMapApplications,
+    
     isLoading: isLoadingMap || isLoadingPoints,
     isLoadingImages,
     historyLoading,
