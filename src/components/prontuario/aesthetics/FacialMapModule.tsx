@@ -235,7 +235,7 @@ export function FacialMapModule({
        </div>
  
        {/* Main Content - Two Column Layout */}
-       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-[600px]">
+       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-[700px]">
          {/* Left Column - Face Map (2/3 width) */}
          <div className="lg:col-span-2 bg-gradient-to-b from-muted/20 to-muted/5 rounded-xl border p-4">
            <div className="h-full flex items-center justify-center">
