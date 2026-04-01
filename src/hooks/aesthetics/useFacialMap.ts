@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useClinicData } from '@/hooks/useClinicData';
@@ -14,6 +14,58 @@ import type {
   ImageType,
   ViewAngle,
 } from '@/components/prontuario/aesthetics/types';
+
+interface UseFacialMapOptions {
+  professionalId?: string | null;
+  specialtyKey?: string | null;
+  canEditRecords?: boolean;
+  validationError?: string | null;
+  mapType?: MapType;
+}
+
+function getErrorDetails(error: any) {
+  return {
+    code: error?.code || null,
+    message: error?.message || 'Erro desconhecido',
+    details: error?.details || null,
+    hint: error?.hint || null,
+  };
+}
+
+function logFacialMapError(
+  type: 'facial_map_create_failed' | 'facial_map_point_create_failed' | 'facial_map_point_update_failed',
+  params: {
+    functionName: string;
+    payload: unknown;
+    response?: unknown;
+    error: unknown;
+    table: 'facial_maps' | 'facial_map_applications';
+    context: Record<string, unknown>;
+  }
+) {
+  console.error(type, {
+    function: params.functionName,
+    payload: params.payload,
+    response: params.response ?? null,
+    error: getErrorDetails(params.error),
+    table: params.table,
+    context: params.context,
+  });
+}
+
+function normalizeCoordinate(value: number | null | undefined) {
+  if (!Number.isFinite(value)) return null;
+  if (value == null || value < 0 || value > 100) return null;
+  return Number(value.toFixed(4));
+}
+
+function inferSide(positionX: number, viewType: ViewType): SideType | null {
+  if (viewType === 'left_lateral') return 'left';
+  if (viewType === 'right_lateral') return 'right';
+  if (positionX < 45) return 'left';
+  if (positionX > 55) return 'right';
+  return 'center';
+}
 
 // Helper: convert DB row to FacialMap domain object
 function dbRowToFacialMap(row: any): FacialMap {
@@ -39,6 +91,8 @@ function dbRowToApplication(row: any): FacialMapApplication {
     id: row.id,
     clinic_id: extra.clinic_id || '',
     patient_id: extra.patient_id || '',
+    appointment_id: extra.appointment_id || null,
+    professional_id: extra.professional_id || null,
     facial_map_id: row.facial_map_id,
     procedure_type: (extra.procedure_type || 'toxin') as ProcedureType,
     view_type: (extra.view_type || 'frontal') as ViewType,
@@ -47,7 +101,7 @@ function dbRowToApplication(row: any): FacialMapApplication {
     muscle: row.region || extra.muscle || null,
     product_name: row.product_name || 'A definir',
     quantity: row.units ?? extra.quantity ?? 0,
-    unit: extra.unit || 'UI',
+    unit: extra.unit || 'U',
     side: (extra.side as SideType) || null,
     notes: row.notes,
     created_at: row.created_at,
@@ -56,14 +110,233 @@ function dbRowToApplication(row: any): FacialMapApplication {
   };
 }
 
-export function useFacialMap(patientId: string | null, appointmentId?: string | null) {
+export function useFacialMap(
+  patientId: string | null,
+  appointmentId?: string | null,
+  options?: UseFacialMapOptions
+) {
   const { clinic } = useClinicData();
   const queryClient = useQueryClient();
   const [currentMapId, setCurrentMapId] = useState<string | null>(null);
+  const preferredMapType = options?.mapType || 'toxin';
 
   const mapQueryKey = ['facial-map', patientId, appointmentId];
   const pointsQueryKey = ['facial-map-points', currentMapId];
   const imagesQueryKey = ['facial-map-images', currentMapId];
+
+  const getContextSnapshot = () => ({
+    clinic_id: clinic?.id || null,
+    patient_id: patientId || null,
+    professional_id: options?.professionalId || null,
+    appointment_id: appointmentId || null,
+    specialty_key: options?.specialtyKey || null,
+    can_edit_records: options?.canEditRecords ?? null,
+    validation_error: options?.validationError || null,
+    map_type: preferredMapType,
+    current_map_id: currentMapId,
+  });
+
+  const ensureEditableContext = () => {
+    if (!patientId) {
+      throw new Error('Paciente não identificado para o Mapa Facial.');
+    }
+
+    if (!clinic?.id) {
+      throw new Error('Clínica não identificada para o Mapa Facial.');
+    }
+
+    if (options?.specialtyKey && options.specialtyKey !== 'estetica') {
+      throw new Error('O Mapa Facial só pode ser usado na especialidade Estética / Harmonização Facial.');
+    }
+
+    if (options && options.canEditRecords === false) {
+      throw new Error(options.validationError || 'Inicie ou vincule um atendimento para registrar aplicações no mapa facial.');
+    }
+  };
+
+  const getAuthUserId = async () => {
+    const { data, error } = await supabase.auth.getUser();
+
+    if (error) {
+      throw error;
+    }
+
+    return data.user?.id || null;
+  };
+
+  const findExistingMapForContext = async () => {
+    if (!patientId || !clinic?.id) return null;
+
+    if (appointmentId) {
+      const { data: maps, error } = await supabase
+        .from('facial_maps')
+        .select('*')
+        .eq('clinic_id', clinic.id)
+        .eq('patient_id', patientId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        logFacialMapError('facial_map_create_failed', {
+          functionName: 'getOrCreateFacialMap',
+          payload: { clinic_id: clinic.id, patient_id: patientId, appointment_id: appointmentId },
+          error,
+          table: 'facial_maps',
+          context: getContextSnapshot(),
+        });
+        throw error;
+      }
+
+      return (maps || []).find((map: any) => {
+        const data = (map.data as Record<string, any>) || {};
+        return data.appointment_id === appointmentId;
+      }) || null;
+    }
+
+    const { data: recentMap, error } = await supabase
+      .from('facial_maps')
+      .select('*')
+      .eq('clinic_id', clinic.id)
+      .eq('patient_id', patientId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      logFacialMapError('facial_map_create_failed', {
+        functionName: 'getOrCreateFacialMap',
+        payload: { clinic_id: clinic.id, patient_id: patientId, appointment_id: null },
+        error,
+        table: 'facial_maps',
+        context: getContextSnapshot(),
+      });
+      throw error;
+    }
+
+    return recentMap || null;
+  };
+
+  const createNewFacialMap = async (mapType: MapType = preferredMapType) => {
+    ensureEditableContext();
+
+    const authUserId = await getAuthUserId();
+    const payload = {
+      clinic_id: clinic!.id,
+      patient_id: patientId!,
+      map_type: mapType,
+      professional_id: options?.professionalId || null,
+      notes: '',
+      data: {
+        appointment_id: appointmentId || null,
+        created_by: authUserId,
+        specialty_key: options?.specialtyKey || null,
+      },
+    };
+
+    const { data: result, error } = await supabase
+      .from('facial_maps')
+      .insert(payload)
+      .select('*')
+      .single();
+
+    if (error) {
+      logFacialMapError('facial_map_create_failed', {
+        functionName: 'getOrCreateFacialMap',
+        payload,
+        response: result,
+        error,
+        table: 'facial_maps',
+        context: getContextSnapshot(),
+      });
+      throw error;
+    }
+
+    const createdMap = dbRowToFacialMap(result);
+    setCurrentMapId(createdMap.id);
+    queryClient.setQueryData(mapQueryKey, createdMap);
+
+    return createdMap;
+  };
+
+  const getOrCreateFacialMap = async (mapType: MapType = preferredMapType): Promise<FacialMap> => {
+    ensureEditableContext();
+
+    if (facialMap?.id) {
+      setCurrentMapId(facialMap.id);
+      return facialMap;
+    }
+
+    const existing = await findExistingMapForContext();
+    if (existing) {
+      const mappedMap = dbRowToFacialMap(existing);
+      setCurrentMapId(mappedMap.id);
+      queryClient.setQueryData(mapQueryKey, mappedMap);
+      return mappedMap;
+    }
+
+    return createNewFacialMap(mapType);
+  };
+
+  const createFacialMapPoint = async (appData: Partial<FacialMapApplication>) => {
+    ensureEditableContext();
+
+    const positionX = normalizeCoordinate(appData.position_x);
+    const positionY = normalizeCoordinate(appData.position_y);
+
+    if (positionX === null || positionY === null) {
+      throw new Error('Coordenadas inválidas para marcar o ponto no mapa facial.');
+    }
+
+    const procedureType = appData.procedure_type || 'toxin';
+    const viewType = appData.view_type || 'frontal';
+    const quantity = appData.quantity ?? 0;
+    const unit = appData.unit || 'U';
+    const map = await getOrCreateFacialMap(preferredMapType);
+    const authUserId = await getAuthUserId();
+
+    const payload = {
+      facial_map_id: map.id,
+      product_name: appData.product_name || 'A definir',
+      region: appData.muscle || null,
+      units: quantity,
+      notes: appData.notes || null,
+      data: {
+        clinic_id: clinic!.id,
+        patient_id: patientId!,
+        professional_id: options?.professionalId || null,
+        appointment_id: appointmentId || null,
+        procedure_type: procedureType,
+        view_type: viewType,
+        position_x: positionX,
+        position_y: positionY,
+        muscle: appData.muscle || null,
+        unit,
+        side: appData.side ?? inferSide(positionX, viewType),
+        quantity,
+        created_by: authUserId,
+        updated_at: new Date().toISOString(),
+      },
+    };
+
+    const { data: result, error } = await supabase
+      .from('facial_map_applications')
+      .insert(payload)
+      .select('*')
+      .single();
+
+    if (error) {
+      logFacialMapError('facial_map_point_create_failed', {
+        functionName: 'createFacialMapPoint',
+        payload,
+        response: result,
+        error,
+        table: 'facial_map_applications',
+        context: getContextSnapshot(),
+      });
+      throw error;
+    }
+
+    return dbRowToApplication(result);
+  };
 
   // Fetch or find facial map for this patient
   const { data: facialMap, isLoading: isLoadingMap } = useQuery({
@@ -92,10 +365,7 @@ export function useFacialMap(patientId: string | null, appointmentId?: string | 
         });
         if (match) return dbRowToFacialMap(match);
 
-        // If no match but maps exist, return most recent
-        if (maps && maps.length > 0) {
-          return dbRowToFacialMap(maps[0]);
-        }
+        return null;
       }
 
       // No appointmentId → get the most recent map
@@ -173,124 +443,107 @@ export function useFacialMap(patientId: string | null, appointmentId?: string | 
 
   // Create facial map
   const createMapMutation = useMutation({
-    mutationFn: async (mapType: MapType = 'general') => {
-      if (!patientId || !clinic?.id) throw new Error('Missing required data');
-
-      const { data: userData } = await supabase.auth.getUser();
-
-      const { data: result, error } = await supabase
-        .from('facial_maps')
-        .insert({
-          clinic_id: clinic.id,
-          patient_id: patientId,
-          map_type: mapType,
-          professional_id: userData.user?.id || null,
-          notes: null,
-          data: {
-            appointment_id: appointmentId || null,
-            created_by: userData.user?.id || null,
-          },
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return dbRowToFacialMap(result);
+    mutationFn: async (mapType: MapType = preferredMapType) => {
+      return getOrCreateFacialMap(mapType);
     },
     onSuccess: (newMap) => {
       queryClient.invalidateQueries({ queryKey: mapQueryKey });
       setCurrentMapId(newMap.id);
-      toast.success('Mapa facial criado');
+      toast.success('Mapa facial pronto');
     },
     onError: (error) => {
-      console.error('Error creating facial map:', error);
-      toast.error('Erro ao criar mapa facial');
+      toast.error(error instanceof Error ? error.message : 'Erro ao criar mapa facial');
     },
   });
 
-  // Ensure map exists before adding points
-  const ensureMapExists = async (): Promise<string> => {
-    if (currentMapId) return currentMapId;
-    
-    const newMap = await createMapMutation.mutateAsync('general');
-    return newMap.id;
-  };
-
   // Add application point (creates map if needed)
   const addApplicationMutation = useMutation({
-    mutationFn: async (appData: Partial<FacialMapApplication>) => {
-      if (!patientId || !clinic?.id) throw new Error('Missing required data');
-
-      const mapId = await ensureMapExists();
-      const { data: userData } = await supabase.auth.getUser();
-
-      // Build the data JSON with extended fields
-      const extendedData = {
-        clinic_id: clinic.id,
-        patient_id: patientId,
-        procedure_type: appData.procedure_type || 'toxin',
-        view_type: appData.view_type || 'frontal',
-        position_x: appData.position_x ?? 0,
-        position_y: appData.position_y ?? 0,
-        muscle: appData.muscle || null,
-        unit: appData.unit || 'UI',
-        side: appData.side || null,
-        quantity: appData.quantity ?? 0,
-        created_by: userData.user?.id || null,
-        updated_at: new Date().toISOString(),
-      };
-
-      const { data: result, error } = await supabase
-        .from('facial_map_applications')
-        .insert({
-          facial_map_id: mapId,
-          product_name: appData.product_name || 'A definir',
-          region: appData.muscle || null,
-          units: appData.quantity ?? 0,
-          notes: appData.notes || null,
-          data: extendedData,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return dbRowToApplication(result);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: pointsQueryKey });
+    mutationFn: createFacialMapPoint,
+    onSuccess: (newApplication) => {
+      if (newApplication.facial_map_id) {
+        queryClient.invalidateQueries({ queryKey: ['facial-map-points', newApplication.facial_map_id] });
+        setCurrentMapId(newApplication.facial_map_id);
+      } else {
+        queryClient.invalidateQueries({ queryKey: pointsQueryKey });
+      }
       toast.success('Ponto de aplicação adicionado');
     },
     onError: (error) => {
-      console.error('Error adding application:', error);
-      toast.error('Erro ao adicionar ponto');
+      toast.error(error instanceof Error ? error.message : 'Erro ao adicionar ponto');
     },
   });
 
   // Update application point
   const updateApplicationMutation = useMutation({
     mutationFn: async ({ id, data: appData }: { id: string; data: Partial<FacialMapApplication> }) => {
-      // Build updated extended data
-      const extendedData = {
-        procedure_type: appData.procedure_type || 'toxin',
-        muscle: appData.muscle || null,
-        unit: appData.unit || 'UI',
-        side: appData.side || null,
-        quantity: appData.quantity ?? 0,
-        updated_at: new Date().toISOString(),
+      const { data: existingRow, error: fetchError } = await supabase
+        .from('facial_map_applications')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fetchError) {
+        logFacialMapError('facial_map_point_update_failed', {
+          functionName: 'updateFacialMapPoint',
+          payload: { id, data: appData },
+          error: fetchError,
+          table: 'facial_map_applications',
+          context: getContextSnapshot(),
+        });
+        throw fetchError;
+      }
+
+      const existingData = (existingRow?.data as Record<string, any>) || {};
+      const existingPositionX = normalizeCoordinate(Number(existingData.position_x));
+      const existingPositionY = normalizeCoordinate(Number(existingData.position_y));
+      const positionX = normalizeCoordinate(appData.position_x ?? existingPositionX);
+      const positionY = normalizeCoordinate(appData.position_y ?? existingPositionY);
+
+      if (positionX === null || positionY === null) {
+        throw new Error('Coordenadas inválidas para atualizar o ponto do mapa facial.');
+      }
+
+      const procedureType = appData.procedure_type || existingData.procedure_type || 'toxin';
+      const viewType = appData.view_type || existingData.view_type || 'frontal';
+      const quantity = appData.quantity ?? existingRow.units ?? existingData.quantity ?? 0;
+      const payload = {
+        product_name: appData.product_name ?? existingRow.product_name ?? 'A definir',
+        region: appData.muscle ?? existingRow.region ?? existingData.muscle ?? null,
+        units: quantity,
+        notes: appData.notes ?? existingRow.notes ?? null,
+        data: {
+          ...existingData,
+          clinic_id: existingData.clinic_id || clinic?.id || '',
+          patient_id: existingData.patient_id || patientId || '',
+          professional_id: appData.professional_id ?? existingData.professional_id ?? options?.professionalId ?? null,
+          appointment_id: appData.appointment_id ?? existingData.appointment_id ?? appointmentId ?? null,
+          procedure_type: procedureType,
+          view_type: viewType,
+          position_x: positionX,
+          position_y: positionY,
+          muscle: appData.muscle ?? existingRow.region ?? existingData.muscle ?? null,
+          unit: appData.unit || existingData.unit || 'U',
+          side: appData.side ?? existingData.side ?? inferSide(positionX, viewType),
+          quantity,
+          updated_at: new Date().toISOString(),
+        },
       };
 
       const { error } = await supabase
         .from('facial_map_applications')
-        .update({
-          product_name: appData.product_name || null,
-          region: appData.muscle || null,
-          units: appData.quantity ?? 0,
-          notes: appData.notes || null,
-          data: extendedData,
-        })
+        .update(payload)
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        logFacialMapError('facial_map_point_update_failed', {
+          functionName: 'updateFacialMapPoint',
+          payload,
+          error,
+          table: 'facial_map_applications',
+          context: getContextSnapshot(),
+        });
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: pointsQueryKey });
@@ -333,7 +586,8 @@ export function useFacialMap(patientId: string | null, appointmentId?: string | 
     }) => {
       if (!clinic?.id) throw new Error('Missing required data');
 
-      const mapId = await ensureMapExists();
+      const map = await getOrCreateFacialMap(preferredMapType);
+      const mapId = map.id;
 
       const { data: result, error } = await supabase
         .from('facial_map_images')
@@ -468,6 +722,7 @@ export function useFacialMap(patientId: string | null, appointmentId?: string | 
     setCurrentMapId,
     allMaps,
     createMap: createMapMutation.mutateAsync,
+    getOrCreateFacialMap,
     updateMapNotes: updateMapNotesMutation.mutateAsync,
     isCreatingMap: createMapMutation.isPending,
     
