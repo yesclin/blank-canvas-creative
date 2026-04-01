@@ -71,6 +71,13 @@ export function AnamneseEsteticaBlock({
   canEdit = false,
   specialtyId,
   procedureId,
+  patientName,
+  patientBirthDate,
+  patientPhone,
+  patientCpf,
+  professionalName,
+  professionalRegistration,
+  canExport = true,
 }: AnamneseEsteticaBlockProps) {
   const { 
     current, 
