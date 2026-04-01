@@ -934,6 +934,8 @@ export function useFacialMap(
     // Session lifecycle
     concludeSession: concludeSessionMutation.mutateAsync,
     isConcluding: concludeSessionMutation.isPending,
+    reopenSession: reopenSessionMutation.mutateAsync,
+    isReopening: reopenSessionMutation.isPending,
     duplicateSession: duplicateSessionMutation.mutateAsync,
     isDuplicating: duplicateSessionMutation.isPending,
     loadMapApplications,
