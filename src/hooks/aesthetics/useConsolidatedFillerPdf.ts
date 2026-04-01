@@ -293,6 +293,7 @@ export function useConsolidatedFillerPdf() {
       ${buildFieldRow('Histórico prévio', anamnesisData.historico_previo || anamnesisData.historico_estetico)}
       ${buildFieldRow('Observações clínicas', anamnesisData.observacoes_clinicas)}
       ${buildFieldRow('Plano terapêutico inicial', anamnesisData.plano_terapeutico_ah || anamnesisData.plano_terapeutico)}
+      ${buildDynamicFields(anamnesisData)}
     </div>
   </div>
 
