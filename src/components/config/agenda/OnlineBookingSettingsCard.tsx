@@ -42,22 +42,32 @@ export function OnlineBookingSettingsCard() {
   const loadSettings = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.warn("[OnlineBooking] No authenticated user");
+        return;
+      }
 
-      const { data: profile } = await supabase
+      const { data: profile, error: profileErr } = await supabase
         .from("profiles")
         .select("clinic_id")
         .eq("id", user.id)
         .single();
 
-      if (!profile?.clinic_id) return;
+      if (profileErr || !profile?.clinic_id) {
+        console.warn("[OnlineBooking] Profile not found or no clinic_id", profileErr);
+        return;
+      }
       setClinicId(profile.clinic_id);
 
-      const { data: clinic } = await supabase
+      const { data: clinic, error: clinicErr } = await supabase
         .from("clinics")
         .select("slug, public_booking_enabled, public_booking_settings")
         .eq("id", profile.clinic_id)
         .single();
+
+      if (clinicErr) {
+        console.warn("[OnlineBooking] Clinic fetch error", clinicErr);
+      }
 
       if (clinic) {
         setEnabled(clinic.public_booking_enabled || false);
@@ -66,6 +76,8 @@ export function OnlineBookingSettingsCard() {
           setSettings((prev) => ({ ...prev, ...(clinic.public_booking_settings as BookingSettings) }));
         }
       }
+    } catch (err) {
+      console.error("[OnlineBooking] loadSettings error:", err);
     } finally {
       setIsLoading(false);
     }
