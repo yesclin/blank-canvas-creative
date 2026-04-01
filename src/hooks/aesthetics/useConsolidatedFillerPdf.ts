@@ -851,7 +851,7 @@ export function useConsolidatedFillerPdf() {
         <div class="lbl">Regiões Tratadas</div>
       </div>
     </div>
-    ${treatedRegions.length > 0 ? `<p style="margin-top:6px;"><strong>Regiões:</strong> ${treatedRegions.map(r => escapeHtml(r)).join(', ')}</p>` : ''}
+    ${treatedRegions.length > 0 ? `<p style="margin-top:6px;"><strong>Regiões:</strong> ${treatedRegions.map(r => escapeHtml(String(r))).join(', ')}</p>` : ''}
   </div>
 
   ${uniqueObservations.length > 0 ? `
