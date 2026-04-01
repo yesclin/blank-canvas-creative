@@ -124,13 +124,28 @@ export interface Appointment {
   is_fit_in: boolean;
   payment_type: PaymentType;
   expected_value?: number;
-  procedure_cost?: number; // Historical cost calculated at execution time
+  procedure_cost?: number;
   notes?: string;
   cancellation_reason?: string;
   arrived_at?: string;
   started_at?: string;
   finished_at?: string;
   created_at: string;
+  // Teleconsulta fields
+  care_mode: CareMode;
+  meeting_provider?: string;
+  meeting_link?: string;
+  meeting_id?: string;
+  meeting_password?: string;
+  meeting_status: MeetingStatus;
+  meeting_created_at?: string;
+  meeting_started_at?: string;
+  meeting_ended_at?: string;
+  precheck_status: string;
+  consent_telehealth_accepted: boolean;
+  consent_telehealth_accepted_at?: string;
+  technical_issue_count: number;
+  teleconsultation_notes?: string;
 }
 
 export interface AgendaFilters {
