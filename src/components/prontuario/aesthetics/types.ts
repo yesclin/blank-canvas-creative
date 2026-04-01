@@ -6,6 +6,7 @@
  export type ViewAngle = 'frontal' | 'left_profile' | 'right_profile' | 'left_45' | 'right_45';
  export type ConsentType = 'toxin' | 'filler' | 'biostimulator' | 'general';
 export type MapType = 'general' | 'toxin';
+export type MapStatus = 'active' | 'concluded';
 export type ImageType = 'before' | 'after';
 
 // Entidade pai: Mapa Facial
@@ -16,7 +17,9 @@ export interface FacialMap {
   appointment_id?: string | null;
   professional_id?: string | null;
   map_type: MapType;
+  status: MapStatus;
   general_notes?: string | null;
+  concluded_at?: string | null;
   created_at: string;
   created_by?: string | null;
   updated_at: string;
