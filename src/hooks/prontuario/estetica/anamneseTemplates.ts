@@ -109,8 +109,7 @@ export const ANAMNESE_ESTETICA_TEMPLATES: TemplateAnamneseEstetica[] = [
     icon: 'User',
     campos: [
       { id: 'objetivo_corporal', label: 'Objetivo corporal principal', type: 'textarea', required: true, section: 'Consulta' },
-      { id: 'mapa_corporal_frente', label: 'Mapa Corporal (frente)', type: 'imagem_interativa', section: 'Mapa Corporal' },
-      { id: 'mapa_corporal_costas', label: 'Mapa Corporal (costas)', type: 'imagem_interativa', section: 'Mapa Corporal' },
+      { id: 'link_mapa_corporal', label: 'Mapa Corporal', type: 'link_mapa_facial', section: 'Mapa Corporal' },
       { id: 'peso', label: 'Peso (kg)', type: 'number', section: 'Medições' },
       { id: 'altura', label: 'Altura (cm)', type: 'number', section: 'Medições' },
       { id: 'observacoes', label: 'Observações', type: 'textarea', section: 'Observações' },
