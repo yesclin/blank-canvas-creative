@@ -6,6 +6,7 @@
  export type ViewAngle = 'frontal' | 'left_profile' | 'right_profile' | 'left_45' | 'right_45';
  export type ConsentType = 'toxin' | 'filler' | 'biostimulator' | 'general';
 export type MapType = 'general' | 'toxin';
+export type MapStatus = 'active' | 'concluded';
 export type ImageType = 'before' | 'after';
 
 // Entidade pai: Mapa Facial
