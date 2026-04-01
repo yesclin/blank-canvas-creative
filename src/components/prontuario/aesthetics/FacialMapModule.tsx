@@ -30,6 +30,8 @@ interface FacialMapModuleProps {
   canEdit?: boolean;
   professionalId?: string | null;
   specialtyKey?: string;
+  /** Tipo de procedimento ativo - determina qual imagem-base usar */
+  procedureType?: ProcedureType;
 }
  
 export function FacialMapModule({ 
@@ -39,6 +41,7 @@ export function FacialMapModule({
   canEdit = false,
   professionalId,
   specialtyKey = 'estetica',
+  procedureType: activeProcedureType = 'toxin',
 }: FacialMapModuleProps) {
    const [viewType, setViewType] = useState<ViewType>('frontal');
    const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
