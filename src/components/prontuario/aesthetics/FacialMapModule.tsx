@@ -249,7 +249,11 @@ export function FacialMapModule({
                 isEditing={isEditing}
                 selectedMuscle={selectedMuscle}
                 className="max-h-[700px]"
-                baseImageUrl={viewType === 'frontal' ? facialMapToxinaFrontal : undefined}
+                baseImageUrl={
+                  viewType === 'frontal' ? facialMapToxinaFrontal 
+                  : viewType === 'lateral_left' ? facialMapToxinaLateralEsquerda 
+                  : undefined
+                }
               />
            </div>
          </div>
