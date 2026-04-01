@@ -19,6 +19,13 @@ import AceitarConvite from "./pages/AceitarConvite";
 import NotFound from "./pages/NotFound";
 import ValidarDocumento from "./pages/ValidarDocumento";
 
+// Teleconsulta - Páginas Públicas
+import PrecheckPage from "./pages/teleconsulta/PrecheckPage";
+import PatientRoomPage from "./pages/teleconsulta/PatientRoomPage";
+
+// Teleconsulta - Página Autenticada
+import TeleconsultaSala from "./pages/app/TeleconsultaSala";
+
 // Layout do App
 import { AppLayout } from "./components/app/AppLayout";
 
