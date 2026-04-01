@@ -26,8 +26,9 @@ import type {
   AgendaFilters as FiltersType,
   AppointmentStatus,
   AppointmentType,
+  CareMode,
 } from "@/types/agenda";
-import { statusLabels, typeLabels } from "@/types/agenda";
+import { statusLabels, typeLabels, careModeLabels } from "@/types/agenda";
 
 interface AgendaFiltersSheetProps {
   filters: FiltersType;
