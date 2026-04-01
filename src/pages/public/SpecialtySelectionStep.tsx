@@ -1,7 +1,7 @@
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { PublicClinicData } from "@/hooks/usePublicClinic";
 import { usePublicSpecialties } from "@/hooks/usePublicSpecialties";
-import { Loader2, Stethoscope } from "lucide-react";
+import { Loader2, Stethoscope, ArrowLeft } from "lucide-react";
 
 export default function SpecialtySelectionStep() {
   const { clinic } = useOutletContext<{ clinic: PublicClinicData }>();
