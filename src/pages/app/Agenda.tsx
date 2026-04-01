@@ -152,6 +152,9 @@ export default function Agenda() {
     if (filters.status) {
       result = result.filter(apt => apt.status === filters.status);
     }
+    if (filters.careMode) {
+      result = result.filter(apt => apt.care_mode === filters.careMode);
+    }
     
     return result;
   }, [appointments, effectiveSelectedProfessionalId, filters]);
