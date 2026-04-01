@@ -274,7 +274,7 @@ export function FacialMapModule({
                 className="max-h-[700px]"
                 baseImageUrl={
                   viewType === 'frontal' 
-                    ? (activeProcedureType === 'filler' ? facialMapFillerFrontal : facialMapToxinaFrontal)
+                    ? (activeProcedure === 'filler' ? facialMapFillerFrontal : facialMapToxinaFrontal)
                   : viewType === 'left_lateral' ? facialMapToxinaLateralEsquerda 
                   : viewType === 'right_lateral' ? facialMapToxinaLateralDireita
                   : undefined
