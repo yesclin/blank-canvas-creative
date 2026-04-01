@@ -65,7 +65,8 @@ import {
 } from "@/hooks/prontuario/clinica-geral/anamneseTemplates";
 import { useAnamnesisTemplatesV2, useAnamnesisRecords, type AnamnesisTemplateV2, type AnamnesisRecord } from "@/hooks/useAnamnesisTemplatesV2";
 import { useInstitutionalPdf } from "@/hooks/useInstitutionalPdf";
-import { FileDown } from "lucide-react";
+import { useConsolidatedFillerPdf } from "@/hooks/aesthetics/useConsolidatedFillerPdf";
+import { FileDown, Printer, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
