@@ -501,6 +501,7 @@ export default function Prontuario() {
 
   // Print & Export
   const { handlePrint, handleExport, printing, exporting } = useProntuarioPrint();
+  const { generateConsolidatedPdf, exporting: exportingFiller } = useConsolidatedFillerPdf();
   const { clinic, getFormattedAddress } = useClinicData();
 
   // LGPD Enforcement and Feature Flags
