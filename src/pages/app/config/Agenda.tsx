@@ -30,6 +30,7 @@ export default function ConfigAgenda() {
           <TabsTrigger value="types">Tipos & Status</TabsTrigger>
           <TabsTrigger value="rules">Regras</TabsTrigger>
           <TabsTrigger value="alerts">Alertas de Ociosidade</TabsTrigger>
+          <TabsTrigger value="teleconsulta">Teleconsulta</TabsTrigger>
         </TabsList>
 
         <TabsContent value="clinic" className="space-y-4">
@@ -57,6 +58,10 @@ export default function ConfigAgenda() {
 
         <TabsContent value="alerts" className="space-y-6">
           <IdleAlertSettingsCard />
+        </TabsContent>
+
+        <TabsContent value="teleconsulta" className="space-y-6">
+          <TeleconsultaAgendaRulesCard />
         </TabsContent>
       </Tabs>
     </div>
