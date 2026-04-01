@@ -65,6 +65,10 @@ export default function ConfigAgenda() {
         <TabsContent value="teleconsulta" className="space-y-6">
           <TeleconsultaAgendaRulesCard />
         </TabsContent>
+
+        <TabsContent value="online-booking" className="space-y-6">
+          <OnlineBookingSettingsCard />
+        </TabsContent>
       </Tabs>
     </div>
   );
