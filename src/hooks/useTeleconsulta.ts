@@ -92,7 +92,7 @@ export function useTeleconsultaActions() {
       appointmentId,
       patientId,
       professionalId,
-      provider = "manual",
+      provider = "internal",
     }: {
       appointmentId: string;
       patientId: string;
@@ -101,55 +101,109 @@ export function useTeleconsultaActions() {
     }) => {
       if (!clinicId) throw new Error("Clínica não encontrada");
 
-      // Create session
-      const meetingLink = `https://meet.yesclin.com/${crypto.randomUUID().slice(0, 8)}`;
-      const { data: session, error: sessionError } = await supabase
-        .from("teleconsultation_sessions" as any)
-        .insert({
+      console.log("[Gerar Sala] Dados recebidos:", { clinicId, appointmentId, patientId, professionalId, provider });
+
+      // Validações
+      if (!appointmentId || !patientId || !professionalId) {
+        const missing = [!appointmentId && 'appointmentId', !patientId && 'patientId', !professionalId && 'professionalId'].filter(Boolean);
+        throw new Error(`Dados obrigatórios ausentes: ${missing.join(', ')}`);
+      }
+
+      // Check if session already exists
+      const { data: existingSession, error: checkError } = await supabase
+        .from("teleconsultation_sessions")
+        .select("*")
+        .eq("appointment_id", appointmentId)
+        .eq("clinic_id", clinicId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error("[Gerar Sala] Erro ao verificar sessão existente:", checkError);
+        throw checkError;
+      }
+
+      console.log("[Gerar Sala] Sessão existente:", existingSession);
+
+      let session = existingSession;
+
+      if (!session) {
+        const insertPayload = {
           clinic_id: clinicId,
           appointment_id: appointmentId,
           patient_id: patientId,
           professional_id: professionalId,
           provider,
-          join_url_patient: meetingLink,
-          join_url_professional: meetingLink,
-          status: "criada",
-        })
-        .select()
-        .single();
+          status: "nao_iniciada",
+        };
+        console.log("[Gerar Sala] Payload insert teleconsultation_sessions:", insertPayload);
 
-      if (sessionError) throw sessionError;
+        const { data: newSession, error: sessionError } = await supabase
+          .from("teleconsultation_sessions")
+          .insert(insertPayload)
+          .select()
+          .single();
+
+        if (sessionError) {
+          console.error("[Gerar Sala] Erro ao criar sessão:", sessionError);
+          throw sessionError;
+        }
+        console.log("[Gerar Sala] Sessão criada:", newSession);
+        session = newSession;
+      }
 
       // Update appointment
+      const updatePayload = {
+        meeting_status: "gerada",
+        meeting_created_at: new Date().toISOString(),
+      };
+      console.log("[Gerar Sala] Payload update appointments:", updatePayload);
+
       const { error: updateError } = await supabase
         .from("appointments")
-        .update({
-          meeting_link: meetingLink,
-          meeting_status: "gerada",
-          meeting_provider: provider,
-          meeting_created_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq("id", appointmentId);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error("[Gerar Sala] Erro ao atualizar appointment:", updateError);
+        throw updateError;
+      }
+      console.log("[Gerar Sala] Appointment atualizado com sucesso");
 
       // Log event
-      await supabase.from("teleconsultation_events" as any).insert({
+      const eventPayload = {
         clinic_id: clinicId,
         teleconsultation_session_id: (session as any).id,
         appointment_id: appointmentId,
-        event_type: "room_created",
-        actor_type: "professional",
-      });
+        patient_id: patientId,
+        professional_id: professionalId,
+        event_type: "link_gerado",
+        actor_type: "system",
+        payload: {},
+      };
+      console.log("[Gerar Sala] Payload insert teleconsultation_events:", eventPayload);
 
-      return { session, meetingLink };
+      const { error: eventError } = await supabase
+        .from("teleconsultation_events")
+        .insert(eventPayload);
+
+      if (eventError) {
+        console.error("[Gerar Sala] Erro ao registrar evento (não-bloqueante):", eventError);
+        // Non-blocking: don't throw, session was already created
+      }
+
+      return { session };
     },
     onSuccess: (_, variables) => {
       toast.success("Sala de teleconsulta gerada!");
       queryClient.invalidateQueries({ queryKey: ["teleconsultation-session", variables.appointmentId] });
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
     },
-    onError: () => toast.error("Erro ao gerar sala de teleconsulta"),
+    onError: (error: any) => {
+      console.error("[Gerar Sala] Erro completo:", error);
+      toast.error(`Erro ao gerar sala: ${error?.message || 'erro desconhecido'}`);
+    },
   });
 
   const copyLink = async (link: string) => {
