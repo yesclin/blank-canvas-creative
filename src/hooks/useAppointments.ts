@@ -66,6 +66,8 @@ export interface AppointmentFormData {
   is_fit_in?: boolean;
   is_first_visit?: boolean;
   is_return?: boolean;
+  care_mode?: string;
+  meeting_provider?: string;
 }
 
 async function getClinicId(): Promise<string> {
