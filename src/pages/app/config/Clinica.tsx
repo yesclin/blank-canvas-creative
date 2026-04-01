@@ -470,6 +470,8 @@ export default function ConfigClinica() {
 
       <ClinicalModulesSection />
 
+      <TeleconsultaSettingsSection />
+
       <div className="flex justify-end">
         <Button 
           size="lg" 
