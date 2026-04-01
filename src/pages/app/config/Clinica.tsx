@@ -11,6 +11,7 @@ import { LocationHoursSection } from "@/components/config/LocationHoursSection";
 import { WeekSchedule, getDefaultWeekSchedule } from "@/components/config/EnhancedWorkingHoursCard";
 import { SpecialtiesSection } from "@/components/config/SpecialtiesSection";
 import { ClinicalModulesSection } from "@/components/config/ClinicalModulesSection";
+import { TeleconsultaSettingsSection } from "@/components/config/TeleconsultaSettingsSection";
 import { validateCPF, validateCNPJ } from "@/lib/validators";
 
 interface ClinicFormData {
