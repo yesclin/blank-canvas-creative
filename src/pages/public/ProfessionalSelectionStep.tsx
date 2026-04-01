@@ -1,7 +1,7 @@
 import { useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
 import { PublicClinicData } from "@/hooks/usePublicClinic";
 import { usePublicProfessionals } from "@/hooks/usePublicProfessionals";
-import { Loader2, UserRound } from "lucide-react";
+import { Loader2, UserRound, ArrowLeft } from "lucide-react";
 
 export default function ProfessionalSelectionStep() {
   const { clinic } = useOutletContext<{ clinic: PublicClinicData }>();
