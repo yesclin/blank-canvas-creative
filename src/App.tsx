@@ -92,6 +92,16 @@ const App = () => (
           {/* Teleconsulta - Páginas Públicas */}
           <Route path="/teleconsulta/:token/precheck" element={<PrecheckPage />} />
           <Route path="/teleconsulta/:token/sala" element={<PatientRoomPage />} />
+
+          {/* Agendamento Público */}
+          <Route path="/agendar/:clinicSlug" element={<PublicBookingLayout />}>
+            <Route index element={<PublicClinicBookingPage />} />
+            <Route path="especialidade" element={<SpecialtySelectionStep />} />
+            <Route path="profissional" element={<ProfessionalSelectionStep />} />
+            <Route path="horarios" element={<TimeSelectionStep />} />
+            <Route path="dados" element={<PatientDataStep />} />
+            <Route path="confirmacao" element={<BookingConfirmationStep />} />
+          </Route>
           
           {/* Área do App (protegida) */}
           <Route
