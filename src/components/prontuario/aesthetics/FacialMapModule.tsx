@@ -18,12 +18,15 @@ import { useFacialMapPdf } from "./useFacialMapPdf";
 import type { FacialMapApplication, ViewType, ProcedureType } from "./types";
 import { VIEW_TYPE_LABELS, FACIAL_MUSCLES, COMMON_PRODUCTS } from "./types";
 import facialMapToxinaFrontal from "@/assets/facial-map-toxina-frontal.png";
+import { toast } from "sonner";
 
 interface FacialMapModuleProps {
   patientId: string;
   patientName?: string;
   appointmentId?: string | null;
   canEdit?: boolean;
+  professionalId?: string | null;
+  specialtyKey?: string;
 }
  
 export function FacialMapModule({ 
@@ -31,6 +34,8 @@ export function FacialMapModule({
   patientName,
   appointmentId,
   canEdit = false,
+  professionalId,
+  specialtyKey = 'estetica',
 }: FacialMapModuleProps) {
    const [viewType, setViewType] = useState<ViewType>('frontal');
    const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
@@ -50,7 +55,11 @@ export function FacialMapModule({
      updateApplication,
      deleteApplication,
      updateMapNotes,
-   } = useFacialMap(patientId, showHistory ? null : appointmentId);
+   } = useFacialMap(patientId, showHistory ? null : appointmentId, {
+     professionalId: professionalId || null,
+     specialtyKey,
+     canEditRecords: canEdit,
+   });
  
   const displayApplications = showHistory ? allApplications : applications;
   const isEditing = canEdit && selectedMuscle !== null;
@@ -71,7 +80,16 @@ export function FacialMapModule({
    }, {});
  
    const handleMapClick = (x: number, y: number) => {
-     if (!isEditing || !canEdit || !selectedMuscle) return;
+     if (!canEdit) return;
+     if (!selectedMuscle) {
+       toast.info('Selecione uma região/músculo antes de marcar o ponto.');
+       return;
+     }
+     // Validate coordinates
+     if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 100 || y < 0 || y > 100) {
+       console.warn('Invalid click coordinates:', { x, y });
+       return;
+     }
      setNewPointPosition({ x, y });
      setSelectedPoint(null);
      setDialogOpen(true);
@@ -84,19 +102,25 @@ export function FacialMapModule({
    };
  
    const handleSavePoint = async (data: Partial<FacialMapApplication>) => {
-     if (selectedPoint) {
-       await updateApplication({ id: selectedPoint.id, data });
-     } else if (newPointPosition) {
-       await addApplication({
-         ...data,
-         position_x: newPointPosition.x,
-         position_y: newPointPosition.y,
-         view_type: viewType,
-         muscle: selectedMuscle,
-       });
+     try {
+       if (selectedPoint) {
+         await updateApplication({ id: selectedPoint.id, data });
+       } else if (newPointPosition) {
+         await addApplication({
+           ...data,
+           position_x: newPointPosition.x,
+           position_y: newPointPosition.y,
+           view_type: viewType,
+           muscle: selectedMuscle || data.muscle,
+         });
+       }
+     } catch (err) {
+       // Error already handled by mutation onError - just log for traceability
+       console.error('handleSavePoint failed:', err);
+     } finally {
+       setSelectedPoint(null);
+       setNewPointPosition(null);
      }
-     setSelectedPoint(null);
-     setNewPointPosition(null);
    };
  
    const handleDeletePoint = async () => {
