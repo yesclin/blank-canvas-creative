@@ -34,7 +34,7 @@
    const filteredApplications = applications.filter(a => a.view_type === viewType);
  
    const handleSvgClick = (e: React.MouseEvent<SVGSVGElement>) => {
-     if (!isEditing || !onMapClick) return;
+     if (!onMapClick) return;
      
      const svg = e.currentTarget;
      const rect = svg.getBoundingClientRect();
@@ -49,7 +49,7 @@
        viewBox="0 0 400 520"
        className={cn(
          "w-full h-full transition-all",
-         isEditing && selectedMuscle && "cursor-crosshair",
+         isEditing && "cursor-crosshair",
          className
        )}
        onClick={handleSvgClick}

@@ -80,7 +80,7 @@ export function ApplicationPointDialog({
   }, [point, preselectedMuscle, preselectedProduct, preselectedType]);
 
   const handleSave = () => {
-    if (quantity <= 0 || !productName) return;
+    if (!productName) return;
     onSave({
       ...point,
       procedure_type: procedureType,
@@ -230,7 +230,7 @@ export function ApplicationPointDialog({
           <Button 
             size="sm" 
             onClick={handleSave} 
-            disabled={!productName || quantity <= 0}
+            disabled={!productName}
           >
             Salvar
           </Button>

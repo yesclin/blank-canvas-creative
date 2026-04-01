@@ -2046,6 +2046,8 @@ export default function Prontuario() {
             patientId={patientId!}
             appointmentId={activeAppointment?.id}
             canEdit={canEditCurrentTab}
+            professionalId={currentProfessionalId}
+            specialtyKey={activeSpecialtyKey || 'estetica'}
           />
         );
 
