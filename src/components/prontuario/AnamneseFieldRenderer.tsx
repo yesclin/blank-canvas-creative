@@ -48,6 +48,7 @@ export function AnamneseFieldRenderer({
   onChange,
   readOnly = false,
   className,
+  onNavigateToTab,
 }: AnamneseFieldRendererProps) {
   const renderField = () => {
     switch (campo.type) {
