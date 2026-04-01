@@ -11,6 +11,7 @@ import type {
   ViewType, 
   SideType,
   MapType,
+  MapStatus,
   ImageType,
   ViewAngle,
 } from '@/components/prontuario/aesthetics/types';
