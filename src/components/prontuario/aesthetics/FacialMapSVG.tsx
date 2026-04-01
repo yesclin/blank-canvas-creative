@@ -271,28 +271,37 @@
           </g>
         )}
        
-       {/* Face - Left Lateral View */}
-       {viewType === 'left_lateral' && (
-         <g className="face-left-lateral" filter="url(#softShadow)">
-           <ellipse 
-             cx="220" cy="250" rx="100" ry="170" 
-             fill="url(#skinGradient)" 
-             stroke="hsl(var(--border))" 
-             strokeWidth="1.5" 
-           />
-           <path 
-             d="M 180 180 Q 120 200 140 280 Q 120 320 180 360" 
-             fill="none" 
-             stroke="hsl(var(--foreground))" 
-             strokeWidth="1.5"
-             opacity="0.6"
-           />
-           <ellipse cx="160" cy="200" rx="18" ry="10" fill="none" stroke="hsl(var(--foreground))" strokeWidth="1.5" opacity="0.8" />
-           <circle cx="160" cy="200" r="5" fill="hsl(var(--foreground))" opacity="0.6" />
-           <path d="M 150 175 Q 180 165 200 172" fill="none" stroke="hsl(var(--foreground))" strokeWidth="3" strokeLinecap="round" opacity="0.7" />
-           <path d="M 130 265 L 145 335" fill="none" stroke="hsl(var(--foreground))" strokeWidth="1.5" opacity="0.6" />
-         </g>
-       )}
+        {/* Face - Left Lateral View */}
+        {viewType === 'left_lateral' && baseImageUrl ? (
+          <image
+            href={baseImageUrl}
+            x="0"
+            y="0"
+            width="500"
+            height="650"
+            preserveAspectRatio="xMidYMid meet"
+          />
+        ) : viewType === 'left_lateral' && (
+          <g className="face-left-lateral" filter="url(#softShadow)">
+            <ellipse 
+              cx="220" cy="250" rx="100" ry="170" 
+              fill="url(#skinGradient)" 
+              stroke="hsl(var(--border))" 
+              strokeWidth="1.5" 
+            />
+            <path 
+              d="M 180 180 Q 120 200 140 280 Q 120 320 180 360" 
+              fill="none" 
+              stroke="hsl(var(--foreground))" 
+              strokeWidth="1.5"
+              opacity="0.6"
+            />
+            <ellipse cx="160" cy="200" rx="18" ry="10" fill="none" stroke="hsl(var(--foreground))" strokeWidth="1.5" opacity="0.8" />
+            <circle cx="160" cy="200" r="5" fill="hsl(var(--foreground))" opacity="0.6" />
+            <path d="M 150 175 Q 180 165 200 172" fill="none" stroke="hsl(var(--foreground))" strokeWidth="3" strokeLinecap="round" opacity="0.7" />
+            <path d="M 130 265 L 145 335" fill="none" stroke="hsl(var(--foreground))" strokeWidth="1.5" opacity="0.6" />
+          </g>
+        )}
        
        {/* Face - Right Lateral View */}
        {viewType === 'right_lateral' && (
