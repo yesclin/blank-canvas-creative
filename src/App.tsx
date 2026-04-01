@@ -23,6 +23,15 @@ import ValidarDocumento from "./pages/ValidarDocumento";
 import PrecheckPage from "./pages/teleconsulta/PrecheckPage";
 import PatientRoomPage from "./pages/teleconsulta/PatientRoomPage";
 
+// Agendamento Público
+import PublicBookingLayout from "./pages/public/PublicBookingLayout";
+import PublicClinicBookingPage from "./pages/public/PublicClinicBookingPage";
+import SpecialtySelectionStep from "./pages/public/SpecialtySelectionStep";
+import ProfessionalSelectionStep from "./pages/public/ProfessionalSelectionStep";
+import TimeSelectionStep from "./pages/public/TimeSelectionStep";
+import PatientDataStep from "./pages/public/PatientDataStep";
+import BookingConfirmationStep from "./pages/public/BookingConfirmationStep";
+
 // Teleconsulta - Página Autenticada
 import TeleconsultaSala from "./pages/app/TeleconsultaSala";
 
