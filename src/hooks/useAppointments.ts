@@ -181,6 +181,8 @@ export function useCreateAppointment() {
           is_first_visit: data.is_first_visit || false,
           is_return: data.is_return || data.appointment_type === "retorno",
           status: "nao_confirmado",
+          care_mode: data.care_mode || "presencial",
+          meeting_provider: data.meeting_provider || null,
         })
         .select()
         .single();
