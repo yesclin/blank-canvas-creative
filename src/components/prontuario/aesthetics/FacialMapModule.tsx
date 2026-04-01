@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,6 +9,7 @@ import {
   Save,
   FileText,
   RotateCcw,
+  AlertCircle,
 } from "lucide-react";
 import { FacialMapSVG } from "./FacialMapSVG";
 import { MuscleList } from "./MuscleList";
@@ -16,7 +17,7 @@ import { ApplicationPointDialog } from "./ApplicationPointDialog";
 import { useFacialMap } from "@/hooks/aesthetics";
 import { useFacialMapPdf } from "./useFacialMapPdf";
 import type { FacialMapApplication, ViewType, ProcedureType } from "./types";
-import { VIEW_TYPE_LABELS, FACIAL_MUSCLES, COMMON_PRODUCTS } from "./types";
+import { VIEW_TYPE_LABELS, COMMON_PRODUCTS, getDefaultUnit, getRegionLabel } from "./types";
 import facialMapToxinaFrontal from "@/assets/facial-map-toxina-frontal.png";
 import facialMapToxinaLateralEsquerda from "@/assets/facial-map-toxina-lateral-esquerda.png";
 import facialMapToxinaLateralDireita from "@/assets/facial-map-toxina-lateral-direita.png";
@@ -30,7 +31,6 @@ interface FacialMapModuleProps {
   canEdit?: boolean;
   professionalId?: string | null;
   specialtyKey?: string;
-  /** Tipo de procedimento ativo - determina qual imagem-base usar */
   procedureType?: ProcedureType;
 }
  
@@ -67,10 +67,19 @@ export function FacialMapModule({
      specialtyKey,
      canEditRecords: canEdit,
    });
- 
-  const displayApplications = showHistory 
-    ? allApplications 
-    : applications.filter(a => a.procedure_type === activeProcedure);
+
+  // === CORE FILTERING ===
+  // Default: only current appointment + current procedure type
+  // History mode: all applications across all appointments
+  const displayApplications = useMemo(() => {
+    if (showHistory) {
+      // In history mode show all points but still filter by active procedure
+      return allApplications.filter(a => a.procedure_type === activeProcedure);
+    }
+    // Current appointment only + current procedure type
+    return applications.filter(a => a.procedure_type === activeProcedure);
+  }, [showHistory, allApplications, applications, activeProcedure]);
+
   const isEditing = canEdit && selectedMuscle !== null;
 
   // PDF export hook
@@ -81,20 +90,19 @@ export function FacialMapModule({
     applications: displayApplications,
   });
  
-   // Calculate totals
-   const totals = displayApplications.reduce((acc: Record<string, number>, app: any) => {
-     if (!acc[app.procedure_type]) acc[app.procedure_type] = 0;
-     acc[app.procedure_type] += app.quantity;
-     return acc;
-   }, {});
+   // Calculate totals for current procedure only
+   const currentTotal = useMemo(() => {
+     return displayApplications.reduce((sum, app) => sum + app.quantity, 0);
+   }, [displayApplications]);
+
+   const unitLabel = getDefaultUnit(activeProcedure);
  
    const handleMapClick = (x: number, y: number) => {
      if (!canEdit) return;
      if (!selectedMuscle) {
-       toast.info('Selecione uma região/músculo antes de marcar o ponto.');
+       toast.info(`Selecione ${activeProcedure === 'toxin' ? 'um músculo' : 'uma região'} antes de marcar o ponto.`);
        return;
      }
-     // Validate coordinates
      if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 100 || y < 0 || y > 100) {
        console.warn('Invalid click coordinates:', { x, y });
        return;
@@ -117,6 +125,7 @@ export function FacialMapModule({
        } else if (newPointPosition) {
          await addApplication({
            ...data,
+           procedure_type: activeProcedure,
            position_x: newPointPosition.x,
            position_y: newPointPosition.y,
            view_type: viewType,
@@ -124,7 +133,6 @@ export function FacialMapModule({
          });
        }
      } catch (err) {
-       // Error already handled by mutation onError - just log for traceability
        console.error('handleSavePoint failed:', err);
      } finally {
        setSelectedPoint(null);
@@ -149,6 +157,12 @@ export function FacialMapModule({
      await updateMapNotes(notesValue);
      setEditingNotes(false);
    };
+
+   // Clear muscle selection when switching procedure type
+   const handleProcedureChange = (proc: ProcedureType) => {
+     setActiveProcedure(proc);
+     setSelectedMuscle(null);
+   };
  
    if (isLoading) {
      return (
@@ -161,12 +175,26 @@ export function FacialMapModule({
        </div>
      );
    }
+
+   // No appointment context warning
+   const noAppointment = !appointmentId;
  
    return (
      <div className="space-y-4">
-       {/* Header Actions - Minimal */}
-       <div className="flex items-center justify-between">
-         <div className="flex items-center gap-2">
+       {/* No appointment warning */}
+       {noAppointment && (
+         <div className="flex items-center gap-2 p-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+           <AlertCircle className="h-4 w-4 shrink-0" />
+           <p className="text-sm">
+             Nenhum atendimento ativo. Inicie um atendimento para registrar novas marcações.
+             {' '}Visualizando histórico disponível.
+           </p>
+         </div>
+       )}
+
+       {/* Header Actions */}
+       <div className="flex items-center justify-between flex-wrap gap-2">
+         <div className="flex items-center gap-2 flex-wrap">
            {/* View Switcher */}
            <div className="flex bg-muted rounded-lg p-1">
              {Object.entries(VIEW_TYPE_LABELS).map(([key, label]) => (
@@ -189,7 +217,7 @@ export function FacialMapModule({
               {([['toxin', 'Toxina'], ['filler', 'Preenchimento'], ['biostimulator', 'Bioestimulador']] as const).map(([key, label]) => (
                 <button
                   key={key}
-                  onClick={() => setActiveProcedure(key)}
+                  onClick={() => handleProcedureChange(key)}
                   className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                     activeProcedure === key 
                       ? 'bg-background text-foreground shadow-sm' 
@@ -203,25 +231,11 @@ export function FacialMapModule({
           </div>
  
          <div className="flex items-center gap-2">
-           {/* Totals Summary */}
-           {Object.keys(totals).length > 0 && (
-             <div className="flex items-center gap-3 mr-4 text-sm">
-               {totals.toxin && (
-                 <span className="text-muted-foreground">
-                   Toxina: <span className="font-semibold text-foreground">{totals.toxin} UI</span>
-                 </span>
-               )}
-               {totals.filler && (
-                 <span className="text-muted-foreground">
-                   Preench.: <span className="font-semibold text-foreground">{totals.filler} ml</span>
-                 </span>
-               )}
-               {totals.biostimulator && (
-                 <span className="text-muted-foreground">
-                   Bioestim.: <span className="font-semibold text-foreground">{totals.biostimulator} ml</span>
-                 </span>
-               )}
-             </div>
+           {/* Current procedure total */}
+           {currentTotal > 0 && (
+             <span className="text-sm text-muted-foreground mr-2">
+               Total: <span className="font-semibold text-foreground">{currentTotal} {unitLabel}</span>
+             </span>
            )}
  
            <Button
@@ -243,11 +257,6 @@ export function FacialMapModule({
              )}
            </Button>
            
-           <Button variant="ghost" size="sm" className="text-muted-foreground">
-             <Eye className="h-4 w-4 mr-1.5" />
-             Visualizar
-           </Button>
-           
             <Button 
               variant="outline" 
               size="sm"
@@ -259,8 +268,18 @@ export function FacialMapModule({
             </Button>
          </div>
        </div>
+
+       {/* History mode banner */}
+       {showHistory && (
+         <div className="flex items-center gap-2 p-3 rounded-lg border border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-200">
+           <History className="h-4 w-4 shrink-0" />
+           <p className="text-sm">
+             Modo Histórico — exibindo todas as marcações de <strong>{activeProcedure === 'toxin' ? 'Toxina' : activeProcedure === 'filler' ? 'Preenchimento' : 'Bioestimulador'}</strong> do paciente.
+           </p>
+         </div>
+       )}
  
-        {/* Main Content - Stacked Layout: Image on top, muscles below */}
+        {/* Main Content */}
         <div className="flex flex-col gap-6">
           {/* Top - Face Map */}
           <div className="bg-gradient-to-b from-muted/20 to-muted/5 rounded-xl border p-4 flex items-center justify-center">
@@ -284,14 +303,30 @@ export function FacialMapModule({
               />
             </div>
           </div>
+
+          {/* Empty state */}
+          {displayApplications.length === 0 && !isLoading && (
+            <div className="text-center py-6 text-muted-foreground">
+              <p className="text-sm">
+                {showHistory 
+                  ? `Nenhuma marcação de ${activeProcedure === 'toxin' ? 'Toxina' : activeProcedure === 'filler' ? 'Preenchimento' : 'Bioestimulador'} encontrada no histórico.`
+                  : canEdit 
+                    ? `Selecione ${activeProcedure === 'toxin' ? 'um músculo' : 'uma região'} abaixo e clique no mapa para começar.`
+                    : 'Nenhuma marcação neste atendimento.'
+                }
+              </p>
+            </div>
+          )}
  
-         {/* Right Column - Muscle List (1/3 width) */}
+         {/* Region/Muscle List */}
          <div className="bg-background rounded-xl border flex flex-col">
            <div className="p-4 border-b">
-             <h3 className="font-semibold text-sm">Músculos</h3>
+             <h3 className="font-semibold text-sm">
+               {activeProcedure === 'toxin' ? 'Músculos' : activeProcedure === 'filler' ? 'Regiões' : 'Áreas'}
+             </h3>
              <p className="text-xs text-muted-foreground mt-1">
                {canEdit 
-                 ? 'Selecione um músculo e clique no mapa'
+                 ? `Selecione ${activeProcedure === 'toxin' ? 'um músculo' : 'uma região'} e clique no mapa`
                  : 'Visualização dos pontos de aplicação'
                }
              </p>
@@ -310,7 +345,8 @@ export function FacialMapModule({
              <MuscleList
                selectedMuscle={selectedMuscle}
                onSelectMuscle={(id) => setSelectedMuscle(id)}
-               disabled={!canEdit}
+               disabled={!canEdit || showHistory}
+               procedureType={activeProcedure}
              />
            </div>
          </div>
@@ -323,7 +359,7 @@ export function FacialMapModule({
              <FileText className="h-4 w-4 text-muted-foreground" />
              <h3 className="font-medium text-sm">Observações Clínicas</h3>
            </div>
-           {canEdit && !editingNotes && (
+           {canEdit && !editingNotes && !showHistory && (
              <Button 
                variant="ghost" 
                size="sm" 
@@ -366,7 +402,7 @@ export function FacialMapModule({
          )}
        </div>
  
-       {/* Edit Dialog - Simplified */}
+       {/* Edit Dialog */}
        <ApplicationPointDialog
          open={dialogOpen}
          onOpenChange={setDialogOpen}
@@ -379,8 +415,8 @@ export function FacialMapModule({
          onDelete={selectedPoint ? handleDeletePoint : undefined}
          isNew={!selectedPoint}
          preselectedMuscle={selectedMuscle}
-         preselectedProduct={COMMON_PRODUCTS.toxin[0]}
-         preselectedType="toxin"
+         preselectedProduct={COMMON_PRODUCTS[activeProcedure][0]}
+         preselectedType={activeProcedure}
        />
      </div>
    );
