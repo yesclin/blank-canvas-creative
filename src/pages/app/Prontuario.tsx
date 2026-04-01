@@ -2107,6 +2107,7 @@ export default function Prontuario() {
     }
   };
 
+  const isEsteticaSpecialty = activeSpecialtyKey === 'estetica';
   // Print handler - consolidated for Estética, default for others
   const onPrintClick = useCallback(() => {
     if (!patientId || !patient) {
