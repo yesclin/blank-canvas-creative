@@ -84,7 +84,11 @@ export function OnlineBookingSettingsCard() {
   };
 
   const handleSave = async () => {
-    if (!clinicId) return;
+    if (!clinicId) {
+      toast.error("Clínica não identificada. Recarregue a página.");
+      console.warn("[OnlineBooking] handleSave: clinicId is null");
+      return;
+    }
     if (enabled && !slug.trim()) {
       toast.error("Defina um slug para o link público.");
       return;
