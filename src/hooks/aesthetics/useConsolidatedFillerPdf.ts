@@ -42,6 +42,10 @@ interface ConsolidatedPdfParams {
   patient: PatientForPdf;
   professionalName?: string | null;
   professionalRegistration?: string | null;
+  /** Pass the current record's responses directly so the PDF reads from the active record */
+  recordResponses?: Record<string, any> | null;
+  /** Pass the current record's data directly */
+  recordData?: Record<string, any> | null;
 }
 
 function getMuscleName(id: string): string {
