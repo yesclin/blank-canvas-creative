@@ -247,7 +247,7 @@ export function FacialMapModule({
                 onMapClick={handleMapClick}
                 isEditing={isEditing}
                 selectedMuscle={selectedMuscle}
-                className="max-h-[560px]"
+                className="max-h-[700px]"
                 baseImageUrl={viewType === 'frontal' ? facialMapToxinaFrontal : undefined}
               />
            </div>
