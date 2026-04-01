@@ -20,6 +20,7 @@ export interface FacialMap {
   status: MapStatus;
   general_notes?: string | null;
   concluded_at?: string | null;
+  source_session_id?: string | null;
   created_at: string;
   created_by?: string | null;
   updated_at: string;

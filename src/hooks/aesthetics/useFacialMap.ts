@@ -84,6 +84,7 @@ function dbRowToFacialMap(row: any): FacialMap {
     created_at: row.created_at,
     created_by: extra.created_by || null,
     updated_at: row.updated_at,
+    source_session_id: extra.source_session_id || null,
   };
 }
 
@@ -232,7 +233,7 @@ export function useFacialMap(
     return recentMap || null;
   };
 
-  const createNewFacialMap = async (mapType: MapType = preferredMapType) => {
+  const createNewFacialMap = async (mapType: MapType = preferredMapType, sourceSessionId?: string | null) => {
     ensureEditableContext();
 
     const authUserId = await getAuthUserId();
@@ -246,6 +247,7 @@ export function useFacialMap(
         appointment_id: appointmentId || null,
         created_by: authUserId,
         specialty_key: options?.specialtyKey || null,
+        source_session_id: sourceSessionId || null,
       },
     };
 
@@ -742,6 +744,44 @@ export function useFacialMap(
     },
   });
 
+  // Reopen a concluded session
+  const reopenSessionMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentMapId) throw new Error('Nenhum mapa selecionado');
+      
+      const { data: row, error: fetchError } = await supabase
+        .from('facial_maps')
+        .select('data')
+        .eq('id', currentMapId)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      const existingData = (row?.data as Record<string, any>) || {};
+      const { error } = await supabase
+        .from('facial_maps')
+        .update({
+          data: {
+            ...existingData,
+            status: 'active',
+            concluded_at: null,
+          },
+        })
+        .eq('id', currentMapId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: mapQueryKey });
+      queryClient.invalidateQueries({ queryKey: ['facial-map-history', patientId] });
+      toast.success('Sessão reaberta com sucesso');
+    },
+    onError: (error) => {
+      console.error('Error reopening session:', error);
+      toast.error('Erro ao reabrir sessão');
+    },
+  });
+
   // Duplicate a session as base for a new one
   const duplicateSessionMutation = useMutation({
     mutationFn: async (sourceMapId: string) => {
@@ -756,7 +796,7 @@ export function useFacialMap(
       if (appsError) throw appsError;
       
       // Create a new map for this appointment
-      const newMap = await createNewFacialMap(preferredMapType);
+      const newMap = await createNewFacialMap(preferredMapType, sourceMapId);
       
       // Copy applications to new map
       if (sourceApps && sourceApps.length > 0) {
@@ -896,6 +936,8 @@ export function useFacialMap(
     // Session lifecycle
     concludeSession: concludeSessionMutation.mutateAsync,
     isConcluding: concludeSessionMutation.isPending,
+    reopenSession: reopenSessionMutation.mutateAsync,
+    isReopening: reopenSessionMutation.isPending,
     duplicateSession: duplicateSessionMutation.mutateAsync,
     isDuplicating: duplicateSessionMutation.isPending,
     loadMapApplications,

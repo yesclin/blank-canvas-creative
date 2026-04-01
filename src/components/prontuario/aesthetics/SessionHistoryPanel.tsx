@@ -3,6 +3,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -21,9 +23,11 @@ import {
   CheckCircle2,
   Clock,
   X,
+  Download,
+  Filter,
 } from "lucide-react";
 import type { FacialMap, FacialMapApplication, ProcedureType } from "./types";
-import { PROCEDURE_TYPE_LABELS, getDefaultUnit, getRegionsForProcedure } from "./types";
+import { getDefaultUnit } from "./types";
 
 interface SessionHistoryPanelProps {
   allMaps: FacialMap[];
@@ -33,6 +37,7 @@ interface SessionHistoryPanelProps {
   onClose: () => void;
   loadMapApplications: (mapId: string) => Promise<FacialMapApplication[]>;
   canDuplicate?: boolean;
+  onGeneratePdfForSession?: (mapId: string) => void;
 }
 
 const PROC_ICONS: Record<ProcedureType, typeof Syringe> = {
@@ -55,8 +60,13 @@ export function SessionHistoryPanel({
   onClose,
   loadMapApplications,
   canDuplicate = false,
+  onGeneratePdfForSession,
 }: SessionHistoryPanelProps) {
   const [filterProcedure, setFilterProcedure] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
   const [sessionSummaries, setSessionSummaries] = useState<SessionSummary[]>([]);
   const [loadingApps, setLoadingApps] = useState(true);
 
@@ -97,9 +107,27 @@ export function SessionHistoryPanel({
   }, [allMaps, loadMapApplications]);
 
   const filteredSessions = sessionSummaries.filter(s => {
-    if (filterProcedure === 'all') return true;
-    return Object.keys(s.totalsByProcedure).includes(filterProcedure);
+    // Procedure filter
+    if (filterProcedure !== 'all') {
+      if (!Object.keys(s.totalsByProcedure).includes(filterProcedure)) return false;
+    }
+    // Status filter
+    if (filterStatus !== 'all') {
+      if (s.map.status !== filterStatus) return false;
+    }
+    // Date range filter
+    if (filterDateFrom) {
+      const mapDate = new Date(s.map.created_at).toISOString().slice(0, 10);
+      if (mapDate < filterDateFrom) return false;
+    }
+    if (filterDateTo) {
+      const mapDate = new Date(s.map.created_at).toISOString().slice(0, 10);
+      if (mapDate > filterDateTo) return false;
+    }
+    return true;
   });
+
+  const hasActiveFilters = filterProcedure !== 'all' || filterStatus !== 'all' || filterDateFrom || filterDateTo;
 
   return (
     <div className="bg-background rounded-xl border flex flex-col">
@@ -107,26 +135,97 @@ export function SessionHistoryPanel({
         <div>
           <h3 className="font-semibold text-sm">Histórico de Sessões</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {allMaps.length} sessão(ões) encontrada(s)
+            {filteredSessions.length} de {allMaps.length} sessão(ões)
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={filterProcedure} onValueChange={setFilterProcedure}>
-            <SelectTrigger className="h-8 w-[160px] text-xs">
-              <SelectValue placeholder="Filtrar" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="toxin">Toxina</SelectItem>
-              <SelectItem value="filler">Preenchimento</SelectItem>
-              <SelectItem value="biostimulator">Bioestimulador</SelectItem>
-            </SelectContent>
-          </Select>
+          <Button
+            variant={showFilters ? "default" : "outline"}
+            size="sm"
+            className="h-8 text-xs gap-1"
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <Filter className="h-3.5 w-3.5" />
+            Filtros
+            {hasActiveFilters && (
+              <span className="ml-1 bg-primary-foreground text-primary rounded-full h-4 w-4 text-[10px] flex items-center justify-center">
+                !
+              </span>
+            )}
+          </Button>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </div>
       </div>
+
+      {/* Filters */}
+      {showFilters && (
+        <div className="p-3 border-b bg-muted/30 space-y-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="space-y-1">
+              <Label className="text-[10px] text-muted-foreground uppercase">Procedimento</Label>
+              <Select value={filterProcedure} onValueChange={setFilterProcedure}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="toxin">Toxina</SelectItem>
+                  <SelectItem value="filler">Preenchimento</SelectItem>
+                  <SelectItem value="biostimulator">Bioestimulador</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px] text-muted-foreground uppercase">Status</Label>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="active">Em andamento</SelectItem>
+                  <SelectItem value="concluded">Concluída</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px] text-muted-foreground uppercase">Data inicial</Label>
+              <Input
+                type="date"
+                value={filterDateFrom}
+                onChange={(e) => setFilterDateFrom(e.target.value)}
+                className="h-8 text-xs"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px] text-muted-foreground uppercase">Data final</Label>
+              <Input
+                type="date"
+                value={filterDateTo}
+                onChange={(e) => setFilterDateTo(e.target.value)}
+                className="h-8 text-xs"
+              />
+            </div>
+          </div>
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => {
+                setFilterProcedure('all');
+                setFilterStatus('all');
+                setFilterDateFrom('');
+                setFilterDateTo('');
+              }}
+            >
+              Limpar filtros
+            </Button>
+          )}
+        </div>
+      )}
 
       <ScrollArea className="flex-1 max-h-[400px]">
         <div className="p-3 space-y-2">
@@ -151,7 +250,7 @@ export function SessionHistoryPanel({
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                         <span className="text-sm font-medium">{dateStr}</span>
                         {isCurrent && (
@@ -216,6 +315,16 @@ export function SessionHistoryPanel({
                         >
                           <Copy className="h-3.5 w-3.5" />
                           Duplicar
+                        </Button>
+                      )}
+                      {onGeneratePdfForSession && session.applications.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs gap-1"
+                          onClick={() => onGeneratePdfForSession(session.map.id)}
+                        >
+                          <Download className="h-3.5 w-3.5" />
                         </Button>
                       )}
                     </div>
