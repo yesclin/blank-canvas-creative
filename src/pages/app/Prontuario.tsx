@@ -97,6 +97,7 @@ import { isBlockEnabled } from "@/hooks/prontuario/specialtyCapabilities";
 import { getVisibleTabsForSpecialty } from "@/hooks/prontuario/specialtyTabsConfig";
 import { useLgpdEnforcement } from "@/hooks/lgpd";
 import { useProntuarioPrint } from "@/hooks/prontuario/useProntuarioPrint";
+import { useConsolidatedFillerPdf } from "@/hooks/aesthetics/useConsolidatedFillerPdf";
 import { useClinicData } from "@/hooks/useClinicData";
 import { PatientHeader } from "@/components/prontuario/PatientHeader";
 import { ProntuarioHeader } from "@/components/prontuario/ProntuarioHeader";
