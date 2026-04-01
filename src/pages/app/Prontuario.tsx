@@ -2107,10 +2107,29 @@ export default function Prontuario() {
     }
   };
 
-  // Print handler - must be before early returns (Rules of Hooks)
+  // Print handler - consolidated for Estética, default for others
   const onPrintClick = useCallback(() => {
-    handlePrint();
-  }, [handlePrint]);
+    if (!patientId || !patient) {
+      handlePrint();
+      return;
+    }
+    if (isEsteticaSpecialty) {
+      generateConsolidatedPdf({
+        patientId,
+        appointmentId: activeAppointment?.id,
+        patient: {
+          full_name: patient.full_name,
+          birth_date: patient.birth_date,
+          phone: patient.phone,
+          cpf: patient.cpf,
+        },
+        professionalName: currentProfessionalName,
+        professionalRegistration: docClinicoProfReg,
+      });
+    } else {
+      handlePrint();
+    }
+  }, [handlePrint, patientId, patient, activeAppointment, isEsteticaSpecialty, generateConsolidatedPdf, currentProfessionalName, docClinicoProfReg]);
 
   // Export handler - consolidated PDF for Estética/filler, default for others
   const isEsteticaSpecialty = activeSpecialtyKey === 'estetica';
