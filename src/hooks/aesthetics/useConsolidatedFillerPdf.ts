@@ -70,6 +70,8 @@ export function useConsolidatedFillerPdf() {
     patient,
     professionalName,
     professionalRegistration,
+    recordResponses,
+    recordData,
   }: ConsolidatedPdfParams) => {
     setExporting(true);
     try {
@@ -84,9 +86,15 @@ export function useConsolidatedFillerPdf() {
         docSettings = data;
       }
 
-      // 2. Fetch anamnesis record for this patient (latest for aesthetics)
+      // 2. Build anamnesis data from the current record's responses/data (passed directly)
+      //    Falls back to fetching latest record only if nothing was passed.
       let anamnesisData: Record<string, any> = {};
-      if (clinic?.id) {
+      if (recordResponses || recordData) {
+        anamnesisData = {
+          ...(typeof recordData === 'object' && recordData ? recordData : {}),
+          ...(typeof recordResponses === 'object' && recordResponses ? recordResponses : {}),
+        };
+      } else if (clinic?.id) {
         const { data: anamnesisRecords } = await supabase
           .from('anamnesis_records')
           .select('data, responses')
