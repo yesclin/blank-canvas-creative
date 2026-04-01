@@ -235,10 +235,10 @@ export function FacialMapModule({
          </div>
        </div>
  
-       {/* Main Content - Two Column Layout */}
-       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-[700px]">
-         {/* Left Column - Face Map (2/3 width) */}
-          <div className="lg:col-span-2 bg-gradient-to-b from-muted/20 to-muted/5 rounded-xl border p-4 flex items-center justify-center">
+        {/* Main Content - Stacked Layout: Image on top, muscles below */}
+        <div className="flex flex-col gap-6">
+          {/* Top - Face Map */}
+          <div className="bg-gradient-to-b from-muted/20 to-muted/5 rounded-xl border p-4 flex items-center justify-center">
             <div className="w-full max-w-[600px] mx-auto flex items-center justify-center">
               <FacialMapSVG
                 viewType={viewType}
@@ -255,8 +255,8 @@ export function FacialMapModule({
                   : undefined
                 }
               />
-           </div>
-         </div>
+            </div>
+          </div>
  
          {/* Right Column - Muscle List (1/3 width) */}
          <div className="bg-background rounded-xl border flex flex-col">
