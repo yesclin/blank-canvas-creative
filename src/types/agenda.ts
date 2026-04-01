@@ -13,6 +13,27 @@ export type AppointmentType = 'consulta' | 'retorno' | 'procedimento' | 'encaixe
 
 export type PaymentType = 'particular' | 'convenio';
 
+export type CareMode = 'presencial' | 'teleconsulta' | 'domiciliar';
+
+export type MeetingStatus = 'nao_gerada' | 'gerada' | 'enviada' | 'paciente_entrou' | 'profissional_entrou' | 'em_andamento' | 'encerrada' | 'falhou';
+
+export const careModeLabels: Record<CareMode, string> = {
+  presencial: 'Presencial',
+  teleconsulta: 'Teleconsulta',
+  domiciliar: 'Domiciliar',
+};
+
+export const meetingStatusLabels: Record<MeetingStatus, string> = {
+  nao_gerada: 'Não Gerada',
+  gerada: 'Sala Gerada',
+  enviada: 'Link Enviado',
+  paciente_entrou: 'Paciente Entrou',
+  profissional_entrou: 'Profissional Entrou',
+  em_andamento: 'Em Andamento',
+  encerrada: 'Encerrada',
+  falhou: 'Falhou',
+};
+
 export type ViewMode = 'daily' | 'weekly' | 'monthly' | 'timeline';
 
 export type GroupBy = 'professional' | 'room' | 'specialty' | 'type' | 'status' | 'general';
