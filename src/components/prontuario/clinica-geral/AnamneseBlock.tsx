@@ -1236,6 +1236,7 @@ export function AnamneseBlock({
                 size="sm"
                 disabled={exportingConsolidated}
                 onClick={() => {
+                  const activeRecord = selectedRecord || currentAnamnese;
                   generateConsolidatedPdf({
                     patientId: patientData.id,
                     appointmentId: appointmentId,
@@ -1247,6 +1248,8 @@ export function AnamneseBlock({
                     },
                     professionalName,
                     professionalRegistration,
+                    recordResponses: (activeRecord && 'responses' in activeRecord ? activeRecord.responses : null) as Record<string, any> | null,
+                    recordData: (activeRecord && 'data' in activeRecord ? activeRecord.data : (activeRecord && 'structured_data' in activeRecord ? (activeRecord as any).structured_data : null)) as Record<string, any> | null,
                   });
                 }}
                 title="Gerar PDF consolidado deste registro"
