@@ -46,6 +46,7 @@ import {
 
 import { useResolvedAnamnesisTemplate } from '@/hooks/prontuario/useResolvedAnamnesisTemplate';
 import { AnamneseModelSelector } from '@/components/prontuario/AnamneseModelSelector';
+import { useConsolidatedFillerPdf } from '@/hooks/aesthetics/useConsolidatedFillerPdf';
 
 interface AnamneseEsteticaBlockProps {
   patientId: string | null;
@@ -54,6 +55,13 @@ interface AnamneseEsteticaBlockProps {
   canEdit?: boolean;
   specialtyId?: string | null;
   procedureId?: string | null;
+  patientName?: string;
+  patientBirthDate?: string | null;
+  patientPhone?: string | null;
+  patientCpf?: string | null;
+  professionalName?: string | null;
+  professionalRegistration?: string | null;
+  canExport?: boolean;
 }
 
 export function AnamneseEsteticaBlock({
