@@ -8,6 +8,7 @@ import { AppointmentStatusCard } from "@/components/config/atendimento/Appointme
 import { AppointmentRulesCard } from "@/components/config/atendimento/AppointmentRulesCard";
 import { IdleAlertSettingsCard } from "@/components/config/atendimento/IdleAlertSettingsCard";
 import { TeleconsultaAgendaRulesCard } from "@/components/config/agenda/TeleconsultaAgendaRulesCard";
+import { OnlineBookingSettingsCard } from "@/components/config/agenda/OnlineBookingSettingsCard";
 
 export default function ConfigAgenda() {
   return (
@@ -31,6 +32,7 @@ export default function ConfigAgenda() {
           <TabsTrigger value="rules">Regras</TabsTrigger>
           <TabsTrigger value="alerts">Alertas de Ociosidade</TabsTrigger>
           <TabsTrigger value="teleconsulta">Teleconsulta</TabsTrigger>
+          <TabsTrigger value="online-booking">Agendamento Online</TabsTrigger>
         </TabsList>
 
         <TabsContent value="clinic" className="space-y-4">
@@ -62,6 +64,10 @@ export default function ConfigAgenda() {
 
         <TabsContent value="teleconsulta" className="space-y-6">
           <TeleconsultaAgendaRulesCard />
+        </TabsContent>
+
+        <TabsContent value="online-booking" className="space-y-6">
+          <OnlineBookingSettingsCard />
         </TabsContent>
       </Tabs>
     </div>
