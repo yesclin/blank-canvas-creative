@@ -252,179 +252,251 @@ export function AppointmentDetailDrawer({
           </div>
 
           {/* Teleconsulta Section */}
-          {isTeleconsulta && (
-            <>
-              <Separator />
-              <div>
-                <p className="text-sm font-semibold mb-3 flex items-center gap-2">
-                  <Video className="h-4 w-4 text-blue-600" />
-                  Teleconsulta
-                </p>
-                <div className="space-y-3">
-                  {/* Meeting Status */}
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Sessão</span>
-                    <span className={cn("font-medium", getMeetingStatusColor(meeting_status))}>
-                      {meetingStatusLabels[meeting_status as MeetingStatus] || meeting_status}
-                    </span>
-                  </div>
+          {isTeleconsulta && (() => {
+            const hasSession = !!teleSession;
+            const sessionStatus = teleSession?.status ?? null;
+            const isSessionActive = hasSession && sessionStatus !== 'encerrada' && sessionStatus !== 'falhou';
+            const isSessionEnded = sessionStatus === 'encerrada';
+            const isSessionFailed = sessionStatus === 'falhou';
 
-                  {/* Precheck Status */}
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Pré-check</span>
-                    <span className={cn("font-medium", getPrecheckStatusColor(precheck_status))}>
-                      {precheckStatusLabels[precheck_status] || precheck_status}
-                    </span>
-                  </div>
+            // Derive contextual label and text
+            let sessionLabel = "Não Gerada";
+            let sessionText = "Sala não gerada";
+            let sessionLabelColor = "text-muted-foreground";
 
-                  {/* Consent */}
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Termo aceito</span>
-                    <span className={cn("font-medium", consent_telehealth_accepted ? "text-green-600" : "text-muted-foreground")}>
-                      {consent_telehealth_accepted ? "Sim" : "Pendente"}
-                    </span>
-                  </div>
+            if (hasSession) {
+              switch (sessionStatus) {
+                case 'nao_iniciada':
+                  sessionLabel = "Sala Gerada";
+                  sessionText = "Sala gerada e pronta para uso";
+                  sessionLabelColor = "text-blue-600";
+                  break;
+                case 'aguardando_paciente':
+                  sessionLabel = "Aguardando Paciente";
+                  sessionText = "Sala gerada aguardando entrada do paciente";
+                  sessionLabelColor = "text-amber-600";
+                  break;
+                case 'em_andamento':
+                  sessionLabel = "Em Andamento";
+                  sessionText = "Teleconsulta em andamento";
+                  sessionLabelColor = "text-green-600";
+                  break;
+                case 'encerrada':
+                  sessionLabel = "Encerrada";
+                  sessionText = "Teleconsulta encerrada";
+                  sessionLabelColor = "text-muted-foreground";
+                  break;
+                case 'falhou':
+                  sessionLabel = "Falha";
+                  sessionText = "Sessão com falha técnica";
+                  sessionLabelColor = "text-destructive";
+                  break;
+                default:
+                  sessionLabel = meetingStatusLabels[meeting_status as MeetingStatus] || sessionStatus || "Gerada";
+                  sessionText = `Status da sessão: ${sessionStatus}`;
+                  sessionLabelColor = getMeetingStatusColor(meeting_status);
+              }
+            }
 
-                  {/* Provider */}
-                  {meeting_provider && (
+            // Debug logs
+            console.log("[Teleconsulta UI]", {
+              meetingStatus: meeting_status,
+              precheckStatus: precheck_status,
+              technicalIssueCount: technical_issue_count,
+              sessionId: teleSession?.id ?? null,
+              sessionStatus,
+              derivedLabel: sessionLabel,
+              derivedText: sessionText,
+              hasSession,
+            });
+
+            return (
+              <>
+                <Separator />
+                <div>
+                  <p className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <Video className="h-4 w-4 text-blue-600" />
+                    Teleconsulta
+                  </p>
+                  <div className="space-y-3">
+                    {/* Session Status - derived */}
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Provedor</span>
-                      <span className="font-medium capitalize">{meeting_provider}</span>
+                      <span className="text-muted-foreground">Sessão</span>
+                      <span className={cn("font-medium", sessionLabelColor)}>
+                        {sessionLabel}
+                      </span>
                     </div>
-                  )}
 
-                  {/* Technical Issues */}
-                  {technical_issue_count > 0 && (
+                    {/* Precheck Status */}
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Falhas técnicas</span>
-                      <Badge variant="outline" className="text-xs text-destructive border-destructive/30">
-                        {technical_issue_count}
-                      </Badge>
+                      <span className="text-muted-foreground">Pré-check</span>
+                      <span className={cn("font-medium", getPrecheckStatusColor(precheck_status))}>
+                        {precheckStatusLabels[precheck_status] || precheck_status}
+                      </span>
                     </div>
-                  )}
 
-                  {/* Session Timestamps */}
-                  {meeting_started_at && (
+                    {/* Consent */}
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Início sessão</span>
-                      <span className="text-xs">{formatTimestamp(meeting_started_at)}</span>
+                      <span className="text-muted-foreground">Termo aceito</span>
+                      <span className={cn("font-medium", consent_telehealth_accepted ? "text-green-600" : "text-muted-foreground")}>
+                        {consent_telehealth_accepted ? "Sim" : "Pendente"}
+                      </span>
                     </div>
-                  )}
-                  {meeting_ended_at && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Fim sessão</span>
-                      <span className="text-xs">{formatTimestamp(meeting_ended_at)}</span>
-                    </div>
-                  )}
 
-                  {/* Meeting Link */}
-                  {meeting_link ? (
-                    <div className="flex items-center gap-2 p-2 rounded-md bg-muted text-sm">
-                      <Video className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <span className="truncate flex-1 text-xs">{meeting_link}</span>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">Sala não gerada</p>
-                  )}
-                  
-                  {/* Teleconsulta Actions */}
-                  <div className="grid grid-cols-2 gap-2">
-                    {!meeting_link && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1"
-                        disabled={generateRoom.isPending}
-                        onClick={() => generateRoom.mutate({
-                          appointmentId: appointment.id,
-                          patientId: appointment.patient_id,
-                          professionalId: appointment.professional_id,
-                        })}
-                      >
-                        <Video className="h-3.5 w-3.5" />
-                        Gerar Sala
-                      </Button>
+                    {/* Provider */}
+                    {meeting_provider && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Provedor</span>
+                        <span className="font-medium capitalize">{meeting_provider}</span>
+                      </div>
                     )}
-                    
-                    {meeting_link && (
-                      <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1"
-                          onClick={() => copyLink(meeting_link)}
-                        >
-                          <Copy className="h-3.5 w-3.5" />
-                          Copiar Link
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1"
-                          onClick={() => {
-                            toast.success("Link reenviado ao paciente");
-                            // TODO: integrate with communication flow when available
-                          }}
-                        >
-                          <Send className="h-3.5 w-3.5" />
-                          Reenviar
-                        </Button>
-                        <Button
-                          variant="default"
-                          size="sm"
-                          className="gap-1"
-                          onClick={handleEnterRoom}
-                        >
-                          <ExternalLink className="h-3.5 w-3.5" />
-                          {isReceptionist ? 'Copiar' : 'Entrar'}
-                        </Button>
-                      </>
+
+                    {/* Technical Issues */}
+                    {technical_issue_count > 0 && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Falhas técnicas</span>
+                        <Badge variant="outline" className="text-xs text-destructive border-destructive/30">
+                          {technical_issue_count}
+                        </Badge>
+                      </div>
                     )}
-                    
-                    {teleSession && teleSession.status !== 'encerrada' && (
-                      <>
+
+                    {/* Session Timestamps */}
+                    {meeting_started_at && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Início sessão</span>
+                        <span className="text-xs">{formatTimestamp(meeting_started_at)}</span>
+                      </div>
+                    )}
+                    {meeting_ended_at && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Fim sessão</span>
+                        <span className="text-xs">{formatTimestamp(meeting_ended_at)}</span>
+                      </div>
+                    )}
+
+                    {/* Contextual text - derived from session state */}
+                    <p className={cn("text-sm italic", hasSession ? "text-foreground" : "text-muted-foreground")}>
+                      {sessionText}
+                    </p>
+
+                    {/* Meeting Link display */}
+                    {meeting_link && hasSession && (
+                      <div className="flex items-center gap-2 p-2 rounded-md bg-muted text-sm">
+                        <Video className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <span className="truncate flex-1 text-xs">{meeting_link}</span>
+                      </div>
+                    )}
+
+                    {/* Teleconsulta Actions - derived from session existence */}
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Gerar Sala: only when NO session exists */}
+                      {!hasSession && (
                         <Button
                           variant="outline"
                           size="sm"
-                          className="gap-1 text-amber-600"
-                          onClick={() => reportTechnicalIssue.mutate({
+                          className="gap-1"
+                          disabled={generateRoom.isPending}
+                          onClick={() => generateRoom.mutate({
                             appointmentId: appointment.id,
-                            sessionId: teleSession.id,
-                            description: "Falha técnica reportada",
+                            patientId: appointment.patient_id,
+                            professionalId: appointment.professional_id,
                           })}
                         >
-                          <Wifi className="h-3.5 w-3.5" />
-                          Falha
+                          <Video className="h-3.5 w-3.5" />
+                          Gerar Sala
                         </Button>
+                      )}
+
+                      {/* Actions when session EXISTS */}
+                      {hasSession && !isSessionEnded && (
+                        <>
+                          <Button
+                            variant="default"
+                            size="sm"
+                            className="gap-1"
+                            onClick={handleEnterRoom}
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            {isReceptionist ? 'Copiar' : 'Abrir Sala'}
+                          </Button>
+
+                          {meeting_link && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-1"
+                                onClick={() => copyLink(meeting_link)}
+                              >
+                                <Copy className="h-3.5 w-3.5" />
+                                Copiar Link
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-1"
+                                onClick={() => {
+                                  toast.success("Link reenviado ao paciente");
+                                }}
+                              >
+                                <Send className="h-3.5 w-3.5" />
+                                Reenviar
+                              </Button>
+                            </>
+                          )}
+                        </>
+                      )}
+
+                      {/* Falha + Encerrar: only when session is active */}
+                      {hasSession && isSessionActive && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1 text-amber-600"
+                            onClick={() => reportTechnicalIssue.mutate({
+                              appointmentId: appointment.id,
+                              sessionId: teleSession!.id,
+                              description: "Falha técnica reportada",
+                            })}
+                          >
+                            <Wifi className="h-3.5 w-3.5" />
+                            Falha
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1 text-destructive"
+                            onClick={() => endSession.mutate({
+                              appointmentId: appointment.id,
+                              sessionId: teleSession!.id,
+                            })}
+                          >
+                            <Power className="h-3.5 w-3.5" />
+                            Encerrar
+                          </Button>
+                        </>
+                      )}
+
+                      {/* Converter para presencial: always available unless ended */}
+                      {!isSessionEnded && (
                         <Button
                           variant="outline"
                           size="sm"
-                          className="gap-1 text-destructive"
-                          onClick={() => endSession.mutate({
-                            appointmentId: appointment.id,
-                            sessionId: teleSession.id,
-                          })}
+                          className="gap-1"
+                          onClick={() => convertToPresencial.mutate({ appointmentId: appointment.id })}
                         >
-                          <Power className="h-3.5 w-3.5" />
-                          Encerrar
+                          <ArrowRightLeft className="h-3.5 w-3.5" />
+                          Presencial
                         </Button>
-                      </>
-                    )}
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1"
-                      onClick={() => convertToPresencial.mutate({ appointmentId: appointment.id })}
-                    >
-                      <ArrowRightLeft className="h-3.5 w-3.5" />
-                      Presencial
-                    </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </>
-          )}
+              </>
+            );
+          })()}
 
           {/* Notes */}
           {notes && (
