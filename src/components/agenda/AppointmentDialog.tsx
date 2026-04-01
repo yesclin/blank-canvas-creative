@@ -37,7 +37,7 @@ import { Calendar as CalendarIcon, Plus, Search, Clock, Banknote, User, Video } 
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Professional, Patient, Room, Specialty, Insurance, Appointment } from "@/types/agenda";
-import { typeLabels } from "@/types/agenda";
+import { typeLabels, careModeLabels } from "@/types/agenda";
 import { useProceduresList, Procedure } from "@/hooks/useProceduresCRUD";
 import { useSlotSuggestions } from "@/hooks/useSlotSuggestions";
 import { useConflictDetection } from "@/hooks/useConflictDetection";
