@@ -385,16 +385,16 @@
        })}
        
        {/* Minimal legend at bottom */}
-       <g transform="translate(80, 490)">
-         <circle cx="0" cy="0" r="5" fill={PROCEDURE_COLORS.toxin} />
-         <text x="12" y="4" fontSize="10" fill="hsl(var(--muted-foreground))">Toxina</text>
-         
-         <circle cx="90" cy="0" r="5" fill={PROCEDURE_COLORS.filler} />
-         <text x="102" y="4" fontSize="10" fill="hsl(var(--muted-foreground))">Preenchimento</text>
-         
-         <circle cx="210" cy="0" r="5" fill={PROCEDURE_COLORS.biostimulator} />
-         <text x="222" y="4" fontSize="10" fill="hsl(var(--muted-foreground))">Bioestimulador</text>
-       </g>
+        <g transform="translate(100, 620)">
+          <circle cx="0" cy="0" r="7" fill={PROCEDURE_COLORS.toxin} />
+          <text x="14" y="5" fontSize="14" fill="hsl(var(--muted-foreground))">Toxina</text>
+          
+          <circle cx="110" cy="0" r="7" fill={PROCEDURE_COLORS.filler} />
+          <text x="124" y="5" fontSize="14" fill="hsl(var(--muted-foreground))">Preenchimento</text>
+          
+          <circle cx="280" cy="0" r="7" fill={PROCEDURE_COLORS.biostimulator} />
+          <text x="294" y="5" fontSize="14" fill="hsl(var(--muted-foreground))">Bioestimulador</text>
+        </g>
      </svg>
    );
  }
