@@ -20,7 +20,7 @@ import {
 import { Trash2, Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import type { FacialMapApplication, ProcedureType } from "./types";
-import { PROCEDURE_TYPE_LABELS, COMMON_PRODUCTS, FACIAL_MUSCLES } from "./types";
+import { COMMON_PRODUCTS, getRegionsForProcedure, getDefaultUnit, getRegionLabel } from "./types";
 
 interface ApplicationPointDialogProps {
   open: boolean;
@@ -57,9 +57,10 @@ export function ApplicationPointDialog({
 
   useEffect(() => {
     if (point) {
+      const type = (point.procedure_type as ProcedureType) || preselectedType;
       setQuantity(point.quantity || 0);
-      setUnit(point.unit || 'UI');
-      setProcedureType((point.procedure_type as ProcedureType) || preselectedType);
+      setUnit(point.unit || getDefaultUnit(type));
+      setProcedureType(type);
       setProductName(point.product_name || preselectedProduct || '');
       setMuscle(point.muscle || preselectedMuscle || '');
       setNotes(point.notes || '');
@@ -70,7 +71,7 @@ export function ApplicationPointDialog({
       );
     } else {
       setQuantity(0);
-      setUnit(preselectedType === 'toxin' ? 'UI' : 'ml');
+      setUnit(getDefaultUnit(preselectedType));
       setProcedureType(preselectedType);
       setProductName(preselectedProduct || '');
       setMuscle(preselectedMuscle || '');
@@ -93,7 +94,9 @@ export function ApplicationPointDialog({
     onOpenChange(false);
   };
 
-  const muscleName = FACIAL_MUSCLES.find(m => m.id === muscle)?.name || muscle;
+  const regions = getRegionsForProcedure(procedureType);
+  const regionLabel = getRegionLabel(procedureType);
+  const muscleName = regions.find(m => m.id === muscle)?.name || muscle;
   const products = COMMON_PRODUCTS[procedureType] || [];
 
   return (
@@ -105,36 +108,12 @@ export function ApplicationPointDialog({
           </DialogTitle>
           {isNew && muscleName && (
             <p className="text-sm text-muted-foreground mt-1">
-              Músculo: <span className="font-medium text-foreground">{muscleName}</span>
+              {regionLabel}: <span className="font-medium text-foreground">{muscleName}</span>
             </p>
           )}
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          {/* Procedure Type */}
-          {isNew && !preselectedType && (
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Tipo</Label>
-              <Select
-                value={procedureType}
-                onValueChange={(v) => {
-                  setProcedureType(v as ProcedureType);
-                  setProductName('');
-                  setUnit(v === 'toxin' ? 'UI' : 'ml');
-                }}
-              >
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(PROCEDURE_TYPE_LABELS).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
           {/* Product and Date row */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
@@ -164,16 +143,16 @@ export function ApplicationPointDialog({
             </div>
           </div>
 
-          {/* Muscle selector if not preselected */}
+          {/* Region/muscle selector if not preselected */}
           {!preselectedMuscle && (
             <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Músculo / Região</Label>
+              <Label className="text-xs text-muted-foreground">{regionLabel}</Label>
               <Select value={muscle} onValueChange={setMuscle}>
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
-                  {FACIAL_MUSCLES.map((m) => (
+                  {regions.map((m) => (
                     <SelectItem key={m.id} value={m.id}>
                       {m.name} <span className="text-muted-foreground">({m.region})</span>
                     </SelectItem>
@@ -186,7 +165,7 @@ export function ApplicationPointDialog({
           {/* Quantity */}
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">
-              Quantidade {procedureType === 'toxin' ? '(UI)' : '(ml)'}
+              Quantidade ({getDefaultUnit(procedureType)})
             </Label>
             <Input
               type="number"
