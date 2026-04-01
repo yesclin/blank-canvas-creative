@@ -85,6 +85,7 @@ export function AgendaFiltersSheet({
       roomId: undefined,
       appointmentType: undefined,
       status: undefined,
+      careMode: undefined,
     });
   };
 
