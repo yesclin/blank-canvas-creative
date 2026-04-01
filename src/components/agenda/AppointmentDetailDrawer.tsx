@@ -25,10 +25,18 @@ import {
   RotateCcw,
   AlertTriangle,
   DollarSign,
+  Video,
+  Copy,
+  Send,
+  ExternalLink,
+  Wifi,
+  ArrowRightLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Appointment, AppointmentStatus } from "@/types/agenda";
-import { statusLabels, statusColors, typeLabels } from "@/types/agenda";
+import { statusLabels, statusColors, typeLabels, careModeLabels } from "@/types/agenda";
+import { useTeleconsultaActions, useTeleconsultaSession } from "@/hooks/useTeleconsulta";
+import { toast } from "sonner";
 
 interface AppointmentDetailDrawerProps {
   appointment: Appointment | null;
