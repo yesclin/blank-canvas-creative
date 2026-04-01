@@ -127,7 +127,7 @@ export function FacialMapModule({
   const isSessionConcluded = facialMap?.status === 'concluded';
   const canEditPoints = canEdit && !isViewingHistory && !isSessionConcluded && !showHistory;
   const isEditing = canEditPoints && selectedMuscle !== null;
-  const sourceSessionId = (facialMap as any)?.source_session_id;
+  const sourceSessionId = facialMap?.source_session_id;
 
   const { generatePdf } = useFacialMapPdf({
     patientName,
