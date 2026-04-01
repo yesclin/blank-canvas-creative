@@ -136,8 +136,7 @@ export const ANAMNESE_ESTETICA_TEMPLATES: TemplateAnamneseEstetica[] = [
     campos: [
       { id: 'objetivo_geral', label: 'Objetivo geral', type: 'textarea', required: true, section: 'Consulta' },
       { id: 'procedimentos_planejados', label: 'Procedimentos planejados', type: 'textarea', required: true, section: 'Consulta' },
-      { id: 'mapa_facial_comb', label: 'Mapa Facial (se aplicável)', type: 'imagem_interativa', section: 'Mapas' },
-      { id: 'mapa_corporal_comb', label: 'Mapa Corporal (se aplicável)', type: 'imagem_interativa', section: 'Mapas' },
+      { id: 'link_mapa_comb', label: 'Mapa Facial / Corporal', type: 'link_mapa_facial', section: 'Mapas' },
       { id: 'observacoes', label: 'Observações finais', type: 'textarea', section: 'Observações' },
     ],
   },
