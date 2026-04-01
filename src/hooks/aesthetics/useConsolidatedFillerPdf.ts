@@ -442,7 +442,41 @@ export function useConsolidatedFillerPdf() {
 }
 
 function buildFieldRow(label: string, value: unknown): string {
-  const val = typeof value === 'string' ? value : '';
-  if (!val) return '';
+  if (value == null) return '';
+  if (Array.isArray(value)) {
+    const items = value.map(v => typeof v === 'string' ? v : JSON.stringify(v)).filter(Boolean);
+    if (!items.length) return '';
+    return `<div class="field-row"><span class="field-label">${escapeHtml(label)}:</span> <span class="field-value">${items.map(i => escapeHtml(i)).join(', ')}</span></div>`;
+  }
+  if (typeof value === 'boolean') {
+    return `<div class="field-row"><span class="field-label">${escapeHtml(label)}:</span> <span class="field-value">${value ? 'Sim' : 'Não'}</span></div>`;
+  }
+  const val = typeof value === 'string' ? value : String(value);
+  if (!val || val === 'undefined') return '';
   return `<div class="field-row"><span class="field-label">${escapeHtml(label)}:</span> <span class="field-value">${escapeHtml(val)}</span></div>`;
+}
+
+/** Known keys already rendered in the hardcoded section */
+const KNOWN_KEYS = new Set([
+  'objetivo_procedimento_ah', 'objetivo_procedimento',
+  'queixa_principal',
+  'areas_interesse_ah', 'areas_interesse',
+  'contraindicacoes',
+  'historico_previo', 'historico_estetico',
+  'observacoes_clinicas',
+  'plano_terapeutico_ah', 'plano_terapeutico',
+]);
+
+function humanizeKey(key: string): string {
+  return key
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+
+/** Render any dynamic fields from responses that aren't in the hardcoded list */
+function buildDynamicFields(data: Record<string, any>): string {
+  return Object.entries(data)
+    .filter(([key, val]) => !KNOWN_KEYS.has(key) && val != null && val !== '')
+    .map(([key, val]) => buildFieldRow(humanizeKey(key), val))
+    .join('');
 }
