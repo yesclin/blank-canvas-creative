@@ -254,6 +254,32 @@ export function AgendaFiltersSheet({
             </Select>
           </div>
 
+          {/* Care Mode (Modalidade) */}
+          <div className="space-y-2">
+            <Label htmlFor="filter-care-mode">Modalidade</Label>
+            <Select
+              value={draftFilters.careMode || "all"}
+              onValueChange={(v) =>
+                setDraftFilters({
+                  ...draftFilters,
+                  careMode: v === "all" ? undefined : (v as CareMode),
+                })
+              }
+            >
+              <SelectTrigger id="filter-care-mode">
+                <SelectValue placeholder="Todas as modalidades" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as modalidades</SelectItem>
+                {Object.entries(careModeLabels).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Clear button */}
           {draftFiltersCount > 0 && (
             <Button
