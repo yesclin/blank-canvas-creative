@@ -132,7 +132,7 @@ export function ApplicationPointDialog({
       unit,
       muscle: muscle || null,
       notes: notes || null,
-      side: side || null,
+      side: (side as any) || null,
       manufacturer: manufacturer || null,
       lot_number: lotNumber || null,
       expiry_date: expiryDate || null,
