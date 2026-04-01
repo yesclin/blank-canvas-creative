@@ -1201,7 +1201,10 @@ export default function Prontuario() {
             }}
             specialtyId={resolvedSpecialtyId}
             specialtyName={resolvedSpecialtyName}
+            specialtyKey={activeSpecialtyKey}
             appointmentId={activeAppointment?.id || null}
+            professionalName={currentProfessionalName}
+            professionalRegistration={docClinicoProfReg}
           />
         );
 

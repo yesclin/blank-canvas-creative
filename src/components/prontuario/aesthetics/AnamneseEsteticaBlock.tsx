@@ -33,6 +33,8 @@ import {
   ChevronRight,
   Lock,
   User,
+  Printer,
+  Download,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -44,6 +46,7 @@ import {
 
 import { useResolvedAnamnesisTemplate } from '@/hooks/prontuario/useResolvedAnamnesisTemplate';
 import { AnamneseModelSelector } from '@/components/prontuario/AnamneseModelSelector';
+import { useConsolidatedFillerPdf } from '@/hooks/aesthetics/useConsolidatedFillerPdf';
 
 interface AnamneseEsteticaBlockProps {
   patientId: string | null;
@@ -52,6 +55,13 @@ interface AnamneseEsteticaBlockProps {
   canEdit?: boolean;
   specialtyId?: string | null;
   procedureId?: string | null;
+  patientName?: string;
+  patientBirthDate?: string | null;
+  patientPhone?: string | null;
+  patientCpf?: string | null;
+  professionalName?: string | null;
+  professionalRegistration?: string | null;
+  canExport?: boolean;
 }
 
 export function AnamneseEsteticaBlock({
@@ -61,6 +71,13 @@ export function AnamneseEsteticaBlock({
   canEdit = false,
   specialtyId,
   procedureId,
+  patientName,
+  patientBirthDate,
+  patientPhone,
+  patientCpf,
+  professionalName,
+  professionalRegistration,
+  canExport = true,
 }: AnamneseEsteticaBlockProps) {
   const { 
     current, 
@@ -85,6 +102,24 @@ export function AnamneseEsteticaBlock({
     allTemplates,
     isLoading: templateLoading,
   } = useResolvedAnamnesisTemplate(specialtyId, procedureId);
+
+  const { generateConsolidatedPdf, exporting: exportingPdf } = useConsolidatedFillerPdf();
+
+  const handlePrintRecord = () => {
+    if (!patientId || !current) return;
+    generateConsolidatedPdf({
+      patientId,
+      appointmentId: current.appointment_id,
+      patient: {
+        full_name: patientName || 'Paciente',
+        birth_date: patientBirthDate,
+        phone: patientPhone,
+        cpf: patientCpf,
+      },
+      professionalName,
+      professionalRegistration,
+    });
+  };
 
   // Carregar dados atuais no formulário
   useEffect(() => {
@@ -160,6 +195,32 @@ export function AnamneseEsteticaBlock({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Print/Export buttons for current record */}
+          {current && canExport && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrintRecord}
+                disabled={exportingPdf}
+                title="Imprimir ficha consolidada deste registro"
+              >
+                <Printer className="h-4 w-4 mr-1.5" />
+                Imprimir Registro
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrintRecord}
+                disabled={exportingPdf}
+                title="Gerar PDF consolidado deste registro"
+              >
+                <Download className="h-4 w-4 mr-1.5" />
+                {exportingPdf ? 'Gerando...' : 'Gerar PDF'}
+              </Button>
+            </>
+          )}
+
           {totalVersions > 1 && (
             <Button
               variant="ghost"
