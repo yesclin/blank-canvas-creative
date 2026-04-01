@@ -30,8 +30,8 @@ import {
   Video,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Appointment } from "@/types/agenda";
-import { statusLabels, statusColors, typeLabels } from "@/types/agenda";
+import type { Appointment, MeetingStatus } from "@/types/agenda";
+import { statusLabels, statusColors, typeLabels, meetingStatusLabels, precheckStatusLabels } from "@/types/agenda";
 import { usePermissions } from "@/hooks/usePermissions";
 
 interface AppointmentCardProps {
