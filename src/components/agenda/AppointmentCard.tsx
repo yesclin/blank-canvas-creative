@@ -26,7 +26,8 @@ import {
   RotateCcw,
   Sparkles,
   ShoppingCart,
-  Package
+  Package,
+  Video,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Appointment } from "@/types/agenda";
