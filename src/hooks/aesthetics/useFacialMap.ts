@@ -328,6 +328,20 @@ export function useFacialMap(
         quantity,
         created_by: authUserId,
         updated_at: new Date().toISOString(),
+        // Extended fields
+        manufacturer: appData.manufacturer || null,
+        lot_number: appData.lot_number || null,
+        expiry_date: appData.expiry_date || null,
+        dilution: appData.dilution || null,
+        technique: appData.technique || null,
+        depth: appData.depth || null,
+        planned_volume: appData.planned_volume ?? null,
+        applied_volume: appData.applied_volume ?? null,
+        application_plan: appData.application_plan || null,
+        session_number: appData.session_number ?? null,
+        total_sessions: appData.total_sessions ?? null,
+        session_interval: appData.session_interval || null,
+        protocol: appData.protocol || null,
       },
     };
 
