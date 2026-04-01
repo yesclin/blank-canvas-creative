@@ -742,6 +742,44 @@ export function useFacialMap(
     },
   });
 
+  // Reopen a concluded session
+  const reopenSessionMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentMapId) throw new Error('Nenhum mapa selecionado');
+      
+      const { data: row, error: fetchError } = await supabase
+        .from('facial_maps')
+        .select('data')
+        .eq('id', currentMapId)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      const existingData = (row?.data as Record<string, any>) || {};
+      const { error } = await supabase
+        .from('facial_maps')
+        .update({
+          data: {
+            ...existingData,
+            status: 'active',
+            concluded_at: null,
+          },
+        })
+        .eq('id', currentMapId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: mapQueryKey });
+      queryClient.invalidateQueries({ queryKey: ['facial-map-history', patientId] });
+      toast.success('Sessão reaberta com sucesso');
+    },
+    onError: (error) => {
+      console.error('Error reopening session:', error);
+      toast.error('Erro ao reabrir sessão');
+    },
+  });
+
   // Duplicate a session as base for a new one
   const duplicateSessionMutation = useMutation({
     mutationFn: async (sourceMapId: string) => {
