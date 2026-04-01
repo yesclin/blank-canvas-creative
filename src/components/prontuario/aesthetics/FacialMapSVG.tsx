@@ -46,7 +46,7 @@
  
    return (
      <svg
-       viewBox="0 0 400 520"
+       viewBox="0 0 500 650"
        className={cn(
          "w-full h-full transition-all",
          isEditing && "cursor-crosshair",
