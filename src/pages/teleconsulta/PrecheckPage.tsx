@@ -702,6 +702,7 @@ export default function PrecheckPage() {
                 label="Câmera"
                 status={cameraStatus}
                 statusText={statusLabel(cameraStatus)}
+                onClick={testCamera}
               />
               <CheckRow
                 icon={Mic}
