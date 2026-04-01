@@ -45,7 +45,7 @@ export function FacialMapModule({
 }: FacialMapModuleProps) {
    const [viewType, setViewType] = useState<ViewType>('frontal');
    const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
-   const [selectedPoint, setSelectedPoint] = useState<FacialMapApplication | null>(null);
+   const [activeProcedure, setActiveProcedure] = useState<ProcedureType>(activeProcedureType);
    const [newPointPosition, setNewPointPosition] = useState<{ x: number; y: number } | null>(null);
    const [dialogOpen, setDialogOpen] = useState(false);
    const [showHistory, setShowHistory] = useState(false);
