@@ -4,8 +4,8 @@ import { PublicClinicData } from "@/hooks/usePublicClinic";
 import { usePublicProfessionalAvailability } from "@/hooks/usePublicProfessionalAvailability";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
-import { Loader2, CalendarDays } from "lucide-react";
-import { format, addDays, startOfDay, parse } from "date-fns";
+import { Loader2, CalendarDays, AlertCircle } from "lucide-react";
+import { format, addDays, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { PublicSlot } from "@/services/publicAvailability";
@@ -27,7 +27,7 @@ export default function TimeSelectionStep() {
   const dateStart = startOfDay(new Date());
   const dateEnd = addDays(dateStart, maxDays);
 
-  const { data: slots, isLoading } = usePublicProfessionalAvailability(
+  const { data: result, isLoading } = usePublicProfessionalAvailability(
     professionalId
       ? {
           clinicId: clinic.id,
@@ -39,10 +39,13 @@ export default function TimeSelectionStep() {
       : null
   );
 
+  const slots = result?.slots || [];
+  const emptyReason = result?.emptyReason;
+
   // Group slots by date
   const slotsByDate = useMemo(() => {
     const map = new Map<string, PublicSlot[]>();
-    for (const slot of slots || []) {
+    for (const slot of slots) {
       const existing = map.get(slot.date) || [];
       existing.push(slot);
       map.set(slot.date, existing);
@@ -80,6 +83,46 @@ export default function TimeSelectionStep() {
     );
   }
 
+  const renderEmptyState = () => {
+    if (emptyReason === "no_schedules") {
+      return (
+        <div className="text-center py-12 space-y-3">
+          <AlertCircle className="h-10 w-10 text-amber-500 mx-auto" />
+          <p className="text-foreground font-medium">Este profissional ainda não possui horários configurados.</p>
+          <p className="text-muted-foreground text-sm">Entre em contato com a clínica para mais informações.</p>
+          <Button variant="outline" className="mt-4" onClick={() => navigate(-1)}>
+            Voltar
+          </Button>
+        </div>
+      );
+    }
+    if (emptyReason === "all_blocked") {
+      return (
+        <div className="text-center py-12 space-y-3">
+          <CalendarDays className="h-10 w-10 text-muted-foreground mx-auto" />
+          <p className="text-foreground font-medium">Não há horários disponíveis neste período.</p>
+          <p className="text-muted-foreground text-sm">Tente novamente mais tarde ou escolha outro profissional.</p>
+          <Button variant="outline" className="mt-4" onClick={() => navigate(-1)}>
+            Voltar
+          </Button>
+        </div>
+      );
+    }
+    if (emptyReason === "config_error") {
+      return (
+        <div className="text-center py-12 space-y-3">
+          <AlertCircle className="h-10 w-10 text-destructive mx-auto" />
+          <p className="text-foreground font-medium">Não foi possível carregar a disponibilidade.</p>
+          <p className="text-muted-foreground text-sm">Verifique a configuração da agenda da clínica.</p>
+          <Button variant="outline" className="mt-4" onClick={() => navigate(-1)}>
+            Voltar
+          </Button>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -91,6 +134,8 @@ export default function TimeSelectionStep() {
         <div className="flex justify-center py-16">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
+      ) : emptyReason ? (
+        renderEmptyState()
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Calendar */}
