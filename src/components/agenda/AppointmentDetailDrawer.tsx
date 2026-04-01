@@ -200,7 +200,96 @@ export function AppointmentDetailDrawer({
             {insurance && <DetailRow icon={CreditCard} label="Convênio" value={insurance.name} />}
             <DetailRow icon={CreditCard} label="Pagamento" value={payment_type ? paymentLabels[payment_type] || payment_type : "—"} />
             <DetailRow icon={FileText} label="Tipo" value={typeLabels[appointment_type]} />
+            {care_mode && <DetailRow icon={Video} label="Modalidade" value={careModeLabels[care_mode] || care_mode} />}
           </div>
+
+          {/* Teleconsulta Section */}
+          {isTeleconsulta && (
+            <>
+              <Separator />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-3">Teleconsulta</p>
+                <div className="space-y-2">
+                  {meeting_link ? (
+                    <div className="flex items-center gap-2 p-2 rounded-md bg-muted text-sm">
+                      <Video className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span className="truncate flex-1">{meeting_link}</span>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Sala não gerada</p>
+                  )}
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    {!meeting_link && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1"
+                        disabled={generateRoom.isPending}
+                        onClick={() => generateRoom.mutate({
+                          appointmentId: appointment.id,
+                          patientId: appointment.patient_id,
+                          professionalId: appointment.professional_id,
+                        })}
+                      >
+                        <Video className="h-3.5 w-3.5" />
+                        Gerar Sala
+                      </Button>
+                    )}
+                    
+                    {meeting_link && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1"
+                          onClick={() => copyLink(meeting_link)}
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                          Copiar Link
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1"
+                          onClick={() => window.open(meeting_link, '_blank')}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          Abrir Sala
+                        </Button>
+                      </>
+                    )}
+                    
+                    {teleSession && teleSession.status !== 'encerrada' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1 text-amber-600"
+                        onClick={() => reportTechnicalIssue.mutate({
+                          appointmentId: appointment.id,
+                          sessionId: teleSession.id,
+                          description: "Falha técnica reportada",
+                        })}
+                      >
+                        <Wifi className="h-3.5 w-3.5" />
+                        Falha Técnica
+                      </Button>
+                    )}
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1"
+                      onClick={() => convertToPresencial.mutate({ appointmentId: appointment.id })}
+                    >
+                      <ArrowRightLeft className="h-3.5 w-3.5" />
+                      Presencial
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Notes */}
           {notes && (
