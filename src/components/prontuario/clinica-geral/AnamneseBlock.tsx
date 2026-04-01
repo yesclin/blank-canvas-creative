@@ -1222,8 +1222,8 @@ export function AnamneseBlock({
                     },
                     professionalName,
                     professionalRegistration,
-                    recordResponses: activeRecord?.responses as Record<string, any> || null,
-                    recordData: activeRecord?.data as Record<string, any> || null,
+                    recordResponses: (activeRecord && 'responses' in activeRecord ? activeRecord.responses : null) as Record<string, any> | null,
+                    recordData: (activeRecord && 'data' in activeRecord ? activeRecord.data : activeRecord?.structured_data) as Record<string, any> | null,
                   });
                 }}
                 title="Gerar ficha consolidada com plano + mapa facial + produtos"
