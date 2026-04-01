@@ -74,6 +74,7 @@ export function AgendaFiltersSheet({
     draftFilters.roomId,
     draftFilters.appointmentType,
     draftFilters.status,
+    draftFilters.careMode,
   ].filter(Boolean).length;
 
   const clearDraftFilters = () => {
