@@ -36,9 +36,17 @@ export default function ProfessionalSelectionStep() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-foreground">Escolha o profissional</h2>
-        <p className="text-muted-foreground text-sm">Selecione o profissional de sua preferência</p>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => navigate(`/agendar/${clinic.slug}/especialidade`)}
+          className="h-9 w-9 rounded-lg border bg-card flex items-center justify-center hover:bg-muted transition-colors shrink-0"
+        >
+          <ArrowLeft className="h-4 w-4 text-foreground" />
+        </button>
+        <div>
+          <h2 className="text-xl font-bold text-foreground">Escolha o profissional</h2>
+          <p className="text-muted-foreground text-sm">Selecione o profissional de sua preferência</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
