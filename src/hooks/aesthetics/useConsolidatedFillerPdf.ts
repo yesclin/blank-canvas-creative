@@ -18,13 +18,10 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { escapeHtml } from '@/lib/htmlEscape';
 import {
-  PROCEDURE_TYPE_LABELS,
   FACIAL_MUSCLES,
-  VIEW_TYPE_LABELS,
   SIDE_LABELS,
 } from '@/components/prontuario/aesthetics/types';
 import type { FacialMapApplication } from '@/components/prontuario/aesthetics/types';
-import type { AestheticProductUsed } from '@/hooks/aesthetics/useProdutosUtilizadosData';
 
 // Import the filler base image
 import fillerFrontalImg from '@/assets/facial-map-filler-frontal.png';
@@ -42,10 +39,364 @@ interface ConsolidatedPdfParams {
   patient: PatientForPdf;
   professionalName?: string | null;
   professionalRegistration?: string | null;
+  recordId?: string | null;
+  recordTemplateId?: string | null;
+  recordTemplateVersionId?: string | null;
+  recordStructureSnapshot?: unknown | null;
+  recordSpecialtyId?: string | null;
   /** Pass the current record's responses directly so the PDF reads from the active record */
   recordResponses?: Record<string, any> | null;
   /** Pass the current record's data directly */
   recordData?: Record<string, any> | null;
+}
+
+interface ConsolidatedProduct {
+  product_name: string;
+  manufacturer?: string | null;
+  batch_number?: string | null;
+  expiry_date?: string | null;
+  quantity: number;
+  unit: string;
+  application_area?: string | null;
+}
+
+interface RawAnamnesisRecord {
+  id: string;
+  appointment_id: string | null;
+  specialty_id: string | null;
+  template_id: string | null;
+  template_version_id: string | null;
+  responses: unknown;
+  data: unknown;
+  structure_snapshot: unknown;
+  created_at: string;
+}
+
+interface TemplateFieldDefinition {
+  id: string;
+  label: string;
+  order: number;
+}
+
+interface FacialMapSelectionContext {
+  appointmentId?: string | null;
+  recordId?: string | null;
+  templateId?: string | null;
+  templateVersionId?: string | null;
+  recordCreatedAt?: string | null;
+}
+
+const SYSTEM_RESPONSE_KEYS = new Set([
+  'id',
+  'created_at',
+  'updated_at',
+  'template_id',
+  'template_version_id',
+  'appointment_id',
+  'specialty_id',
+  'patient_id',
+  'clinic_id',
+  'professional_id',
+]);
+
+function asRecord(value: unknown): Record<string, any> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+  return value as Record<string, any>;
+}
+
+function mergeRecordData(...sources: unknown[]): Record<string, any> {
+  return sources.reduce<Record<string, any>>((acc, source) => {
+    return { ...acc, ...asRecord(source) };
+  }, {});
+}
+
+function isMeaningfulValue(value: unknown): boolean {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'string') return value.trim() !== '';
+  if (Array.isArray(value)) return value.some(isMeaningfulValue);
+  if (typeof value === 'object') return Object.keys(asRecord(value)).length > 0;
+  return true;
+}
+
+function humanizeKey(key: string): string {
+  return key
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function valueToDisplay(value: unknown): string {
+  if (!isMeaningfulValue(value)) return '';
+
+  if (typeof value === 'boolean') {
+    return value ? 'Sim' : 'Não';
+  }
+
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? String(value) : '';
+  }
+
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => valueToDisplay(item))
+      .filter(Boolean)
+      .join(', ');
+  }
+
+  const objectValue = asRecord(value);
+  const entries = Object.entries(objectValue)
+    .map(([key, nestedValue]) => {
+      const nestedDisplay = valueToDisplay(nestedValue);
+      return nestedDisplay ? `${humanizeKey(key)}: ${nestedDisplay}` : '';
+    })
+    .filter(Boolean);
+
+  return entries.join(' • ');
+}
+
+function buildFieldRow(label: string, value: unknown): string {
+  const renderedValue = valueToDisplay(value);
+  if (!renderedValue) return '';
+
+  return `<div class="field-row"><span class="field-label">${escapeHtml(label)}:</span> <span class="field-value">${escapeHtml(renderedValue)}</span></div>`;
+}
+
+function extractTemplateFields(structure: unknown): TemplateFieldDefinition[] {
+  if (!Array.isArray(structure)) return [];
+
+  const fields: TemplateFieldDefinition[] = [];
+
+  structure.forEach((section, sectionIndex) => {
+    const sectionObj = asRecord(section);
+    const sectionFields = Array.isArray(sectionObj.fields)
+      ? sectionObj.fields
+      : Array.isArray(sectionObj.campos)
+        ? sectionObj.campos
+        : [];
+
+    sectionFields.forEach((field, fieldIndex) => {
+      const fieldObj = asRecord(field);
+      const id = String(fieldObj.id || fieldObj.name || fieldObj.nome || '').trim();
+      if (!id) return;
+
+      const label = String(fieldObj.label || fieldObj.nome || fieldObj.name || humanizeKey(id)).trim();
+
+      fields.push({
+        id,
+        label,
+        order: sectionIndex * 1000 + fieldIndex,
+      });
+    });
+  });
+
+  const uniqueById = new Map<string, TemplateFieldDefinition>();
+  fields
+    .sort((a, b) => a.order - b.order)
+    .forEach((field) => {
+      if (!uniqueById.has(field.id)) {
+        uniqueById.set(field.id, field);
+      }
+    });
+
+  return Array.from(uniqueById.values());
+}
+
+function buildPlanFields(data: Record<string, any>, templateStructure: unknown): string {
+  const renderedRows: string[] = [];
+  const renderedKeys = new Set<string>();
+
+  const templateFields = extractTemplateFields(templateStructure);
+  if (templateFields.length > 0) {
+    templateFields.forEach((field) => {
+      const value = data[field.id];
+      if (!isMeaningfulValue(value)) return;
+
+      const row = buildFieldRow(field.label, value);
+      if (row) {
+        renderedRows.push(row);
+        renderedKeys.add(field.id);
+      }
+    });
+  }
+
+  Object.entries(data)
+    .filter(([key, value]) => {
+      if (renderedKeys.has(key)) return false;
+      if (SYSTEM_RESPONSE_KEYS.has(key)) return false;
+      return isMeaningfulValue(value);
+    })
+    .forEach(([key, value]) => {
+      const row = buildFieldRow(humanizeKey(key), value);
+      if (row) {
+        renderedRows.push(row);
+      }
+    });
+
+  if (renderedRows.length === 0) {
+    return '<p style="font-size:11px; color:#64748b;">Nenhum campo preenchido encontrado no registro selecionado.</p>';
+  }
+
+  return renderedRows.join('');
+}
+
+function mapDistanceScore(sourceDate: string | null | undefined, targetDate: string | null | undefined): number {
+  if (!sourceDate || !targetDate) return 0;
+
+  const source = new Date(sourceDate).getTime();
+  const target = new Date(targetDate).getTime();
+  if (!Number.isFinite(source) || !Number.isFinite(target)) return 0;
+
+  const diffInDays = Math.abs(source - target) / (1000 * 60 * 60 * 24);
+  return Math.max(0, 40 - diffInDays);
+}
+
+function scoreFacialMap(mapRow: any, context: FacialMapSelectionContext): number {
+  const rowData = asRecord(mapRow?.data);
+  let score = 0;
+
+  if (context.recordId && (rowData.anamnesis_record_id === context.recordId || rowData.record_id === context.recordId)) {
+    score += 1000;
+  }
+
+  if (context.templateVersionId && rowData.template_version_id === context.templateVersionId) {
+    score += 700;
+  }
+
+  if (context.templateId && rowData.template_id === context.templateId) {
+    score += 500;
+  }
+
+  const mapAppointmentId = rowData.appointment_id || null;
+  if (context.appointmentId) {
+    if (mapAppointmentId === context.appointmentId) {
+      score += 300;
+    } else {
+      score -= 120;
+    }
+  } else if (!mapAppointmentId) {
+    score += 80;
+  }
+
+  if (rowData.specialty_key === 'estetica' || rowData.specialty === 'estetica') {
+    score += 60;
+  }
+
+  score += mapDistanceScore(mapRow?.created_at, context.recordCreatedAt);
+  return score;
+}
+
+function selectBestFacialMap(mapRows: any[], context: FacialMapSelectionContext): any | null {
+  if (!mapRows.length) return null;
+
+  return [...mapRows].sort((a, b) => {
+    const scoreDiff = scoreFacialMap(b, context) - scoreFacialMap(a, context);
+    if (scoreDiff !== 0) return scoreDiff;
+
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  })[0];
+}
+
+function parseApplicationRow(row: any): FacialMapApplication {
+  const rowData = asRecord(row?.data);
+  const positionX = Number(rowData.position_x ?? 50);
+  const positionY = Number(rowData.position_y ?? 50);
+
+  return {
+    id: row.id,
+    clinic_id: String(rowData.clinic_id || ''),
+    patient_id: String(rowData.patient_id || ''),
+    appointment_id: (rowData.appointment_id as string | null) ?? null,
+    professional_id: (rowData.professional_id as string | null) ?? null,
+    facial_map_id: row.facial_map_id,
+    procedure_type: (rowData.procedure_type || 'filler') as any,
+    view_type: (rowData.view_type || 'frontal') as any,
+    position_x: Number.isFinite(positionX) ? positionX : 50,
+    position_y: Number.isFinite(positionY) ? positionY : 50,
+    muscle: (row.region || rowData.muscle || null) as string | null,
+    product_name: (row.product_name || 'A definir') as string,
+    quantity: Number(row.units ?? rowData.quantity ?? 0),
+    unit: String(rowData.unit || 'ml'),
+    side: (rowData.side as any) ?? null,
+    notes: (row.notes || null) as string | null,
+    created_at: row.created_at,
+    created_by: (rowData.created_by || null) as string | null,
+    updated_at: (rowData.updated_at || row.created_at) as string,
+  };
+}
+
+function buildProductsFromApplications(applications: FacialMapApplication[]): ConsolidatedProduct[] {
+  const grouped = new Map<string, ConsolidatedProduct>();
+
+  applications.forEach((application) => {
+    const productName = application.product_name || 'Produto não informado';
+    const unit = application.unit || 'ml';
+    const key = `${productName.toLowerCase()}::${unit.toLowerCase()}`;
+    const muscleName = application.muscle ? getMuscleName(application.muscle) : null;
+
+    const existing = grouped.get(key);
+    if (!existing) {
+      grouped.set(key, {
+        product_name: productName,
+        quantity: Number(application.quantity || 0),
+        unit,
+        application_area: muscleName,
+      });
+      return;
+    }
+
+    existing.quantity += Number(application.quantity || 0);
+    if (muscleName) {
+      const currentAreas = new Set((existing.application_area || '').split(',').map((area) => area.trim()).filter(Boolean));
+      currentAreas.add(muscleName);
+      existing.application_area = Array.from(currentAreas).join(', ');
+    }
+  });
+
+  return Array.from(grouped.values());
+}
+
+async function fetchLatestAnamnesisRecord(params: {
+  clinicId: string;
+  patientId: string;
+  appointmentId?: string | null;
+  specialtyId?: string | null;
+}): Promise<RawAnamnesisRecord | null> {
+  const runQuery = async (withAppointment: boolean) => {
+    let query = supabase
+      .from('anamnesis_records')
+      .select('id, appointment_id, specialty_id, template_id, template_version_id, responses, data, structure_snapshot, created_at')
+      .eq('clinic_id', params.clinicId)
+      .eq('patient_id', params.patientId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (withAppointment && params.appointmentId) {
+      query = query.eq('appointment_id', params.appointmentId);
+    }
+
+    if (params.specialtyId) {
+      query = query.eq('specialty_id', params.specialtyId);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data as RawAnamnesisRecord | null) || null;
+  };
+
+  const withAppointment = await runQuery(true);
+  if (withAppointment) return withAppointment;
+
+  if (params.appointmentId) {
+    return runQuery(false);
+  }
+
+  return withAppointment;
 }
 
 function getMuscleName(id: string): string {
@@ -70,14 +421,24 @@ export function useConsolidatedFillerPdf() {
     patient,
     professionalName,
     professionalRegistration,
+    recordId,
+    recordTemplateId,
+    recordTemplateVersionId,
+    recordStructureSnapshot,
+    recordSpecialtyId,
     recordResponses,
     recordData,
   }: ConsolidatedPdfParams) => {
     setExporting(true);
     try {
+      if (!clinic?.id) {
+        toast.error('Clínica não identificada para exportação.');
+        return;
+      }
+
       // 1. Fetch document settings
       let docSettings: any = null;
-      if (clinic?.id) {
+      {
         const { data } = await supabase
           .from('clinic_document_settings')
           .select('*')
@@ -86,109 +447,205 @@ export function useConsolidatedFillerPdf() {
         docSettings = data;
       }
 
-      // 2. Build anamnesis data from the current record's responses/data (passed directly)
-      //    Falls back to fetching latest record only if nothing was passed.
-      let anamnesisData: Record<string, any> = {};
-      if (recordResponses || recordData) {
-        anamnesisData = {
-          ...(typeof recordData === 'object' && recordData ? recordData : {}),
-          ...(typeof recordResponses === 'object' && recordResponses ? recordResponses : {}),
-        };
-      } else if (clinic?.id) {
-        const { data: anamnesisRecords } = await supabase
+      // 2. Resolve current anamnesis record (recordId > payload snapshot > latest)
+      let resolvedRecord: RawAnamnesisRecord | null = null;
+      let resolvedTemplateId = recordTemplateId || null;
+      let resolvedTemplateVersionId = recordTemplateVersionId || null;
+      let resolvedAppointmentId = appointmentId || null;
+      let resolvedStructureSnapshot = recordStructureSnapshot || null;
+
+      let anamnesisData = mergeRecordData(recordData, recordResponses);
+
+      if (recordId) {
+        const { data: selectedRecord, error } = await supabase
           .from('anamnesis_records')
-          .select('data, responses')
-          .eq('patient_id', patientId)
+          .select('id, appointment_id, specialty_id, template_id, template_version_id, responses, data, structure_snapshot, created_at')
+          .eq('id', recordId)
           .eq('clinic_id', clinic.id)
-          .order('created_at', { ascending: false })
-          .limit(1);
-        if (anamnesisRecords?.[0]) {
-          anamnesisData = {
-            ...(typeof anamnesisRecords[0].data === 'object' ? anamnesisRecords[0].data as Record<string, any> : {}),
-            ...(typeof anamnesisRecords[0].responses === 'object' ? anamnesisRecords[0].responses as Record<string, any> : {}),
-          };
+          .eq('patient_id', patientId)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (!selectedRecord) {
+          toast.error('Registro selecionado não foi encontrado para exportação.');
+          return;
+        }
+
+        resolvedRecord = selectedRecord as RawAnamnesisRecord;
+        resolvedTemplateId = resolvedRecord.template_id || resolvedTemplateId;
+        resolvedTemplateVersionId = resolvedRecord.template_version_id || resolvedTemplateVersionId;
+        resolvedAppointmentId = resolvedRecord.appointment_id || resolvedAppointmentId;
+        resolvedStructureSnapshot = resolvedRecord.structure_snapshot || resolvedStructureSnapshot;
+
+        anamnesisData = mergeRecordData(resolvedRecord.data, resolvedRecord.responses);
+      }
+
+      if (!resolvedRecord && Object.keys(anamnesisData).length === 0) {
+        const fallbackRecord = await fetchLatestAnamnesisRecord({
+          clinicId: clinic.id,
+          patientId,
+          appointmentId: resolvedAppointmentId,
+          specialtyId: recordSpecialtyId || null,
+        });
+
+        if (fallbackRecord) {
+          resolvedRecord = fallbackRecord;
+          resolvedTemplateId = fallbackRecord.template_id || resolvedTemplateId;
+          resolvedTemplateVersionId = fallbackRecord.template_version_id || resolvedTemplateVersionId;
+          resolvedAppointmentId = fallbackRecord.appointment_id || resolvedAppointmentId;
+          resolvedStructureSnapshot = fallbackRecord.structure_snapshot || resolvedStructureSnapshot;
+          anamnesisData = mergeRecordData(fallbackRecord.data, fallbackRecord.responses);
         }
       }
 
-      // 3. Fetch facial map + applications
-      let applications: FacialMapApplication[] = [];
-      let generalNotes = '';
-      if (clinic?.id) {
-        const mapQuery = supabase
-          .from('facial_maps')
+      if (Object.keys(anamnesisData).length === 0) {
+        toast.error('O registro selecionado não possui dados preenchidos para exportação.');
+        return;
+      }
+
+      // 3. Resolve template structure + title (version snapshot first)
+      let templateStructure: unknown = resolvedStructureSnapshot;
+      let documentTitle = 'Plano de Preenchimento com Ácido Hialurônico';
+
+      if (!templateStructure && resolvedTemplateVersionId) {
+        const { data: templateVersion, error } = await supabase
+          .from('anamnesis_template_versions')
+          .select('structure')
+          .eq('id', resolvedTemplateVersionId)
+          .maybeSingle();
+
+        if (error) throw error;
+        templateStructure = templateVersion?.structure || null;
+      }
+
+      if (resolvedTemplateId) {
+        const { data: template, error } = await supabase
+          .from('anamnesis_templates')
+          .select('name')
+          .eq('id', resolvedTemplateId)
+          .maybeSingle();
+
+        if (error) throw error;
+        if (template?.name) {
+          documentTitle = template.name;
+        }
+      }
+
+      const planFieldsHtml = buildPlanFields(anamnesisData, templateStructure);
+
+      // 4. Resolve linked facial map + applications + map image
+      const { data: mapRows, error: mapError } = await supabase
+        .from('facial_maps')
+        .select('*')
+        .eq('clinic_id', clinic.id)
+        .eq('patient_id', patientId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (mapError) throw mapError;
+
+      const selectedMap = selectBestFacialMap(mapRows || [], {
+        appointmentId: resolvedAppointmentId,
+        recordId: recordId || resolvedRecord?.id || null,
+        templateId: resolvedTemplateId,
+        templateVersionId: resolvedTemplateVersionId,
+        recordCreatedAt: resolvedRecord?.created_at || null,
+      });
+
+      if (!selectedMap) {
+        toast.error('Não foi encontrado mapa facial vinculado ao registro selecionado.');
+        return;
+      }
+
+      const [applicationsResult, mapImagesResult] = await Promise.all([
+        supabase
+          .from('facial_map_applications')
           .select('*')
-          .eq('clinic_id', clinic.id)
-          .eq('patient_id', patientId)
+          .eq('facial_map_id', selectedMap.id)
+          .order('created_at', { ascending: true }),
+        supabase
+          .from('facial_map_images')
+          .select('image_url')
+          .eq('facial_map_id', selectedMap.id)
           .order('created_at', { ascending: false })
-          .limit(1);
-        
-        if (appointmentId) {
-          mapQuery.eq('appointment_id', appointmentId);
-        }
+          .limit(1),
+      ]);
 
-        const { data: maps } = await mapQuery;
-        const map = maps?.[0];
-        
-        if (map) {
-          generalNotes = (map as any).general_notes || '';
-          const { data: apps } = await supabase
-            .from('facial_map_applications')
-            .select('*')
-            .eq('facial_map_id', map.id)
-            .order('created_at', { ascending: true });
-          
-          if (apps) {
-            applications = apps.map((a: any) => ({
-              id: a.id,
-              clinic_id: a.clinic_id,
-              patient_id: a.patient_id,
-              appointment_id: a.appointment_id,
-              professional_id: a.professional_id,
-              facial_map_id: a.facial_map_id,
-              procedure_type: a.procedure_type,
-              view_type: a.view_type,
-              position_x: a.position_x,
-              position_y: a.position_y,
-              muscle: a.muscle,
-              product_name: a.product_name,
-              quantity: a.quantity,
-              unit: a.unit,
-              side: a.side,
-              notes: a.notes,
-              created_at: a.created_at,
-              created_by: a.created_by,
-              updated_at: a.updated_at,
-            }));
-          }
-        }
-      }
+      if (applicationsResult.error) throw applicationsResult.error;
+      if (mapImagesResult.error) throw mapImagesResult.error;
 
-      // Filter filler applications
-      const fillerApps = applications.filter(a => a.procedure_type === 'filler');
+      const applications = (applicationsResult.data || []).map(parseApplicationRow);
+      const fillerApps = applications.filter((application) => (application.procedure_type || 'filler') === 'filler');
+      const mapImageUrl = mapImagesResult.data?.[0]?.image_url || fillerFrontalImg;
+      const mapNotes = selectedMap?.notes || '';
 
-      // 4. Fetch products used
-      let products: AestheticProductUsed[] = [];
-      if (clinic?.id) {
-        const prodQuery = supabase
+      // 5. Fetch products used (and fallback to map applications if table is unavailable)
+      let products: ConsolidatedProduct[] = [];
+      try {
+        let query = supabase
           .from('aesthetic_products_used')
           .select('*')
           .eq('clinic_id', clinic.id)
           .eq('patient_id', patientId)
           .order('created_at', { ascending: false });
 
-        if (appointmentId) {
-          prodQuery.eq('appointment_id', appointmentId);
+        if (resolvedAppointmentId) {
+          query = query.eq('appointment_id', resolvedAppointmentId);
         }
 
-        const { data: prods } = await prodQuery;
-        if (prods) {
-          products = prods as unknown as AestheticProductUsed[];
+        const { data, error } = await query;
+
+        if (error) {
+          const errorMessage = `${error.message || ''} ${(error as any).details || ''}`;
+          const tableMissing = errorMessage.includes('does not exist') || String((error as any).code || '').includes('42P01');
+          if (!tableMissing) {
+            throw error;
+          }
+        } else {
+          const rows = (data as any[]) || [];
+          products = rows
+            .filter((row) => {
+              if (!resolvedAppointmentId) return true;
+              return row.appointment_id === resolvedAppointmentId || row.appointment_id == null;
+            })
+            .filter((row) => {
+              if (!row.facial_map_id) return true;
+              return row.facial_map_id === selectedMap.id;
+            })
+            .filter((row) => (row.procedure_type || 'filler') === 'filler')
+            .map((row) => ({
+              product_name: row.product_name || 'Produto não informado',
+              manufacturer: row.manufacturer || null,
+              batch_number: row.batch_number || null,
+              expiry_date: row.expiry_date || null,
+              quantity: Number(row.quantity || 0),
+              unit: row.unit || 'ml',
+              application_area: row.application_area || null,
+            }));
         }
+      } catch (error) {
+        console.warn('[ConsolidatedPDF] fallback para produtos derivados das aplicações do mapa', error);
       }
 
-      // 5. Calculate totals
-      const totalVolume = fillerApps.reduce((sum, a) => sum + (a.quantity || 0), 0);
-      const treatedRegions = [...new Set(fillerApps.map(a => getMuscleName(a.muscle || 'outros')))];
+      if (products.length === 0) {
+        products = buildProductsFromApplications(fillerApps);
+      }
+
+      // 6. Calculate totals and derived content
+      const totalVolume = fillerApps.reduce((sum, application) => sum + Number(application.quantity || 0), 0);
+      const treatedRegions = [...new Set(fillerApps.map((application) => getMuscleName(application.muscle || 'outros')))];
+      const productByName = new Map(products.map((product) => [product.product_name.toLowerCase(), product]));
+
+      const finalObservations = [
+        valueToDisplay(anamnesisData.observacoes_finais),
+        valueToDisplay(anamnesisData.observacoes_gerais),
+        valueToDisplay(anamnesisData.observacoes_clinicas),
+        valueToDisplay(anamnesisData.orientacoes_pos_procedimento),
+        valueToDisplay(mapNotes),
+      ].filter(Boolean);
+
+      const uniqueObservations = Array.from(new Set(finalObservations));
 
       const dateStr = format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
       const clinicName = docSettings?.clinic_name || clinic?.name || '';
@@ -199,12 +656,12 @@ export function useConsolidatedFillerPdf() {
       const profName = professionalName || docSettings?.responsible_name || '';
       const profReg = professionalRegistration || docSettings?.responsible_crm || '';
 
-      // 6. Build HTML
+      // 7. Build HTML
       const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Plano de Preenchimento com Ácido Hialurônico - ${escapeHtml(patient.full_name)}</title>
+  <title>${escapeHtml(documentTitle)} - ${escapeHtml(patient.full_name)}</title>
   <style>
     @media print { @page { margin: 12mm; size: A4; } }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -264,7 +721,7 @@ export function useConsolidatedFillerPdf() {
       ${logoUrl ? `<img src="${escapeHtml(logoUrl)}" class="header-logo" crossorigin="anonymous" />` : ''}
       <div>
         <h1>${escapeHtml(clinicName)}</h1>
-        <div class="doc-title">Plano de Preenchimento com Ácido Hialurônico</div>
+        <div class="doc-title">${escapeHtml(documentTitle)}</div>
       </div>
     </div>
     <div class="meta">
@@ -286,14 +743,7 @@ export function useConsolidatedFillerPdf() {
   <div class="section">
     <div class="section-title">Dados Clínicos do Plano</div>
     <div class="section-content">
-      ${buildFieldRow('Objetivo do procedimento', anamnesisData.objetivo_procedimento_ah || anamnesisData.objetivo_procedimento)}
-      ${buildFieldRow('Queixa principal', anamnesisData.queixa_principal)}
-      ${buildFieldRow('Áreas de interesse', anamnesisData.areas_interesse_ah || anamnesisData.areas_interesse)}
-      ${buildFieldRow('Contraindicações', anamnesisData.contraindicacoes)}
-      ${buildFieldRow('Histórico prévio', anamnesisData.historico_previo || anamnesisData.historico_estetico)}
-      ${buildFieldRow('Observações clínicas', anamnesisData.observacoes_clinicas)}
-      ${buildFieldRow('Plano terapêutico inicial', anamnesisData.plano_terapeutico_ah || anamnesisData.plano_terapeutico)}
-      ${buildDynamicFields(anamnesisData)}
+      ${planFieldsHtml}
     </div>
   </div>
 
@@ -301,7 +751,7 @@ export function useConsolidatedFillerPdf() {
   <div class="section">
     <div class="section-title">Mapa Facial</div>
     <div class="map-container" style="display: inline-block; position: relative;">
-      <img src="${fillerFrontalImg}" alt="Mapa Facial Frontal" />
+      <img src="${escapeHtml(mapImageUrl)}" alt="Mapa Facial" crossorigin="anonymous" />
       ${fillerApps.map((app, i) => {
         const x = app.position_x ?? 50;
         const y = app.position_y ?? 50;
@@ -322,23 +772,32 @@ export function useConsolidatedFillerPdf() {
           <th>Região</th>
           <th>Lado</th>
           <th>Produto</th>
+          <th>Fabricante</th>
+          <th>Lote</th>
+          <th>Validade</th>
           <th>Qtd</th>
           <th>Unidade</th>
           <th>Observações</th>
         </tr>
       </thead>
       <tbody>
-        ${fillerApps.map((app, i) => `
+        ${fillerApps.map((app, i) => {
+          const relatedProduct = productByName.get((app.product_name || '').toLowerCase());
+          return `
         <tr>
           <td>${i + 1}</td>
           <td><strong>${escapeHtml(getMuscleName(app.muscle || 'outros'))}</strong></td>
           <td>${escapeHtml(app.side ? SIDE_LABELS[app.side] || app.side : '-')}</td>
           <td>${escapeHtml(app.product_name || '-')}</td>
+          <td>${escapeHtml(relatedProduct?.manufacturer || '-')}</td>
+          <td>${escapeHtml(relatedProduct?.batch_number || '-')}</td>
+          <td>${relatedProduct?.expiry_date ? escapeHtml(format(new Date(relatedProduct.expiry_date), 'dd/MM/yyyy')) : '-'}</td>
           <td><strong>${app.quantity}</strong></td>
           <td>${escapeHtml(app.unit)}</td>
           <td>${escapeHtml(app.notes) || '-'}</td>
         </tr>
-        `).join('')}
+        `;
+        }).join('')}
       </tbody>
     </table>
   </div>
@@ -366,7 +825,7 @@ export function useConsolidatedFillerPdf() {
           <td>${escapeHtml(p.manufacturer) || '-'}</td>
           <td>${escapeHtml(p.batch_number) || '-'}</td>
           <td>${p.expiry_date ? format(new Date(p.expiry_date), 'dd/MM/yyyy') : '-'}</td>
-          <td>${p.quantity} ${escapeHtml(p.unit)}</td>
+          <td>${Number(p.quantity || 0)} ${escapeHtml(p.unit || '')}</td>
           <td>${escapeHtml(p.application_area) || '-'}</td>
         </tr>
         `).join('')}
@@ -395,10 +854,10 @@ export function useConsolidatedFillerPdf() {
     ${treatedRegions.length > 0 ? `<p style="margin-top:6px;"><strong>Regiões:</strong> ${treatedRegions.map(r => escapeHtml(r)).join(', ')}</p>` : ''}
   </div>
 
-  ${generalNotes ? `
+  ${uniqueObservations.length > 0 ? `
   <div class="notes-box">
     <h4>Observações Clínicas Finais</h4>
-    <p>${escapeHtml(generalNotes)}</p>
+    <p>${escapeHtml(uniqueObservations.join(' • '))}</p>
   </div>
   ` : ''}
 
@@ -439,44 +898,4 @@ export function useConsolidatedFillerPdf() {
   }, [clinic]);
 
   return { generateConsolidatedPdf, exporting };
-}
-
-function buildFieldRow(label: string, value: unknown): string {
-  if (value == null) return '';
-  if (Array.isArray(value)) {
-    const items = value.map(v => typeof v === 'string' ? v : JSON.stringify(v)).filter(Boolean);
-    if (!items.length) return '';
-    return `<div class="field-row"><span class="field-label">${escapeHtml(label)}:</span> <span class="field-value">${items.map(i => escapeHtml(i)).join(', ')}</span></div>`;
-  }
-  if (typeof value === 'boolean') {
-    return `<div class="field-row"><span class="field-label">${escapeHtml(label)}:</span> <span class="field-value">${value ? 'Sim' : 'Não'}</span></div>`;
-  }
-  const val = typeof value === 'string' ? value : String(value);
-  if (!val || val === 'undefined') return '';
-  return `<div class="field-row"><span class="field-label">${escapeHtml(label)}:</span> <span class="field-value">${escapeHtml(val)}</span></div>`;
-}
-
-/** Known keys already rendered in the hardcoded section */
-const KNOWN_KEYS = new Set([
-  'objetivo_procedimento_ah', 'objetivo_procedimento',
-  'queixa_principal',
-  'areas_interesse_ah', 'areas_interesse',
-  'contraindicacoes',
-  'historico_previo', 'historico_estetico',
-  'observacoes_clinicas',
-  'plano_terapeutico_ah', 'plano_terapeutico',
-]);
-
-function humanizeKey(key: string): string {
-  return key
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, c => c.toUpperCase());
-}
-
-/** Render any dynamic fields from responses that aren't in the hardcoded list */
-function buildDynamicFields(data: Record<string, any>): string {
-  return Object.entries(data)
-    .filter(([key, val]) => !KNOWN_KEYS.has(key) && val != null && val !== '')
-    .map(([key, val]) => buildFieldRow(humanizeKey(key), val))
-    .join('');
 }
