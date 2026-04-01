@@ -33,11 +33,11 @@ import {
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarIcon, Plus, Search, Clock, Banknote, User } from "lucide-react";
+import { Calendar as CalendarIcon, Plus, Search, Clock, Banknote, User, Video } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Professional, Patient, Room, Specialty, Insurance, Appointment } from "@/types/agenda";
-import { typeLabels } from "@/types/agenda";
+import { typeLabels, careModeLabels } from "@/types/agenda";
 import { useProceduresList, Procedure } from "@/hooks/useProceduresCRUD";
 import { useSlotSuggestions } from "@/hooks/useSlotSuggestions";
 import { useConflictDetection } from "@/hooks/useConflictDetection";
@@ -65,6 +65,8 @@ const appointmentSchema = z.object({
   expected_value: z.number().optional(),
   notes: z.string().optional(),
   is_fit_in: z.boolean().optional(),
+  care_mode: z.string().optional(),
+  meeting_provider: z.string().optional(),
 });
 
 type AppointmentFormData = z.infer<typeof appointmentSchema>;
@@ -155,6 +157,8 @@ export function AppointmentDialog({
       expected_value: appointment?.expected_value || 0,
       notes: appointment?.notes || "",
       is_fit_in: mode === 'fitIn',
+      care_mode: appointment?.care_mode || "presencial",
+      meeting_provider: appointment?.meeting_provider || "",
     },
   });
 
@@ -176,6 +180,8 @@ export function AppointmentDialog({
         expected_value: appointment.expected_value || 0,
         notes: appointment.notes || "",
         is_fit_in: mode === 'fitIn',
+        care_mode: appointment.care_mode || "presencial",
+        meeting_provider: appointment.meeting_provider || "",
       });
     }
   }, [open, appointment, mode, lockedProfessionalId]);
@@ -215,6 +221,7 @@ export function AppointmentDialog({
   const watchStartTime = form.watch("start_time");
   const watchIsFitIn = form.watch("is_fit_in");
   const watchSpecialtyId = form.watch("specialty_id");
+  const watchCareMode = form.watch("care_mode");
 
   // Fetch professional-specific specialties — ALWAYS filter by selected professional
   const selectedProfId = lockedProfessionalId || watchProfessionalId || null;
@@ -644,6 +651,65 @@ export function AppointmentDialog({
                   </FormItem>
                 )}
               />
+              )}
+
+              {/* Care Mode (Modalidade) */}
+              {!isReschedule && (
+              <FormField
+                control={form.control}
+                name="care_mode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Modalidade</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || "presencial"}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {Object.entries(careModeLabels).map(([key, label]) => (
+                          <SelectItem key={key} value={key}>
+                            <div className="flex items-center gap-2">
+                              {key === 'teleconsulta' && <Video className="h-3.5 w-3.5" />}
+                              {label}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              )}
+
+              {/* Meeting Provider (only for teleconsulta) */}
+              {!isReschedule && watchCareMode === 'teleconsulta' && (
+                <FormField
+                  control={form.control}
+                  name="meeting_provider"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Provedor de Videoconferência</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || "manual"}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="manual">Link Manual</SelectItem>
+                          <SelectItem value="google_meet">Google Meet</SelectItem>
+                          <SelectItem value="zoom">Zoom</SelectItem>
+                          <SelectItem value="teams">Microsoft Teams</SelectItem>
+                          <SelectItem value="outro">Outro</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               )}
 
               {/* Date */}

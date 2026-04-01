@@ -13,6 +13,27 @@ export type AppointmentType = 'consulta' | 'retorno' | 'procedimento' | 'encaixe
 
 export type PaymentType = 'particular' | 'convenio';
 
+export type CareMode = 'presencial' | 'teleconsulta' | 'domiciliar';
+
+export type MeetingStatus = 'nao_gerada' | 'gerada' | 'enviada' | 'paciente_entrou' | 'profissional_entrou' | 'em_andamento' | 'encerrada' | 'falhou';
+
+export const careModeLabels: Record<CareMode, string> = {
+  presencial: 'Presencial',
+  teleconsulta: 'Teleconsulta',
+  domiciliar: 'Domiciliar',
+};
+
+export const meetingStatusLabels: Record<MeetingStatus, string> = {
+  nao_gerada: 'Não Gerada',
+  gerada: 'Sala Gerada',
+  enviada: 'Link Enviado',
+  paciente_entrou: 'Paciente Entrou',
+  profissional_entrou: 'Profissional Entrou',
+  em_andamento: 'Em Andamento',
+  encerrada: 'Encerrada',
+  falhou: 'Falhou',
+};
+
 export type ViewMode = 'daily' | 'weekly' | 'monthly' | 'timeline';
 
 export type GroupBy = 'professional' | 'room' | 'specialty' | 'type' | 'status' | 'general';
@@ -103,13 +124,28 @@ export interface Appointment {
   is_fit_in: boolean;
   payment_type: PaymentType;
   expected_value?: number;
-  procedure_cost?: number; // Historical cost calculated at execution time
+  procedure_cost?: number;
   notes?: string;
   cancellation_reason?: string;
   arrived_at?: string;
   started_at?: string;
   finished_at?: string;
   created_at: string;
+  // Teleconsulta fields
+  care_mode: CareMode;
+  meeting_provider?: string;
+  meeting_link?: string;
+  meeting_id?: string;
+  meeting_password?: string;
+  meeting_status: MeetingStatus;
+  meeting_created_at?: string;
+  meeting_started_at?: string;
+  meeting_ended_at?: string;
+  precheck_status: string;
+  consent_telehealth_accepted: boolean;
+  consent_telehealth_accepted_at?: string;
+  technical_issue_count: number;
+  teleconsultation_notes?: string;
 }
 
 export interface AgendaFilters {

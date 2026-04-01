@@ -102,6 +102,8 @@ import { PatientHeader } from "@/components/prontuario/PatientHeader";
 import { ProntuarioHeader } from "@/components/prontuario/ProntuarioHeader";
 import { ProntuarioSearchBar, type SearchResult } from "@/components/prontuario/ProntuarioSearchBar";
 import { LgpdBlockingOverlay } from "@/components/prontuario/LgpdBlockingOverlay";
+import { TeleconsultaContextBar } from "@/components/prontuario/TeleconsultaContextBar";
+import { RemoteAttendanceBlock } from "@/components/prontuario/RemoteAttendanceBlock";
 import { ConsentCollectionDialog } from "@/components/prontuario/ConsentCollectionDialog";
 import { SignatureDialog } from "@/components/prontuario/SignatureDialog";
 import { SignedRecordBadge } from "@/components/prontuario/SignedRecordBadge";
@@ -2250,6 +2252,16 @@ export default function Prontuario() {
         clinicalDataLoading={clinicalDataLoading}
       />
 
+      {/* Teleconsulta Context Bar */}
+      {activeAppointment && (activeAppointment as any).care_mode === 'teleconsulta' && (
+        <div className="px-4 py-2 border-b">
+          <TeleconsultaContextBar
+            appointmentId={activeAppointment.id}
+            meetingLink={(activeAppointment as any).meeting_link}
+            meetingStatus={(activeAppointment as any).meeting_status || 'nao_gerada'}
+          />
+        </div>
+      )}
       {/* Barra de Pesquisa Global */}
       {patientId && (
         <div className="px-4 py-2 border-b bg-background">

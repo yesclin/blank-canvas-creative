@@ -26,7 +26,8 @@ import {
   RotateCcw,
   Sparkles,
   ShoppingCart,
-  Package
+  Package,
+  Video,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Appointment } from "@/types/agenda";
@@ -191,6 +192,18 @@ export function AppointmentCard({
               <Badge variant="secondary" className="text-xs">
                 Encaixe
               </Badge>
+            )}
+            
+            {(appointment as any).care_mode === 'teleconsulta' && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="secondary" className="text-xs gap-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                    <Video className="h-3 w-3" />
+                    Teleconsulta
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>Atendimento por teleconsulta</TooltipContent>
+              </Tooltip>
             )}
             
             <Badge variant="outline" className="text-xs">
