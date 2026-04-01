@@ -26,8 +26,9 @@ import type {
   AgendaFilters as FiltersType,
   AppointmentStatus,
   AppointmentType,
+  CareMode,
 } from "@/types/agenda";
-import { statusLabels, typeLabels } from "@/types/agenda";
+import { statusLabels, typeLabels, careModeLabels } from "@/types/agenda";
 
 interface AgendaFiltersSheetProps {
   filters: FiltersType;
@@ -64,6 +65,7 @@ export function AgendaFiltersSheet({
     filters.roomId,
     filters.appointmentType,
     filters.status,
+    filters.careMode,
   ].filter(Boolean).length;
 
   const draftFiltersCount = [
@@ -72,6 +74,7 @@ export function AgendaFiltersSheet({
     draftFilters.roomId,
     draftFilters.appointmentType,
     draftFilters.status,
+    draftFilters.careMode,
   ].filter(Boolean).length;
 
   const clearDraftFilters = () => {
@@ -82,6 +85,7 @@ export function AgendaFiltersSheet({
       roomId: undefined,
       appointmentType: undefined,
       status: undefined,
+      careMode: undefined,
     });
   };
 
@@ -242,6 +246,32 @@ export function AgendaFiltersSheet({
               <SelectContent>
                 <SelectItem value="all">Todos os status</SelectItem>
                 {Object.entries(statusLabels).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Care Mode (Modalidade) */}
+          <div className="space-y-2">
+            <Label htmlFor="filter-care-mode">Modalidade</Label>
+            <Select
+              value={draftFilters.careMode || "all"}
+              onValueChange={(v) =>
+                setDraftFilters({
+                  ...draftFilters,
+                  careMode: v === "all" ? undefined : (v as CareMode),
+                })
+              }
+            >
+              <SelectTrigger id="filter-care-mode">
+                <SelectValue placeholder="Todas as modalidades" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as modalidades</SelectItem>
+                {Object.entries(careModeLabels).map(([key, label]) => (
                   <SelectItem key={key} value={key}>
                     {label}
                   </SelectItem>

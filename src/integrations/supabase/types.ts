@@ -488,6 +488,7 @@ export type Database = {
           clinic_id: string
           consent_telehealth_accepted: boolean
           consent_telehealth_accepted_at: string | null
+          consent_telehealth_required: boolean
           created_at: string
           created_by: string | null
           duration_minutes: number
@@ -533,6 +534,7 @@ export type Database = {
           clinic_id: string
           consent_telehealth_accepted?: boolean
           consent_telehealth_accepted_at?: string | null
+          consent_telehealth_required?: boolean
           created_at?: string
           created_by?: string | null
           duration_minutes?: number
@@ -578,6 +580,7 @@ export type Database = {
           clinic_id?: string
           consent_telehealth_accepted?: boolean
           consent_telehealth_accepted_at?: string | null
+          consent_telehealth_required?: boolean
           created_at?: string
           created_by?: string | null
           duration_minutes?: number
@@ -1208,6 +1211,71 @@ export type Database = {
             columns: ["specialty_id"]
             isOneToOne: false
             referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clinic_teleconsultation_settings: {
+        Row: {
+          allow_join_with_failed_precheck: boolean
+          allow_precheck_file_upload: boolean
+          allow_recording: boolean
+          clinic_id: string
+          created_at: string
+          default_provider: string | null
+          enabled: boolean
+          id: string
+          late_tolerance_minutes: number
+          post_call_message: string | null
+          precheck_window_minutes_before: number
+          require_precheck: boolean
+          require_telehealth_consent: boolean
+          room_join_window_minutes_before: number
+          updated_at: string
+          waiting_room_message: string | null
+        }
+        Insert: {
+          allow_join_with_failed_precheck?: boolean
+          allow_precheck_file_upload?: boolean
+          allow_recording?: boolean
+          clinic_id: string
+          created_at?: string
+          default_provider?: string | null
+          enabled?: boolean
+          id?: string
+          late_tolerance_minutes?: number
+          post_call_message?: string | null
+          precheck_window_minutes_before?: number
+          require_precheck?: boolean
+          require_telehealth_consent?: boolean
+          room_join_window_minutes_before?: number
+          updated_at?: string
+          waiting_room_message?: string | null
+        }
+        Update: {
+          allow_join_with_failed_precheck?: boolean
+          allow_precheck_file_upload?: boolean
+          allow_recording?: boolean
+          clinic_id?: string
+          created_at?: string
+          default_provider?: string | null
+          enabled?: boolean
+          id?: string
+          late_tolerance_minutes?: number
+          post_call_message?: string | null
+          precheck_window_minutes_before?: number
+          require_precheck?: boolean
+          require_telehealth_consent?: boolean
+          room_join_window_minutes_before?: number
+          updated_at?: string
+          waiting_room_message?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_teleconsultation_settings_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -5434,6 +5502,69 @@ export type Database = {
           },
         ]
       }
+      procedure_teleconsultation_settings: {
+        Row: {
+          allows_teleconsultation: boolean
+          clinic_id: string
+          created_at: string
+          id: string
+          in_person_only: boolean
+          precheck_instructions: string | null
+          procedure_id: string
+          remote_duration_minutes: number | null
+          requires_file_upload: boolean
+          requires_precheck: boolean
+          requires_telehealth_consent: boolean
+          teleconsultation_only: boolean
+          updated_at: string
+        }
+        Insert: {
+          allows_teleconsultation?: boolean
+          clinic_id: string
+          created_at?: string
+          id?: string
+          in_person_only?: boolean
+          precheck_instructions?: string | null
+          procedure_id: string
+          remote_duration_minutes?: number | null
+          requires_file_upload?: boolean
+          requires_precheck?: boolean
+          requires_telehealth_consent?: boolean
+          teleconsultation_only?: boolean
+          updated_at?: string
+        }
+        Update: {
+          allows_teleconsultation?: boolean
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          in_person_only?: boolean
+          precheck_instructions?: string | null
+          procedure_id?: string
+          remote_duration_minutes?: number | null
+          requires_file_upload?: boolean
+          requires_precheck?: boolean
+          requires_telehealth_consent?: boolean
+          teleconsultation_only?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procedure_teleconsultation_settings_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procedure_teleconsultation_settings_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: true
+            referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       procedures: {
         Row: {
           allows_return: boolean
@@ -6883,38 +7014,120 @@ export type Database = {
           },
         ]
       }
-      teleconsultation_events: {
+      teleconsultation_access_tokens: {
         Row: {
-          actor_id: string | null
-          actor_type: string
           appointment_id: string
           clinic_id: string
-          created_at: string | null
+          created_at: string
+          expires_at: string
+          first_used_at: string | null
+          id: string
+          last_used_at: string | null
+          metadata: Json
+          revoked_at: string | null
+          revoked_reason: string | null
+          target_actor: string
+          teleconsultation_session_id: string | null
+          token: string
+          token_type: string
+        }
+        Insert: {
+          appointment_id: string
+          clinic_id: string
+          created_at?: string
+          expires_at: string
+          first_used_at?: string | null
+          id?: string
+          last_used_at?: string | null
+          metadata?: Json
+          revoked_at?: string | null
+          revoked_reason?: string | null
+          target_actor: string
+          teleconsultation_session_id?: string | null
+          token: string
+          token_type: string
+        }
+        Update: {
+          appointment_id?: string
+          clinic_id?: string
+          created_at?: string
+          expires_at?: string
+          first_used_at?: string | null
+          id?: string
+          last_used_at?: string | null
+          metadata?: Json
+          revoked_at?: string | null
+          revoked_reason?: string | null
+          target_actor?: string
+          teleconsultation_session_id?: string | null
+          token?: string
+          token_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teleconsultation_access_tokens_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teleconsultation_access_tokens_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teleconsultation_access_tokens_teleconsultation_session_id_fkey"
+            columns: ["teleconsultation_session_id"]
+            isOneToOne: false
+            referencedRelation: "teleconsultation_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teleconsultation_events: {
+        Row: {
+          actor_label: string | null
+          actor_type: string
+          actor_user_id: string | null
+          appointment_id: string
+          clinic_id: string
+          created_at: string
           event_type: string
           id: string
-          payload: Json | null
+          patient_id: string | null
+          payload: Json
+          professional_id: string | null
           teleconsultation_session_id: string
         }
         Insert: {
-          actor_id?: string | null
-          actor_type?: string
+          actor_label?: string | null
+          actor_type: string
+          actor_user_id?: string | null
           appointment_id: string
           clinic_id: string
-          created_at?: string | null
+          created_at?: string
           event_type: string
           id?: string
-          payload?: Json | null
+          patient_id?: string | null
+          payload?: Json
+          professional_id?: string | null
           teleconsultation_session_id: string
         }
         Update: {
-          actor_id?: string | null
+          actor_label?: string | null
           actor_type?: string
+          actor_user_id?: string | null
           appointment_id?: string
           clinic_id?: string
-          created_at?: string | null
+          created_at?: string
           event_type?: string
           id?: string
-          payload?: Json | null
+          patient_id?: string | null
+          payload?: Json
+          professional_id?: string | null
           teleconsultation_session_id?: string
         }
         Relationships: [
@@ -6933,7 +7146,117 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "teleconsultation_events_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teleconsultation_events_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "teleconsultation_events_teleconsultation_session_id_fkey"
+            columns: ["teleconsultation_session_id"]
+            isOneToOne: false
+            referencedRelation: "teleconsultation_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teleconsultation_files: {
+        Row: {
+          appointment_id: string
+          category: string
+          clinic_id: string
+          created_at: string
+          description: string | null
+          file_name: string
+          file_size_bytes: number | null
+          file_type: string | null
+          file_url: string | null
+          id: string
+          is_active: boolean
+          patient_id: string
+          precheck_id: string | null
+          storage_path: string
+          teleconsultation_session_id: string | null
+          uploaded_by_actor: string
+          uploaded_by_user_id: string | null
+        }
+        Insert: {
+          appointment_id: string
+          category?: string
+          clinic_id: string
+          created_at?: string
+          description?: string | null
+          file_name: string
+          file_size_bytes?: number | null
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          is_active?: boolean
+          patient_id: string
+          precheck_id?: string | null
+          storage_path: string
+          teleconsultation_session_id?: string | null
+          uploaded_by_actor: string
+          uploaded_by_user_id?: string | null
+        }
+        Update: {
+          appointment_id?: string
+          category?: string
+          clinic_id?: string
+          created_at?: string
+          description?: string | null
+          file_name?: string
+          file_size_bytes?: number | null
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          is_active?: boolean
+          patient_id?: string
+          precheck_id?: string | null
+          storage_path?: string
+          teleconsultation_session_id?: string | null
+          uploaded_by_actor?: string
+          uploaded_by_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teleconsultation_files_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teleconsultation_files_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teleconsultation_files_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teleconsultation_files_precheck_id_fkey"
+            columns: ["precheck_id"]
+            isOneToOne: false
+            referencedRelation: "teleconsultation_prechecks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teleconsultation_files_teleconsultation_session_id_fkey"
             columns: ["teleconsultation_session_id"]
             isOneToOne: false
             referencedRelation: "teleconsultation_sessions"
@@ -6944,51 +7267,84 @@ export type Database = {
       teleconsultation_prechecks: {
         Row: {
           appointment_id: string
-          camera_ok: boolean | null
+          camera_test_status: string
           clinic_id: string
           completed_at: string | null
-          consent_accepted: boolean | null
-          created_at: string | null
+          connection_quality: string | null
+          connection_test_status: string
+          consent_accepted: boolean
+          consent_accepted_at: string | null
+          consent_required: boolean
+          created_at: string
           id: string
-          identity_confirmed: boolean | null
-          internet_ok: boolean | null
-          microphone_ok: boolean | null
-          notes: string | null
+          identification_confirmed: boolean
+          identification_confirmed_at: string | null
+          identification_method: string | null
+          microphone_test_status: string
           patient_id: string
+          release_reason: string | null
+          released_to_join: boolean
+          started_at: string | null
+          status: string
+          technical_notes: string | null
+          teleconsultation_session_id: string | null
+          updated_at: string
         }
         Insert: {
           appointment_id: string
-          camera_ok?: boolean | null
+          camera_test_status?: string
           clinic_id: string
           completed_at?: string | null
-          consent_accepted?: boolean | null
-          created_at?: string | null
+          connection_quality?: string | null
+          connection_test_status?: string
+          consent_accepted?: boolean
+          consent_accepted_at?: string | null
+          consent_required?: boolean
+          created_at?: string
           id?: string
-          identity_confirmed?: boolean | null
-          internet_ok?: boolean | null
-          microphone_ok?: boolean | null
-          notes?: string | null
+          identification_confirmed?: boolean
+          identification_confirmed_at?: string | null
+          identification_method?: string | null
+          microphone_test_status?: string
           patient_id: string
+          release_reason?: string | null
+          released_to_join?: boolean
+          started_at?: string | null
+          status?: string
+          technical_notes?: string | null
+          teleconsultation_session_id?: string | null
+          updated_at?: string
         }
         Update: {
           appointment_id?: string
-          camera_ok?: boolean | null
+          camera_test_status?: string
           clinic_id?: string
           completed_at?: string | null
-          consent_accepted?: boolean | null
-          created_at?: string | null
+          connection_quality?: string | null
+          connection_test_status?: string
+          consent_accepted?: boolean
+          consent_accepted_at?: string | null
+          consent_required?: boolean
+          created_at?: string
           id?: string
-          identity_confirmed?: boolean | null
-          internet_ok?: boolean | null
-          microphone_ok?: boolean | null
-          notes?: string | null
+          identification_confirmed?: boolean
+          identification_confirmed_at?: string | null
+          identification_method?: string | null
+          microphone_test_status?: string
           patient_id?: string
+          release_reason?: string | null
+          released_to_join?: boolean
+          started_at?: string | null
+          status?: string
+          technical_notes?: string | null
+          teleconsultation_session_id?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
             foreignKeyName: "teleconsultation_prechecks_appointment_id_fkey"
             columns: ["appointment_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "appointments"
             referencedColumns: ["id"]
           },
@@ -7006,14 +7362,24 @@ export type Database = {
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "teleconsultation_prechecks_teleconsultation_session_id_fkey"
+            columns: ["teleconsultation_session_id"]
+            isOneToOne: false
+            referencedRelation: "teleconsultation_sessions"
+            referencedColumns: ["id"]
+          },
         ]
       }
       teleconsultation_sessions: {
         Row: {
+          access_token_patient: string | null
+          access_token_professional: string | null
           appointment_id: string
           clinic_id: string
-          connection_metadata: Json | null
-          created_at: string | null
+          connection_metadata: Json
+          created_at: string
+          created_by: string | null
           duration_seconds: number | null
           ended_at: string | null
           external_meeting_id: string | null
@@ -7024,17 +7390,21 @@ export type Database = {
           patient_id: string
           professional_id: string
           provider: string
+          recording_enabled: boolean
           recording_status: string | null
           recording_url: string | null
           started_at: string | null
           status: string
-          updated_at: string | null
+          updated_at: string
         }
         Insert: {
+          access_token_patient?: string | null
+          access_token_professional?: string | null
           appointment_id: string
           clinic_id: string
-          connection_metadata?: Json | null
-          created_at?: string | null
+          connection_metadata?: Json
+          created_at?: string
+          created_by?: string | null
           duration_seconds?: number | null
           ended_at?: string | null
           external_meeting_id?: string | null
@@ -7044,18 +7414,22 @@ export type Database = {
           join_url_professional?: string | null
           patient_id: string
           professional_id: string
-          provider?: string
+          provider: string
+          recording_enabled?: boolean
           recording_status?: string | null
           recording_url?: string | null
           started_at?: string | null
           status?: string
-          updated_at?: string | null
+          updated_at?: string
         }
         Update: {
+          access_token_patient?: string | null
+          access_token_professional?: string | null
           appointment_id?: string
           clinic_id?: string
-          connection_metadata?: Json | null
-          created_at?: string | null
+          connection_metadata?: Json
+          created_at?: string
+          created_by?: string | null
           duration_seconds?: number | null
           ended_at?: string | null
           external_meeting_id?: string | null
@@ -7066,17 +7440,18 @@ export type Database = {
           patient_id?: string
           professional_id?: string
           provider?: string
+          recording_enabled?: boolean
           recording_status?: string | null
           recording_url?: string | null
           started_at?: string | null
           status?: string
-          updated_at?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
             foreignKeyName: "teleconsultation_sessions_appointment_id_fkey"
             columns: ["appointment_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "appointments"
             referencedColumns: ["id"]
           },
@@ -7766,14 +8141,51 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_clinic_as_staff: {
+        Args: { p_clinic_id: string }
+        Returns: boolean
+      }
       can_access_clinical_content: {
         Args: { _user_id?: string }
         Returns: boolean
       }
+      can_access_teleconsultation_session_row: {
+        Args: { p_clinic_id: string; p_professional_id: string }
+        Returns: boolean
+      }
+      can_join_teleconsultation: {
+        Args: { p_actor: string; p_appointment_id: string }
+        Returns: {
+          can_join: boolean
+          consent_accepted: boolean
+          consent_required: boolean
+          meeting_status: string
+          precheck_status: string
+          reason: string
+        }[]
+      }
       clinic_specialty_summary: { Args: { _clinic_id: string }; Returns: Json }
+      current_professional_id_for_clinic: {
+        Args: { p_clinic_id: string }
+        Returns: string
+      }
+      current_user_role_for_clinic: {
+        Args: { p_clinic_id: string }
+        Returns: string
+      }
       deactivate_specialty: {
         Args: { _clinic_id: string; _specialty_slug: string }
         Returns: Json
+      }
+      generate_secure_token: { Args: { p_length?: number }; Returns: string }
+      generate_teleconsultation_token: {
+        Args: {
+          p_actor: string
+          p_appointment_id: string
+          p_expiration_minutes?: number
+          p_token_type: string
+        }
+        Returns: string
       }
       get_next_document_number: {
         Args: { p_clinic_id: string }
@@ -7799,6 +8211,20 @@ export type Database = {
         Returns: boolean
       }
       is_recepcionista: { Args: { _user_id?: string }; Returns: boolean }
+      log_teleconsultation_event: {
+        Args: {
+          p_actor_label?: string
+          p_actor_type?: string
+          p_actor_user_id?: string
+          p_appointment_id: string
+          p_event_type: string
+          p_patient_id?: string
+          p_payload?: Json
+          p_professional_id?: string
+          p_teleconsultation_session_id: string
+        }
+        Returns: string
+      }
       provision_estetica_anamnesis_templates: {
         Args: { _clinic_id: string; _specialty_id: string }
         Returns: number
@@ -7823,6 +8249,10 @@ export type Database = {
         Args: { _clinic_id: string; _specialty_slug: string }
         Returns: undefined
       }
+      sync_appointment_teleconsultation_status: {
+        Args: { p_appointment_id: string }
+        Returns: undefined
+      }
       user_clinic_id: { Args: { _user_id: string }; Returns: string }
       user_has_module_permission: {
         Args: {
@@ -7833,6 +8263,18 @@ export type Database = {
         Returns: boolean
       }
       user_professional_id: { Args: { _user_id: string }; Returns: string }
+      validate_teleconsultation_token: {
+        Args: { p_token: string; p_token_type: string }
+        Returns: {
+          appointment_id: string
+          clinic_id: string
+          expires_at: string
+          is_valid: boolean
+          revoked_at: string
+          target_actor: string
+          teleconsultation_session_id: string
+        }[]
+      }
     }
     Enums: {
       app_action: "view" | "create" | "edit" | "delete" | "export"

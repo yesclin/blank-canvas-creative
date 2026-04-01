@@ -155,9 +155,20 @@ export interface AgendaFilters {
   appointmentType?: AppointmentType;
   paymentType?: PaymentType;
   status?: AppointmentStatus;
+  careMode?: CareMode;
+  meetingStatus?: MeetingStatus;
+  precheckStatus?: string;
   startDate: Date;
   endDate: Date;
 }
+
+export const precheckStatusLabels: Record<string, string> = {
+  pendente: 'Pendente',
+  em_progresso: 'Em Progresso',
+  concluido: 'Concluído',
+  falhou: 'Falhou',
+  parcialmente_concluido: 'Parcial',
+};
 
 export interface AgendaStats {
   totalAppointments: number;

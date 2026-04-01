@@ -152,6 +152,9 @@ export default function Agenda() {
     if (filters.status) {
       result = result.filter(apt => apt.status === filters.status);
     }
+    if (filters.careMode) {
+      result = result.filter(apt => apt.care_mode === filters.careMode);
+    }
     
     return result;
   }, [appointments, effectiveSelectedProfessionalId, filters]);
@@ -416,6 +419,8 @@ export default function Agenda() {
       procedure_id: data.procedure_id,
       notes: data.notes,
       is_fit_in: data.is_fit_in,
+      care_mode: (data as any).care_mode || 'presencial',
+      meeting_provider: (data as any).meeting_provider || undefined,
     };
     
     createAppointmentMutation.mutate(formData, {
@@ -436,6 +441,7 @@ export default function Agenda() {
     filters.roomId,
     filters.appointmentType,
     filters.status,
+    filters.careMode,
   ].filter(Boolean).length;
 
   return (

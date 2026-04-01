@@ -30,8 +30,8 @@ import {
   Video,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Appointment } from "@/types/agenda";
-import { statusLabels, statusColors, typeLabels } from "@/types/agenda";
+import type { Appointment, MeetingStatus } from "@/types/agenda";
+import { statusLabels, statusColors, typeLabels, meetingStatusLabels, precheckStatusLabels } from "@/types/agenda";
 import { usePermissions } from "@/hooks/usePermissions";
 
 interface AppointmentCardProps {
@@ -194,7 +194,7 @@ export function AppointmentCard({
               </Badge>
             )}
             
-            {(appointment as any).care_mode === 'teleconsulta' && (
+            {appointment.care_mode === 'teleconsulta' && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Badge variant="secondary" className="text-xs gap-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
@@ -202,8 +202,25 @@ export function AppointmentCard({
                     Teleconsulta
                   </Badge>
                 </TooltipTrigger>
-                <TooltipContent>Atendimento por teleconsulta</TooltipContent>
+                <TooltipContent>
+                  {meetingStatusLabels[appointment.meeting_status as MeetingStatus] || appointment.meeting_status}
+                  {appointment.precheck_status && appointment.precheck_status !== 'pendente' && (
+                    <> • Pré-check: {precheckStatusLabels[appointment.precheck_status] || appointment.precheck_status}</>
+                  )}
+                </TooltipContent>
               </Tooltip>
+            )}
+            
+            {appointment.care_mode === 'teleconsulta' && appointment.meeting_status === 'nao_gerada' && (
+              <Badge variant="outline" className="text-xs gap-1 text-amber-600 border-amber-300">
+                Sem sala
+              </Badge>
+            )}
+            
+            {appointment.care_mode === 'teleconsulta' && appointment.technical_issue_count > 0 && (
+              <Badge variant="outline" className="text-xs gap-1 text-red-600 border-red-300">
+                {appointment.technical_issue_count} falha(s)
+              </Badge>
             )}
             
             <Badge variant="outline" className="text-xs">
