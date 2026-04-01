@@ -246,6 +246,7 @@ export function useFacialMap(
         appointment_id: appointmentId || null,
         created_by: authUserId,
         specialty_key: options?.specialtyKey || null,
+        source_session_id: null,
       },
     };
 
