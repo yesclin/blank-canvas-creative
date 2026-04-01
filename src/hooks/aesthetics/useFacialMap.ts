@@ -495,8 +495,10 @@ export function useFacialMap(
       return createNewFacialMap(mapType);
     },
     onSuccess: (newMap) => {
-      queryClient.invalidateQueries({ queryKey: mapQueryKey });
-      queryClient.invalidateQueries({ queryKey: ['facial-map-points', newMap.id] });
+      // Set the new map as the active one in the query cache immediately
+      queryClient.setQueryData(mapQueryKey, newMap);
+      // The new map has no points, so set empty array
+      queryClient.setQueryData(['facial-map-points', newMap.id], []);
       setCurrentMapId(newMap.id);
       toast.success('Nova sessão criada');
     },
