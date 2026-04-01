@@ -82,7 +82,8 @@ export const ANAMNESE_ESTETICA_TEMPLATES: TemplateAnamneseEstetica[] = [
     campos: [
       { id: 'uso_anterior_ah', label: 'Já realizou preenchimento?', type: 'radio', options: ['Sim', 'Não'], required: true, section: 'Histórico com Preenchimento' },
       { id: 'areas_desejadas', label: 'Áreas de Interesse para Tratamento', type: 'multiselect', options: ['Lábios', 'Sulco nasogeniano', 'Malar', 'Mandíbula', 'Queixo', 'Olheiras', 'Têmporas', 'Nariz', 'Outra'], required: true, section: 'Áreas Desejadas' },
-      { id: 'mapa_facial_ah', label: 'Mapa Facial de Preenchimento', type: 'imagem_interativa', section: 'Mapa de Aplicação' },
+      { id: 'plano_terapeutico_ah', label: 'Plano Terapêutico de Preenchimento', type: 'textarea', placeholder: 'Descreva o plano de volumização por área, técnica e volume estimado...', section: 'Planejamento' },
+      { id: 'link_mapa_ah', label: 'Mapa Facial de Preenchimento', type: 'link_mapa_facial', section: 'Mapa de Aplicação' },
       { id: 'gestante_lactante', label: 'Gestante ou Lactante', type: 'radio', options: ['Sim', 'Não'], section: 'Contraindicações' },
       { id: 'observacoes', label: 'Observações Adicionais', type: 'textarea', section: 'Observações' },
     ],
