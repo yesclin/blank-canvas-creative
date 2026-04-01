@@ -204,6 +204,29 @@ export function AnamneseFieldRenderer({
           />
         );
 
+      case 'link_mapa_facial':
+        return (
+          <div className="flex items-center gap-3 p-4 rounded-lg border border-dashed bg-muted/30">
+            <MapPin className="h-5 w-5 text-primary shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium">{campo.label}</p>
+              <p className="text-xs text-muted-foreground">
+                Use o módulo Mapa Facial para marcações interativas, registro de pontos e rastreabilidade de produtos.
+              </p>
+            </div>
+            {onNavigateToTab && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onNavigateToTab('facial_map')}
+              >
+                Abrir Mapa Facial
+              </Button>
+            )}
+          </div>
+        );
+
       default:
         return (
           <Input
