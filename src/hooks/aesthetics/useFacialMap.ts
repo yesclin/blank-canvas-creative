@@ -474,7 +474,7 @@ export function useFacialMap(
     enabled: !!currentMapId,
   });
 
-  // Create facial map
+  // Create facial map (get or create)
   const createMapMutation = useMutation({
     mutationFn: async (mapType: MapType = preferredMapType) => {
       return getOrCreateFacialMap(mapType);
@@ -486,6 +486,22 @@ export function useFacialMap(
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : 'Erro ao criar mapa facial');
+    },
+  });
+
+  // Force create a brand new session (always creates new map, ignoring existing)
+  const forceCreateNewSessionMutation = useMutation({
+    mutationFn: async (mapType: MapType = preferredMapType) => {
+      return createNewFacialMap(mapType);
+    },
+    onSuccess: (newMap) => {
+      queryClient.invalidateQueries({ queryKey: mapQueryKey });
+      queryClient.invalidateQueries({ queryKey: ['facial-map-points', newMap.id] });
+      setCurrentMapId(newMap.id);
+      toast.success('Nova sessão criada');
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Erro ao criar nova sessão');
     },
   });
 
@@ -914,9 +930,10 @@ export function useFacialMap(
     setCurrentMapId,
     allMaps,
     createMap: createMapMutation.mutateAsync,
+    forceCreateNewSession: forceCreateNewSessionMutation.mutateAsync,
     getOrCreateFacialMap,
     updateMapNotes: updateMapNotesMutation.mutateAsync,
-    isCreatingMap: createMapMutation.isPending,
+    isCreatingMap: createMapMutation.isPending || forceCreateNewSessionMutation.isPending,
     
     applications,
     allApplications,

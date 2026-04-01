@@ -96,7 +96,8 @@ export function FacialMapModule({
      updateApplication,
      deleteApplication,
      updateMapNotes,
-     createMap,
+      createMap,
+      forceCreateNewSession,
      concludeSession,
      isConcluding,
      duplicateSession,
@@ -229,8 +230,8 @@ export function FacialMapModule({
      try {
        if (confirmAction === 'conclude') {
          await concludeSession();
-       } else if (confirmAction === 'create') {
-         await createMap('general');
+        } else if (confirmAction === 'create') {
+          await forceCreateNewSession('general');
        } else if (confirmAction === 'reopen') {
          await reopenSession();
        }
