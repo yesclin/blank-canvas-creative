@@ -1210,6 +1210,7 @@ export function AnamneseBlock({
                 size="sm"
                 disabled={exportingConsolidated}
                 onClick={() => {
+                  const activeRecord = selectedRecord || currentAnamnese;
                   generateConsolidatedPdf({
                     patientId: patientData.id,
                     appointmentId: appointmentId,
@@ -1221,6 +1222,8 @@ export function AnamneseBlock({
                     },
                     professionalName,
                     professionalRegistration,
+                    recordResponses: activeRecord?.responses as Record<string, any> || null,
+                    recordData: activeRecord?.data as Record<string, any> || null,
                   });
                 }}
                 title="Gerar ficha consolidada com plano + mapa facial + produtos"
