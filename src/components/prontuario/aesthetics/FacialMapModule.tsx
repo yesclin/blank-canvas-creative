@@ -188,7 +188,7 @@ export function FacialMapModule({
 
    const handleCreateMap = async () => {
      try {
-       await createMap();
+       await createMap('general');
      } catch (err) {
        console.error('Create map failed:', err);
      }
