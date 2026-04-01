@@ -19,6 +19,13 @@ import AceitarConvite from "./pages/AceitarConvite";
 import NotFound from "./pages/NotFound";
 import ValidarDocumento from "./pages/ValidarDocumento";
 
+// Teleconsulta - Páginas Públicas
+import PrecheckPage from "./pages/teleconsulta/PrecheckPage";
+import PatientRoomPage from "./pages/teleconsulta/PatientRoomPage";
+
+// Teleconsulta - Página Autenticada
+import TeleconsultaSala from "./pages/app/TeleconsultaSala";
+
 // Layout do App
 import { AppLayout } from "./components/app/AppLayout";
 
@@ -73,6 +80,10 @@ const App = () => (
           
           <Route path="/aceitar-convite" element={<AceitarConvite />} />
           
+          {/* Teleconsulta - Páginas Públicas */}
+          <Route path="/teleconsulta/:token/precheck" element={<PrecheckPage />} />
+          <Route path="/teleconsulta/:token/sala" element={<PatientRoomPage />} />
+          
           {/* Área do App (protegida) */}
           <Route
             path="/app"
@@ -111,6 +122,9 @@ const App = () => (
             <Route path="config/integracoes" element={<ProtectedRoute module="configuracoes"><ConfigIntegracoes /></ProtectedRoute>} />
             <Route path="config/modelos-anamnese" element={<ProtectedRoute module="configuracoes"><ModelosAnamnese /></ProtectedRoute>} />
             <Route path="config/documentos-institucionais" element={<ProtectedRoute module="configuracoes"><DocumentosInstitucionais /></ProtectedRoute>} />
+            
+            {/* Teleconsulta - Sala do Profissional */}
+            <Route path="teleconsulta/:appointmentId/sala" element={<ProtectedRoute module="agenda"><TeleconsultaSala /></ProtectedRoute>} />
           </Route>
           
           {/* Catch-all */}
