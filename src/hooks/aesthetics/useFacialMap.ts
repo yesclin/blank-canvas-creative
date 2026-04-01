@@ -930,9 +930,10 @@ export function useFacialMap(
     setCurrentMapId,
     allMaps,
     createMap: createMapMutation.mutateAsync,
+    forceCreateNewSession: forceCreateNewSessionMutation.mutateAsync,
     getOrCreateFacialMap,
     updateMapNotes: updateMapNotesMutation.mutateAsync,
-    isCreatingMap: createMapMutation.isPending,
+    isCreatingMap: createMapMutation.isPending || forceCreateNewSessionMutation.isPending,
     
     applications,
     allApplications,
