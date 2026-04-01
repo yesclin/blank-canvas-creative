@@ -441,6 +441,7 @@ export default function Agenda() {
     filters.roomId,
     filters.appointmentType,
     filters.status,
+    filters.careMode,
   ].filter(Boolean).length;
 
   return (
