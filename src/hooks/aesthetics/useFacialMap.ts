@@ -704,7 +704,114 @@ export function useFacialMap(
     },
   });
 
-  // Get all maps for history
+  // Conclude session (mark map as concluded)
+  const concludeSessionMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentMapId) throw new Error('Nenhum mapa selecionado');
+      
+      const { data: row, error: fetchError } = await supabase
+        .from('facial_maps')
+        .select('data')
+        .eq('id', currentMapId)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      const existingData = (row?.data as Record<string, any>) || {};
+      const { error } = await supabase
+        .from('facial_maps')
+        .update({
+          data: {
+            ...existingData,
+            status: 'concluded',
+            concluded_at: new Date().toISOString(),
+          },
+        })
+        .eq('id', currentMapId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: mapQueryKey });
+      queryClient.invalidateQueries({ queryKey: ['facial-map-history', patientId] });
+      toast.success('Sessão concluída com sucesso');
+    },
+    onError: (error) => {
+      console.error('Error concluding session:', error);
+      toast.error('Erro ao concluir sessão');
+    },
+  });
+
+  // Duplicate a session as base for a new one
+  const duplicateSessionMutation = useMutation({
+    mutationFn: async (sourceMapId: string) => {
+      ensureEditableContext();
+      
+      // Fetch source map's applications
+      const { data: sourceApps, error: appsError } = await supabase
+        .from('facial_map_applications')
+        .select('*')
+        .eq('facial_map_id', sourceMapId);
+      
+      if (appsError) throw appsError;
+      
+      // Create a new map for this appointment
+      const newMap = await createNewFacialMap(preferredMapType);
+      
+      // Copy applications to new map
+      if (sourceApps && sourceApps.length > 0) {
+        const authUserId = await getAuthUserId();
+        const newApps = sourceApps.map((app: any) => {
+          const existingData = (app.data as Record<string, any>) || {};
+          return {
+            facial_map_id: newMap.id,
+            product_name: app.product_name,
+            region: app.region,
+            units: app.units,
+            notes: app.notes,
+            data: {
+              ...existingData,
+              appointment_id: appointmentId || null,
+              created_by: authUserId,
+              updated_at: new Date().toISOString(),
+            },
+          };
+        });
+        
+        const { error: insertError } = await supabase
+          .from('facial_map_applications')
+          .insert(newApps);
+        
+        if (insertError) throw insertError;
+      }
+      
+      return newMap;
+    },
+    onSuccess: (newMap) => {
+      queryClient.invalidateQueries({ queryKey: mapQueryKey });
+      queryClient.invalidateQueries({ queryKey: ['facial-map-points', newMap.id] });
+      setCurrentMapId(newMap.id);
+      toast.success('Sessão duplicada como base para nova sessão');
+    },
+    onError: (error) => {
+      console.error('Error duplicating session:', error);
+      toast.error('Erro ao duplicar sessão');
+    },
+  });
+
+  // Load applications for a specific map (for history viewing)
+  const loadMapApplications = async (mapId: string) => {
+    const { data, error } = await supabase
+      .from('facial_map_applications')
+      .select('*')
+      .eq('facial_map_id', mapId)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(dbRowToApplication);
+  };
+
+
   const { data: allMaps = [], isLoading: historyLoading } = useQuery({
     queryKey: ['facial-map-history', patientId],
     queryFn: async () => {
