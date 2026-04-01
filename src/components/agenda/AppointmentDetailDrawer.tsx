@@ -159,6 +159,12 @@ export function AppointmentDetailDrawer({
             {is_fit_in && (
               <Badge variant="secondary" className="text-xs">Encaixe</Badge>
             )}
+            {isTeleconsulta && (
+              <Badge variant="secondary" className="text-xs gap-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                <Video className="h-3 w-3" />
+                Teleconsulta
+              </Badge>
+            )}
           </div>
           <SheetTitle className="text-left text-lg">
             {patient?.full_name || "Paciente"}
