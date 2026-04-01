@@ -17,7 +17,9 @@ export interface FacialMap {
   appointment_id?: string | null;
   professional_id?: string | null;
   map_type: MapType;
+  status: MapStatus;
   general_notes?: string | null;
+  concluded_at?: string | null;
   created_at: string;
   created_by?: string | null;
   updated_at: string;
