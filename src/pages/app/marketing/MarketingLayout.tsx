@@ -1,40 +1,41 @@
 import { lazy, Suspense, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  LayoutDashboard, MessageSquare, Zap, Megaphone,
-  History, MessageCircle, Wifi, WifiOff, Settings, Loader2,
+  LayoutDashboard, MessageSquare, Send, Filter,
+  History, Settings, Zap, Loader2,
 } from "lucide-react";
-import { useWhatsAppIntegration } from "@/hooks/useWhatsAppIntegration";
 import { cn } from "@/lib/utils";
 
-// Lazy-loaded tab content — only loads when tab is activated
-const MarketingDashboard = lazy(() => import("./MarketingDashboard"));
+// Lazy-loaded tab content
+const MarketingPainel = lazy(() => import("./MarketingPainel"));
+const MarketingCentral = lazy(() => import("./MarketingCentral"));
 const MarketingTemplates = lazy(() => import("./MarketingTemplates"));
 const MarketingAutomacoes = lazy(() => import("./MarketingAutomacoes"));
-const MarketingCampanhas = lazy(() => import("./MarketingCampanhas"));
+const MarketingSegmentacoes = lazy(() => import("./MarketingSegmentacoes"));
 const MarketingHistorico = lazy(() => import("./MarketingHistorico"));
-const MarketingConfigWhatsApp = lazy(() => import("./MarketingConfigWhatsApp"));
+const MarketingIntegracoes = lazy(() => import("./MarketingIntegracoes"));
 
 const TABS = [
-  { value: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { value: "painel", label: "Painel", icon: LayoutDashboard },
+  { value: "central", label: "Central de Mensagens", icon: Send },
   { value: "templates", label: "Templates", icon: MessageSquare },
   { value: "automacoes", label: "Automações", icon: Zap },
-  { value: "campanhas", label: "Campanhas", icon: Megaphone },
+  { value: "segmentacoes", label: "Segmentações", icon: Filter },
   { value: "historico", label: "Histórico", icon: History },
-  { value: "whatsapp", label: "WhatsApp", icon: MessageCircle },
+  { value: "integracoes", label: "Integrações", icon: Settings },
 ] as const;
 
 type TabValue = (typeof TABS)[number]["value"];
 
 const TAB_COMPONENTS: Record<TabValue, React.LazyExoticComponent<() => JSX.Element>> = {
-  dashboard: MarketingDashboard,
+  painel: MarketingPainel,
+  central: MarketingCentral,
   templates: MarketingTemplates,
   automacoes: MarketingAutomacoes,
-  campanhas: MarketingCampanhas,
+  segmentacoes: MarketingSegmentacoes,
   historico: MarketingHistorico,
-  whatsapp: MarketingConfigWhatsApp,
+  integracoes: MarketingIntegracoes,
 };
 
 function TabFallback() {
@@ -47,13 +48,11 @@ function TabFallback() {
 
 export default function MarketingLayout() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const tabFromUrl = (searchParams.get("tab") as TabValue) || "dashboard";
-  const activeTab: TabValue = TABS.some((t) => t.value === tabFromUrl) ? tabFromUrl : "dashboard";
-
-  const { isConfigured, loading: whatsappLoading } = useWhatsAppIntegration();
+  const tabFromUrl = (searchParams.get("tab") as TabValue) || "painel";
+  const activeTab: TabValue = TABS.some((t) => t.value === tabFromUrl) ? tabFromUrl : "painel";
 
   const handleTabChange = useCallback((value: TabValue) => {
-    if (value === "dashboard") {
+    if (value === "painel") {
       setSearchParams({});
     } else {
       setSearchParams({ tab: value });
@@ -64,59 +63,19 @@ export default function MarketingLayout() {
 
   return (
     <div className="space-y-0">
-      {/* ── Premium Header ── */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">Marketing</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">CRM clínico, automações e campanhas</p>
-        </div>
-        <div className="flex items-center gap-3">
-          {/* WhatsApp Status Indicator */}
-          {!whatsappLoading && (
-            <Badge
-              variant="outline"
-              className={cn(
-                "px-3 py-1.5 text-xs font-medium gap-1.5 border transition-colors cursor-default",
-                isConfigured
-                  ? "border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/30 dark:text-green-400"
-                  : "border-red-200 bg-red-50 text-red-600 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400"
-              )}
-            >
-              {isConfigured ? (
-                <>
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-                  </span>
-                  <Wifi className="h-3 w-3" />
-                  Conectado
-                </>
-              ) : (
-                <>
-                  <span className="relative flex h-2 w-2">
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
-                  </span>
-                  <WifiOff className="h-3 w-3" />
-                  Desconectado
-                </>
-              )}
-            </Badge>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={() => handleTabChange("whatsapp")}
-          >
-            <Settings className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Configurar WhatsApp</span>
-          </Button>
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">Comunicação & Relacionamento</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Mensagens, segmentações e acompanhamento de pacientes
+          </p>
         </div>
       </div>
 
-      {/* ── Animated Tab Bar ── */}
+      {/* Tab Bar */}
       <div className="border-b border-border mb-6">
-        <nav className="-mb-px flex gap-0 overflow-x-auto scrollbar-none" aria-label="Abas do Marketing">
+        <nav className="-mb-px flex gap-0 overflow-x-auto scrollbar-none" aria-label="Abas de Comunicação">
           {TABS.map(({ value, label, icon: Icon }) => {
             const isActive = activeTab === value;
             return (
@@ -126,9 +85,7 @@ export default function MarketingLayout() {
                 className={cn(
                   "group relative flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-200",
                   "hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                  isActive
-                    ? "text-primary"
-                    : "text-muted-foreground"
+                  isActive ? "text-primary" : "text-muted-foreground"
                 )}
               >
                 <Icon className={cn(
@@ -136,7 +93,6 @@ export default function MarketingLayout() {
                   isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
                 )} />
                 <span className="hidden sm:inline">{label}</span>
-                {/* Active indicator line */}
                 <span
                   className={cn(
                     "absolute bottom-0 left-0 right-0 h-0.5 rounded-full transition-all duration-300 ease-out",
@@ -151,7 +107,7 @@ export default function MarketingLayout() {
         </nav>
       </div>
 
-      {/* ── Tab Content with Fade ── */}
+      {/* Tab Content */}
       <div key={activeTab} className="animate-fade-in">
         <Suspense fallback={<TabFallback />}>
           <ActiveComponent />
