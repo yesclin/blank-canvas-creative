@@ -84,6 +84,7 @@ function dbRowToFacialMap(row: any): FacialMap {
     created_at: row.created_at,
     created_by: extra.created_by || null,
     updated_at: row.updated_at,
+    source_session_id: extra.source_session_id || null,
   };
 }
 
