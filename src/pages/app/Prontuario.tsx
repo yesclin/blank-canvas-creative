@@ -97,6 +97,7 @@ import { isBlockEnabled } from "@/hooks/prontuario/specialtyCapabilities";
 import { getVisibleTabsForSpecialty } from "@/hooks/prontuario/specialtyTabsConfig";
 import { useLgpdEnforcement } from "@/hooks/lgpd";
 import { useProntuarioPrint } from "@/hooks/prontuario/useProntuarioPrint";
+import { useConsolidatedFillerPdf } from "@/hooks/aesthetics/useConsolidatedFillerPdf";
 import { useClinicData } from "@/hooks/useClinicData";
 import { PatientHeader } from "@/components/prontuario/PatientHeader";
 import { ProntuarioHeader } from "@/components/prontuario/ProntuarioHeader";
@@ -500,6 +501,7 @@ export default function Prontuario() {
 
   // Print & Export
   const { handlePrint, handleExport, printing, exporting } = useProntuarioPrint();
+  const { generateConsolidatedPdf, exporting: exportingFiller } = useConsolidatedFillerPdf();
   const { clinic, getFormattedAddress } = useClinicData();
 
   // LGPD Enforcement and Feature Flags
@@ -2110,11 +2112,27 @@ export default function Prontuario() {
     handlePrint();
   }, [handlePrint]);
 
-  // Export handler
+  // Export handler - consolidated PDF for Estética/filler, default for others
+  const isEsteticaSpecialty = activeSpecialtyKey === 'estetica';
   const onExportClick = useCallback(() => {
     if (!patientId || !patient) return;
-    handleExport(patientId, activeAppointment?.id, patient.full_name);
-  }, [patientId, patient, activeAppointment, handleExport]);
+    if (isEsteticaSpecialty) {
+      generateConsolidatedPdf({
+        patientId,
+        appointmentId: activeAppointment?.id,
+        patient: {
+          full_name: patient.full_name,
+          birth_date: patient.birth_date,
+          phone: patient.phone,
+          cpf: patient.cpf,
+        },
+        professionalName: currentProfessionalName,
+        professionalRegistration: docClinicoProfReg,
+      });
+    } else {
+      handleExport(patientId, activeAppointment?.id, patient.full_name);
+    }
+  }, [patientId, patient, activeAppointment, handleExport, isEsteticaSpecialty, generateConsolidatedPdf, currentProfessionalName, docClinicoProfReg]);
 
   // No patient selected - show patient selector
   if (!patientId) {
@@ -2238,7 +2256,7 @@ export default function Prontuario() {
         canExport={canPerformAction('export_pdf')}
         onPrint={onPrintClick}
         onExport={onExportClick}
-        exporting={exporting}
+        exporting={exporting || exportingFiller}
         insuranceName={(patient as any)?.insurance?.insurance_name || null}
         clinicalSummary={clinicalDataLoading ? undefined : (prontuarioClinicalData ? {
           allergies: (prontuarioClinicalData.allergies || []).map(a => a.split('\n')[0].substring(0, 40)),
