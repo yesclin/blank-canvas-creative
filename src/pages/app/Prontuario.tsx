@@ -2112,11 +2112,27 @@ export default function Prontuario() {
     handlePrint();
   }, [handlePrint]);
 
-  // Export handler
+  // Export handler - consolidated PDF for Estética/filler, default for others
+  const isEsteticaSpecialty = activeSpecialtyKey === 'aesthetics' || activeSpecialtyKey === 'estetica';
   const onExportClick = useCallback(() => {
     if (!patientId || !patient) return;
-    handleExport(patientId, activeAppointment?.id, patient.full_name);
-  }, [patientId, patient, activeAppointment, handleExport]);
+    if (isEsteticaSpecialty) {
+      generateConsolidatedPdf({
+        patientId,
+        appointmentId: activeAppointment?.id,
+        patient: {
+          full_name: patient.full_name,
+          birth_date: patient.birth_date,
+          phone: patient.phone,
+          cpf: patient.cpf,
+        },
+        professionalName: currentProfessionalName,
+        professionalRegistration: docClinicoProfReg,
+      });
+    } else {
+      handleExport(patientId, activeAppointment?.id, patient.full_name);
+    }
+  }, [patientId, patient, activeAppointment, handleExport, isEsteticaSpecialty, generateConsolidatedPdf, currentProfessionalName, docClinicoProfReg]);
 
   // No patient selected - show patient selector
   if (!patientId) {
