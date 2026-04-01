@@ -554,6 +554,20 @@ export function useFacialMap(
           side: appData.side ?? existingData.side ?? inferSide(positionX, viewType),
           quantity,
           updated_at: new Date().toISOString(),
+          // Extended fields
+          manufacturer: appData.manufacturer ?? existingData.manufacturer ?? null,
+          lot_number: appData.lot_number ?? existingData.lot_number ?? null,
+          expiry_date: appData.expiry_date ?? existingData.expiry_date ?? null,
+          dilution: appData.dilution ?? existingData.dilution ?? null,
+          technique: appData.technique ?? existingData.technique ?? null,
+          depth: appData.depth ?? existingData.depth ?? null,
+          planned_volume: appData.planned_volume ?? existingData.planned_volume ?? null,
+          applied_volume: appData.applied_volume ?? existingData.applied_volume ?? null,
+          application_plan: appData.application_plan ?? existingData.application_plan ?? null,
+          session_number: appData.session_number ?? existingData.session_number ?? null,
+          total_sessions: appData.total_sessions ?? existingData.total_sessions ?? null,
+          session_interval: appData.session_interval ?? existingData.session_interval ?? null,
+          protocol: appData.protocol ?? existingData.protocol ?? null,
         },
       };
 
