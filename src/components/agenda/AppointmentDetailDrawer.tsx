@@ -57,6 +57,10 @@ export function AppointmentDetailDrawer({
   onLaunchSale,
   onStartAtendimento,
 }: AppointmentDetailDrawerProps) {
+  const isTeleconsulta = appointment?.care_mode === 'teleconsulta';
+  const { data: teleSession } = useTeleconsultaSession(isTeleconsulta ? appointment?.id ?? null : null);
+  const { generateRoom, copyLink, startSession, endSession, reportTechnicalIssue, convertToPresencial } = useTeleconsultaActions();
+
   if (!appointment) return null;
 
   const {
@@ -79,6 +83,9 @@ export function AppointmentDetailDrawer({
     arrived_at,
     started_at,
     finished_at,
+    care_mode,
+    meeting_link,
+    meeting_status,
   } = appointment;
 
   const statusActions = getStatusActions(status);
