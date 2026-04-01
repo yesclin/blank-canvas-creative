@@ -71,8 +71,8 @@
             href={baseImageUrl}
             x="0"
             y="0"
-            width="400"
-            height="520"
+            width="500"
+             height="650"
             preserveAspectRatio="xMidYMid meet"
           />
         ) : viewType === 'frontal' && (
