@@ -351,12 +351,12 @@ export function AppointmentDetailDrawer({
                       </div>
                     )}
 
-                    {/* Technical Issues */}
+                    {/* Technical Issues - secondary indicator */}
                     {technical_issue_count > 0 && (
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Falhas técnicas</span>
-                        <Badge variant="outline" className="text-xs text-destructive border-destructive/30">
-                          {technical_issue_count}
+                        <span className="text-muted-foreground">Intercorrências</span>
+                        <Badge variant="outline" className="text-xs text-muted-foreground border-border">
+                          {technical_issue_count} registrada{technical_issue_count > 1 ? 's' : ''}
                         </Badge>
                       </div>
                     )}
