@@ -483,14 +483,17 @@ export type Database = {
         Row: {
           appointment_type: string
           arrived_at: string | null
+          booking_reference: string | null
           cancellation_reason: string | null
           care_mode: string
           clinic_id: string
+          confirmation_token: string | null
           consent_telehealth_accepted: boolean
           consent_telehealth_accepted_at: string | null
           consent_telehealth_required: boolean
           created_at: string
           created_by: string | null
+          created_source: string
           duration_minutes: number
           end_time: string
           expected_value: number | null
@@ -529,14 +532,17 @@ export type Database = {
         Insert: {
           appointment_type?: string
           arrived_at?: string | null
+          booking_reference?: string | null
           cancellation_reason?: string | null
           care_mode?: string
           clinic_id: string
+          confirmation_token?: string | null
           consent_telehealth_accepted?: boolean
           consent_telehealth_accepted_at?: string | null
           consent_telehealth_required?: boolean
           created_at?: string
           created_by?: string | null
+          created_source?: string
           duration_minutes?: number
           end_time: string
           expected_value?: number | null
@@ -575,14 +581,17 @@ export type Database = {
         Update: {
           appointment_type?: string
           arrived_at?: string | null
+          booking_reference?: string | null
           cancellation_reason?: string | null
           care_mode?: string
           clinic_id?: string
+          confirmation_token?: string | null
           consent_telehealth_accepted?: boolean
           consent_telehealth_accepted_at?: string | null
           consent_telehealth_required?: boolean
           created_at?: string
           created_by?: string | null
+          created_source?: string
           duration_minutes?: number
           end_time?: string
           expected_value?: number | null
@@ -1730,6 +1739,9 @@ export type Database = {
           opening_hours: Json | null
           phone: string | null
           primary_specialty_id: string | null
+          public_booking_enabled: boolean
+          public_booking_settings: Json
+          slug: string | null
           updated_at: string
           whatsapp: string | null
         }
@@ -1759,6 +1771,9 @@ export type Database = {
           opening_hours?: Json | null
           phone?: string | null
           primary_specialty_id?: string | null
+          public_booking_enabled?: boolean
+          public_booking_settings?: Json
+          slug?: string | null
           updated_at?: string
           whatsapp?: string | null
         }
@@ -1788,6 +1803,9 @@ export type Database = {
           opening_hours?: Json | null
           phone?: string | null
           primary_specialty_id?: string | null
+          public_booking_enabled?: boolean
+          public_booking_settings?: Json
+          slug?: string | null
           updated_at?: string
           whatsapp?: string | null
         }
@@ -8220,6 +8238,16 @@ export type Database = {
           reason: string
         }[]
       }
+      check_slot_available: {
+        Args: {
+          _clinic_id: string
+          _end_time: string
+          _professional_id: string
+          _scheduled_date: string
+          _start_time: string
+        }
+        Returns: boolean
+      }
       clinic_specialty_summary: { Args: { _clinic_id: string }; Returns: Json }
       current_professional_id_for_clinic: {
         Args: { p_clinic_id: string }
@@ -8233,6 +8261,17 @@ export type Database = {
         Args: { _clinic_id: string; _specialty_slug: string }
         Returns: Json
       }
+      find_or_create_public_patient: {
+        Args: {
+          _birth_date?: string
+          _clinic_id: string
+          _cpf?: string
+          _email?: string
+          _full_name: string
+          _phone: string
+        }
+        Returns: string
+      }
       generate_secure_token: { Args: { p_length?: number }; Returns: string }
       generate_teleconsultation_token: {
         Args: {
@@ -8242,6 +8281,19 @@ export type Database = {
           p_token_type: string
         }
         Returns: string
+      }
+      get_booked_slots: {
+        Args: {
+          _clinic_id: string
+          _date_end: string
+          _date_start: string
+          _professional_id: string
+        }
+        Returns: {
+          end_time: string
+          scheduled_date: string
+          start_time: string
+        }[]
       }
       get_next_document_number: {
         Args: { p_clinic_id: string }
