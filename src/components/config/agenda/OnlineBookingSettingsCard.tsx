@@ -50,7 +50,7 @@ export function OnlineBookingSettingsCard() {
       const { data: profile, error: profileErr } = await supabase
         .from("profiles")
         .select("clinic_id")
-        .eq("id", user.id)
+        .eq("user_id", user.id)
         .single();
 
       if (profileErr || !profile?.clinic_id) {
