@@ -653,6 +653,65 @@ export function AppointmentDialog({
               />
               )}
 
+              {/* Care Mode (Modalidade) */}
+              {!isReschedule && (
+              <FormField
+                control={form.control}
+                name="care_mode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Modalidade</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || "presencial"}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {Object.entries(careModeLabels).map(([key, label]) => (
+                          <SelectItem key={key} value={key}>
+                            <div className="flex items-center gap-2">
+                              {key === 'teleconsulta' && <Video className="h-3.5 w-3.5" />}
+                              {label}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              )}
+
+              {/* Meeting Provider (only for teleconsulta) */}
+              {!isReschedule && watchCareMode === 'teleconsulta' && (
+                <FormField
+                  control={form.control}
+                  name="meeting_provider"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Provedor de Videoconferência</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || "manual"}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="manual">Link Manual</SelectItem>
+                          <SelectItem value="google_meet">Google Meet</SelectItem>
+                          <SelectItem value="zoom">Zoom</SelectItem>
+                          <SelectItem value="teams">Microsoft Teams</SelectItem>
+                          <SelectItem value="outro">Outro</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
               {/* Date */}
               <FormField
                 control={form.control}
