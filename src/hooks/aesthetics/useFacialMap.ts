@@ -107,6 +107,20 @@ function dbRowToApplication(row: any): FacialMapApplication {
     created_at: row.created_at,
     created_by: extra.created_by || null,
     updated_at: extra.updated_at || row.created_at,
+    // Extended fields
+    manufacturer: extra.manufacturer || null,
+    lot_number: extra.lot_number || null,
+    expiry_date: extra.expiry_date || null,
+    dilution: extra.dilution || null,
+    technique: extra.technique || null,
+    depth: extra.depth || null,
+    planned_volume: extra.planned_volume ?? null,
+    applied_volume: extra.applied_volume ?? null,
+    application_plan: extra.application_plan || null,
+    session_number: extra.session_number ?? null,
+    total_sessions: extra.total_sessions ?? null,
+    session_interval: extra.session_interval || null,
+    protocol: extra.protocol || null,
   };
 }
 
