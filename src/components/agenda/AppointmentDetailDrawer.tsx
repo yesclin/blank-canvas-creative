@@ -452,9 +452,9 @@ export function AppointmentDetailDrawer({
                       {hasSession && isSessionActive && (
                         <>
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
-                            className="gap-1 text-amber-600"
+                            className="gap-1 text-muted-foreground hover:text-amber-600"
                             onClick={() => reportTechnicalIssue.mutate({
                               appointmentId: appointment.id,
                               sessionId: teleSession!.id,
@@ -462,7 +462,7 @@ export function AppointmentDetailDrawer({
                             })}
                           >
                             <Wifi className="h-3.5 w-3.5" />
-                            Falha
+                            Registrar Falha
                           </Button>
                           <Button
                             variant="outline"
