@@ -221,6 +221,7 @@ export function AppointmentDialog({
   const watchStartTime = form.watch("start_time");
   const watchIsFitIn = form.watch("is_fit_in");
   const watchSpecialtyId = form.watch("specialty_id");
+  const watchCareMode = form.watch("care_mode");
 
   // Fetch professional-specific specialties — ALWAYS filter by selected professional
   const selectedProfId = lockedProfessionalId || watchProfessionalId || null;
