@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,10 +14,13 @@ import {
   Droplets,
   Sparkles,
   Plus,
+  CheckCircle2,
+  Clock,
 } from "lucide-react";
 import { FacialMapSVG } from "./FacialMapSVG";
 import { MuscleList } from "./MuscleList";
 import { ApplicationPointDialog } from "./ApplicationPointDialog";
+import { SessionHistoryPanel } from "./SessionHistoryPanel";
 import { useFacialMap } from "@/hooks/aesthetics";
 import { useFacialMapPdf } from "./useFacialMapPdf";
 import type { FacialMapApplication, ViewType, ProcedureType } from "./types";
@@ -28,6 +31,7 @@ import facialMapToxinaLateralDireita from "@/assets/facial-map-toxina-lateral-di
 import facialMapFillerFrontal from "@/assets/facial-map-filler-frontal.png";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface FacialMapModuleProps {
   patientId: string;
@@ -63,17 +67,27 @@ export function FacialMapModule({
    const [showHistory, setShowHistory] = useState(false);
    const [notesValue, setNotesValue] = useState('');
    const [editingNotes, setEditingNotes] = useState(false);
+   const [viewingHistoryMapId, setViewingHistoryMapId] = useState<string | null>(null);
+   const [historyApplications, setHistoryApplications] = useState<FacialMapApplication[]>([]);
  
    const { 
      facialMap,
      applications, 
      allApplications,
+     allMaps,
      isLoading, 
      addApplication,
      updateApplication,
      deleteApplication,
      updateMapNotes,
      createMap,
+     concludeSession,
+     isConcluding,
+     duplicateSession,
+     isDuplicating,
+     loadMapApplications,
+     currentMapId,
+     setCurrentMapId,
    } = useFacialMap(patientId, showHistory ? null : appointmentId, {
      professionalId: professionalId || null,
      specialtyKey,
@@ -82,13 +96,20 @@ export function FacialMapModule({
 
   // === CORE FILTERING ===
   const displayApplications = useMemo(() => {
+    // If viewing a specific history session
+    if (viewingHistoryMapId) {
+      return historyApplications.filter(a => a.procedure_type === activeProcedure);
+    }
     if (showHistory) {
       return allApplications.filter(a => a.procedure_type === activeProcedure);
     }
     return applications.filter(a => a.procedure_type === activeProcedure);
-  }, [showHistory, allApplications, applications, activeProcedure]);
+  }, [showHistory, viewingHistoryMapId, historyApplications, allApplications, applications, activeProcedure]);
 
-  const isEditing = canEdit && selectedMuscle !== null;
+  const isViewingHistory = !!viewingHistoryMapId;
+  const isSessionConcluded = facialMap?.status === 'concluded';
+  const canEditPoints = canEdit && !isViewingHistory && !isSessionConcluded && !showHistory;
+  const isEditing = canEditPoints && selectedMuscle !== null;
 
   const { generatePdf } = useFacialMapPdf({
     patientName,
@@ -97,12 +118,10 @@ export function FacialMapModule({
     applications: displayApplications,
   });
  
-  // Totals
   const currentTotal = useMemo(() => {
     return displayApplications.reduce((sum, app) => sum + app.quantity, 0);
   }, [displayApplications]);
 
-  // Region-based totals
   const regionTotals = useMemo(() => {
     const regions = getRegionsForProcedure(activeProcedure);
     const map = new Map<string, { name: string; total: number; count: number }>();
@@ -122,7 +141,7 @@ export function FacialMapModule({
   const ProcIcon = procConfig.icon;
  
    const handleMapClick = (x: number, y: number) => {
-     if (!canEdit) return;
+     if (!canEditPoints) return;
      if (!selectedMuscle) {
        toast.info(`Selecione ${activeProcedure === 'toxin' ? 'um músculo' : 'uma região'} antes de marcar o ponto.`);
        return;
@@ -136,6 +155,7 @@ export function FacialMapModule({
    };
  
    const handlePointClick = (point: FacialMapApplication) => {
+     if (isViewingHistory || showHistory) return; // View-only in history
      setSelectedPoint(point);
      setNewPointPosition(null);
      setDialogOpen(true);
@@ -193,6 +213,42 @@ export function FacialMapModule({
        console.error('Create map failed:', err);
      }
    };
+
+   const handleConcludeSession = async () => {
+     try {
+       await concludeSession();
+     } catch (err) {
+       console.error('Conclude session failed:', err);
+     }
+   };
+
+   const handleViewHistorySession = useCallback(async (mapId: string) => {
+     try {
+       const apps = await loadMapApplications(mapId);
+       setHistoryApplications(apps);
+       setViewingHistoryMapId(mapId);
+       setShowHistory(false);
+     } catch (err) {
+       console.error('Failed to load history session:', err);
+       toast.error('Erro ao carregar sessão');
+     }
+   }, [loadMapApplications]);
+
+   const handleExitHistoryView = () => {
+     setViewingHistoryMapId(null);
+     setHistoryApplications([]);
+   };
+
+   const handleDuplicateSession = async (sourceMapId: string) => {
+     try {
+       await duplicateSession(sourceMapId);
+       setShowHistory(false);
+       setViewingHistoryMapId(null);
+       setHistoryApplications([]);
+     } catch (err) {
+       console.error('Duplicate session failed:', err);
+     }
+   };
  
    if (isLoading) {
      return (
@@ -209,7 +265,6 @@ export function FacialMapModule({
    const noAppointment = !appointmentId;
    const noMap = !facialMap && !noAppointment;
 
-   // Base image per procedure + view
    const getBaseImage = () => {
      if (activeProcedure === 'filler' && viewType === 'frontal') return facialMapFillerFrontal;
      if (viewType === 'frontal') return facialMapToxinaFrontal;
@@ -217,6 +272,8 @@ export function FacialMapModule({
      if (viewType === 'right_lateral') return facialMapToxinaLateralDireita;
      return undefined;
    };
+
+   const viewingHistoryMap = viewingHistoryMapId ? allMaps.find(m => m.id === viewingHistoryMapId) : null;
  
    return (
      <div className="space-y-4">
@@ -227,9 +284,31 @@ export function FacialMapModule({
              <ProcIcon className="h-3.5 w-3.5" />
              {procConfig.label}
            </Badge>
-           {appointmentId && (
+           {facialMap && !isViewingHistory && (
+             <>
+               <span className="text-xs text-muted-foreground">
+                 Sessão: <span className="font-medium text-foreground">
+                   {format(new Date(facialMap.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                 </span>
+               </span>
+               {isSessionConcluded ? (
+                 <Badge variant="secondary" className="text-[10px] h-5 px-1.5 gap-0.5">
+                   <CheckCircle2 className="h-2.5 w-2.5" />
+                   Concluída
+                 </Badge>
+               ) : (
+                 <Badge variant="outline" className="text-[10px] h-5 px-1.5 gap-0.5 border-amber-300 text-amber-700 dark:text-amber-300">
+                   <Clock className="h-2.5 w-2.5" />
+                   Em andamento
+                 </Badge>
+               )}
+             </>
+           )}
+           {isViewingHistory && viewingHistoryMap && (
              <span className="text-xs text-muted-foreground">
-               Atendimento: <span className="font-medium text-foreground">{format(new Date(), 'dd/MM/yyyy')}</span>
+               Visualizando sessão de <span className="font-medium text-foreground">
+                 {format(new Date(viewingHistoryMap.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+               </span>
              </span>
            )}
            {currentTotal > 0 && (
@@ -239,17 +318,51 @@ export function FacialMapModule({
            )}
          </div>
          <div className="flex items-center gap-2">
-           {showHistory && (
-             <Badge variant="secondary" className="gap-1">
-               <History className="h-3 w-3" />
-               Histórico
-             </Badge>
+           {/* Conclude session button */}
+           {facialMap && !isSessionConcluded && canEdit && !isViewingHistory && !showHistory && (
+             <Button
+               variant="outline"
+               size="sm"
+               onClick={handleConcludeSession}
+               disabled={isConcluding || displayApplications.length === 0}
+               className="text-xs gap-1"
+             >
+               <CheckCircle2 className="h-3.5 w-3.5" />
+               {isConcluding ? 'Concluindo...' : 'Concluir Sessão'}
+             </Button>
            )}
          </div>
        </div>
 
+       {/* Viewing history session banner */}
+       {isViewingHistory && (
+         <div className="flex items-center justify-between gap-2 p-3 rounded-lg border border-purple-200 bg-purple-50 text-purple-800 dark:border-purple-800 dark:bg-purple-950/30 dark:text-purple-200">
+           <div className="flex items-center gap-2">
+             <History className="h-4 w-4 shrink-0" />
+             <p className="text-sm">Visualizando sessão anterior (somente leitura)</p>
+           </div>
+           <div className="flex gap-2">
+             {canEdit && (
+               <Button
+                 variant="outline"
+                 size="sm"
+                 onClick={() => handleDuplicateSession(viewingHistoryMapId!)}
+                 disabled={isDuplicating}
+                 className="text-xs gap-1"
+               >
+                 Duplicar como Base
+               </Button>
+             )}
+             <Button variant="outline" size="sm" onClick={handleExitHistoryView} className="text-xs gap-1">
+               <RotateCcw className="h-3.5 w-3.5" />
+               Voltar à Sessão Atual
+             </Button>
+           </div>
+         </div>
+       )}
+
        {/* No appointment warning */}
-       {noAppointment && (
+       {noAppointment && !isViewingHistory && (
          <div className="flex items-center gap-2 p-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
            <AlertCircle className="h-4 w-4 shrink-0" />
            <p className="text-sm">
@@ -259,7 +372,7 @@ export function FacialMapModule({
        )}
 
        {/* No map for current appointment */}
-       {noMap && canEdit && (
+       {noMap && canEdit && !isViewingHistory && (
          <div className="flex items-center justify-between gap-2 p-3 rounded-lg border border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-200">
            <div className="flex items-center gap-2">
              <Plus className="h-4 w-4 shrink-0" />
@@ -267,7 +380,21 @@ export function FacialMapModule({
            </div>
            <Button size="sm" variant="outline" onClick={handleCreateMap} className="shrink-0">
              <Plus className="h-3.5 w-3.5 mr-1" />
-             Novo Mapa da Sessão
+             Nova Sessão
+           </Button>
+         </div>
+       )}
+
+       {/* Concluded session - allow creating new */}
+       {isSessionConcluded && canEdit && !isViewingHistory && (
+         <div className="flex items-center justify-between gap-2 p-3 rounded-lg border border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950/30 dark:text-green-200">
+           <div className="flex items-center gap-2">
+             <CheckCircle2 className="h-4 w-4 shrink-0" />
+             <p className="text-sm">Esta sessão foi concluída. Crie uma nova sessão para registrar novas marcações.</p>
+           </div>
+           <Button size="sm" variant="outline" onClick={handleCreateMap} className="shrink-0">
+             <Plus className="h-3.5 w-3.5 mr-1" />
+             Nova Sessão
            </Button>
          </div>
        )}
@@ -316,15 +443,21 @@ export function FacialMapModule({
  
          <div className="flex items-center gap-2">
            <Button
-             variant="ghost"
+             variant={showHistory ? "default" : "ghost"}
              size="sm"
-             onClick={() => setShowHistory(!showHistory)}
-             className="text-muted-foreground"
+             onClick={() => {
+               if (isViewingHistory) {
+                 handleExitHistoryView();
+               } else {
+                 setShowHistory(!showHistory);
+               }
+             }}
+             className={showHistory ? "" : "text-muted-foreground"}
            >
-             {showHistory ? (
+             {showHistory || isViewingHistory ? (
                <>
                  <RotateCcw className="h-4 w-4 mr-1.5" />
-                 Atual
+                 Sessão Atual
                </>
              ) : (
                <>
@@ -346,177 +479,188 @@ export function FacialMapModule({
          </div>
        </div>
 
-       {/* History mode banner */}
+       {/* History Panel */}
        {showHistory && (
-         <div className="flex items-center gap-2 p-3 rounded-lg border border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-200">
-           <History className="h-4 w-4 shrink-0" />
-           <p className="text-sm">
-             Modo Histórico — exibindo todas as marcações de <strong>{procConfig.label}</strong> do paciente.
-           </p>
-         </div>
+         <SessionHistoryPanel
+           allMaps={allMaps}
+           currentMapId={currentMapId}
+           onViewSession={handleViewHistorySession}
+           onDuplicateSession={handleDuplicateSession}
+           onClose={() => setShowHistory(false)}
+           loadMapApplications={loadMapApplications}
+           canDuplicate={canEdit && !!appointmentId}
+         />
        )}
  
         {/* Main Content */}
-        <div className="flex flex-col gap-6">
-          {/* Top - Face Map */}
-          <div className="bg-gradient-to-b from-muted/20 to-muted/5 rounded-xl border p-4 flex items-center justify-center">
-            <div className="w-full max-w-[600px] mx-auto flex items-center justify-center">
-              <FacialMapSVG
-                viewType={viewType}
-                applications={displayApplications}
-                selectedPointId={selectedPoint?.id}
-                onPointClick={handlePointClick}
-                onMapClick={handleMapClick}
-                isEditing={isEditing}
-                selectedMuscle={selectedMuscle}
-                className="max-h-[700px]"
-                baseImageUrl={getBaseImage()}
-              />
-            </div>
-          </div>
-
-          {/* Empty state */}
-          {displayApplications.length === 0 && !isLoading && (
-            <div className="text-center py-6 text-muted-foreground">
-              <p className="text-sm">
-                {showHistory 
-                  ? `Nenhuma marcação de ${procConfig.label} encontrada no histórico.`
-                  : canEdit 
-                    ? `Selecione ${activeProcedure === 'toxin' ? 'um músculo' : 'uma região'} abaixo e clique no mapa para começar.`
-                    : 'Nenhuma marcação neste atendimento.'
-                }
-              </p>
-            </div>
-          )}
-
-          {/* Region Totals Summary */}
-          {regionTotals.length > 0 && (
-            <div className="bg-muted/20 rounded-xl border p-4">
-              <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                <ProcIcon className="h-4 w-4" />
-                Resumo por {activeProcedure === 'toxin' ? 'Músculo' : 'Região'}
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                {regionTotals.map((rt) => (
-                  <div key={rt.id} className="flex items-center justify-between p-2 rounded-lg bg-background border text-sm">
-                    <span className="truncate text-muted-foreground">{rt.name}</span>
-                    <span className="font-semibold ml-2 shrink-0">{rt.total} {unitLabel}</span>
-                  </div>
-                ))}
+        {!showHistory && (
+          <div className="flex flex-col gap-6">
+            {/* Top - Face Map */}
+            <div className="bg-gradient-to-b from-muted/20 to-muted/5 rounded-xl border p-4 flex items-center justify-center">
+              <div className="w-full max-w-[600px] mx-auto flex items-center justify-center">
+                <FacialMapSVG
+                  viewType={viewType}
+                  applications={displayApplications}
+                  selectedPointId={selectedPoint?.id}
+                  onPointClick={handlePointClick}
+                  onMapClick={handleMapClick}
+                  isEditing={isEditing}
+                  selectedMuscle={selectedMuscle}
+                  className="max-h-[700px]"
+                  baseImageUrl={getBaseImage()}
+                />
               </div>
-              {activeProcedure === 'biostimulator' && displayApplications.length > 0 && (
-                <div className="mt-3 pt-3 border-t text-sm text-muted-foreground space-y-1">
-                  {displayApplications[0]?.session_number && (
-                    <p>Sessão: <span className="font-medium text-foreground">{displayApplications[0].session_number} de {displayApplications[0].total_sessions || '?'}</span></p>
-                  )}
-                  {displayApplications[0]?.protocol && (
-                    <p>Protocolo: <span className="font-medium text-foreground">{displayApplications[0].protocol}</span></p>
-                  )}
-                </div>
-              )}
             </div>
-          )}
- 
-         {/* Region/Muscle List */}
-         <div className="bg-background rounded-xl border flex flex-col">
-           <div className="p-4 border-b">
-             <h3 className="font-semibold text-sm">
-               {activeProcedure === 'toxin' ? 'Músculos' : activeProcedure === 'filler' ? 'Regiões' : 'Áreas'}
-             </h3>
-             <p className="text-xs text-muted-foreground mt-1">
-               {canEdit 
-                 ? `Selecione ${activeProcedure === 'toxin' ? 'um músculo' : 'uma região'} e clique no mapa`
-                 : 'Visualização dos pontos de aplicação'
-               }
-             </p>
-             {selectedMuscle && canEdit && (
-               <Button 
-                 variant="ghost" 
-                 size="sm" 
-                 onClick={() => setSelectedMuscle(null)}
-                 className="mt-2 h-7 text-xs"
-               >
-                 Limpar seleção
-               </Button>
-             )}
-           </div>
-           <div className="flex-1 p-3 overflow-hidden">
-             <MuscleList
-               selectedMuscle={selectedMuscle}
-               onSelectMuscle={(id) => setSelectedMuscle(id)}
-               disabled={!canEdit || showHistory}
-               procedureType={activeProcedure}
-             />
-           </div>
-         </div>
-       </div>
- 
-       {/* Clinical Notes Section */}
-       <div className="bg-muted/20 rounded-xl border p-4">
-         <div className="flex items-center justify-between mb-3">
-           <div className="flex items-center gap-2">
-             <FileText className="h-4 w-4 text-muted-foreground" />
-             <h3 className="font-medium text-sm">Observações Clínicas</h3>
-           </div>
-           {canEdit && !editingNotes && !showHistory && (
-             <Button 
-               variant="ghost" 
-               size="sm" 
-               onClick={handleEditNotes}
-               className="h-7 text-xs"
-             >
-               Editar
-             </Button>
-           )}
-         </div>
-         
-         {editingNotes ? (
-           <div className="space-y-3">
-             <Textarea
-               value={notesValue}
-               onChange={(e) => setNotesValue(e.target.value)}
-               placeholder="Registre observações sobre reações, recomendações e anotações técnicas..."
-               rows={3}
-               className="bg-background resize-none"
-             />
-             <div className="flex gap-2">
-               <Button size="sm" onClick={handleSaveNotes} className="h-8">
-                 <Save className="h-3.5 w-3.5 mr-1.5" />
-                 Salvar
-               </Button>
-               <Button 
-                 size="sm" 
-                 variant="ghost" 
-                 onClick={() => setEditingNotes(false)}
-                 className="h-8"
-               >
-                 Cancelar
-               </Button>
+
+            {/* Empty state */}
+            {displayApplications.length === 0 && !isLoading && (
+              <div className="text-center py-6 text-muted-foreground">
+                <p className="text-sm">
+                  {isViewingHistory
+                    ? `Nenhuma marcação de ${procConfig.label} nesta sessão.`
+                    : canEditPoints 
+                      ? `Selecione ${activeProcedure === 'toxin' ? 'um músculo' : 'uma região'} abaixo e clique no mapa para começar.`
+                      : isSessionConcluded
+                      ? 'Sessão concluída. Crie uma nova sessão para novas marcações.'
+                      : 'Nenhuma marcação neste atendimento.'
+                  }
+                </p>
+              </div>
+            )}
+
+            {/* Region Totals Summary */}
+            {regionTotals.length > 0 && (
+              <div className="bg-muted/20 rounded-xl border p-4">
+                <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                  <ProcIcon className="h-4 w-4" />
+                  Resumo por {activeProcedure === 'toxin' ? 'Músculo' : 'Região'}
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {regionTotals.map((rt) => (
+                    <div key={rt.id} className="flex items-center justify-between p-2 rounded-lg bg-background border text-sm">
+                      <span className="truncate text-muted-foreground">{rt.name}</span>
+                      <span className="font-semibold ml-2 shrink-0">{rt.total} {unitLabel}</span>
+                    </div>
+                  ))}
+                </div>
+                {activeProcedure === 'biostimulator' && displayApplications.length > 0 && (
+                  <div className="mt-3 pt-3 border-t text-sm text-muted-foreground space-y-1">
+                    {displayApplications[0]?.session_number && (
+                      <p>Sessão: <span className="font-medium text-foreground">{displayApplications[0].session_number} de {displayApplications[0].total_sessions || '?'}</span></p>
+                    )}
+                    {displayApplications[0]?.protocol && (
+                      <p>Protocolo: <span className="font-medium text-foreground">{displayApplications[0].protocol}</span></p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+   
+           {/* Region/Muscle List */}
+           <div className="bg-background rounded-xl border flex flex-col">
+             <div className="p-4 border-b">
+               <h3 className="font-semibold text-sm">
+                 {activeProcedure === 'toxin' ? 'Músculos' : activeProcedure === 'filler' ? 'Regiões' : 'Áreas'}
+               </h3>
+               <p className="text-xs text-muted-foreground mt-1">
+                 {canEditPoints 
+                   ? `Selecione ${activeProcedure === 'toxin' ? 'um músculo' : 'uma região'} e clique no mapa`
+                   : 'Visualização dos pontos de aplicação'
+                 }
+               </p>
+               {selectedMuscle && canEditPoints && (
+                 <Button 
+                   variant="ghost" 
+                   size="sm" 
+                   onClick={() => setSelectedMuscle(null)}
+                   className="mt-2 h-7 text-xs"
+                 >
+                   Limpar seleção
+                 </Button>
+               )}
+             </div>
+             <div className="flex-1 p-3 overflow-hidden">
+               <MuscleList
+                 selectedMuscle={selectedMuscle}
+                 onSelectMuscle={(id) => setSelectedMuscle(id)}
+                 disabled={!canEditPoints}
+                 procedureType={activeProcedure}
+               />
              </div>
            </div>
-         ) : (
-           <p className="text-sm text-muted-foreground">
-             {facialMap?.general_notes || 'Nenhuma observação registrada.'}
-           </p>
-         )}
-       </div>
+         </div>
+        )}
+   
+        {/* Clinical Notes Section */}
+        {!showHistory && (
+          <div className="bg-muted/20 rounded-xl border p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <h3 className="font-medium text-sm">Observações Clínicas</h3>
+              </div>
+              {canEditPoints && !editingNotes && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleEditNotes}
+                  className="h-7 text-xs"
+                >
+                  Editar
+                </Button>
+              )}
+            </div>
+            
+            {editingNotes ? (
+              <div className="space-y-3">
+                <Textarea
+                  value={notesValue}
+                  onChange={(e) => setNotesValue(e.target.value)}
+                  placeholder="Registre observações sobre reações, recomendações e anotações técnicas..."
+                  rows={3}
+                  className="bg-background resize-none"
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleSaveNotes} className="h-8">
+                    <Save className="h-3.5 w-3.5 mr-1.5" />
+                    Salvar
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => setEditingNotes(false)}
+                    className="h-8"
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {facialMap?.general_notes || 'Nenhuma observação registrada.'}
+              </p>
+            )}
+          </div>
+        )}
  
        {/* Edit Dialog */}
-       <ApplicationPointDialog
-         open={dialogOpen}
-         onOpenChange={setDialogOpen}
-         point={selectedPoint || (newPointPosition ? { 
-           position_x: newPointPosition.x, 
-           position_y: newPointPosition.y,
-           view_type: viewType,
-         } : null)}
-         onSave={handleSavePoint}
-         onDelete={selectedPoint ? handleDeletePoint : undefined}
-         isNew={!selectedPoint}
-         preselectedMuscle={selectedMuscle}
-         preselectedProduct={COMMON_PRODUCTS[activeProcedure][0]}
-         preselectedType={activeProcedure}
-       />
+       {!isViewingHistory && (
+         <ApplicationPointDialog
+           open={dialogOpen}
+           onOpenChange={setDialogOpen}
+           point={selectedPoint || (newPointPosition ? { 
+             position_x: newPointPosition.x, 
+             position_y: newPointPosition.y,
+             view_type: viewType,
+           } : null)}
+           onSave={handleSavePoint}
+           onDelete={selectedPoint ? handleDeletePoint : undefined}
+           isNew={!selectedPoint}
+           preselectedMuscle={selectedMuscle}
+           preselectedProduct={COMMON_PRODUCTS[activeProcedure][0]}
+           preselectedType={activeProcedure}
+         />
+       )}
      </div>
    );
  }
