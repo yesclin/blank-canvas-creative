@@ -3,6 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
   Download, 
   History,
@@ -16,6 +26,8 @@ import {
   Plus,
   CheckCircle2,
   Clock,
+  Unlock,
+  Copy,
 } from "lucide-react";
 import { FacialMapSVG } from "./FacialMapSVG";
 import { MuscleList } from "./MuscleList";
@@ -44,9 +56,9 @@ interface FacialMapModuleProps {
 }
 
 const PROCEDURE_CONFIG = {
-  toxin: { label: 'Toxina', icon: Syringe, color: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 border-red-200 dark:border-red-800' },
-  filler: { label: 'Preenchimento', icon: Droplets, color: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border-blue-200 dark:border-blue-800' },
-  biostimulator: { label: 'Bioestimulador', icon: Sparkles, color: 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300 border-green-200 dark:border-green-800' },
+  toxin: { label: 'Toxina', icon: Syringe, color: 'bg-destructive/10 text-destructive border-destructive/20' },
+  filler: { label: 'Preenchimento', icon: Droplets, color: 'bg-primary/10 text-primary border-primary/20' },
+  biostimulator: { label: 'Bioestimulador', icon: Sparkles, color: 'bg-accent/10 text-accent-foreground border-accent/20' },
 } as const;
  
 export function FacialMapModule({ 
@@ -69,6 +81,10 @@ export function FacialMapModule({
    const [editingNotes, setEditingNotes] = useState(false);
    const [viewingHistoryMapId, setViewingHistoryMapId] = useState<string | null>(null);
    const [historyApplications, setHistoryApplications] = useState<FacialMapApplication[]>([]);
+   
+   // Confirmation dialog states
+   const [confirmAction, setConfirmAction] = useState<'conclude' | 'create' | 'reopen' | null>(null);
+   const [duplicateConfirmMapId, setDuplicateConfirmMapId] = useState<string | null>(null);
  
    const { 
      facialMap,
@@ -85,6 +101,8 @@ export function FacialMapModule({
      isConcluding,
      duplicateSession,
      isDuplicating,
+     reopenSession,
+     isReopening,
      loadMapApplications,
      currentMapId,
      setCurrentMapId,
@@ -96,7 +114,6 @@ export function FacialMapModule({
 
   // === CORE FILTERING ===
   const displayApplications = useMemo(() => {
-    // If viewing a specific history session
     if (viewingHistoryMapId) {
       return historyApplications.filter(a => a.procedure_type === activeProcedure);
     }
@@ -110,6 +127,7 @@ export function FacialMapModule({
   const isSessionConcluded = facialMap?.status === 'concluded';
   const canEditPoints = canEdit && !isViewingHistory && !isSessionConcluded && !showHistory;
   const isEditing = canEditPoints && selectedMuscle !== null;
+  const sourceSessionId = (facialMap as any)?.source_session_id;
 
   const { generatePdf } = useFacialMapPdf({
     patientName,
@@ -155,7 +173,7 @@ export function FacialMapModule({
    };
  
    const handlePointClick = (point: FacialMapApplication) => {
-     if (isViewingHistory || showHistory) return; // View-only in history
+     if (isViewingHistory || showHistory) return;
      setSelectedPoint(point);
      setNewPointPosition(null);
      setDialogOpen(true);
@@ -206,20 +224,33 @@ export function FacialMapModule({
      setSelectedMuscle(null);
    };
 
-   const handleCreateMap = async () => {
+   // Actions with confirmation
+   const handleConfirmedAction = async () => {
      try {
-       await createMap('general');
+       if (confirmAction === 'conclude') {
+         await concludeSession();
+       } else if (confirmAction === 'create') {
+         await createMap('general');
+       } else if (confirmAction === 'reopen') {
+         await reopenSession();
+       }
      } catch (err) {
-       console.error('Create map failed:', err);
+       console.error(`${confirmAction} failed:`, err);
      }
+     setConfirmAction(null);
    };
 
-   const handleConcludeSession = async () => {
+   const handleConfirmedDuplicate = async () => {
+     if (!duplicateConfirmMapId) return;
      try {
-       await concludeSession();
+       await duplicateSession(duplicateConfirmMapId);
+       setShowHistory(false);
+       setViewingHistoryMapId(null);
+       setHistoryApplications([]);
      } catch (err) {
-       console.error('Conclude session failed:', err);
+       console.error('Duplicate session failed:', err);
      }
+     setDuplicateConfirmMapId(null);
    };
 
    const handleViewHistorySession = useCallback(async (mapId: string) => {
@@ -237,17 +268,6 @@ export function FacialMapModule({
    const handleExitHistoryView = () => {
      setViewingHistoryMapId(null);
      setHistoryApplications([]);
-   };
-
-   const handleDuplicateSession = async (sourceMapId: string) => {
-     try {
-       await duplicateSession(sourceMapId);
-       setShowHistory(false);
-       setViewingHistoryMapId(null);
-       setHistoryApplications([]);
-     } catch (err) {
-       console.error('Duplicate session failed:', err);
-     }
    };
  
    if (isLoading) {
@@ -274,6 +294,21 @@ export function FacialMapModule({
    };
 
    const viewingHistoryMap = viewingHistoryMapId ? allMaps.find(m => m.id === viewingHistoryMapId) : null;
+
+   const confirmMessages = {
+     conclude: {
+       title: 'Concluir Sessão',
+       description: 'Ao concluir, esta sessão será congelada e não poderá receber novas marcações. Deseja continuar?',
+     },
+     create: {
+       title: 'Criar Nova Sessão',
+       description: 'Uma nova sessão de mapa facial será criada para este atendimento. Deseja continuar?',
+     },
+     reopen: {
+       title: 'Reabrir Sessão',
+       description: 'A sessão será reaberta e poderá receber novas marcações. Deseja continuar?',
+     },
+   };
  
    return (
      <div className="space-y-4">
@@ -297,7 +332,7 @@ export function FacialMapModule({
                    Concluída
                  </Badge>
                ) : (
-                 <Badge variant="outline" className="text-[10px] h-5 px-1.5 gap-0.5 border-amber-300 text-amber-700 dark:text-amber-300">
+                 <Badge variant="outline" className="text-[10px] h-5 px-1.5 gap-0.5">
                    <Clock className="h-2.5 w-2.5" />
                    Em andamento
                  </Badge>
@@ -305,11 +340,17 @@ export function FacialMapModule({
              </>
            )}
            {isViewingHistory && viewingHistoryMap && (
-             <span className="text-xs text-muted-foreground">
-               Visualizando sessão de <span className="font-medium text-foreground">
-                 {format(new Date(viewingHistoryMap.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+             <>
+               <Badge variant="outline" className="text-[10px] h-5 px-1.5 gap-0.5 border-secondary text-secondary-foreground bg-secondary/50">
+                 <History className="h-2.5 w-2.5" />
+                 Histórico
+               </Badge>
+               <span className="text-xs text-muted-foreground">
+                 Sessão de <span className="font-medium text-foreground">
+                   {format(new Date(viewingHistoryMap.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                 </span>
                </span>
-             </span>
+             </>
            )}
            {currentTotal > 0 && (
              <span className="text-sm font-semibold">
@@ -318,12 +359,25 @@ export function FacialMapModule({
            )}
          </div>
          <div className="flex items-center gap-2">
+           {/* Reopen session button */}
+           {isSessionConcluded && canEdit && !isViewingHistory && !showHistory && (
+             <Button
+               variant="ghost"
+               size="sm"
+               onClick={() => setConfirmAction('reopen')}
+               disabled={isReopening}
+               className="text-xs gap-1"
+             >
+               <Unlock className="h-3.5 w-3.5" />
+               {isReopening ? 'Reabrindo...' : 'Reabrir'}
+             </Button>
+           )}
            {/* Conclude session button */}
            {facialMap && !isSessionConcluded && canEdit && !isViewingHistory && !showHistory && (
              <Button
                variant="outline"
                size="sm"
-               onClick={handleConcludeSession}
+               onClick={() => setConfirmAction('conclude')}
                disabled={isConcluding || displayApplications.length === 0}
                className="text-xs gap-1"
              >
@@ -334,22 +388,31 @@ export function FacialMapModule({
          </div>
        </div>
 
+       {/* Source session banner */}
+       {sourceSessionId && !isViewingHistory && (
+         <div className="flex items-center gap-2 p-2.5 rounded-lg border bg-muted/20 text-muted-foreground">
+           <Copy className="h-3.5 w-3.5 shrink-0" />
+           <p className="text-xs">Sessão criada a partir de base anterior</p>
+         </div>
+       )}
+
        {/* Viewing history session banner */}
        {isViewingHistory && (
-         <div className="flex items-center justify-between gap-2 p-3 rounded-lg border border-purple-200 bg-purple-50 text-purple-800 dark:border-purple-800 dark:bg-purple-950/30 dark:text-purple-200">
+         <div className="flex items-center justify-between gap-2 p-3 rounded-lg border bg-secondary/30">
            <div className="flex items-center gap-2">
-             <History className="h-4 w-4 shrink-0" />
-             <p className="text-sm">Visualizando sessão anterior (somente leitura)</p>
+             <History className="h-4 w-4 shrink-0 text-muted-foreground" />
+             <p className="text-sm text-muted-foreground">Visualizando sessão anterior (somente leitura)</p>
            </div>
            <div className="flex gap-2">
              {canEdit && (
                <Button
                  variant="outline"
                  size="sm"
-                 onClick={() => handleDuplicateSession(viewingHistoryMapId!)}
+                 onClick={() => setDuplicateConfirmMapId(viewingHistoryMapId!)}
                  disabled={isDuplicating}
                  className="text-xs gap-1"
                >
+                 <Copy className="h-3.5 w-3.5" />
                  Duplicar como Base
                </Button>
              )}
@@ -363,9 +426,9 @@ export function FacialMapModule({
 
        {/* No appointment warning */}
        {noAppointment && !isViewingHistory && (
-         <div className="flex items-center gap-2 p-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
-           <AlertCircle className="h-4 w-4 shrink-0" />
-           <p className="text-sm">
+         <div className="flex items-center gap-2 p-3 rounded-lg border bg-muted/40">
+           <AlertCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
+           <p className="text-sm text-muted-foreground">
              Nenhum atendimento ativo. Inicie um atendimento para registrar novas marcações.
            </p>
          </div>
@@ -373,12 +436,12 @@ export function FacialMapModule({
 
        {/* No map for current appointment */}
        {noMap && canEdit && !isViewingHistory && (
-         <div className="flex items-center justify-between gap-2 p-3 rounded-lg border border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-200">
+         <div className="flex items-center justify-between gap-2 p-3 rounded-lg border bg-primary/5">
            <div className="flex items-center gap-2">
-             <Plus className="h-4 w-4 shrink-0" />
+             <Plus className="h-4 w-4 shrink-0 text-primary" />
              <p className="text-sm">Nenhum mapa facial neste atendimento.</p>
            </div>
-           <Button size="sm" variant="outline" onClick={handleCreateMap} className="shrink-0">
+           <Button size="sm" variant="outline" onClick={() => setConfirmAction('create')} className="shrink-0">
              <Plus className="h-3.5 w-3.5 mr-1" />
              Nova Sessão
            </Button>
@@ -387,12 +450,12 @@ export function FacialMapModule({
 
        {/* Concluded session - allow creating new */}
        {isSessionConcluded && canEdit && !isViewingHistory && (
-         <div className="flex items-center justify-between gap-2 p-3 rounded-lg border border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950/30 dark:text-green-200">
+         <div className="flex items-center justify-between gap-2 p-3 rounded-lg border bg-muted/30">
            <div className="flex items-center gap-2">
-             <CheckCircle2 className="h-4 w-4 shrink-0" />
-             <p className="text-sm">Esta sessão foi concluída. Crie uma nova sessão para registrar novas marcações.</p>
+             <CheckCircle2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+             <p className="text-sm text-muted-foreground">Sessão concluída. Crie uma nova sessão para novas marcações.</p>
            </div>
-           <Button size="sm" variant="outline" onClick={handleCreateMap} className="shrink-0">
+           <Button size="sm" variant="outline" onClick={() => setConfirmAction('create')} className="shrink-0">
              <Plus className="h-3.5 w-3.5 mr-1" />
              Nova Sessão
            </Button>
@@ -485,7 +548,7 @@ export function FacialMapModule({
            allMaps={allMaps}
            currentMapId={currentMapId}
            onViewSession={handleViewHistorySession}
-           onDuplicateSession={handleDuplicateSession}
+           onDuplicateSession={(mapId) => setDuplicateConfirmMapId(mapId)}
            onClose={() => setShowHistory(false)}
            loadMapApplications={loadMapApplications}
            canDuplicate={canEdit && !!appointmentId}
@@ -660,6 +723,41 @@ export function FacialMapModule({
            preselectedProduct={COMMON_PRODUCTS[activeProcedure][0]}
            preselectedType={activeProcedure}
          />
+       )}
+
+       {/* Confirmation Dialogs */}
+       {confirmAction && (
+         <AlertDialog open={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
+           <AlertDialogContent>
+             <AlertDialogHeader>
+               <AlertDialogTitle>{confirmMessages[confirmAction].title}</AlertDialogTitle>
+               <AlertDialogDescription>{confirmMessages[confirmAction].description}</AlertDialogDescription>
+             </AlertDialogHeader>
+             <AlertDialogFooter>
+               <AlertDialogCancel>Cancelar</AlertDialogCancel>
+               <AlertDialogAction onClick={handleConfirmedAction}>Confirmar</AlertDialogAction>
+             </AlertDialogFooter>
+           </AlertDialogContent>
+         </AlertDialog>
+       )}
+
+       {duplicateConfirmMapId && (
+         <AlertDialog open={!!duplicateConfirmMapId} onOpenChange={(open) => !open && setDuplicateConfirmMapId(null)}>
+           <AlertDialogContent>
+             <AlertDialogHeader>
+               <AlertDialogTitle>Duplicar Sessão como Base</AlertDialogTitle>
+               <AlertDialogDescription>
+                 Uma nova sessão será criada com os mesmos pontos da sessão selecionada. A sessão original não será alterada. Deseja continuar?
+               </AlertDialogDescription>
+             </AlertDialogHeader>
+             <AlertDialogFooter>
+               <AlertDialogCancel>Cancelar</AlertDialogCancel>
+               <AlertDialogAction onClick={handleConfirmedDuplicate} disabled={isDuplicating}>
+                 {isDuplicating ? 'Duplicando...' : 'Duplicar'}
+               </AlertDialogAction>
+             </AlertDialogFooter>
+           </AlertDialogContent>
+         </AlertDialog>
        )}
      </div>
    );
