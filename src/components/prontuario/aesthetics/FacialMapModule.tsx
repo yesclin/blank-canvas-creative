@@ -64,7 +64,7 @@ export function FacialMapModule({
   });
  
    // Calculate totals
-   const totals = displayApplications.reduce<Record<string, number>>((acc, app) => {
+   const totals = displayApplications.reduce((acc: Record<string, number>, app: any) => {
      if (!acc[app.procedure_type]) acc[app.procedure_type] = 0;
      acc[app.procedure_type] += app.quantity;
      return acc;
