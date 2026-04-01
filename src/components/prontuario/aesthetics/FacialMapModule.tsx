@@ -68,7 +68,9 @@ export function FacialMapModule({
      canEditRecords: canEdit,
    });
  
-  const displayApplications = showHistory ? allApplications : applications;
+  const displayApplications = showHistory 
+    ? allApplications 
+    : applications.filter(a => a.procedure_type === activeProcedure);
   const isEditing = canEdit && selectedMuscle !== null;
 
   // PDF export hook
