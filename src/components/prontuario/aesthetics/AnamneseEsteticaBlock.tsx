@@ -195,6 +195,32 @@ export function AnamneseEsteticaBlock({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Print/Export buttons for current record */}
+          {current && canExport && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrintRecord}
+                disabled={exportingPdf}
+                title="Imprimir ficha consolidada deste registro"
+              >
+                <Printer className="h-4 w-4 mr-1.5" />
+                Imprimir Registro
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrintRecord}
+                disabled={exportingPdf}
+                title="Gerar PDF consolidado deste registro"
+              >
+                <Download className="h-4 w-4 mr-1.5" />
+                {exportingPdf ? 'Gerando...' : 'Gerar PDF'}
+              </Button>
+            </>
+          )}
+
           {totalVersions > 1 && (
             <Button
               variant="ghost"
