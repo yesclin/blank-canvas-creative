@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,13 +16,16 @@ import {
   User,
   Clock,
   Stethoscope,
-  FileUp,
   ShieldCheck,
   AlertTriangle,
+  Shield,
+  RefreshCw,
 } from "lucide-react";
 
 interface AppointmentInfo {
   id: string;
+  clinic_id: string;
+  patient_id: string;
   patient_name: string;
   professional_name: string;
   specialty_name: string;
@@ -31,15 +34,16 @@ interface AppointmentInfo {
   end_time: string;
   clinic_name: string;
   clinic_logo?: string;
-  require_consent: boolean;
-  require_precheck: boolean;
   meeting_link?: string;
+  meeting_status: string;
 }
 
 type CheckStatus = "pending" | "checking" | "ok" | "failed";
 
 export default function PrecheckPage() {
   const { token } = useParams<{ token: string }>();
+  const navigate = useNavigate();
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [appointmentInfo, setAppointmentInfo] = useState<AppointmentInfo | null>(null);
@@ -64,11 +68,11 @@ export default function PrecheckPage() {
     }
 
     try {
-      // Look up appointment by meeting_id (used as token)
       const { data: apt, error: aptError } = await supabase
         .from("appointments")
         .select(`
-          id, scheduled_date, start_time, end_time, meeting_link, care_mode,
+          id, clinic_id, patient_id, scheduled_date, start_time, end_time,
+          meeting_link, meeting_status, care_mode,
           patients:patient_id(full_name),
           professionals:professional_id(full_name),
           specialties:specialty_id(name),
@@ -86,20 +90,29 @@ export default function PrecheckPage() {
       }
 
       const a = apt as any;
-      setAppointmentInfo({
-        id: a.id,
-        patient_name: a.patients?.full_name || "Paciente",
-        professional_name: a.professionals?.full_name || "Profissional",
-        specialty_name: a.specialties?.name || "",
-        scheduled_date: a.scheduled_date,
-        start_time: a.start_time,
-        end_time: a.end_time,
-        clinic_name: a.clinics?.name || "Clínica",
-        clinic_logo: a.clinics?.logo_url,
-        require_consent: true,
-        require_precheck: true,
-        meeting_link: a.meeting_link,
-      });
+
+      // If already ended, block access
+      if (a.meeting_status === "encerrada") {
+        setError("Esta consulta já foi encerrada");
+        setLoading(false);
+        return;
+      }
+
+      // If precheck already done, skip to completed
+      const { data: existingPrecheck } = await supabase
+        .from("teleconsultation_prechecks")
+        .select("id")
+        .eq("appointment_id", a.id)
+        .maybeSingle();
+
+      if (existingPrecheck) {
+        setAppointmentInfo(buildInfo(a));
+        setCompleted(true);
+        setLoading(false);
+        return;
+      }
+
+      setAppointmentInfo(buildInfo(a));
     } catch (err) {
       console.error(err);
       setError("Erro ao carregar informações do atendimento");
@@ -107,6 +120,24 @@ export default function PrecheckPage() {
       setLoading(false);
     }
   };
+
+  const buildInfo = (a: any): AppointmentInfo => ({
+    id: a.id,
+    clinic_id: a.clinic_id,
+    patient_id: a.patient_id,
+    patient_name: a.patients?.full_name || "Paciente",
+    professional_name: a.professionals?.full_name || "Profissional",
+    specialty_name: a.specialties?.name || "",
+    scheduled_date: a.scheduled_date,
+    start_time: a.start_time,
+    end_time: a.end_time,
+    clinic_name: a.clinics?.name || "Clínica",
+    clinic_logo: a.clinics?.logo_url,
+    meeting_link: a.meeting_link,
+    meeting_status: a.meeting_status,
+  });
+
+  // ── Device tests ──
 
   const testCamera = useCallback(async () => {
     setCameraStatus("checking");
@@ -155,11 +186,10 @@ export default function PrecheckPage() {
     if (!appointmentInfo || !token) return;
     setSubmitting(true);
     try {
-      // Save precheck
-      await supabase.from("teleconsultation_prechecks" as any).insert({
-        clinic_id: (await supabase.from("appointments").select("clinic_id").eq("id", appointmentInfo.id).single()).data?.clinic_id,
+      await supabase.from("teleconsultation_prechecks").insert({
+        clinic_id: appointmentInfo.clinic_id,
         appointment_id: appointmentInfo.id,
-        patient_id: (await supabase.from("appointments").select("patient_id").eq("id", appointmentInfo.id).single()).data?.patient_id,
+        patient_id: appointmentInfo.patient_id,
         camera_ok: cameraStatus === "ok",
         microphone_ok: micStatus === "ok",
         internet_ok: internetStatus === "ok",
@@ -168,12 +198,14 @@ export default function PrecheckPage() {
         completed_at: new Date().toISOString(),
       });
 
-      // Update appointment precheck status
-      await supabase.from("appointments").update({
-        precheck_status: "concluido",
-        consent_telehealth_accepted: consentAccepted,
-        consent_telehealth_accepted_at: new Date().toISOString(),
-      }).eq("id", appointmentInfo.id);
+      await supabase
+        .from("appointments")
+        .update({
+          precheck_status: "concluido",
+          consent_telehealth_accepted: consentAccepted,
+          consent_telehealth_accepted_at: new Date().toISOString(),
+        })
+        .eq("id", appointmentInfo.id);
 
       setCompleted(true);
     } catch (err) {
@@ -185,26 +217,70 @@ export default function PrecheckPage() {
   };
 
   const handleEnterRoom = () => {
-    if (appointmentInfo?.meeting_link) {
-      window.location.href = appointmentInfo.meeting_link;
+    if (token) {
+      navigate(`/teleconsulta/${token}/sala`);
     }
   };
 
+  const formatDate = (date: string) => {
+    try {
+      return new Date(date + "T00:00:00").toLocaleDateString("pt-BR", {
+        weekday: "long",
+        day: "2-digit",
+        month: "long",
+      });
+    } catch {
+      return date;
+    }
+  };
+
+  // ── Status icon component ──
+  const StatusIcon = ({ status }: { status: CheckStatus }) => {
+    switch (status) {
+      case "pending":
+        return <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30" />;
+      case "checking":
+        return <Loader2 className="h-5 w-5 animate-spin text-primary" />;
+      case "ok":
+        return <CheckCircle2 className="h-5 w-5 text-green-600" />;
+      case "failed":
+        return <XCircle className="h-5 w-5 text-destructive" />;
+    }
+  };
+
+  const statusLabel = (status: CheckStatus) => {
+    switch (status) {
+      case "pending": return "Não testado";
+      case "checking": return "Testando...";
+      case "ok": return "Funcionando";
+      case "failed": return "Falhou";
+    }
+  };
+
+  // ══════════════════════════════════════════
+  // RENDER — Loading
+  // ══════════════════════════════════════════
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-3">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Carregando pré-check...</p>
       </div>
     );
   }
 
+  // ══════════════════════════════════════════
+  // RENDER — Error
+  // ══════════════════════════════════════════
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="max-w-md w-full">
-          <CardContent className="pt-6 text-center space-y-4">
-            <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
-            <p className="text-lg font-medium">{error}</p>
+        <Card className="max-w-md w-full shadow-lg">
+          <CardContent className="pt-8 pb-8 text-center space-y-4">
+            <div className="h-14 w-14 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+              <Shield className="h-7 w-7 text-destructive" />
+            </div>
+            <h2 className="text-lg font-semibold">{error}</h2>
             <p className="text-sm text-muted-foreground">
               Verifique o link recebido ou entre em contato com a clínica.
             </p>
@@ -216,48 +292,63 @@ export default function PrecheckPage() {
 
   if (!appointmentInfo) return null;
 
-  const StatusIcon = ({ status }: { status: CheckStatus }) => {
-    switch (status) {
-      case "pending": return <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30" />;
-      case "checking": return <Loader2 className="h-5 w-5 animate-spin text-primary" />;
-      case "ok": return <CheckCircle2 className="h-5 w-5 text-green-600" />;
-      case "failed": return <XCircle className="h-5 w-5 text-destructive" />;
-    }
-  };
-
+  // ══════════════════════════════════════════
+  // RENDER — Completed
+  // ══════════════════════════════════════════
   if (completed) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="max-w-md w-full">
-          <CardContent className="pt-6 text-center space-y-4">
-            <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto" />
+        <Card className="max-w-md w-full shadow-lg">
+          <CardContent className="pt-8 pb-8 text-center space-y-5">
+            {appointmentInfo.clinic_logo && (
+              <img
+                src={appointmentInfo.clinic_logo}
+                alt=""
+                className="h-12 w-12 rounded-lg object-cover mx-auto"
+              />
+            )}
+            <div className="h-16 w-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto">
+              <CheckCircle2 className="h-9 w-9 text-green-600" />
+            </div>
             <h2 className="text-xl font-bold">Pré-check concluído!</h2>
             <p className="text-sm text-muted-foreground">
-              Você está pronto para a teleconsulta. Aguarde o horário da consulta para entrar na sala.
+              Você está pronto(a) para a teleconsulta com{" "}
+              <strong>Dr(a). {appointmentInfo.professional_name}</strong>.
             </p>
-            {appointmentInfo.meeting_link && (
-              <Button onClick={handleEnterRoom} className="w-full gap-2">
-                <Video className="h-4 w-4" />
-                Entrar na Consulta
-              </Button>
-            )}
+            <p className="text-xs text-muted-foreground">
+              {formatDate(appointmentInfo.scheduled_date)} às{" "}
+              {appointmentInfo.start_time.slice(0, 5)}
+            </p>
+            <Button onClick={handleEnterRoom} className="w-full gap-2" size="lg">
+              <Video className="h-4 w-4" />
+              Entrar na Sala de Consulta
+            </Button>
           </CardContent>
         </Card>
       </div>
     );
   }
 
+  // ══════════════════════════════════════════
+  // RENDER — Precheck form
+  // ══════════════════════════════════════════
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b bg-card">
         <div className="max-w-2xl mx-auto p-4 flex items-center gap-3">
           {appointmentInfo.clinic_logo && (
-            <img src={appointmentInfo.clinic_logo} alt="" className="h-10 w-10 rounded-lg object-cover" />
+            <img
+              src={appointmentInfo.clinic_logo}
+              alt=""
+              className="h-10 w-10 rounded-lg object-cover"
+            />
           )}
           <div>
             <h1 className="font-bold text-lg">{appointmentInfo.clinic_name}</h1>
-            <p className="text-xs text-muted-foreground">Pré-check de Teleconsulta</p>
+            <p className="text-xs text-muted-foreground">
+              Pré-check de Teleconsulta
+            </p>
           </div>
         </div>
       </div>
@@ -270,19 +361,21 @@ export default function PrecheckPage() {
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex items-center gap-2 text-sm">
-              <User className="h-4 w-4 text-muted-foreground" />
-              <span>Profissional: <strong>{appointmentInfo.professional_name}</strong></span>
+              <User className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span>
+                Profissional: <strong>Dr(a). {appointmentInfo.professional_name}</strong>
+              </span>
             </div>
             {appointmentInfo.specialty_name && (
               <div className="flex items-center gap-2 text-sm">
-                <Stethoscope className="h-4 w-4 text-muted-foreground" />
+                <Stethoscope className="h-4 w-4 text-muted-foreground shrink-0" />
                 <span>{appointmentInfo.specialty_name}</span>
               </div>
             )}
             <div className="flex items-center gap-2 text-sm">
-              <Clock className="h-4 w-4 text-muted-foreground" />
+              <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
               <span>
-                {new Date(appointmentInfo.scheduled_date + "T00:00:00").toLocaleDateString("pt-BR")} às{" "}
+                {formatDate(appointmentInfo.scheduled_date)} às{" "}
                 {appointmentInfo.start_time.slice(0, 5)}
               </span>
             </div>
@@ -298,27 +391,49 @@ export default function PrecheckPage() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">Verificação Técnica</CardTitle>
-              <Button variant="outline" size="sm" onClick={runAllChecks}>
+              <Button variant="outline" size="sm" onClick={runAllChecks} className="gap-1.5">
+                <RefreshCw className="h-3.5 w-3.5" />
                 Testar Tudo
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Clique em cada item ou em "Testar Tudo" para verificar seus dispositivos.
+            </p>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <button onClick={testCamera} className="flex items-center gap-3 w-full text-left p-2 rounded-md hover:bg-muted/50 transition-colors">
-              <StatusIcon status={cameraStatus} />
-              <Video className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm">Câmera</span>
-            </button>
-            <button onClick={testMic} className="flex items-center gap-3 w-full text-left p-2 rounded-md hover:bg-muted/50 transition-colors">
-              <StatusIcon status={micStatus} />
-              <Mic className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm">Microfone</span>
-            </button>
-            <button onClick={testInternet} className="flex items-center gap-3 w-full text-left p-2 rounded-md hover:bg-muted/50 transition-colors">
-              <StatusIcon status={internetStatus} />
-              <Wifi className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm">Conexão com a Internet</span>
-            </button>
+          <CardContent className="space-y-1">
+            <CheckRow
+              icon={Video}
+              label="Câmera"
+              status={cameraStatus}
+              statusLabel={statusLabel(cameraStatus)}
+              onClick={testCamera}
+              StatusIcon={StatusIcon}
+            />
+            <CheckRow
+              icon={Mic}
+              label="Microfone"
+              status={micStatus}
+              statusLabel={statusLabel(micStatus)}
+              onClick={testMic}
+              StatusIcon={StatusIcon}
+            />
+            <CheckRow
+              icon={Wifi}
+              label="Conexão com a Internet"
+              status={internetStatus}
+              statusLabel={statusLabel(internetStatus)}
+              onClick={testInternet}
+              StatusIcon={StatusIcon}
+            />
+
+            {(cameraStatus === "failed" || micStatus === "failed" || internetStatus === "failed") && (
+              <div className="flex items-start gap-2 mt-3 p-2.5 rounded-lg bg-destructive/10 border border-destructive/20">
+                <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                <p className="text-xs text-destructive">
+                  Um ou mais testes falharam. Verifique as permissões do navegador e tente novamente.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -337,8 +452,9 @@ export default function PrecheckPage() {
                 checked={identityConfirmed}
                 onCheckedChange={(v) => setIdentityConfirmed(v === true)}
               />
-              <label htmlFor="identity" className="text-sm cursor-pointer">
-                Confirmo que sou <strong>{appointmentInfo.patient_name}</strong> e que os dados acima estão corretos.
+              <label htmlFor="identity" className="text-sm cursor-pointer leading-relaxed">
+                Confirmo que sou <strong>{appointmentInfo.patient_name}</strong> e
+                que os dados acima estão corretos.
               </label>
             </div>
             <Separator />
@@ -348,9 +464,11 @@ export default function PrecheckPage() {
                 checked={consentAccepted}
                 onCheckedChange={(v) => setConsentAccepted(v === true)}
               />
-              <label htmlFor="consent" className="text-sm cursor-pointer">
-                Li e aceito o <strong>Termo de Consentimento para Teleatendimento</strong>. 
-                Compreendo que esta consulta será realizada de forma remota e concordo com as condições.
+              <label htmlFor="consent" className="text-sm cursor-pointer leading-relaxed">
+                Li e aceito o{" "}
+                <strong>Termo de Consentimento para Teleatendimento</strong>.
+                Compreendo que esta consulta será realizada de forma remota e
+                concordo com as condições.
               </label>
             </div>
           </CardContent>
@@ -370,7 +488,53 @@ export default function PrecheckPage() {
           )}
           Concluir Pré-Check
         </Button>
+
+        {!canProceed && (
+          <p className="text-xs text-center text-muted-foreground">
+            Complete todos os testes técnicos e aceite os termos para continuar.
+          </p>
+        )}
       </div>
     </div>
+  );
+}
+
+// ── Subcomponent ──
+
+function CheckRow({
+  icon: Icon,
+  label,
+  status,
+  statusLabel,
+  onClick,
+  StatusIcon,
+}: {
+  icon: typeof Video;
+  label: string;
+  status: CheckStatus;
+  statusLabel: string;
+  onClick: () => void;
+  StatusIcon: React.ComponentType<{ status: CheckStatus }>;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-3 w-full text-left p-2.5 rounded-md hover:bg-muted/50 transition-colors"
+    >
+      <StatusIcon status={status} />
+      <Icon className="h-4 w-4 text-muted-foreground" />
+      <span className="text-sm flex-1">{label}</span>
+      <span
+        className={`text-xs ${
+          status === "ok"
+            ? "text-green-600"
+            : status === "failed"
+            ? "text-destructive"
+            : "text-muted-foreground"
+        }`}
+      >
+        {statusLabel}
+      </span>
+    </button>
   );
 }
