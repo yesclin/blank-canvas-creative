@@ -2252,6 +2252,16 @@ export default function Prontuario() {
         clinicalDataLoading={clinicalDataLoading}
       />
 
+      {/* Teleconsulta Context Bar */}
+      {activeAppointment && (activeAppointment as any).care_mode === 'teleconsulta' && (
+        <div className="px-4 py-2 border-b">
+          <TeleconsultaContextBar
+            appointmentId={activeAppointment.id}
+            meetingLink={(activeAppointment as any).meeting_link}
+            meetingStatus={(activeAppointment as any).meeting_status || 'nao_gerada'}
+          />
+        </div>
+      )}
       {/* Barra de Pesquisa Global */}
       {patientId && (
         <div className="px-4 py-2 border-b bg-background">
