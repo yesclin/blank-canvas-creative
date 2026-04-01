@@ -103,6 +103,24 @@ export function AnamneseEsteticaBlock({
     isLoading: templateLoading,
   } = useResolvedAnamnesisTemplate(specialtyId, procedureId);
 
+  const { generateConsolidatedPdf, exporting: exportingPdf } = useConsolidatedFillerPdf();
+
+  const handlePrintRecord = () => {
+    if (!patientId || !current) return;
+    generateConsolidatedPdf({
+      patientId,
+      appointmentId: current.appointment_id,
+      patient: {
+        full_name: patientName || 'Paciente',
+        birth_date: patientBirthDate,
+        phone: patientPhone,
+        cpf: patientCpf,
+      },
+      professionalName,
+      professionalRegistration,
+    });
+  };
+
   // Carregar dados atuais no formulário
   useEffect(() => {
     if (current) {
