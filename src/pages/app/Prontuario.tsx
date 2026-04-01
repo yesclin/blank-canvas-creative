@@ -2256,7 +2256,7 @@ export default function Prontuario() {
         canExport={canPerformAction('export_pdf')}
         onPrint={onPrintClick}
         onExport={onExportClick}
-        exporting={exporting}
+        exporting={exporting || exportingFiller}
         insuranceName={(patient as any)?.insurance?.insurance_name || null}
         clinicalSummary={clinicalDataLoading ? undefined : (prontuarioClinicalData ? {
           allergies: (prontuarioClinicalData.allergies || []).map(a => a.split('\n')[0].substring(0, 40)),
