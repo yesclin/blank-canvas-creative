@@ -719,7 +719,7 @@ export default function PrecheckPage() {
                 onClick={testInternet}
               />
 
-              {/* Bind the camera click separately since CheckRow onClick isn't wired above */}
+
 
               {(cameraStatus === "failed" || micStatus === "failed" || internetStatus === "failed") && (
                 <div className="flex items-start gap-2 mt-3 p-2.5 rounded-lg bg-destructive/10 border border-destructive/20">
