@@ -7,6 +7,7 @@ import { AppointmentTypesCard } from "@/components/config/atendimento/Appointmen
 import { AppointmentStatusCard } from "@/components/config/atendimento/AppointmentStatusCard";
 import { AppointmentRulesCard } from "@/components/config/atendimento/AppointmentRulesCard";
 import { IdleAlertSettingsCard } from "@/components/config/atendimento/IdleAlertSettingsCard";
+import { TeleconsultaAgendaRulesCard } from "@/components/config/agenda/TeleconsultaAgendaRulesCard";
 
 export default function ConfigAgenda() {
   return (
