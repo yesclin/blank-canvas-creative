@@ -253,6 +253,7 @@ export function FacialMapModule({
                 baseImageUrl={
                   viewType === 'frontal' ? facialMapToxinaFrontal 
                   : viewType === 'left_lateral' ? facialMapToxinaLateralEsquerda 
+                  : viewType === 'right_lateral' ? facialMapToxinaLateralDireita
                   : undefined
                 }
               />
