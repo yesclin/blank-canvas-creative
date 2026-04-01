@@ -1,6 +1,6 @@
 /**
  * Componente para renderizar campos de anamnese com base no tipo
- * Suporta: text, textarea, select, multiselect, checkbox, radio, date, number, imagem_interativa
+ * Suporta: text, textarea, select, multiselect, checkbox, radio, date, number, imagem_interativa, link_mapa_facial
  */
 
 import { Input } from '@/components/ui/input';
@@ -16,7 +16,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { MapPin } from 'lucide-react';
 import type { CampoAnamnese } from '@/hooks/prontuario/estetica/anamneseTemplates';
 import { InteractiveImageCanvas } from './InteractiveImageCanvas';
 import facialMapToxinaFrontal from '@/assets/facial-map-toxina-frontal.png';
@@ -36,6 +38,8 @@ interface AnamneseFieldRendererProps {
   onChange: (value: unknown) => void;
   readOnly?: boolean;
   className?: string;
+  /** Callback to navigate to a specific prontuário tab (e.g. 'facial_map') */
+  onNavigateToTab?: (tabKey: string) => void;
 }
 
 export function AnamneseFieldRenderer({
