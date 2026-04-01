@@ -233,7 +233,7 @@ export function useFacialMap(
     return recentMap || null;
   };
 
-  const createNewFacialMap = async (mapType: MapType = preferredMapType) => {
+  const createNewFacialMap = async (mapType: MapType = preferredMapType, sourceSessionId?: string | null) => {
     ensureEditableContext();
 
     const authUserId = await getAuthUserId();
@@ -247,7 +247,7 @@ export function useFacialMap(
         appointment_id: appointmentId || null,
         created_by: authUserId,
         specialty_key: options?.specialtyKey || null,
-        source_session_id: null,
+        source_session_id: sourceSessionId || null,
       },
     };
 
