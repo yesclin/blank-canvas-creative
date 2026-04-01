@@ -180,8 +180,25 @@ export function FacialMapModule({
                  {label}
                </button>
              ))}
-           </div>
-         </div>
+            </div>
+
+            {/* Procedure Type Switcher */}
+            <div className="flex bg-muted rounded-lg p-1 ml-2">
+              {([['toxin', 'Toxina'], ['filler', 'Preenchimento'], ['biostimulator', 'Bioestimulador']] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setActiveProcedure(key)}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    activeProcedure === key 
+                      ? 'bg-background text-foreground shadow-sm' 
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
  
          <div className="flex items-center gap-2">
            {/* Totals Summary */}
