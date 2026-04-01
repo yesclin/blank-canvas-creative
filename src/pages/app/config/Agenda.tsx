@@ -32,6 +32,7 @@ export default function ConfigAgenda() {
           <TabsTrigger value="rules">Regras</TabsTrigger>
           <TabsTrigger value="alerts">Alertas de Ociosidade</TabsTrigger>
           <TabsTrigger value="teleconsulta">Teleconsulta</TabsTrigger>
+          <TabsTrigger value="online-booking">Agendamento Online</TabsTrigger>
         </TabsList>
 
         <TabsContent value="clinic" className="space-y-4">
