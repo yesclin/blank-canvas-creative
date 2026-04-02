@@ -42,6 +42,7 @@ import facialMapToxinaLateralEsquerda from "@/assets/facial-map-toxina-lateral-e
 import facialMapToxinaLateralDireita from "@/assets/facial-map-toxina-lateral-direita.png";
 import facialMapFillerFrontal from "@/assets/facial-map-filler-frontal.png";
 import facialMapFillerLeftLateral from "@/assets/facial-map-filler-left-lateral.png";
+import facialMapFillerRightLateral from "@/assets/facial-map-filler-right-lateral.png";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
