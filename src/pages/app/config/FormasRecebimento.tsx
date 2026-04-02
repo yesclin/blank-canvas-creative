@@ -324,10 +324,10 @@ export default function FormasRecebimento() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Tipo de Taxa</Label>
-                <Select value={form.fee_type || ""} onValueChange={(v) => set("fee_type", v || undefined)}>
+                <Select value={form.fee_type || "none"} onValueChange={(v) => set("fee_type", v === "none" ? undefined : v)}>
                   <SelectTrigger><SelectValue placeholder="Sem taxa" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Sem taxa</SelectItem>
+                    <SelectItem value="none">Sem taxa</SelectItem>
                     {FEE_TYPES.map((f) => (
                       <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
                     ))}

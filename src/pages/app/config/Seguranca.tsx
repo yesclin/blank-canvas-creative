@@ -880,7 +880,7 @@ export default function ConfigSeguranca() {
                   <SelectValue placeholder="Todas as ações" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas as ações</SelectItem>
+                  <SelectItem value="all">Todas as ações</SelectItem>
                   {Object.entries(actionLabels).map(([key, value]) => (
                     <SelectItem key={key} value={key}>{value.label}</SelectItem>
                   ))}
