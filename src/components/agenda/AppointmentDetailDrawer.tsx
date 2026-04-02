@@ -43,7 +43,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Appointment, AppointmentStatus, MeetingStatus } from "@/types/agenda";
-import { statusLabels, statusColors, typeLabels, careModeLabels, meetingStatusLabels, precheckStatusLabels, paymentStatusLabels, paymentTypeLabels } from "@/types/agenda";
+import { statusLabels, statusColors, typeLabels, careModeLabels, meetingStatusLabels, precheckStatusLabels, paymentStatusLabels, paymentTypeLabels, bookingSourceLabels } from "@/types/agenda";
+import { getAppointmentSourceLabel } from "@/utils/appointmentSource";
 import { useTeleconsultaActions, useTeleconsultaSession } from "@/hooks/useTeleconsulta";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAppointmentFinancialStatus } from "@/hooks/useAppointmentFinancialStatus";
@@ -295,6 +296,10 @@ export function AppointmentDetailDrawer({
             {insurance && <DetailRow icon={CreditCard} label="Convênio" value={insurance.name} />}
             <DetailRow icon={FileText} label="Tipo" value={typeLabels[appointment_type]} />
             {care_mode && <DetailRow icon={Video} label="Modalidade" value={careModeLabels[care_mode] || care_mode} />}
+            {(() => {
+              const sourceLabel = getAppointmentSourceLabel(appointment);
+              return sourceLabel ? <DetailRow icon={FileText} label="Origem" value={sourceLabel} /> : null;
+            })()}
           </div>
 
           <Separator />

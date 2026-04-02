@@ -487,6 +487,7 @@ export type Database = {
           appointment_type: string
           arrived_at: string | null
           booking_reference: string | null
+          booking_source: string | null
           cancellation_reason: string | null
           care_mode: string
           clinic_id: string
@@ -517,6 +518,8 @@ export type Database = {
           meeting_status: string
           notes: string | null
           patient_id: string
+          patient_snapshot_name: string | null
+          patient_snapshot_phone: string | null
           payment_status: string
           payment_type: string | null
           precheck_status: string
@@ -540,6 +543,7 @@ export type Database = {
           appointment_type?: string
           arrived_at?: string | null
           booking_reference?: string | null
+          booking_source?: string | null
           cancellation_reason?: string | null
           care_mode?: string
           clinic_id: string
@@ -570,6 +574,8 @@ export type Database = {
           meeting_status?: string
           notes?: string | null
           patient_id: string
+          patient_snapshot_name?: string | null
+          patient_snapshot_phone?: string | null
           payment_status?: string
           payment_type?: string | null
           precheck_status?: string
@@ -593,6 +599,7 @@ export type Database = {
           appointment_type?: string
           arrived_at?: string | null
           booking_reference?: string | null
+          booking_source?: string | null
           cancellation_reason?: string | null
           care_mode?: string
           clinic_id?: string
@@ -623,6 +630,8 @@ export type Database = {
           meeting_status?: string
           notes?: string | null
           patient_id?: string
+          patient_snapshot_name?: string | null
+          patient_snapshot_phone?: string | null
           payment_status?: string
           payment_type?: string | null
           precheck_status?: string

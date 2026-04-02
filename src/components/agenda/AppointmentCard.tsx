@@ -38,6 +38,7 @@ import { PatientAvatar } from "./PatientAvatar";
 import { AppointmentPaymentBadge } from "./AppointmentPaymentBadge";
 import { AppointmentHoverPreview } from "./AppointmentHoverPreview";
 import { useAppointmentFinancialStatus } from "@/hooks/useAppointmentFinancialStatus";
+import { getAppointmentSourceLabel } from "@/utils/appointmentSource";
 
 interface AppointmentCardProps {
   appointment: Appointment;
@@ -75,6 +76,7 @@ export function AppointmentCard({
   const { canViewCost } = useFinancialAccessControl();
   const financial = useAppointmentFinancialStatus(appointment);
   const isReceptionist = role === 'recepcionista';
+  const sourceLabel = getAppointmentSourceLabel(appointment);
 
   const getStatusActions = () => {
     switch (status) {
@@ -247,6 +249,12 @@ export function AppointmentCard({
               <Badge variant="outline" className="text-xs">
                 {typeLabels[appointment_type]}
               </Badge>
+              
+              {sourceLabel && sourceLabel !== 'Manual' && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                  {sourceLabel}
+                </Badge>
+              )}
               
               {/* Show procedure cost for finalized appointments - only for authorized users */}
               {status === 'finalizado' && canViewCost && procedure_cost !== undefined && procedure_cost !== null && procedure_cost > 0 && (

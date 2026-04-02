@@ -105,6 +105,24 @@ export function AppointmentHoverPreview({ appointment, children }: AppointmentHo
               <span>{preview.careModeLabel}</span>
             </div>
           )}
+          {preview.bookingSourceLabel && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="text-muted-foreground">Origem:</span>
+              <span>{preview.bookingSourceLabel}</span>
+            </div>
+          )}
+          {/* Badges */}
+          <div className="flex items-center gap-1 flex-wrap mt-1">
+            {preview.isFirstVisit && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">1ª Consulta</Badge>
+            )}
+            {preview.isReturn && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Retorno</Badge>
+            )}
+            {preview.isFitIn && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Encaixe</Badge>
+            )}
+          </div>
         </div>
 
         <Separator />

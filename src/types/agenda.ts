@@ -15,6 +15,8 @@ export type PaymentType = 'particular' | 'convenio' | 'cortesia' | 'pacote';
 
 export type PaymentStatus = 'pendente' | 'parcial' | 'pago' | 'isento' | 'faturar_convenio';
 
+export type BookingSource = 'manual' | 'link_publico' | 'retorno' | 'encaixe' | 'whatsapp' | 'campanha' | 'outro';
+
 export type CareMode = 'presencial' | 'teleconsulta' | 'domiciliar';
 
 export type MeetingStatus = 'nao_gerada' | 'gerada' | 'enviada' | 'paciente_entrou' | 'profissional_entrou' | 'em_andamento' | 'encerrada' | 'falhou';
@@ -132,6 +134,9 @@ export interface Appointment {
   amount_expected: number;
   amount_received: number;
   amount_due: number;
+  booking_source?: BookingSource;
+  patient_snapshot_name?: string;
+  patient_snapshot_phone?: string;
   notes?: string;
   cancellation_reason?: string;
   arrived_at?: string;
@@ -250,4 +255,53 @@ export interface ScheduleBlock {
   start_time: string | null;
   end_time: string | null;
   all_day: boolean;
+}
+
+export const bookingSourceLabels: Record<BookingSource, string> = {
+  manual: 'Manual',
+  link_publico: 'Link Público',
+  retorno: 'Retorno',
+  encaixe: 'Encaixe',
+  whatsapp: 'WhatsApp',
+  campanha: 'Campanha',
+  outro: 'Outro',
+};
+
+/** View model unificado para card, preview e drawer da agenda */
+export interface AgendaAppointmentViewModel {
+  id: string;
+  patientName: string;
+  patientPhone?: string;
+  patientEmail?: string;
+  patientBirthDate?: string;
+  patientAge?: number;
+  patientAvatarUrl?: string;
+  professionalName?: string;
+  specialtyName?: string;
+  procedureName?: string;
+  insuranceName?: string;
+  paymentType: PaymentType;
+  paymentTypeLabel: string;
+  paymentStatus: PaymentStatus;
+  paymentStatusLabel: string;
+  amountExpected: number;
+  amountReceived: number;
+  amountDue: number;
+  appointmentType: AppointmentType;
+  appointmentTypeLabel: string;
+  careMode: CareMode;
+  careModeLabel: string;
+  status: AppointmentStatus;
+  statusLabel: string;
+  bookingSource?: BookingSource;
+  bookingSourceLabel?: string;
+  notes?: string;
+  isFirstVisit: boolean;
+  isReturn: boolean;
+  isFitIn: boolean;
+  hasClinicalAlert: boolean;
+  clinicalAlertText?: string;
+  startTime: string;
+  endTime: string;
+  scheduledDate: string;
 }
