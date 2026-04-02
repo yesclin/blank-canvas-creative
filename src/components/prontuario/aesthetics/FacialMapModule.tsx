@@ -41,6 +41,7 @@ import facialMapToxinaFrontal from "@/assets/facial-map-toxina-frontal.png";
 import facialMapToxinaLateralEsquerda from "@/assets/facial-map-toxina-lateral-esquerda.png";
 import facialMapToxinaLateralDireita from "@/assets/facial-map-toxina-lateral-direita.png";
 import facialMapFillerFrontal from "@/assets/facial-map-filler-frontal.png";
+import facialMapFillerLeftLateral from "@/assets/facial-map-filler-left-lateral.png";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -286,13 +287,14 @@ export function FacialMapModule({
    const noAppointment = !appointmentId;
    const noMap = !facialMap && !noAppointment;
 
-   const getBaseImage = () => {
-     if (activeProcedure === 'filler' && viewType === 'frontal') return facialMapFillerFrontal;
-     if (viewType === 'frontal') return facialMapToxinaFrontal;
-     if (viewType === 'left_lateral') return facialMapToxinaLateralEsquerda;
-     if (viewType === 'right_lateral') return facialMapToxinaLateralDireita;
-     return undefined;
-   };
+    const getBaseImage = () => {
+      if (activeProcedure === 'filler' && viewType === 'frontal') return facialMapFillerFrontal;
+      if (activeProcedure === 'filler' && viewType === 'left_lateral') return facialMapFillerLeftLateral;
+      if (viewType === 'frontal') return facialMapToxinaFrontal;
+      if (viewType === 'left_lateral') return facialMapToxinaLateralEsquerda;
+      if (viewType === 'right_lateral') return facialMapToxinaLateralDireita;
+      return undefined;
+    };
 
    const viewingHistoryMap = viewingHistoryMapId ? allMaps.find(m => m.id === viewingHistoryMapId) : null;
 
