@@ -11,7 +11,9 @@ export type AppointmentStatus =
 
 export type AppointmentType = 'consulta' | 'retorno' | 'procedimento' | 'encaixe';
 
-export type PaymentType = 'particular' | 'convenio';
+export type PaymentType = 'particular' | 'convenio' | 'cortesia' | 'pacote';
+
+export type PaymentStatus = 'pendente' | 'parcial' | 'pago' | 'isento' | 'faturar_convenio';
 
 export type CareMode = 'presencial' | 'teleconsulta' | 'domiciliar';
 
