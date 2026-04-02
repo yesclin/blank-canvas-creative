@@ -18,6 +18,7 @@ import {
   ChevronDown,
   Wallet,
   Plug,
+  Briefcase,
   type LucideIcon,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
