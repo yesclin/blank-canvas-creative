@@ -11,7 +11,9 @@ export type AppointmentStatus =
 
 export type AppointmentType = 'consulta' | 'retorno' | 'procedimento' | 'encaixe';
 
-export type PaymentType = 'particular' | 'convenio';
+export type PaymentType = 'particular' | 'convenio' | 'cortesia' | 'pacote';
+
+export type PaymentStatus = 'pendente' | 'parcial' | 'pago' | 'isento' | 'faturar_convenio';
 
 export type CareMode = 'presencial' | 'teleconsulta' | 'domiciliar';
 
@@ -79,6 +81,7 @@ export interface Patient {
   cpf?: string;
   birth_date?: string;
   gender?: string;
+  avatar_url?: string;
   has_clinical_alert: boolean;
   clinical_alert_text?: string;
   is_active: boolean;
@@ -125,6 +128,10 @@ export interface Appointment {
   payment_type: PaymentType;
   expected_value?: number;
   procedure_cost?: number;
+  payment_status: PaymentStatus;
+  amount_expected: number;
+  amount_received: number;
+  amount_due: number;
   notes?: string;
   cancellation_reason?: string;
   arrived_at?: string;
@@ -215,6 +222,21 @@ export const typeLabels: Record<AppointmentType, string> = {
   retorno: 'Retorno',
   procedimento: 'Procedimento',
   encaixe: 'Encaixe',
+};
+
+export const paymentStatusLabels: Record<PaymentStatus, string> = {
+  pendente: 'Pendente',
+  parcial: 'Parcial',
+  pago: 'Pago',
+  isento: 'Isento',
+  faturar_convenio: 'Faturar Convênio',
+};
+
+export const paymentTypeLabels: Record<PaymentType, string> = {
+  particular: 'Particular',
+  convenio: 'Convênio',
+  cortesia: 'Cortesia',
+  pacote: 'Pacote',
 };
 
 export interface ScheduleBlock {

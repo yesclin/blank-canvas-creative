@@ -481,6 +481,9 @@ export type Database = {
       }
       appointments: {
         Row: {
+          amount_due: number | null
+          amount_expected: number | null
+          amount_received: number | null
           appointment_type: string
           arrived_at: string | null
           booking_reference: string | null
@@ -514,6 +517,7 @@ export type Database = {
           meeting_status: string
           notes: string | null
           patient_id: string
+          payment_status: string
           payment_type: string | null
           precheck_status: string
           procedure_cost: number | null
@@ -530,6 +534,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          amount_due?: number | null
+          amount_expected?: number | null
+          amount_received?: number | null
           appointment_type?: string
           arrived_at?: string | null
           booking_reference?: string | null
@@ -563,6 +570,7 @@ export type Database = {
           meeting_status?: string
           notes?: string | null
           patient_id: string
+          payment_status?: string
           payment_type?: string | null
           precheck_status?: string
           procedure_cost?: number | null
@@ -579,6 +587,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          amount_due?: number | null
+          amount_expected?: number | null
+          amount_received?: number | null
           appointment_type?: string
           arrived_at?: string | null
           booking_reference?: string | null
@@ -612,6 +623,7 @@ export type Database = {
           meeting_status?: string
           notes?: string | null
           patient_id?: string
+          payment_status?: string
           payment_type?: string | null
           precheck_status?: string
           procedure_cost?: number | null
@@ -5135,6 +5147,7 @@ export type Database = {
           address_state: string | null
           address_street: string | null
           address_zip: string | null
+          avatar_url: string | null
           birth_date: string | null
           clinic_id: string
           clinical_alert_text: string | null
@@ -5160,6 +5173,7 @@ export type Database = {
           address_state?: string | null
           address_street?: string | null
           address_zip?: string | null
+          avatar_url?: string | null
           birth_date?: string | null
           clinic_id: string
           clinical_alert_text?: string | null
@@ -5185,6 +5199,7 @@ export type Database = {
           address_state?: string | null
           address_street?: string | null
           address_zip?: string | null
+          avatar_url?: string | null
           birth_date?: string | null
           clinic_id?: string
           clinical_alert_text?: string | null
