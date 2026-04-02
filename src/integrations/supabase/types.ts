@@ -2030,46 +2030,64 @@ export type Database = {
       crm_leads: {
         Row: {
           assigned_to: string | null
+          birth_date: string | null
+          campaign_name: string | null
           clinic_id: string
+          converted_patient_id: string | null
           created_at: string
           created_by: string | null
           email: string | null
+          gender: string | null
           id: string
           name: string
           notes: string | null
           patient_id: string | null
           phone: string | null
+          procedure_interest_id: string | null
           source: string | null
+          specialty_interest_id: string | null
           status: string
           updated_at: string
         }
         Insert: {
           assigned_to?: string | null
+          birth_date?: string | null
+          campaign_name?: string | null
           clinic_id: string
+          converted_patient_id?: string | null
           created_at?: string
           created_by?: string | null
           email?: string | null
+          gender?: string | null
           id?: string
           name: string
           notes?: string | null
           patient_id?: string | null
           phone?: string | null
+          procedure_interest_id?: string | null
           source?: string | null
+          specialty_interest_id?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
           assigned_to?: string | null
+          birth_date?: string | null
+          campaign_name?: string | null
           clinic_id?: string
+          converted_patient_id?: string | null
           created_at?: string
           created_by?: string | null
           email?: string | null
+          gender?: string | null
           id?: string
           name?: string
           notes?: string | null
           patient_id?: string | null
           phone?: string | null
+          procedure_interest_id?: string | null
           source?: string | null
+          specialty_interest_id?: string | null
           status?: string
           updated_at?: string
         }
@@ -2082,10 +2100,31 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "crm_leads_converted_patient_id_fkey"
+            columns: ["converted_patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "crm_leads_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_leads_procedure_interest_id_fkey"
+            columns: ["procedure_interest_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_leads_specialty_interest_id_fkey"
+            columns: ["specialty_interest_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
             referencedColumns: ["id"]
           },
         ]
@@ -2127,14 +2166,19 @@ export type Database = {
       }
       crm_opportunities: {
         Row: {
+          assigned_to_user_id: string | null
           clinic_id: string
           closed_at: string | null
+          closing_probability: number | null
           created_at: string
           created_by: string | null
           estimated_value: number | null
           expected_close_date: string | null
           id: string
+          is_lost: boolean
+          is_won: boolean
           lead_id: string | null
+          loss_reason: string | null
           loss_reason_id: string | null
           notes: string | null
           patient_id: string | null
@@ -2147,14 +2191,19 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assigned_to_user_id?: string | null
           clinic_id: string
           closed_at?: string | null
+          closing_probability?: number | null
           created_at?: string
           created_by?: string | null
           estimated_value?: number | null
           expected_close_date?: string | null
           id?: string
+          is_lost?: boolean
+          is_won?: boolean
           lead_id?: string | null
+          loss_reason?: string | null
           loss_reason_id?: string | null
           notes?: string | null
           patient_id?: string | null
@@ -2167,14 +2216,19 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assigned_to_user_id?: string | null
           clinic_id?: string
           closed_at?: string | null
+          closing_probability?: number | null
           created_at?: string
           created_by?: string | null
           estimated_value?: number | null
           expected_close_date?: string | null
           id?: string
+          is_lost?: boolean
+          is_won?: boolean
           lead_id?: string | null
+          loss_reason?: string | null
           loss_reason_id?: string | null
           notes?: string | null
           patient_id?: string | null
