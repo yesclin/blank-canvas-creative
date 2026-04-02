@@ -36,11 +36,12 @@ export function QuoteItemsEditor({ items, onChange }: QuoteItemsEditorProps) {
   };
 
   const handleProcedureChange = (index: number, procedureId: string) => {
-    const proc = procedures?.find((p: any) => p.id === procedureId);
+    const actualId = procedureId === "none" ? "" : procedureId;
+    const proc = procedures?.find((p: any) => p.id === actualId);
     const updated = [...items];
     updated[index] = {
       ...updated[index],
-      procedure_id: procedureId || undefined,
+      procedure_id: actualId || undefined,
       description: proc?.name || updated[index].description,
     };
     onChange(updated);
@@ -71,10 +72,10 @@ export function QuoteItemsEditor({ items, onChange }: QuoteItemsEditorProps) {
             <div className="grid grid-cols-2 gap-2">
               <div className="col-span-2">
                 <Label className="text-xs">Procedimento</Label>
-                <Select value={item.procedure_id || ""} onValueChange={v => handleProcedureChange(index, v)}>
+                <Select value={item.procedure_id || "none"} onValueChange={v => handleProcedureChange(index, v)}>
                   <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value="none">Nenhum</SelectItem>
                     {(procedures || []).map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                   </SelectContent>
                 </Select>

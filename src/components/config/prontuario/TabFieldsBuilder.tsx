@@ -364,10 +364,10 @@ export function TabFieldsBuilder({ tabId, tabName, specialtyId }: TabFieldsBuild
                   <Label>Condicional (mostrar se…)</Label>
                   {otherFields.length > 0 ? (
                     <div className="grid grid-cols-3 gap-2">
-                      <Select value={formCondFieldId} onValueChange={setFormCondFieldId}>
+                      <Select value={formCondFieldId || "none"} onValueChange={v => setFormCondFieldId(v === "none" ? "" : v)}>
                         <SelectTrigger><SelectValue placeholder="Campo" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Nenhum</SelectItem>
+                          <SelectItem value="none">Nenhum</SelectItem>
                           {otherFields.map(f => (
                             <SelectItem key={f.id} value={f.id}>{f.label}</SelectItem>
                           ))}

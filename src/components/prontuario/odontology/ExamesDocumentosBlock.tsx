@@ -281,13 +281,13 @@ export function ExamesDocumentosBlock({
               />
             </div>
           </div>
-          <Select value={filterTipo} onValueChange={setFilterTipo}>
+          <Select value={filterTipo || "all"} onValueChange={v => setFilterTipo(v === "all" ? "" : v)}>
             <SelectTrigger className="w-[200px]">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Tipo" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos os tipos</SelectItem>
+              <SelectItem value="all">Todos os tipos</SelectItem>
               {Object.entries(TIPO_DOCUMENTO_CONFIG).map(([key, config]) => (
                 <SelectItem key={key} value={key}>{config.label}</SelectItem>
               ))}

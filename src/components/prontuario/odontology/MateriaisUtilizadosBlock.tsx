@@ -258,13 +258,13 @@ export function MateriaisUtilizadosBlock({
               />
             </div>
           </div>
-          <Select value={filterLote} onValueChange={setFilterLote}>
+          <Select value={filterLote || "all"} onValueChange={v => setFilterLote(v === "all" ? "" : v)}>
             <SelectTrigger className="w-[160px]">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Lote" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos os lotes</SelectItem>
+              <SelectItem value="all">Todos os lotes</SelectItem>
               {uniqueLotes.map(lote => (
                 <SelectItem key={lote} value={lote}>{lote}</SelectItem>
               ))}

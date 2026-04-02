@@ -38,37 +38,37 @@ export function CommercialFiltersBar({ filters, onChange, showSource = true, sho
         placeholder="Até"
       />
 
-      <Select value={filters.professionalId || ""} onValueChange={v => set("professionalId", v)}>
+      <Select value={filters.professionalId || "all"} onValueChange={v => set("professionalId", v === "all" ? "" : v)}>
         <SelectTrigger className="w-[160px]"><SelectValue placeholder="Profissional" /></SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Todos</SelectItem>
+          <SelectItem value="all">Todos</SelectItem>
           {(professionals || []).map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
         </SelectContent>
       </Select>
 
-      <Select value={filters.specialtyId || ""} onValueChange={v => set("specialtyId", v)}>
+      <Select value={filters.specialtyId || "all"} onValueChange={v => set("specialtyId", v === "all" ? "" : v)}>
         <SelectTrigger className="w-[150px]"><SelectValue placeholder="Especialidade" /></SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Todas</SelectItem>
+          <SelectItem value="all">Todas</SelectItem>
           {(specialties || []).map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
         </SelectContent>
       </Select>
 
       {showSource && (
-        <Select value={filters.source || ""} onValueChange={v => set("source", v)}>
+        <Select value={filters.source || "all"} onValueChange={v => set("source", v === "all" ? "" : v)}>
           <SelectTrigger className="w-[130px]"><SelectValue placeholder="Origem" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todas</SelectItem>
+            <SelectItem value="all">Todas</SelectItem>
             {LEAD_SOURCES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
           </SelectContent>
         </Select>
       )}
 
       {showAssigned && (
-        <Select value={filters.assignedTo || ""} onValueChange={v => set("assignedTo", v)}>
+        <Select value={filters.assignedTo || "all"} onValueChange={v => set("assignedTo", v === "all" ? "" : v)}>
           <SelectTrigger className="w-[160px]"><SelectValue placeholder="Responsável" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos</SelectItem>
+            <SelectItem value="all">Todos</SelectItem>
             {(users || []).map((u: any) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
           </SelectContent>
         </Select>

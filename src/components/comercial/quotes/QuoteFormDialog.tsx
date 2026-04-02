@@ -82,20 +82,20 @@ export function QuoteFormDialog({ open, onOpenChange, prefillLeadId, prefillOppo
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Lead</Label>
-              <Select value={form.lead_id} onValueChange={v => set("lead_id", v)}>
+              <Select value={form.lead_id || "none"} onValueChange={v => set("lead_id", v === "none" ? "" : v)}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="none">Nenhum</SelectItem>
                   {(leads || []).map((l: any) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div>
               <Label>Profissional</Label>
-              <Select value={form.professional_id} onValueChange={v => set("professional_id", v)}>
+              <Select value={form.professional_id || "none"} onValueChange={v => set("professional_id", v === "none" ? "" : v)}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="none">Nenhum</SelectItem>
                   {(professionals || []).map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                 </SelectContent>
               </Select>

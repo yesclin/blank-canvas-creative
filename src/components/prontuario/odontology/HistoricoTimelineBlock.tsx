@@ -270,13 +270,13 @@ export function HistoricoTimelineBlock({
               />
             </div>
           </div>
-          <Select value={filterType} onValueChange={setFilterType}>
+          <Select value={filterType || "all"} onValueChange={v => setFilterType(v === "all" ? "" : v)}>
             <SelectTrigger className="w-[200px]">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Tipo de registro" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos os tipos</SelectItem>
+              <SelectItem value="all">Todos os tipos</SelectItem>
               {Object.entries(ENTRY_TYPE_CONFIG).map(([key, config]) => (
                 <SelectItem key={key} value={key}>
                   <span className="flex items-center gap-2">

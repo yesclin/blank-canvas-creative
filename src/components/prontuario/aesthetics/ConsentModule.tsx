@@ -356,12 +356,12 @@ export function ConsentModule({
                   {procedures.length > 0 && (
                     <div className="space-y-2 border-b pb-4">
                       <Label className="text-sm">Vincular a um Procedimento (opcional)</Label>
-                      <Select value={selectedProcedureId} onValueChange={setSelectedProcedureId}>
+                      <Select value={selectedProcedureId || "none"} onValueChange={v => setSelectedProcedureId(v === "none" ? "" : v)}>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione um procedimento..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Nenhum (termo geral)</SelectItem>
+                          <SelectItem value="none">Nenhum (termo geral)</SelectItem>
                           {procedures.map((proc) => (
                             <SelectItem key={proc.id} value={proc.id}>
                               {proc.name}

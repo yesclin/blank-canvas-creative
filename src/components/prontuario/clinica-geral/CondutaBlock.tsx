@@ -307,14 +307,14 @@ export function CondutaBlock({
                     Vincular a uma Evolução (opcional)
                   </Label>
                   <Select 
-                    value={formData.evolucao_id} 
-                    onValueChange={(v) => setFormData(prev => ({ ...prev, evolucao_id: v }))}
+                    value={formData.evolucao_id || "none"} 
+                    onValueChange={(v) => setFormData(prev => ({ ...prev, evolucao_id: v === "none" ? "" : v }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione uma evolução..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Nenhuma</SelectItem>
+                      <SelectItem value="none">Nenhuma</SelectItem>
                       {availableEvolucoes.map((evo) => (
                         <SelectItem key={evo.id} value={evo.id}>
                           {format(parseISO(evo.data_hora), "dd/MM/yyyy HH:mm", { locale: ptBR })} - {evo.profissional_nome}
