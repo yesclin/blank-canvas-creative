@@ -36,11 +36,12 @@ export function QuoteItemsEditor({ items, onChange }: QuoteItemsEditorProps) {
   };
 
   const handleProcedureChange = (index: number, procedureId: string) => {
-    const proc = procedures?.find((p: any) => p.id === procedureId);
+    const actualId = procedureId === "none" ? "" : procedureId;
+    const proc = procedures?.find((p: any) => p.id === actualId);
     const updated = [...items];
     updated[index] = {
       ...updated[index],
-      procedure_id: procedureId || undefined,
+      procedure_id: actualId || undefined,
       description: proc?.name || updated[index].description,
     };
     onChange(updated);
