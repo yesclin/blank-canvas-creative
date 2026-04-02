@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Sheet,
@@ -50,6 +51,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useAppointmentFinancialStatus } from "@/hooks/useAppointmentFinancialStatus";
 import { PatientAvatar } from "./PatientAvatar";
 import { AppointmentPaymentBadge } from "./AppointmentPaymentBadge";
+import { AppointmentReceivePaymentDialog } from "./AppointmentReceivePaymentDialog";
 import { toast } from "sonner";
 
 interface AppointmentDetailDrawerProps {
@@ -85,8 +87,9 @@ export function AppointmentDetailDrawer({
   onStartAtendimento,
 }: AppointmentDetailDrawerProps) {
   const navigate = useNavigate();
-  const { role } = usePermissions();
+  const { role, can } = usePermissions();
   const financial = useAppointmentFinancialStatus(appointment);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const isTeleconsulta = appointment?.care_mode === 'teleconsulta';
   const { data: teleSession } = useTeleconsultaSession(isTeleconsulta ? appointment?.id ?? null : null);
   const { generateRoom, copyLink, endSession, reportTechnicalIssue, convertToPresencial } = useTeleconsultaActions();
@@ -329,6 +332,48 @@ export function AppointmentDetailDrawer({
                 <span className="font-medium text-red-600">{formatCurrency(financial.amountDue)}</span>
               </div>
             )}
+
+            {/* Payment action button */}
+            {(() => {
+              const canFinance = can("financeiro", "create") || can("agenda", "edit");
+              const ps = financial.paymentStatus;
+              
+              if (ps === "pago") {
+                return (
+                  <Badge variant="outline" className="w-full justify-center py-1.5 text-xs text-green-700 border-green-300 bg-green-50 dark:bg-green-950 dark:text-green-300 dark:border-green-800">
+                    Pagamento concluído
+                  </Badge>
+                );
+              }
+              if (ps === "isento") {
+                return (
+                  <Badge variant="outline" className="w-full justify-center py-1.5 text-xs">
+                    Isento
+                  </Badge>
+                );
+              }
+              if (ps === "faturar_convenio") {
+                return (
+                  <Badge variant="outline" className="w-full justify-center py-1.5 text-xs text-blue-700 border-blue-300 bg-blue-50 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
+                    Faturar convênio
+                  </Badge>
+                );
+              }
+              if ((ps === "pendente" || ps === "parcial") && canFinance) {
+                return (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="w-full gap-2"
+                    onClick={() => setPaymentDialogOpen(true)}
+                  >
+                    <DollarSign className="h-4 w-4" />
+                    {ps === "parcial" ? "Receber Restante" : "Receber Pagamento"}
+                  </Button>
+                );
+              }
+              return null;
+            })()}
           </div>
 
           {/* Teleconsulta Section */}
@@ -579,6 +624,14 @@ export function AppointmentDetailDrawer({
           </div>
         </div>
       </SheetContent>
+
+      {/* Payment Dialog */}
+      <AppointmentReceivePaymentDialog
+        appointment={appointment}
+        open={paymentDialogOpen}
+        onOpenChange={setPaymentDialogOpen}
+        financialStatus={financial}
+      />
     </Sheet>
   );
 }
