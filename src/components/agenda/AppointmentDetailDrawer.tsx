@@ -33,18 +33,17 @@ import {
   ExternalLink,
   Wifi,
   ArrowRightLeft,
-  ClipboardCheck,
   Power,
-  RefreshCw,
   Phone,
   Mail,
   Calendar,
-  UserCog,
   FolderOpen,
+  MessageSquare,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Appointment, AppointmentStatus, MeetingStatus } from "@/types/agenda";
-import { statusLabels, statusColors, typeLabels, careModeLabels, meetingStatusLabels, precheckStatusLabels, paymentStatusLabels, paymentTypeLabels, bookingSourceLabels } from "@/types/agenda";
+import { statusLabels, statusColors, typeLabels, careModeLabels, meetingStatusLabels, precheckStatusLabels, paymentTypeLabels } from "@/types/agenda";
 import { getAppointmentSourceLabel } from "@/utils/appointmentSource";
 import { useTeleconsultaActions, useTeleconsultaSession } from "@/hooks/useTeleconsulta";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -112,7 +111,6 @@ export function AppointmentDetailDrawer({
     notes,
     is_first_visit,
     is_return,
-    has_pending_payment,
     is_fit_in,
     arrived_at,
     started_at,
@@ -134,7 +132,7 @@ export function AppointmentDetailDrawer({
   const patientAge = calculateAge(patient?.birth_date);
 
   function getStatusActions(currentStatus: AppointmentStatus) {
-    const actions: { label: string; icon: typeof CheckCircle2; status: AppointmentStatus; variant?: "default" | "destructive" | "outline" }[] = [];
+    const actions: { label: string; icon: typeof CheckCircle2; status: AppointmentStatus }[] = [];
     switch (currentStatus) {
       case "nao_confirmado":
         actions.push({ label: "Confirmar", icon: CheckCircle2, status: "confirmado" });
@@ -200,174 +198,152 @@ export function AppointmentDetailDrawer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-        <SheetHeader className="pb-4">
-          {/* Patient header with avatar */}
-          <div className="flex items-center gap-3">
-            <PatientAvatar
-              name={patient?.full_name}
-              avatarUrl={patient?.avatar_url}
-              size="lg"
-            />
-            <div className="flex-1 min-w-0">
-              <SheetTitle className="text-left text-lg truncate">
-                {patient?.full_name || "Paciente"}
-              </SheetTitle>
-              {patientAge !== undefined && (
-                <p className="text-xs text-muted-foreground">{patientAge} anos</p>
-              )}
+      <SheetContent className="w-full sm:max-w-md overflow-y-auto p-0">
+        {/* ───── Header ───── */}
+        <div className="sticky top-0 z-10 bg-background border-b px-5 pt-5 pb-4">
+          <SheetHeader className="p-0">
+            <div className="flex items-center gap-3">
+              <PatientAvatar
+                name={patient?.full_name}
+                avatarUrl={patient?.avatar_url}
+                size="lg"
+              />
+              <div className="flex-1 min-w-0">
+                <SheetTitle className="text-left text-base truncate leading-tight">
+                  {patient?.full_name || "Paciente"}
+                </SheetTitle>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {start_time.slice(0, 5)} – {end_time.slice(0, 5)}
+                  {patientAge !== undefined && ` • ${patientAge} anos`}
+                </p>
+              </div>
             </div>
-          </div>
+          </SheetHeader>
 
           {/* Badges */}
-          <div className="flex items-center gap-2 flex-wrap mt-2">
-            <Badge className={cn("text-xs", statusColors[status])}>
+          <div className="flex items-center gap-1.5 flex-wrap mt-3">
+            <Badge className={cn("text-[10px] px-2 py-0.5", statusColors[status])}>
               {statusLabels[status]}
             </Badge>
-            <AppointmentPaymentBadge
-              paymentStatus={financial.paymentStatus}
-              paymentType={payment_type}
-              showType
-            />
+            <AppointmentPaymentBadge paymentStatus={financial.paymentStatus} paymentType={payment_type} showType />
             {is_first_visit && (
-              <Badge variant="secondary" className="text-xs gap-1">
-                <Sparkles className="h-3 w-3" />
-                1ª Consulta
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 gap-0.5">
+                <Sparkles className="h-2.5 w-2.5" /> 1ª
               </Badge>
             )}
             {is_return && (
-              <Badge variant="secondary" className="text-xs gap-1">
-                <RotateCcw className="h-3 w-3" />
-                Retorno
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 gap-0.5">
+                <RotateCcw className="h-2.5 w-2.5" /> Retorno
               </Badge>
             )}
             {is_fit_in && (
-              <Badge variant="secondary" className="text-xs">Encaixe</Badge>
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Encaixe</Badge>
             )}
             {isTeleconsulta && (
-              <Badge variant="secondary" className="text-xs gap-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-                <Video className="h-3 w-3" />
-                Teleconsulta
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 gap-0.5 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                <Video className="h-2.5 w-2.5" /> Tele
               </Badge>
             )}
           </div>
-        </SheetHeader>
 
-        <div className="space-y-5">
-          {/* Alerts - hidden for receptionist */}
+          {/* Primary action in header */}
+          {statusActions.length > 0 && (
+            <div className="mt-3">
+              {statusActions.map((action) => (
+                <Button key={action.status} className="w-full gap-2" size="sm" onClick={() => handleAction(action.status)}>
+                  <action.icon className="h-4 w-4" />
+                  {action.label}
+                </Button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ───── Body ───── */}
+        <div className="px-5 py-4 space-y-5">
+
+          {/* Clinical Alert */}
           {!isReceptionist && patient?.has_clinical_alert && (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+            <div className="flex items-start gap-2.5 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
               <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
               <div>
-                <p className="text-sm font-medium text-destructive">Alerta Clínico</p>
-                <p className="text-xs text-destructive/80">{patient.clinical_alert_text}</p>
+                <p className="text-xs font-semibold text-destructive">Alerta Clínico</p>
+                <p className="text-xs text-destructive/80 mt-0.5">{patient.clinical_alert_text}</p>
               </div>
             </div>
           )}
 
-          {/* Patient Contact */}
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">Paciente</p>
-            {patient?.phone && (
-              <div className="flex items-center gap-2 text-sm">
-                <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                <span>{patient.phone}</span>
-              </div>
-            )}
-            {patient?.email && (
-              <div className="flex items-center gap-2 text-sm">
-                <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="truncate">{patient.email}</span>
-              </div>
-            )}
-            {patient?.birth_date && (
-              <div className="flex items-center gap-2 text-sm">
-                <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                <span>{new Date(patient.birth_date).toLocaleDateString("pt-BR")}{patientAge !== undefined ? ` (${patientAge} anos)` : ''}</span>
-              </div>
-            )}
-          </div>
-
-          <Separator />
-
-          {/* Appointment Details */}
-          <div className="space-y-3">
-            <DetailRow icon={Clock} label="Horário" value={`${start_time.slice(0, 5)} – ${end_time.slice(0, 5)}`} />
-            <DetailRow icon={User} label="Profissional" value={professional?.full_name} />
-            {specialty && <DetailRow icon={Stethoscope} label="Especialidade" value={specialty.name} />}
-            {procedure && <DetailRow icon={FileText} label="Procedimento" value={procedure.name} />}
-            {room && <DetailRow icon={DoorOpen} label="Sala" value={room.name} />}
-            {insurance && <DetailRow icon={CreditCard} label="Convênio" value={insurance.name} />}
-            <DetailRow icon={FileText} label="Tipo" value={typeLabels[appointment_type]} />
-            {care_mode && <DetailRow icon={Video} label="Modalidade" value={careModeLabels[care_mode] || care_mode} />}
+          {/* ── Section: Atendimento ── */}
+          <Section title="Atendimento" icon={Stethoscope}>
+            <InfoRow label="Horário" value={`${start_time.slice(0, 5)} – ${end_time.slice(0, 5)}`} />
+            <InfoRow label="Profissional" value={professional?.full_name} />
+            {specialty && <InfoRow label="Especialidade" value={specialty.name} />}
+            {procedure && <InfoRow label="Procedimento" value={procedure.name} />}
+            {room && <InfoRow label="Sala" value={room.name} />}
+            {insurance && <InfoRow label="Convênio" value={insurance.name} />}
+            <InfoRow label="Tipo" value={typeLabels[appointment_type]} />
+            {care_mode && <InfoRow label="Modalidade" value={careModeLabels[care_mode] || care_mode} />}
             {(() => {
               const sourceLabel = getAppointmentSourceLabel(appointment);
-              return sourceLabel ? <DetailRow icon={FileText} label="Origem" value={sourceLabel} /> : null;
+              return sourceLabel ? <InfoRow label="Origem" value={sourceLabel} /> : null;
             })()}
-          </div>
+          </Section>
 
           <Separator />
 
-          {/* Financial Section */}
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">Financeiro</p>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Pagamento</span>
-              <span className="font-medium">{paymentTypeLabels[payment_type] || payment_type || "—"}</span>
-            </div>
+          {/* ── Section: Financeiro ── */}
+          <Section title="Financeiro" icon={DollarSign}>
+            <InfoRow label="Pagamento" value={paymentTypeLabels[payment_type] || payment_type || "—"} />
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Status</span>
               <AppointmentPaymentBadge paymentStatus={financial.paymentStatus} />
             </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Valor previsto</span>
-              <span className="font-medium">{formatCurrency(financial.amountExpected)}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Recebido</span>
-              <span className="font-medium text-green-600">{formatCurrency(financial.amountReceived)}</span>
-            </div>
-            {financial.amountDue > 0 && (
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Pendente</span>
-                <span className="font-medium text-red-600">{formatCurrency(financial.amountDue)}</span>
-              </div>
-            )}
 
-            {/* Payment action button */}
+            {/* Financial summary cards */}
+            <div className="grid grid-cols-3 gap-2 mt-2">
+              <div className="rounded-lg bg-muted/50 p-2 text-center">
+                <p className="text-[10px] text-muted-foreground">Previsto</p>
+                <p className="text-xs font-semibold">{formatCurrency(financial.amountExpected)}</p>
+              </div>
+              <div className="rounded-lg bg-muted/50 p-2 text-center">
+                <p className="text-[10px] text-muted-foreground">Recebido</p>
+                <p className="text-xs font-semibold text-green-600">{formatCurrency(financial.amountReceived)}</p>
+              </div>
+              <div className={cn("rounded-lg p-2 text-center", financial.amountDue > 0 ? "bg-destructive/5" : "bg-muted/50")}>
+                <p className="text-[10px] text-muted-foreground">Pendente</p>
+                <p className={cn("text-xs font-semibold", financial.amountDue > 0 ? "text-red-600" : "text-muted-foreground")}>
+                  {formatCurrency(financial.amountDue)}
+                </p>
+              </div>
+            </div>
+
+            {/* Payment action */}
             {(() => {
               const canFinance = can("financeiro", "create") || can("agenda", "edit");
               const ps = financial.paymentStatus;
               
               if (ps === "pago") {
                 return (
-                  <Badge variant="outline" className="w-full justify-center py-1.5 text-xs text-green-700 border-green-300 bg-green-50 dark:bg-green-950 dark:text-green-300 dark:border-green-800">
-                    Pagamento concluído
+                  <Badge variant="outline" className="w-full justify-center py-1.5 text-xs text-green-700 border-green-300 bg-green-50 dark:bg-green-950 dark:text-green-300 dark:border-green-800 mt-2">
+                    ✓ Pagamento concluído
                   </Badge>
                 );
               }
               if (ps === "isento") {
                 return (
-                  <Badge variant="outline" className="w-full justify-center py-1.5 text-xs">
-                    Isento
-                  </Badge>
+                  <Badge variant="outline" className="w-full justify-center py-1.5 text-xs mt-2">Isento</Badge>
                 );
               }
               if (ps === "faturar_convenio") {
                 return (
-                  <Badge variant="outline" className="w-full justify-center py-1.5 text-xs text-blue-700 border-blue-300 bg-blue-50 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
+                  <Badge variant="outline" className="w-full justify-center py-1.5 text-xs text-blue-700 border-blue-300 bg-blue-50 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800 mt-2">
                     Faturar convênio
                   </Badge>
                 );
               }
               if ((ps === "pendente" || ps === "parcial") && canFinance) {
                 return (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="w-full gap-2"
-                    onClick={() => setPaymentDialogOpen(true)}
-                  >
+                  <Button variant="default" size="sm" className="w-full gap-2 mt-2" onClick={() => setPaymentDialogOpen(true)}>
                     <DollarSign className="h-4 w-4" />
                     {ps === "parcial" ? "Receber Restante" : "Receber Pagamento"}
                   </Button>
@@ -375,15 +351,29 @@ export function AppointmentDetailDrawer({
               }
               return null;
             })()}
-          </div>
+          </Section>
 
           {/* Payment History */}
-          <AppointmentPaymentsHistory
-            appointmentId={appointment.id}
-            clinicId={appointment.clinic_id}
-          />
+          <AppointmentPaymentsHistory appointmentId={appointment.id} clinicId={appointment.clinic_id} />
 
-          {/* Teleconsulta Section */}
+          {/* ── Section: Contato ── */}
+          {(patient?.phone || patient?.email || patient?.birth_date) && (
+            <>
+              <Separator />
+              <Section title="Contato" icon={Phone}>
+                {patient?.phone && <InfoRow label="Telefone" value={patient.phone} />}
+                {patient?.email && <InfoRow label="E-mail" value={patient.email} />}
+                {patient?.birth_date && (
+                  <InfoRow 
+                    label="Nascimento" 
+                    value={`${new Date(patient.birth_date).toLocaleDateString("pt-BR")}${patientAge !== undefined ? ` (${patientAge} anos)` : ''}`} 
+                  />
+                )}
+              </Section>
+            </>
+          )}
+
+          {/* ── Section: Teleconsulta ── */}
           {isTeleconsulta && (() => {
             const hasSession = !!teleSession;
             const sessionStatus = teleSession?.status ?? null;
@@ -391,24 +381,22 @@ export function AppointmentDetailDrawer({
             const isSessionEnded = sessionStatus === 'encerrada';
 
             let sessionLabel = "Não Gerada";
-            let sessionText = "Sala não gerada";
             let sessionLabelColor = "text-muted-foreground";
 
             if (hasSession) {
               switch (sessionStatus) {
                 case 'nao_iniciada':
-                  sessionLabel = "Sala Gerada"; sessionText = "Sala gerada e pronta para uso"; sessionLabelColor = "text-blue-600"; break;
+                  sessionLabel = "Sala Gerada"; sessionLabelColor = "text-blue-600"; break;
                 case 'aguardando_paciente':
-                  sessionLabel = "Aguardando Paciente"; sessionText = "Sala gerada aguardando entrada do paciente"; sessionLabelColor = "text-amber-600"; break;
+                  sessionLabel = "Aguardando Paciente"; sessionLabelColor = "text-amber-600"; break;
                 case 'em_andamento':
-                  sessionLabel = "Em Andamento"; sessionText = "Teleconsulta em andamento"; sessionLabelColor = "text-green-600"; break;
+                  sessionLabel = "Em Andamento"; sessionLabelColor = "text-green-600"; break;
                 case 'encerrada':
-                  sessionLabel = "Encerrada"; sessionText = "Teleconsulta encerrada"; sessionLabelColor = "text-muted-foreground"; break;
+                  sessionLabel = "Encerrada"; sessionLabelColor = "text-muted-foreground"; break;
                 case 'falhou':
-                  sessionLabel = "Falha"; sessionText = "Sessão com falha técnica"; sessionLabelColor = "text-destructive"; break;
+                  sessionLabel = "Falha"; sessionLabelColor = "text-destructive"; break;
                 default:
                   sessionLabel = meetingStatusLabels[meeting_status as MeetingStatus] || sessionStatus || "Gerada";
-                  sessionText = `Status da sessão: ${sessionStatus}`;
                   sessionLabelColor = getMeetingStatusColor(meeting_status);
               }
             }
@@ -416,215 +404,153 @@ export function AppointmentDetailDrawer({
             return (
               <>
                 <Separator />
-                <div>
-                  <p className="text-sm font-semibold mb-3 flex items-center gap-2">
-                    <Video className="h-4 w-4 text-blue-600" />
-                    Teleconsulta
-                  </p>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Sessão</span>
-                      <span className={cn("font-medium", sessionLabelColor)}>{sessionLabel}</span>
+                <Section title="Teleconsulta" icon={Video}>
+                  <InfoRow label="Sessão" value={sessionLabel} valueClassName={sessionLabelColor} />
+                  <InfoRow label="Pré-check" value={precheckStatusLabels[precheck_status] || precheck_status} valueClassName={getPrecheckStatusColor(precheck_status)} />
+                  <InfoRow label="Termo aceito" value={consent_telehealth_accepted ? "Sim" : "Pendente"} valueClassName={consent_telehealth_accepted ? "text-green-600" : ""} />
+                  {meeting_provider && <InfoRow label="Provedor" value={meeting_provider} />}
+                  {technical_issue_count > 0 && <InfoRow label="Intercorrências" value={`${technical_issue_count}`} />}
+                  {meeting_started_at && <InfoRow label="Início sessão" value={formatTimestamp(meeting_started_at) || ""} />}
+                  {meeting_ended_at && <InfoRow label="Fim sessão" value={formatTimestamp(meeting_ended_at) || ""} />}
+
+                  {meeting_link && hasSession && (
+                    <div className="flex items-center gap-2 p-2 rounded-md bg-muted text-xs mt-1">
+                      <Video className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <span className="truncate flex-1">{meeting_link}</span>
                     </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Pré-check</span>
-                      <span className={cn("font-medium", getPrecheckStatusColor(precheck_status))}>
-                        {precheckStatusLabels[precheck_status] || precheck_status}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Termo aceito</span>
-                      <span className={cn("font-medium", consent_telehealth_accepted ? "text-green-600" : "text-muted-foreground")}>
-                        {consent_telehealth_accepted ? "Sim" : "Pendente"}
-                      </span>
-                    </div>
-                    {meeting_provider && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Provedor</span>
-                        <span className="font-medium capitalize">{meeting_provider}</span>
-                      </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    {!hasSession && (
+                      <Button variant="outline" size="sm" className="gap-1" disabled={generateRoom.isPending}
+                        onClick={() => generateRoom.mutate({
+                          appointmentId: appointment.id,
+                          patientId: appointment.patient_id,
+                          professionalId: appointment.professional_id,
+                        })}>
+                        <Video className="h-3.5 w-3.5" /> Gerar Sala
+                      </Button>
                     )}
-                    {technical_issue_count > 0 && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Intercorrências</span>
-                        <Badge variant="outline" className="text-xs text-muted-foreground border-border">
-                          {technical_issue_count} registrada{technical_issue_count > 1 ? 's' : ''}
-                        </Badge>
-                      </div>
+                    {hasSession && !isSessionEnded && (
+                      <>
+                        <Button variant="default" size="sm" className="gap-1" onClick={handleEnterRoom}>
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          {isReceptionist ? 'Copiar' : 'Abrir Sala'}
+                        </Button>
+                        {meeting_link && (
+                          <>
+                            <Button variant="outline" size="sm" className="gap-1" onClick={() => copyLink(meeting_link)}>
+                              <Copy className="h-3.5 w-3.5" /> Copiar Link
+                            </Button>
+                            <Button variant="outline" size="sm" className="gap-1" onClick={() => toast.success("Link reenviado ao paciente")}>
+                              <Send className="h-3.5 w-3.5" /> Reenviar
+                            </Button>
+                          </>
+                        )}
+                      </>
                     )}
-                    {meeting_started_at && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Início sessão</span>
-                        <span className="text-xs">{formatTimestamp(meeting_started_at)}</span>
-                      </div>
-                    )}
-                    {meeting_ended_at && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Fim sessão</span>
-                        <span className="text-xs">{formatTimestamp(meeting_ended_at)}</span>
-                      </div>
-                    )}
-                    <p className={cn("text-sm italic", hasSession ? "text-foreground" : "text-muted-foreground")}>
-                      {sessionText}
-                    </p>
-                    {meeting_link && hasSession && (
-                      <div className="flex items-center gap-2 p-2 rounded-md bg-muted text-sm">
-                        <Video className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <span className="truncate flex-1 text-xs">{meeting_link}</span>
-                      </div>
-                    )}
-                    <div className="grid grid-cols-2 gap-2">
-                      {!hasSession && (
-                        <Button variant="outline" size="sm" className="gap-1" disabled={generateRoom.isPending}
-                          onClick={() => generateRoom.mutate({
+                    {hasSession && isSessionActive && (
+                      <>
+                        <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground hover:text-amber-600"
+                          onClick={() => reportTechnicalIssue.mutate({
                             appointmentId: appointment.id,
-                            patientId: appointment.patient_id,
-                            professionalId: appointment.professional_id,
+                            sessionId: teleSession!.id,
+                            description: "Falha técnica reportada",
                           })}>
-                          <Video className="h-3.5 w-3.5" />
-                          Gerar Sala
+                          <Wifi className="h-3.5 w-3.5" /> Registrar Falha
                         </Button>
-                      )}
-                      {hasSession && !isSessionEnded && (
-                        <>
-                          <Button variant="default" size="sm" className="gap-1" onClick={handleEnterRoom}>
-                            <ExternalLink className="h-3.5 w-3.5" />
-                            {isReceptionist ? 'Copiar' : 'Abrir Sala'}
-                          </Button>
-                          {meeting_link && (
-                            <>
-                              <Button variant="outline" size="sm" className="gap-1" onClick={() => copyLink(meeting_link)}>
-                                <Copy className="h-3.5 w-3.5" />
-                                Copiar Link
-                              </Button>
-                              <Button variant="outline" size="sm" className="gap-1" onClick={() => toast.success("Link reenviado ao paciente")}>
-                                <Send className="h-3.5 w-3.5" />
-                                Reenviar
-                              </Button>
-                            </>
-                          )}
-                        </>
-                      )}
-                      {hasSession && isSessionActive && (
-                        <>
-                          <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground hover:text-amber-600"
-                            onClick={() => reportTechnicalIssue.mutate({
-                              appointmentId: appointment.id,
-                              sessionId: teleSession!.id,
-                              description: "Falha técnica reportada",
-                            })}>
-                            <Wifi className="h-3.5 w-3.5" />
-                            Registrar Falha
-                          </Button>
-                          <Button variant="outline" size="sm" className="gap-1 text-destructive"
-                            onClick={() => endSession.mutate({
-                              appointmentId: appointment.id,
-                              sessionId: teleSession!.id,
-                            })}>
-                            <Power className="h-3.5 w-3.5" />
-                            Encerrar
-                          </Button>
-                        </>
-                      )}
-                      {!isSessionEnded && (
-                        <Button variant="outline" size="sm" className="gap-1"
-                          onClick={() => convertToPresencial.mutate({ appointmentId: appointment.id })}>
-                          <ArrowRightLeft className="h-3.5 w-3.5" />
-                          Presencial
+                        <Button variant="outline" size="sm" className="gap-1 text-destructive"
+                          onClick={() => endSession.mutate({
+                            appointmentId: appointment.id,
+                            sessionId: teleSession!.id,
+                          })}>
+                          <Power className="h-3.5 w-3.5" /> Encerrar
                         </Button>
-                      )}
-                    </div>
+                      </>
+                    )}
+                    {!isSessionEnded && (
+                      <Button variant="outline" size="sm" className="gap-1"
+                        onClick={() => convertToPresencial.mutate({ appointmentId: appointment.id })}>
+                        <ArrowRightLeft className="h-3.5 w-3.5" /> Presencial
+                      </Button>
+                    )}
                   </div>
-                </div>
+                </Section>
               </>
             );
           })()}
 
-          {/* Notes */}
+          {/* ── Section: Observações ── */}
           {notes && (
             <>
               <Separator />
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-1">Observações</p>
-                <p className="text-sm whitespace-pre-wrap">{notes}</p>
-              </div>
+              <Section title="Observações" icon={MessageSquare}>
+                <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/80">{notes}</p>
+              </Section>
             </>
           )}
 
-          {/* Timestamps */}
+          {/* ── Section: Histórico de status ── */}
           {(arrived_at || started_at || finished_at) && (
             <>
               <Separator />
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground mb-2">Histórico</p>
-                {arrived_at && <p className="text-xs text-muted-foreground">Chegou às {formatTimestamp(arrived_at)}</p>}
-                {started_at && <p className="text-xs text-muted-foreground">Atendimento iniciado às {formatTimestamp(started_at)}</p>}
-                {finished_at && <p className="text-xs text-muted-foreground">Finalizado às {formatTimestamp(finished_at)}</p>}
-              </div>
+              <Section title="Histórico" icon={History}>
+                <div className="space-y-1.5">
+                  {arrived_at && <p className="text-xs text-muted-foreground">✓ Chegou às {formatTimestamp(arrived_at)}</p>}
+                  {started_at && <p className="text-xs text-muted-foreground">▶ Atendimento iniciado às {formatTimestamp(started_at)}</p>}
+                  {finished_at && <p className="text-xs text-muted-foreground">■ Finalizado às {formatTimestamp(finished_at)}</p>}
+                </div>
+              </Section>
             </>
           )}
 
-          {/* Actions */}
+          {/* ── Actions ── */}
           <Separator />
-          <div className="space-y-2">
-            {/* Primary status action */}
-            {statusActions.map((action) => (
-              <Button key={action.status} className="w-full" onClick={() => handleAction(action.status)}>
-                <action.icon className="mr-2 h-4 w-4" />
-                {action.label}
-              </Button>
-            ))}
-
-            {/* Quick navigation actions */}
+          <div className="space-y-2 pb-2">
+            {/* Secondary actions */}
             <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" size="sm" onClick={() => {
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
                 onOpenChange(false);
                 onLaunchSale?.(appointment);
               }}>
-                <ShoppingCart className="mr-1 h-3.5 w-3.5" />
-                Venda
+                <ShoppingCart className="h-3.5 w-3.5" /> Venda
               </Button>
-              <Button variant="outline" size="sm" onClick={() => {
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
                 onOpenChange(false);
                 onReschedule?.(appointment);
               }}>
-                <CalendarClock className="mr-1 h-3.5 w-3.5" />
-                Reagendar
+                <CalendarClock className="h-3.5 w-3.5" /> Reagendar
               </Button>
             </div>
 
-            {/* Patient quick actions */}
+            {/* Patient navigation */}
             <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" size="sm" onClick={() => {
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
                 onOpenChange(false);
                 navigate(`/app/pacientes/${appointment.patient_id}`);
               }}>
-                <User className="mr-1 h-3.5 w-3.5" />
-                Perfil
+                <User className="h-3.5 w-3.5" /> Perfil
               </Button>
               {!isReceptionist && (
-                <Button variant="outline" size="sm" onClick={() => {
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
                   onOpenChange(false);
                   navigate(`/app/prontuario/${appointment.patient_id}`);
                 }}>
-                  <FolderOpen className="mr-1 h-3.5 w-3.5" />
-                  Prontuário
+                  <FolderOpen className="h-3.5 w-3.5" /> Prontuário
                 </Button>
               )}
             </div>
 
-            {/* Destructive actions */}
+            {/* Destructive actions - visually separated */}
             {!isTerminal && (
-              <div className="grid grid-cols-2 gap-2 pt-2">
-                <Button variant="outline" size="sm" className="text-amber-600 border-amber-300 hover:bg-amber-50"
+              <div className="grid grid-cols-2 gap-2 pt-3 mt-1 border-t border-dashed border-border">
+                <Button variant="outline" size="sm" className="gap-1.5 text-amber-600 border-amber-200 hover:bg-amber-50 dark:border-amber-800 dark:hover:bg-amber-950"
                   onClick={() => { onStatusChange?.(appointment.id, "faltou"); onOpenChange(false); }}>
-                  <UserX className="mr-1 h-3.5 w-3.5" />
-                  Falta
+                  <UserX className="h-3.5 w-3.5" /> Falta
                 </Button>
-                <Button variant="outline" size="sm" className="text-destructive border-destructive/30 hover:bg-destructive/5"
+                <Button variant="outline" size="sm" className="gap-1.5 text-destructive border-destructive/20 hover:bg-destructive/5"
                   onClick={() => { onStatusChange?.(appointment.id, "cancelado"); onOpenChange(false); }}>
-                  <XCircle className="mr-1 h-3.5 w-3.5" />
-                  Cancelar
+                  <XCircle className="h-3.5 w-3.5" /> Cancelar
                 </Button>
               </div>
             )}
@@ -643,14 +569,27 @@ export function AppointmentDetailDrawer({
   );
 }
 
-function DetailRow({ icon: Icon, label, value }: { icon: typeof Clock; label: string; value?: string | null }) {
+/* ── Shared UI pieces ── */
+
+function Section({ title, icon: Icon, children }: { title: string; icon: typeof Clock; children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-3">
-      <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
-      <div className="flex-1 min-w-0">
-        <span className="text-xs text-muted-foreground">{label}</span>
-        <p className="text-sm font-medium truncate">{value || "—"}</p>
+    <div className="space-y-2">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+        <Icon className="h-3.5 w-3.5" />
+        {title}
+      </p>
+      <div className="space-y-1.5">
+        {children}
       </div>
+    </div>
+  );
+}
+
+function InfoRow({ label, value, valueClassName }: { label: string; value?: string | null; valueClassName?: string }) {
+  return (
+    <div className="flex items-center justify-between text-sm gap-2">
+      <span className="text-muted-foreground text-xs shrink-0">{label}</span>
+      <span className={cn("font-medium text-xs truncate text-right", valueClassName)}>{value || "—"}</span>
     </div>
   );
 }
