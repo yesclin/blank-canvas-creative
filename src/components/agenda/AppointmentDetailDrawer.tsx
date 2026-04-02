@@ -87,9 +87,9 @@ export function AppointmentDetailDrawer({
   onStartAtendimento,
 }: AppointmentDetailDrawerProps) {
   const navigate = useNavigate();
-  const { role } = usePermissions();
+  const { role, can } = usePermissions();
   const financial = useAppointmentFinancialStatus(appointment);
-  const isTeleconsulta = appointment?.care_mode === 'teleconsulta';
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const { data: teleSession } = useTeleconsultaSession(isTeleconsulta ? appointment?.id ?? null : null);
   const { generateRoom, copyLink, endSession, reportTechnicalIssue, convertToPresencial } = useTeleconsultaActions();
 
