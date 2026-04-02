@@ -1991,10 +1991,12 @@ export type Database = {
           period_end: string
           period_start: string
           professional_id: string | null
+          specialty_id: string | null
           status: string
           target_value: number
           title: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           clinic_id: string
@@ -2006,10 +2008,12 @@ export type Database = {
           period_end: string
           period_start: string
           professional_id?: string | null
+          specialty_id?: string | null
           status?: string
           target_value: number
           title: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           clinic_id?: string
@@ -2021,10 +2025,12 @@ export type Database = {
           period_end?: string
           period_start?: string
           professional_id?: string | null
+          specialty_id?: string | null
           status?: string
           target_value?: number
           title?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -2039,6 +2045,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_goals_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
             referencedColumns: ["id"]
           },
         ]
