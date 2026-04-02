@@ -13,6 +13,7 @@ import { ReportEmptyState } from "@/components/relatorios/ReportEmptyState";
 import { Target } from "lucide-react";
 
 export function OpportunityKanbanBoard() {
+  const queryClient = useQueryClient();
   const { data: stages, isLoading: stagesLoading } = usePipelineStages();
   const { data: opportunities, isLoading: oppsLoading, isError, refetch } = useKanbanOpportunities();
   const moveStage = useMoveOpportunityStage();
