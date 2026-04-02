@@ -264,6 +264,7 @@ export function useAppointmentsForPeriod(
           cpf: apt.patients.cpf,
           birth_date: apt.patients.birth_date,
           gender: apt.patients.gender,
+          avatar_url: (apt.patients as any).avatar_url || undefined,
           has_clinical_alert: apt.patients.has_clinical_alert || false,
           clinical_alert_text: apt.patients.clinical_alert_text,
           is_active: apt.patients.is_active,
