@@ -29,10 +29,10 @@ export function QuoteFiltersBar({ filters, onFiltersChange }: QuoteFiltersBarPro
         />
       </div>
 
-      <Select value={filters.status || ""} onValueChange={v => set("status", v)}>
+      <Select value={filters.status || "all"} onValueChange={v => set("status", v === "all" ? "" : v)}>
         <SelectTrigger className="w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Todos</SelectItem>
+          <SelectItem value="all">Todos</SelectItem>
           {QUOTE_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
         </SelectContent>
       </Select>
