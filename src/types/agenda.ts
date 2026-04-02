@@ -15,6 +15,8 @@ export type PaymentType = 'particular' | 'convenio' | 'cortesia' | 'pacote';
 
 export type PaymentStatus = 'pendente' | 'parcial' | 'pago' | 'isento' | 'faturar_convenio';
 
+export type BookingSource = 'manual' | 'link_publico' | 'retorno' | 'encaixe' | 'whatsapp' | 'campanha' | 'outro';
+
 export type CareMode = 'presencial' | 'teleconsulta' | 'domiciliar';
 
 export type MeetingStatus = 'nao_gerada' | 'gerada' | 'enviada' | 'paciente_entrou' | 'profissional_entrou' | 'em_andamento' | 'encerrada' | 'falhou';
