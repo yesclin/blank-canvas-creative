@@ -18,6 +18,7 @@ import {
   ChevronDown,
   Wallet,
   Plug,
+  Briefcase,
   type LucideIcon,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
@@ -62,6 +63,7 @@ const ownerAdminMainMenu: MenuItem[] = [
   { title: "Agenda", url: "/app/agenda", icon: Calendar, tourId: "agenda" },
   { title: "Pacientes", url: "/app/pacientes", icon: Users, tourId: "patients" },
   { title: "Prontuário", url: "/app/prontuario", icon: FileText, tourId: "medical-record" },
+  { title: "Comercial", url: "/app/comercial", icon: Briefcase, tourId: "commercial" },
   { title: "Marketing", url: "/app/marketing", icon: Megaphone, tourId: "communication" },
 ];
 
@@ -97,9 +99,9 @@ const professionalMainMenu: MenuItem[] = [
 
 // Recepcionista - No clinical content, no configurations
 const receptionistMainMenu: MenuItem[] = [
-  { title: "Agenda", url: "/app/agenda", icon: Calendar, tourId: "agenda" }, // All professionals
-  { title: "Pacientes", url: "/app/pacientes", icon: Users, tourId: "patients" }, // Registration data only
-  
+  { title: "Agenda", url: "/app/agenda", icon: Calendar, tourId: "agenda" },
+  { title: "Pacientes", url: "/app/pacientes", icon: Users, tourId: "patients" },
+  { title: "Comercial", url: "/app/comercial", icon: Briefcase, tourId: "commercial" },
 ];
 
 const receptionistGestaoMenu: MenuItem[] = [

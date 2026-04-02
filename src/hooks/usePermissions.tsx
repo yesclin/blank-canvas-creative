@@ -14,7 +14,8 @@ export type AppModule =
   | "convenios"
   | "estoque"
   | "relatorios"
-  | "configuracoes";
+  | "configuracoes"
+  | "comercial";
 
 export type AppAction = "view" | "create" | "edit" | "delete" | "export";
 

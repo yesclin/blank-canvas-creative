@@ -76,6 +76,7 @@ function AccessDeniedMessage({ module }: { module: AppModule }) {
     estoque: "Estoque",
     relatorios: "Relatórios",
     configuracoes: "Configurações",
+    comercial: "Comercial",
   };
 
   return (

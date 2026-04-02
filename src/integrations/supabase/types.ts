@@ -1894,6 +1894,593 @@ export type Database = {
           },
         ]
       }
+      crm_followups: {
+        Row: {
+          assigned_to: string | null
+          clinic_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          followup_type: string
+          id: string
+          lead_id: string | null
+          notes: string | null
+          opportunity_id: string | null
+          scheduled_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          clinic_id: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          followup_type?: string
+          id?: string
+          lead_id?: string | null
+          notes?: string | null
+          opportunity_id?: string | null
+          scheduled_at: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          clinic_id?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          followup_type?: string
+          id?: string
+          lead_id?: string | null
+          notes?: string | null
+          opportunity_id?: string | null
+          scheduled_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_followups_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_followups_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_followups_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "crm_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_goals: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          current_value: number
+          goal_type: string
+          id: string
+          period_end: string
+          period_start: string
+          professional_id: string | null
+          status: string
+          target_value: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          current_value?: number
+          goal_type?: string
+          id?: string
+          period_end: string
+          period_start: string
+          professional_id?: string | null
+          status?: string
+          target_value: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          current_value?: number
+          goal_type?: string
+          id?: string
+          period_end?: string
+          period_start?: string
+          professional_id?: string | null
+          status?: string
+          target_value?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_goals_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_goals_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_leads: {
+        Row: {
+          assigned_to: string | null
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          patient_id: string | null
+          phone: string | null
+          source: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          patient_id?: string | null
+          phone?: string | null
+          source?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          patient_id?: string | null
+          phone?: string | null
+          source?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_leads_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_leads_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_loss_reasons: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_loss_reasons_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_opportunities: {
+        Row: {
+          clinic_id: string
+          closed_at: string | null
+          created_at: string
+          created_by: string | null
+          estimated_value: number | null
+          expected_close_date: string | null
+          id: string
+          lead_id: string | null
+          loss_reason_id: string | null
+          notes: string | null
+          patient_id: string | null
+          pipeline_stage_id: string | null
+          procedure_id: string | null
+          professional_id: string | null
+          specialty_id: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          closed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          estimated_value?: number | null
+          expected_close_date?: string | null
+          id?: string
+          lead_id?: string | null
+          loss_reason_id?: string | null
+          notes?: string | null
+          patient_id?: string | null
+          pipeline_stage_id?: string | null
+          procedure_id?: string | null
+          professional_id?: string | null
+          specialty_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          closed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          estimated_value?: number | null
+          expected_close_date?: string | null
+          id?: string
+          lead_id?: string | null
+          loss_reason_id?: string | null
+          notes?: string | null
+          patient_id?: string | null
+          pipeline_stage_id?: string | null
+          procedure_id?: string | null
+          professional_id?: string | null
+          specialty_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_opportunities_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_opportunities_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_opportunities_loss_reason_id_fkey"
+            columns: ["loss_reason_id"]
+            isOneToOne: false
+            referencedRelation: "crm_loss_reasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_opportunities_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_opportunities_pipeline_stage_id_fkey"
+            columns: ["pipeline_stage_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipeline_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_opportunities_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_opportunities_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_opportunities_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_opportunity_history: {
+        Row: {
+          changed_by: string | null
+          clinic_id: string
+          created_at: string
+          field_changed: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          opportunity_id: string
+        }
+        Insert: {
+          changed_by?: string | null
+          clinic_id: string
+          created_at?: string
+          field_changed: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          opportunity_id: string
+        }
+        Update: {
+          changed_by?: string | null
+          clinic_id?: string
+          created_at?: string
+          field_changed?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          opportunity_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_opportunity_history_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_opportunity_history_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "crm_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_pipeline_stages: {
+        Row: {
+          clinic_id: string
+          color: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          color?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          color?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_pipeline_stages_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_quote_items: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          description: string
+          discount_percent: number
+          id: string
+          procedure_id: string | null
+          quantity: number
+          quote_id: string
+          total_value: number
+          unit_value: number
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          description: string
+          discount_percent?: number
+          id?: string
+          procedure_id?: string | null
+          quantity?: number
+          quote_id: string
+          total_value?: number
+          unit_value?: number
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          description?: string
+          discount_percent?: number
+          id?: string
+          procedure_id?: string | null
+          quantity?: number
+          quote_id?: string
+          total_value?: number
+          unit_value?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_quote_items_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_quote_items_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_quote_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "crm_quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_quotes: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          discount_value: number
+          final_value: number
+          id: string
+          notes: string | null
+          opportunity_id: string | null
+          patient_id: string | null
+          professional_id: string | null
+          quote_number: string | null
+          status: string
+          total_value: number
+          updated_at: string
+          valid_until: string | null
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          discount_value?: number
+          final_value?: number
+          id?: string
+          notes?: string | null
+          opportunity_id?: string | null
+          patient_id?: string | null
+          professional_id?: string | null
+          quote_number?: string | null
+          status?: string
+          total_value?: number
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          discount_value?: number
+          final_value?: number
+          id?: string
+          notes?: string | null
+          opportunity_id?: string | null
+          patient_id?: string | null
+          professional_id?: string | null
+          quote_number?: string | null
+          status?: string
+          total_value?: number
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_quotes_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_quotes_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "crm_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_quotes_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_quotes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custom_prontuario_fields: {
         Row: {
           all_appointments: boolean | null
@@ -8331,6 +8918,7 @@ export type Database = {
           restrictions: Json
         }[]
       }
+      get_user_clinic_id_for_rls: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -8422,6 +9010,7 @@ export type Database = {
         | "relatorios"
         | "configuracoes"
         | "meu_financeiro"
+        | "comercial"
       app_role: "owner" | "admin" | "profissional" | "recepcionista"
       consent_status: "granted" | "revoked" | "pending"
       document_status: "rascunho" | "assinado" | "cancelado"
@@ -8589,6 +9178,7 @@ export const Constants = {
         "relatorios",
         "configuracoes",
         "meu_financeiro",
+        "comercial",
       ],
       app_role: ["owner", "admin", "profissional", "recepcionista"],
       consent_status: ["granted", "revoked", "pending"],
