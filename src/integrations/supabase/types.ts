@@ -8422,6 +8422,7 @@ export type Database = {
         | "relatorios"
         | "configuracoes"
         | "meu_financeiro"
+        | "comercial"
       app_role: "owner" | "admin" | "profissional" | "recepcionista"
       consent_status: "granted" | "revoked" | "pending"
       document_status: "rascunho" | "assinado" | "cancelado"
@@ -8589,6 +8590,7 @@ export const Constants = {
         "relatorios",
         "configuracoes",
         "meu_financeiro",
+        "comercial",
       ],
       app_role: ["owner", "admin", "profissional", "recepcionista"],
       consent_status: ["granted", "revoked", "pending"],
