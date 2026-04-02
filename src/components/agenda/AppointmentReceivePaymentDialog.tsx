@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,7 @@ import {
 import { DollarSign } from "lucide-react";
 import type { Appointment } from "@/types/agenda";
 import { useReceiveAppointmentPayment } from "@/hooks/useReceiveAppointmentPayment";
+import { usePaymentMethods, type PaymentMethod } from "@/hooks/usePaymentMethods";
 
 interface AppointmentReceivePaymentDialogProps {
   appointment: Appointment | null;
@@ -34,16 +35,6 @@ interface AppointmentReceivePaymentDialogProps {
   };
 }
 
-const PAYMENT_METHODS = [
-  { value: "dinheiro", label: "Dinheiro" },
-  { value: "pix", label: "PIX" },
-  { value: "cartao_debito", label: "Cartão de Débito" },
-  { value: "cartao_credito", label: "Cartão de Crédito" },
-  { value: "transferencia", label: "Transferência" },
-  { value: "boleto", label: "Boleto" },
-  { value: "outro", label: "Outro" },
-];
-
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 
@@ -54,24 +45,37 @@ export function AppointmentReceivePaymentDialog({
   financialStatus,
 }: AppointmentReceivePaymentDialogProps) {
   const receiveMutation = useReceiveAppointmentPayment();
+  const { data: paymentMethods } = usePaymentMethods();
 
   const [amountToReceive, setAmountToReceive] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("");
+  const [selectedMethodId, setSelectedMethodId] = useState("");
   const [transactionDate, setTransactionDate] = useState("");
   const [notes, setNotes] = useState("");
   const [payFull, setPayFull] = useState(false);
   const [createFinance, setCreateFinance] = useState(true);
+  const [installments, setInstallments] = useState(1);
+  const [authorizationCode, setAuthorizationCode] = useState("");
+  const [dueDate, setDueDate] = useState("");
+
+  // Selected method details
+  const selectedMethod: PaymentMethod | undefined = useMemo(
+    () => (paymentMethods || []).find((m) => m.id === selectedMethodId),
+    [paymentMethods, selectedMethodId]
+  );
 
   // Reset form when dialog opens
   useEffect(() => {
     if (open && appointment) {
       const due = financialStatus.amountDue;
       setAmountToReceive(due > 0 ? due.toFixed(2) : "");
-      setPaymentMethod("");
+      setSelectedMethodId("");
       setTransactionDate(new Date().toISOString().split("T")[0]);
       setNotes("");
       setPayFull(false);
       setCreateFinance(true);
+      setInstallments(1);
+      setAuthorizationCode("");
+      setDueDate("");
     }
   }, [open, appointment, financialStatus.amountDue]);
 
@@ -87,12 +91,12 @@ export function AppointmentReceivePaymentDialog({
   const parsedAmount = parseFloat(amountToReceive) || 0;
   const canSubmit =
     parsedAmount > 0 &&
-    paymentMethod &&
+    selectedMethodId &&
     transactionDate &&
     !receiveMutation.isPending;
 
   const handleConfirm = async () => {
-    if (!canSubmit) return;
+    if (!canSubmit || !selectedMethod) return;
 
     await receiveMutation.mutateAsync({
       appointmentId: appointment.id,
@@ -104,10 +108,14 @@ export function AppointmentReceivePaymentDialog({
       amountExpected: financialStatus.amountExpected,
       amountReceivedBefore: financialStatus.amountReceived,
       amountToReceive: parsedAmount,
-      paymentMethod,
+      paymentMethodId: selectedMethod.id,
+      paymentMethodCode: selectedMethod.code,
       transactionDate,
       notes: notes.trim() || undefined,
       createFinanceTransaction: createFinance,
+      installments: selectedMethod.allows_installments ? installments : 1,
+      authorizationCode: selectedMethod.requires_authorization_code ? authorizationCode.trim() || undefined : undefined,
+      dueDate: selectedMethod.requires_due_date ? dueDate || undefined : undefined,
     });
 
     onOpenChange(false);
@@ -115,10 +123,10 @@ export function AppointmentReceivePaymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-green-600" />
+            <DollarSign className="h-5 w-5 text-primary" />
             Receber Pagamento
           </DialogTitle>
         </DialogHeader>
@@ -171,22 +179,60 @@ export function AppointmentReceivePaymentDialog({
             />
           </div>
 
-          {/* Payment method */}
+          {/* Payment method - from DB */}
           <div>
-            <Label>Forma de pagamento *</Label>
-            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+            <Label>Forma de recebimento *</Label>
+            <Select value={selectedMethodId} onValueChange={setSelectedMethodId}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione..." />
               </SelectTrigger>
               <SelectContent>
-                {PAYMENT_METHODS.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    {m.label}
+                {(paymentMethods || []).map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+
+          {/* Conditional fields based on selected method */}
+          {selectedMethod?.allows_installments && (
+            <div>
+              <Label>Parcelas</Label>
+              <Input
+                type="number"
+                min={1}
+                max={selectedMethod.max_installments}
+                value={installments}
+                onChange={(e) => setInstallments(Math.max(1, Math.min(selectedMethod.max_installments, parseInt(e.target.value) || 1)))}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Máx. {selectedMethod.max_installments}x</p>
+            </div>
+          )}
+
+          {selectedMethod?.requires_authorization_code && (
+            <div>
+              <Label>Código/NSU de autorização</Label>
+              <Input
+                value={authorizationCode}
+                onChange={(e) => setAuthorizationCode(e.target.value)}
+                placeholder="NSU ou código"
+                maxLength={100}
+              />
+            </div>
+          )}
+
+          {selectedMethod?.requires_due_date && (
+            <div>
+              <Label>Data de vencimento</Label>
+              <Input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+              />
+            </div>
+          )}
 
           {/* Date */}
           <div>

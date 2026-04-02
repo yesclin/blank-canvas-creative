@@ -353,6 +353,112 @@ export type Database = {
           },
         ]
       }
+      appointment_payments: {
+        Row: {
+          appointment_id: string
+          authorization_code: string | null
+          clinic_id: string
+          created_at: string
+          due_date: string | null
+          finance_transaction_id: string | null
+          id: string
+          installment_number: number
+          installments: number
+          notes: string | null
+          patient_id: string
+          payment_method_id: string
+          professional_id: string | null
+          received_amount: number
+          received_at: string
+          received_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id: string
+          authorization_code?: string | null
+          clinic_id: string
+          created_at?: string
+          due_date?: string | null
+          finance_transaction_id?: string | null
+          id?: string
+          installment_number?: number
+          installments?: number
+          notes?: string | null
+          patient_id: string
+          payment_method_id: string
+          professional_id?: string | null
+          received_amount: number
+          received_at?: string
+          received_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string
+          authorization_code?: string | null
+          clinic_id?: string
+          created_at?: string
+          due_date?: string | null
+          finance_transaction_id?: string | null
+          id?: string
+          installment_number?: number
+          installments?: number
+          notes?: string | null
+          patient_id?: string
+          payment_method_id?: string
+          professional_id?: string | null
+          received_amount?: number
+          received_at?: string
+          received_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_payments_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_payments_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_payments_finance_transaction_id_fkey"
+            columns: ["finance_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "finance_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_payments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_payments_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_payments_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointment_rules: {
         Row: {
           clinic_id: string
@@ -520,6 +626,7 @@ export type Database = {
           patient_id: string
           patient_snapshot_name: string | null
           patient_snapshot_phone: string | null
+          payment_method_id: string | null
           payment_status: string
           payment_type: string | null
           precheck_status: string
@@ -576,6 +683,7 @@ export type Database = {
           patient_id: string
           patient_snapshot_name?: string | null
           patient_snapshot_phone?: string | null
+          payment_method_id?: string | null
           payment_status?: string
           payment_type?: string | null
           precheck_status?: string
@@ -632,6 +740,7 @@ export type Database = {
           patient_id?: string
           patient_snapshot_name?: string | null
           patient_snapshot_phone?: string | null
+          payment_method_id?: string | null
           payment_status?: string
           payment_type?: string | null
           precheck_status?: string
@@ -668,6 +777,13 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
             referencedColumns: ["id"]
           },
           {
@@ -2996,6 +3112,7 @@ export type Database = {
           paid_at: string | null
           patient_id: string | null
           payment_method: string | null
+          payment_method_id: string | null
           professional_id: string | null
           reference_id: string | null
           reference_type: string | null
@@ -3019,6 +3136,7 @@ export type Database = {
           paid_at?: string | null
           patient_id?: string | null
           payment_method?: string | null
+          payment_method_id?: string | null
           professional_id?: string | null
           reference_id?: string | null
           reference_type?: string | null
@@ -3042,6 +3160,7 @@ export type Database = {
           paid_at?: string | null
           patient_id?: string | null
           payment_method?: string | null
+          payment_method_id?: string | null
           professional_id?: string | null
           reference_id?: string | null
           reference_type?: string | null
@@ -3077,6 +3196,13 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_transactions_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
             referencedColumns: ["id"]
           },
           {
@@ -5947,6 +6073,89 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "patients_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_methods: {
+        Row: {
+          accepts_change: boolean
+          allows_installments: boolean
+          auto_settle: boolean
+          category: string
+          clinic_id: string
+          code: string
+          color: string | null
+          created_at: string
+          description: string | null
+          display_order: number
+          fee_type: string | null
+          fee_value: number | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          is_system: boolean
+          max_installments: number
+          name: string
+          requires_authorization_code: boolean
+          requires_due_date: boolean
+          updated_at: string
+        }
+        Insert: {
+          accepts_change?: boolean
+          allows_installments?: boolean
+          auto_settle?: boolean
+          category?: string
+          clinic_id: string
+          code: string
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          fee_type?: string | null
+          fee_value?: number | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          is_system?: boolean
+          max_installments?: number
+          name: string
+          requires_authorization_code?: boolean
+          requires_due_date?: boolean
+          updated_at?: string
+        }
+        Update: {
+          accepts_change?: boolean
+          allows_installments?: boolean
+          auto_settle?: boolean
+          category?: string
+          clinic_id?: string
+          code?: string
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          fee_type?: string | null
+          fee_value?: number | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          is_system?: boolean
+          max_installments?: number
+          name?: string
+          requires_authorization_code?: boolean
+          requires_due_date?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_methods_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
@@ -9099,6 +9308,10 @@ export type Database = {
       }
       provision_specialty: {
         Args: { _clinic_id: string; _specialty_slug: string }
+        Returns: undefined
+      }
+      seed_default_payment_methods: {
+        Args: { _clinic_id: string }
         Returns: undefined
       }
       sync_appointment_teleconsultation_status: {

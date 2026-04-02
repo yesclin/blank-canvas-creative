@@ -67,6 +67,7 @@ import ConfigSeguranca from "./pages/app/config/Seguranca";
 import ConfigIntegracoes from "./pages/app/config/Integracoes";
 import ModelosAnamnese from "./pages/configuracoes/ModelosAnamnese";
 import DocumentosInstitucionais from "./pages/app/config/DocumentosInstitucionais";
+import FormasRecebimento from "./pages/app/config/FormasRecebimento";
 
 // Comercial
 import ComercialDashboard from "./pages/app/comercial/ComercialDashboard";
@@ -152,6 +153,7 @@ const App = () => (
             <Route path="config/integracoes" element={<ProtectedRoute module="configuracoes"><ConfigIntegracoes /></ProtectedRoute>} />
             <Route path="config/modelos-anamnese" element={<ProtectedRoute module="configuracoes"><ModelosAnamnese /></ProtectedRoute>} />
             <Route path="config/documentos-institucionais" element={<ProtectedRoute module="configuracoes"><DocumentosInstitucionais /></ProtectedRoute>} />
+            <Route path="config/formas-recebimento" element={<ProtectedRoute module="configuracoes"><FormasRecebimento /></ProtectedRoute>} />
             
             {/* Comercial */}
             <Route path="comercial" element={<ProtectedRoute module="comercial"><ComercialDashboard /></ProtectedRoute>} />
