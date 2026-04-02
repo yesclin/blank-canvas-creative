@@ -873,14 +873,14 @@ export default function ConfigSeguranca() {
             <div className="grid gap-2">
               <Label>Tipo de Ação</Label>
               <Select 
-                value={logFilterForm.action} 
-                onValueChange={(value) => setLogFilterForm(prev => ({ ...prev, action: value }))}
+                value={logFilterForm.action || "all"} 
+                onValueChange={(value) => setLogFilterForm(prev => ({ ...prev, action: value === "all" ? "" : value }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Todas as ações" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas as ações</SelectItem>
+                  <SelectItem value="all">Todas as ações</SelectItem>
                   {Object.entries(actionLabels).map(([key, value]) => (
                     <SelectItem key={key} value={key}>{value.label}</SelectItem>
                   ))}
