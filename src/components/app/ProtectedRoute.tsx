@@ -116,6 +116,7 @@ const moduleLabels: Record<AppModule, string> = {
   estoque: "Estoque",
   relatorios: "Relatórios",
   configuracoes: "Configurações",
+  comercial: "Comercial",
 };
 
 function AccessDeniedPage({ module }: { module: AppModule }) {
