@@ -81,6 +81,7 @@ export interface Patient {
   cpf?: string;
   birth_date?: string;
   gender?: string;
+  avatar_url?: string;
   has_clinical_alert: boolean;
   clinical_alert_text?: string;
   is_active: boolean;
