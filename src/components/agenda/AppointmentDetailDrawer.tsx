@@ -43,7 +43,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Appointment, AppointmentStatus, MeetingStatus } from "@/types/agenda";
-import { statusLabels, statusColors, typeLabels, careModeLabels, meetingStatusLabels, precheckStatusLabels, paymentStatusLabels, paymentTypeLabels } from "@/types/agenda";
+import { statusLabels, statusColors, typeLabels, careModeLabels, meetingStatusLabels, precheckStatusLabels, paymentStatusLabels, paymentTypeLabels, bookingSourceLabels } from "@/types/agenda";
+import { getAppointmentSourceLabel } from "@/utils/appointmentSource";
 import { useTeleconsultaActions, useTeleconsultaSession } from "@/hooks/useTeleconsulta";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAppointmentFinancialStatus } from "@/hooks/useAppointmentFinancialStatus";
