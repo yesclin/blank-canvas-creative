@@ -296,6 +296,10 @@ export function AppointmentDetailDrawer({
             {insurance && <DetailRow icon={CreditCard} label="Convênio" value={insurance.name} />}
             <DetailRow icon={FileText} label="Tipo" value={typeLabels[appointment_type]} />
             {care_mode && <DetailRow icon={Video} label="Modalidade" value={careModeLabels[care_mode] || care_mode} />}
+            {(() => {
+              const sourceLabel = getAppointmentSourceLabel(appointment);
+              return sourceLabel ? <DetailRow icon={FileText} label="Origem" value={sourceLabel} /> : null;
+            })()}
           </div>
 
           <Separator />
