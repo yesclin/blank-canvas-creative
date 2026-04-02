@@ -43,6 +43,7 @@ import facialMapToxinaLateralDireita from "@/assets/facial-map-toxina-lateral-di
 import facialMapFillerFrontal from "@/assets/facial-map-filler-frontal.png";
 import facialMapFillerLeftLateral from "@/assets/facial-map-filler-left-lateral.png";
 import facialMapFillerRightLateral from "@/assets/facial-map-filler-right-lateral.png";
+import facialMapBiostimulatorFrontal from "@/assets/facial-map-biostimulator-frontal.png";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -292,6 +293,7 @@ export function FacialMapModule({
       if (activeProcedure === 'filler' && viewType === 'frontal') return facialMapFillerFrontal;
       if (activeProcedure === 'filler' && viewType === 'left_lateral') return facialMapFillerLeftLateral;
       if (activeProcedure === 'filler' && viewType === 'right_lateral') return facialMapFillerRightLateral;
+      if (activeProcedure === 'biostimulator' && viewType === 'frontal') return facialMapBiostimulatorFrontal;
       if (viewType === 'frontal') return facialMapToxinaFrontal;
       if (viewType === 'left_lateral') return facialMapToxinaLateralEsquerda;
       if (viewType === 'right_lateral') return facialMapToxinaLateralDireita;
