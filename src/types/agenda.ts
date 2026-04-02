@@ -132,6 +132,9 @@ export interface Appointment {
   amount_expected: number;
   amount_received: number;
   amount_due: number;
+  booking_source?: BookingSource;
+  patient_snapshot_name?: string;
+  patient_snapshot_phone?: string;
   notes?: string;
   cancellation_reason?: string;
   arrived_at?: string;
