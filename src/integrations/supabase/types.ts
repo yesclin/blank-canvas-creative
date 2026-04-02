@@ -2411,9 +2411,12 @@ export type Database = {
           description: string
           discount_percent: number
           id: string
+          package_id: string | null
           procedure_id: string | null
+          professional_id: string | null
           quantity: number
           quote_id: string
+          specialty_id: string | null
           total_value: number
           unit_value: number
           updated_at: string
@@ -2424,9 +2427,12 @@ export type Database = {
           description: string
           discount_percent?: number
           id?: string
+          package_id?: string | null
           procedure_id?: string | null
+          professional_id?: string | null
           quantity?: number
           quote_id: string
+          specialty_id?: string | null
           total_value?: number
           unit_value?: number
           updated_at?: string
@@ -2437,9 +2443,12 @@ export type Database = {
           description?: string
           discount_percent?: number
           id?: string
+          package_id?: string | null
           procedure_id?: string | null
+          professional_id?: string | null
           quantity?: number
           quote_id?: string
+          specialty_id?: string | null
           total_value?: number
           unit_value?: number
           updated_at?: string
@@ -2460,62 +2469,94 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "crm_quote_items_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "crm_quote_items_quote_id_fkey"
             columns: ["quote_id"]
             isOneToOne: false
             referencedRelation: "crm_quotes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "crm_quote_items_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
         ]
       }
       crm_quotes: {
         Row: {
+          approved_at: string | null
           clinic_id: string
+          converted_at: string | null
           created_at: string
           created_by: string | null
+          discount_percent: number | null
           discount_value: number
           final_value: number
           id: string
+          lead_id: string | null
           notes: string | null
           opportunity_id: string | null
           patient_id: string | null
           professional_id: string | null
           quote_number: string | null
+          rejected_at: string | null
           status: string
+          terms_text: string | null
           total_value: number
           updated_at: string
           valid_until: string | null
         }
         Insert: {
+          approved_at?: string | null
           clinic_id: string
+          converted_at?: string | null
           created_at?: string
           created_by?: string | null
+          discount_percent?: number | null
           discount_value?: number
           final_value?: number
           id?: string
+          lead_id?: string | null
           notes?: string | null
           opportunity_id?: string | null
           patient_id?: string | null
           professional_id?: string | null
           quote_number?: string | null
+          rejected_at?: string | null
           status?: string
+          terms_text?: string | null
           total_value?: number
           updated_at?: string
           valid_until?: string | null
         }
         Update: {
+          approved_at?: string | null
           clinic_id?: string
+          converted_at?: string | null
           created_at?: string
           created_by?: string | null
+          discount_percent?: number | null
           discount_value?: number
           final_value?: number
           id?: string
+          lead_id?: string | null
           notes?: string | null
           opportunity_id?: string | null
           patient_id?: string | null
           professional_id?: string | null
           quote_number?: string | null
+          rejected_at?: string | null
           status?: string
+          terms_text?: string | null
           total_value?: number
           updated_at?: string
           valid_until?: string | null
@@ -2526,6 +2567,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_quotes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
             referencedColumns: ["id"]
           },
           {
@@ -8953,6 +9001,7 @@ export type Database = {
         }
         Returns: string
       }
+      generate_quote_number: { Args: { p_clinic_id: string }; Returns: string }
       generate_secure_token: { Args: { p_length?: number }; Returns: string }
       generate_teleconsultation_token: {
         Args: {
