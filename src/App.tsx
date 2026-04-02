@@ -67,6 +67,7 @@ import ConfigSeguranca from "./pages/app/config/Seguranca";
 import ConfigIntegracoes from "./pages/app/config/Integracoes";
 import ModelosAnamnese from "./pages/configuracoes/ModelosAnamnese";
 import DocumentosInstitucionais from "./pages/app/config/DocumentosInstitucionais";
+import FormasRecebimento from "./pages/app/config/FormasRecebimento";
 
 // Comercial
 import ComercialDashboard from "./pages/app/comercial/ComercialDashboard";
