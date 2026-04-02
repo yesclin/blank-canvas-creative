@@ -295,6 +295,7 @@ export function FacialMapModule({
       if (activeProcedure === 'filler' && viewType === 'left_lateral') return facialMapFillerLeftLateral;
       if (activeProcedure === 'filler' && viewType === 'right_lateral') return facialMapFillerRightLateral;
       if (activeProcedure === 'biostimulator' && viewType === 'frontal') return facialMapBiostimulatorFrontal;
+      if (activeProcedure === 'biostimulator' && viewType === 'right_lateral') return facialMapBiostimulatorRightLateral;
       if (viewType === 'frontal') return facialMapToxinaFrontal;
       if (viewType === 'left_lateral') return facialMapToxinaLateralEsquerda;
       if (viewType === 'right_lateral') return facialMapToxinaLateralDireita;
