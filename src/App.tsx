@@ -78,7 +78,6 @@ import ConversionsPage from "./pages/app/comercial/ConversionsPage";
 import FollowupsPage from "./pages/app/comercial/FollowupsPage";
 import GoalsPage from "./pages/app/comercial/GoalsPage";
 import CommercialReportsPage from "./pages/app/comercial/CommercialReportsPage";
-import DocumentosInstitucionais from "./pages/app/config/DocumentosInstitucionais";
 
 const queryClient = new QueryClient();
 
