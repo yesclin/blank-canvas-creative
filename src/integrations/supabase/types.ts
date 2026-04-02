@@ -1899,6 +1899,7 @@ export type Database = {
           assigned_to: string | null
           clinic_id: string
           completed_at: string | null
+          completed_by: string | null
           created_at: string
           created_by: string | null
           followup_type: string
@@ -1906,14 +1907,17 @@ export type Database = {
           lead_id: string | null
           notes: string | null
           opportunity_id: string | null
+          patient_id: string | null
           scheduled_at: string
           status: string
+          subject: string | null
           updated_at: string
         }
         Insert: {
           assigned_to?: string | null
           clinic_id: string
           completed_at?: string | null
+          completed_by?: string | null
           created_at?: string
           created_by?: string | null
           followup_type?: string
@@ -1921,14 +1925,17 @@ export type Database = {
           lead_id?: string | null
           notes?: string | null
           opportunity_id?: string | null
+          patient_id?: string | null
           scheduled_at: string
           status?: string
+          subject?: string | null
           updated_at?: string
         }
         Update: {
           assigned_to?: string | null
           clinic_id?: string
           completed_at?: string | null
+          completed_by?: string | null
           created_at?: string
           created_by?: string | null
           followup_type?: string
@@ -1936,8 +1943,10 @@ export type Database = {
           lead_id?: string | null
           notes?: string | null
           opportunity_id?: string | null
+          patient_id?: string | null
           scheduled_at?: string
           status?: string
+          subject?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1960,6 +1969,13 @@ export type Database = {
             columns: ["opportunity_id"]
             isOneToOne: false
             referencedRelation: "crm_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_followups_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
             referencedColumns: ["id"]
           },
         ]
