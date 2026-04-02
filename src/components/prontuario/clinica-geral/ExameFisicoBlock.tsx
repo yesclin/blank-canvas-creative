@@ -340,8 +340,8 @@ export function ExameFisicoBlock({
                     Vincular a uma Evolução (opcional)
                   </Label>
                   <Select 
-                    value={formData.evolucao_id} 
-                    onValueChange={(v) => setFormData(prev => ({ ...prev, evolucao_id: v }))}
+                    value={formData.evolucao_id || "none"} 
+                    onValueChange={(v) => setFormData(prev => ({ ...prev, evolucao_id: v === "none" ? "" : v }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione uma evolução..." />
