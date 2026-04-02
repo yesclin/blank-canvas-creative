@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePipelineStages } from "@/hooks/crm/usePipelineStages";
 import { useKanbanOpportunities, useMoveOpportunityStage, useWinOpportunity, useLoseOpportunity } from "@/hooks/crm/useKanbanOpportunities";
