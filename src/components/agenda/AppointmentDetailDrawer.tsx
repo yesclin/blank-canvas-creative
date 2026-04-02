@@ -624,6 +624,14 @@ export function AppointmentDetailDrawer({
           </div>
         </div>
       </SheetContent>
+
+      {/* Payment Dialog */}
+      <AppointmentReceivePaymentDialog
+        appointment={appointment}
+        open={paymentDialogOpen}
+        onOpenChange={setPaymentDialogOpen}
+        financialStatus={financial}
+      />
     </Sheet>
   );
 }
