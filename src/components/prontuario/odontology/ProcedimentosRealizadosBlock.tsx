@@ -257,7 +257,7 @@ export function ProcedimentosRealizadosBlock({
               <SelectValue placeholder="Dente" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos</SelectItem>
+              <SelectItem value="all">Todos</SelectItem>
               {uniqueTeeth.map(tooth => (
                 <SelectItem key={tooth} value={tooth}>Dente {tooth}</SelectItem>
               ))}

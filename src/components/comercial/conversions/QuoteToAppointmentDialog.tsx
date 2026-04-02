@@ -109,7 +109,7 @@ export function QuoteToAppointmentDialog({ open, onOpenChange, quote }: QuoteToA
               <Select value={form.specialtyId} onValueChange={v => set("specialtyId", v)}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhuma</SelectItem>
+                  <SelectItem value="none">Nenhuma</SelectItem>
                   {(specialties || []).map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                 </SelectContent>
               </Select>

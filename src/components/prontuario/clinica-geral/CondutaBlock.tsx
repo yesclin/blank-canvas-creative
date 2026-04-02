@@ -314,7 +314,7 @@ export function CondutaBlock({
                       <SelectValue placeholder="Selecione uma evolução..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Nenhuma</SelectItem>
+                      <SelectItem value="none">Nenhuma</SelectItem>
                       {availableEvolucoes.map((evo) => (
                         <SelectItem key={evo.id} value={evo.id}>
                           {format(parseISO(evo.data_hora), "dd/MM/yyyy HH:mm", { locale: ptBR })} - {evo.profissional_nome}

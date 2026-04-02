@@ -264,7 +264,7 @@ export function MateriaisUtilizadosBlock({
               <SelectValue placeholder="Lote" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos os lotes</SelectItem>
+              <SelectItem value="all">Todos os lotes</SelectItem>
               {uniqueLotes.map(lote => (
                 <SelectItem key={lote} value={lote}>{lote}</SelectItem>
               ))}

@@ -287,7 +287,7 @@ export function ExamesDocumentosBlock({
               <SelectValue placeholder="Tipo" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos os tipos</SelectItem>
+              <SelectItem value="all">Todos os tipos</SelectItem>
               {Object.entries(TIPO_DOCUMENTO_CONFIG).map(([key, config]) => (
                 <SelectItem key={key} value={key}>{config.label}</SelectItem>
               ))}

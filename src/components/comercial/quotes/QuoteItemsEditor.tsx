@@ -74,7 +74,7 @@ export function QuoteItemsEditor({ items, onChange }: QuoteItemsEditorProps) {
                 <Select value={item.procedure_id || ""} onValueChange={v => handleProcedureChange(index, v)}>
                   <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value="none">Nenhum</SelectItem>
                     {(procedures || []).map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                   </SelectContent>
                 </Select>

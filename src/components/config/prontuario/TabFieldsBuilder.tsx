@@ -367,7 +367,7 @@ export function TabFieldsBuilder({ tabId, tabName, specialtyId }: TabFieldsBuild
                       <Select value={formCondFieldId} onValueChange={setFormCondFieldId}>
                         <SelectTrigger><SelectValue placeholder="Campo" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Nenhum</SelectItem>
+                          <SelectItem value="none">Nenhum</SelectItem>
                           {otherFields.map(f => (
                             <SelectItem key={f.id} value={f.id}>{f.label}</SelectItem>
                           ))}

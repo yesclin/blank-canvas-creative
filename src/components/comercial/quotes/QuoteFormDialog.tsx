@@ -85,7 +85,7 @@ export function QuoteFormDialog({ open, onOpenChange, prefillLeadId, prefillOppo
               <Select value={form.lead_id} onValueChange={v => set("lead_id", v)}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="none">Nenhum</SelectItem>
                   {(leads || []).map((l: any) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -95,7 +95,7 @@ export function QuoteFormDialog({ open, onOpenChange, prefillLeadId, prefillOppo
               <Select value={form.professional_id} onValueChange={v => set("professional_id", v)}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="none">Nenhum</SelectItem>
                   {(professionals || []).map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                 </SelectContent>
               </Select>

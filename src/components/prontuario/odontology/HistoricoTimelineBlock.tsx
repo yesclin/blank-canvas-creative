@@ -276,7 +276,7 @@ export function HistoricoTimelineBlock({
               <SelectValue placeholder="Tipo de registro" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos os tipos</SelectItem>
+              <SelectItem value="all">Todos os tipos</SelectItem>
               {Object.entries(ENTRY_TYPE_CONFIG).map(([key, config]) => (
                 <SelectItem key={key} value={key}>
                   <span className="flex items-center gap-2">

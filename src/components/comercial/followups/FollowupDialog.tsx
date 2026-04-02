@@ -126,7 +126,7 @@ export function FollowupDialog({ open, onOpenChange, editFollowup, prefillLeadId
             <Select value={form.lead_id} onValueChange={v => set("lead_id", v)}>
               <SelectTrigger><SelectValue placeholder="Vincular a um lead" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
+                <SelectItem value="none">Nenhum</SelectItem>
                 {(leads || []).map((l: any) => (
                   <SelectItem key={l.id} value={l.id}>{l.name}{l.phone ? ` - ${l.phone}` : ""}</SelectItem>
                 ))}
@@ -139,7 +139,7 @@ export function FollowupDialog({ open, onOpenChange, editFollowup, prefillLeadId
             <Select value={form.assigned_to} onValueChange={v => set("assigned_to", v)}>
               <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
+                <SelectItem value="none">Nenhum</SelectItem>
                 {(users || []).map((u: any) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
               </SelectContent>
             </Select>

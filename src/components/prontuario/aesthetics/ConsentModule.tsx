@@ -361,7 +361,7 @@ export function ConsentModule({
                           <SelectValue placeholder="Selecione um procedimento..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Nenhum (termo geral)</SelectItem>
+                          <SelectItem value="none">Nenhum (termo geral)</SelectItem>
                           {procedures.map((proc) => (
                             <SelectItem key={proc.id} value={proc.id}>
                               {proc.name}

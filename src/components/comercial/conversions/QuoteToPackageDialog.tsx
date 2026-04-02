@@ -120,7 +120,7 @@ export function QuoteToPackageDialog({ open, onOpenChange, quote }: QuoteToPacka
                 <Select value={form.paymentMethod} onValueChange={v => set("paymentMethod", v)}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhuma</SelectItem>
+                    <SelectItem value="none">Nenhuma</SelectItem>
                     {PAYMENT_METHODS.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
                   </SelectContent>
                 </Select>

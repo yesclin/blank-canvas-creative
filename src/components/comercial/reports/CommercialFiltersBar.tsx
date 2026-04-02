@@ -41,7 +41,7 @@ export function CommercialFiltersBar({ filters, onChange, showSource = true, sho
       <Select value={filters.professionalId || ""} onValueChange={v => set("professionalId", v)}>
         <SelectTrigger className="w-[160px]"><SelectValue placeholder="Profissional" /></SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Todos</SelectItem>
+          <SelectItem value="all">Todos</SelectItem>
           {(professionals || []).map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
         </SelectContent>
       </Select>
@@ -49,7 +49,7 @@ export function CommercialFiltersBar({ filters, onChange, showSource = true, sho
       <Select value={filters.specialtyId || ""} onValueChange={v => set("specialtyId", v)}>
         <SelectTrigger className="w-[150px]"><SelectValue placeholder="Especialidade" /></SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Todas</SelectItem>
+          <SelectItem value="all">Todas</SelectItem>
           {(specialties || []).map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
         </SelectContent>
       </Select>
@@ -58,7 +58,7 @@ export function CommercialFiltersBar({ filters, onChange, showSource = true, sho
         <Select value={filters.source || ""} onValueChange={v => set("source", v)}>
           <SelectTrigger className="w-[130px]"><SelectValue placeholder="Origem" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todas</SelectItem>
+            <SelectItem value="all">Todas</SelectItem>
             {LEAD_SOURCES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
           </SelectContent>
         </Select>
@@ -68,7 +68,7 @@ export function CommercialFiltersBar({ filters, onChange, showSource = true, sho
         <Select value={filters.assignedTo || ""} onValueChange={v => set("assignedTo", v)}>
           <SelectTrigger className="w-[160px]"><SelectValue placeholder="Responsável" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos</SelectItem>
+            <SelectItem value="all">Todos</SelectItem>
             {(users || []).map((u: any) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
           </SelectContent>
         </Select>

@@ -171,7 +171,7 @@ export default function GoalsPage() {
                 <Select value={form.professional_id} onValueChange={v => set("professional_id", v)}>
                   <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Clínica toda</SelectItem>
+                    <SelectItem value="all">Clínica toda</SelectItem>
                     {(professionals || []).map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -181,7 +181,7 @@ export default function GoalsPage() {
                 <Select value={form.specialty_id} onValueChange={v => set("specialty_id", v)}>
                   <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas</SelectItem>
+                    <SelectItem value="all">Todas</SelectItem>
                     {(specialties || []).map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
