@@ -6083,75 +6083,135 @@ export type Database = {
       payment_methods: {
         Row: {
           accepts_change: boolean
+          account_digit: string | null
+          account_holder_document: string | null
+          account_holder_name: string | null
+          account_number: string | null
+          account_type: string | null
+          acquirer_name: string | null
+          agency: string | null
           allows_installments: boolean
           auto_settle: boolean
+          bank_code: string | null
+          bank_name: string | null
+          card_brands: string[] | null
           category: string
           clinic_id: string
           code: string
           color: string | null
           created_at: string
+          default_entry_account: string | null
           description: string | null
           display_order: number
+          fee_percent: number | null
           fee_type: string | null
           fee_value: number | null
+          fixed_fee: number | null
           icon: string | null
           id: string
+          insurance_id: string | null
           is_active: boolean
           is_default: boolean
           is_system: boolean
           max_installments: number
+          method_type: string
           name: string
+          notes: string | null
+          pix_key: string | null
+          pix_key_type: string | null
           requires_authorization_code: boolean
           requires_due_date: boolean
+          settlement_days: number | null
           updated_at: string
+          wallet_provider: string | null
         }
         Insert: {
           accepts_change?: boolean
+          account_digit?: string | null
+          account_holder_document?: string | null
+          account_holder_name?: string | null
+          account_number?: string | null
+          account_type?: string | null
+          acquirer_name?: string | null
+          agency?: string | null
           allows_installments?: boolean
           auto_settle?: boolean
+          bank_code?: string | null
+          bank_name?: string | null
+          card_brands?: string[] | null
           category?: string
           clinic_id: string
           code: string
           color?: string | null
           created_at?: string
+          default_entry_account?: string | null
           description?: string | null
           display_order?: number
+          fee_percent?: number | null
           fee_type?: string | null
           fee_value?: number | null
+          fixed_fee?: number | null
           icon?: string | null
           id?: string
+          insurance_id?: string | null
           is_active?: boolean
           is_default?: boolean
           is_system?: boolean
           max_installments?: number
+          method_type?: string
           name: string
+          notes?: string | null
+          pix_key?: string | null
+          pix_key_type?: string | null
           requires_authorization_code?: boolean
           requires_due_date?: boolean
+          settlement_days?: number | null
           updated_at?: string
+          wallet_provider?: string | null
         }
         Update: {
           accepts_change?: boolean
+          account_digit?: string | null
+          account_holder_document?: string | null
+          account_holder_name?: string | null
+          account_number?: string | null
+          account_type?: string | null
+          acquirer_name?: string | null
+          agency?: string | null
           allows_installments?: boolean
           auto_settle?: boolean
+          bank_code?: string | null
+          bank_name?: string | null
+          card_brands?: string[] | null
           category?: string
           clinic_id?: string
           code?: string
           color?: string | null
           created_at?: string
+          default_entry_account?: string | null
           description?: string | null
           display_order?: number
+          fee_percent?: number | null
           fee_type?: string | null
           fee_value?: number | null
+          fixed_fee?: number | null
           icon?: string | null
           id?: string
+          insurance_id?: string | null
           is_active?: boolean
           is_default?: boolean
           is_system?: boolean
           max_installments?: number
+          method_type?: string
           name?: string
+          notes?: string | null
+          pix_key?: string | null
+          pix_key_type?: string | null
           requires_authorization_code?: boolean
           requires_due_date?: boolean
+          settlement_days?: number | null
           updated_at?: string
+          wallet_provider?: string | null
         }
         Relationships: [
           {
@@ -6159,6 +6219,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_methods_insurance_id_fkey"
+            columns: ["insurance_id"]
+            isOneToOne: false
+            referencedRelation: "insurances"
             referencedColumns: ["id"]
           },
         ]
