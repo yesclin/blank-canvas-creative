@@ -123,7 +123,7 @@ export function FollowupDialog({ open, onOpenChange, editFollowup, prefillLeadId
 
           <div>
             <Label>Lead</Label>
-            <Select value={form.lead_id} onValueChange={v => set("lead_id", v)}>
+            <Select value={form.lead_id || "none"} onValueChange={v => set("lead_id", v === "none" ? "" : v)}>
               <SelectTrigger><SelectValue placeholder="Vincular a um lead" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Nenhum</SelectItem>
@@ -136,7 +136,7 @@ export function FollowupDialog({ open, onOpenChange, editFollowup, prefillLeadId
 
           <div>
             <Label>Responsável</Label>
-            <Select value={form.assigned_to} onValueChange={v => set("assigned_to", v)}>
+            <Select value={form.assigned_to || "none"} onValueChange={v => set("assigned_to", v === "none" ? "" : v)}>
               <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Nenhum</SelectItem>

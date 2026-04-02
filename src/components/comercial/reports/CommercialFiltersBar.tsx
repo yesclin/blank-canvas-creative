@@ -38,7 +38,7 @@ export function CommercialFiltersBar({ filters, onChange, showSource = true, sho
         placeholder="Até"
       />
 
-      <Select value={filters.professionalId || ""} onValueChange={v => set("professionalId", v)}>
+      <Select value={filters.professionalId || "all"} onValueChange={v => set("professionalId", v === "all" ? "" : v)}>
         <SelectTrigger className="w-[160px]"><SelectValue placeholder="Profissional" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todos</SelectItem>
@@ -46,7 +46,7 @@ export function CommercialFiltersBar({ filters, onChange, showSource = true, sho
         </SelectContent>
       </Select>
 
-      <Select value={filters.specialtyId || ""} onValueChange={v => set("specialtyId", v)}>
+      <Select value={filters.specialtyId || "all"} onValueChange={v => set("specialtyId", v === "all" ? "" : v)}>
         <SelectTrigger className="w-[150px]"><SelectValue placeholder="Especialidade" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todas</SelectItem>
@@ -55,7 +55,7 @@ export function CommercialFiltersBar({ filters, onChange, showSource = true, sho
       </Select>
 
       {showSource && (
-        <Select value={filters.source || ""} onValueChange={v => set("source", v)}>
+        <Select value={filters.source || "all"} onValueChange={v => set("source", v === "all" ? "" : v)}>
           <SelectTrigger className="w-[130px]"><SelectValue placeholder="Origem" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas</SelectItem>
@@ -65,7 +65,7 @@ export function CommercialFiltersBar({ filters, onChange, showSource = true, sho
       )}
 
       {showAssigned && (
-        <Select value={filters.assignedTo || ""} onValueChange={v => set("assignedTo", v)}>
+        <Select value={filters.assignedTo || "all"} onValueChange={v => set("assignedTo", v === "all" ? "" : v)}>
           <SelectTrigger className="w-[160px]"><SelectValue placeholder="Responsável" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>

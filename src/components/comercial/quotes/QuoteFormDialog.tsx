@@ -82,7 +82,7 @@ export function QuoteFormDialog({ open, onOpenChange, prefillLeadId, prefillOppo
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Lead</Label>
-              <Select value={form.lead_id} onValueChange={v => set("lead_id", v)}>
+              <Select value={form.lead_id || "none"} onValueChange={v => set("lead_id", v === "none" ? "" : v)}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Nenhum</SelectItem>
@@ -92,7 +92,7 @@ export function QuoteFormDialog({ open, onOpenChange, prefillLeadId, prefillOppo
             </div>
             <div>
               <Label>Profissional</Label>
-              <Select value={form.professional_id} onValueChange={v => set("professional_id", v)}>
+              <Select value={form.professional_id || "none"} onValueChange={v => set("professional_id", v === "none" ? "" : v)}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Nenhum</SelectItem>

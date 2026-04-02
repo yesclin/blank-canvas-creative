@@ -168,7 +168,7 @@ export default function GoalsPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Profissional</Label>
-                <Select value={form.professional_id} onValueChange={v => set("professional_id", v)}>
+                <Select value={form.professional_id || "all"} onValueChange={v => set("professional_id", v === "all" ? "" : v)}>
                   <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Clínica toda</SelectItem>
@@ -178,7 +178,7 @@ export default function GoalsPage() {
               </div>
               <div>
                 <Label>Especialidade</Label>
-                <Select value={form.specialty_id} onValueChange={v => set("specialty_id", v)}>
+                <Select value={form.specialty_id || "all"} onValueChange={v => set("specialty_id", v === "all" ? "" : v)}>
                   <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todas</SelectItem>

@@ -31,7 +31,7 @@ export function FollowupFiltersBar({ filters, onFiltersChange }: FollowupFilters
         />
       </div>
 
-      <Select value={filters.status || ""} onValueChange={v => set("status", v)}>
+      <Select value={filters.status || "all"} onValueChange={v => set("status", v === "all" ? "" : v)}>
         <SelectTrigger className="w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todos</SelectItem>
@@ -39,7 +39,7 @@ export function FollowupFiltersBar({ filters, onFiltersChange }: FollowupFilters
         </SelectContent>
       </Select>
 
-      <Select value={filters.followup_type || ""} onValueChange={v => set("followup_type", v)}>
+      <Select value={filters.followup_type || "all"} onValueChange={v => set("followup_type", v === "all" ? "" : v)}>
         <SelectTrigger className="w-[140px]"><SelectValue placeholder="Tipo" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todos</SelectItem>
@@ -47,7 +47,7 @@ export function FollowupFiltersBar({ filters, onFiltersChange }: FollowupFilters
         </SelectContent>
       </Select>
 
-      <Select value={filters.assigned_to || ""} onValueChange={v => set("assigned_to", v)}>
+      <Select value={filters.assigned_to || "all"} onValueChange={v => set("assigned_to", v === "all" ? "" : v)}>
         <SelectTrigger className="w-[160px]"><SelectValue placeholder="Responsável" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todos</SelectItem>

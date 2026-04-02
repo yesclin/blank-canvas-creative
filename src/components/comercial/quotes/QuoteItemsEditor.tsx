@@ -71,7 +71,7 @@ export function QuoteItemsEditor({ items, onChange }: QuoteItemsEditorProps) {
             <div className="grid grid-cols-2 gap-2">
               <div className="col-span-2">
                 <Label className="text-xs">Procedimento</Label>
-                <Select value={item.procedure_id || ""} onValueChange={v => handleProcedureChange(index, v)}>
+                <Select value={item.procedure_id || "none"} onValueChange={v => handleProcedureChange(index, v)}>
                   <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Nenhum</SelectItem>
