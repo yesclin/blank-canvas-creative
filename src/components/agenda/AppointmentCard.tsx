@@ -38,6 +38,7 @@ import { PatientAvatar } from "./PatientAvatar";
 import { AppointmentPaymentBadge } from "./AppointmentPaymentBadge";
 import { AppointmentHoverPreview } from "./AppointmentHoverPreview";
 import { useAppointmentFinancialStatus } from "@/hooks/useAppointmentFinancialStatus";
+import { getAppointmentSourceLabel } from "@/utils/appointmentSource";
 
 interface AppointmentCardProps {
   appointment: Appointment;
