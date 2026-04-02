@@ -76,6 +76,7 @@ export function AppointmentCard({
   const { canViewCost } = useFinancialAccessControl();
   const financial = useAppointmentFinancialStatus(appointment);
   const isReceptionist = role === 'recepcionista';
+  const sourceLabel = getAppointmentSourceLabel(appointment);
 
   const getStatusActions = () => {
     switch (status) {
