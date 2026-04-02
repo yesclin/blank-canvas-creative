@@ -68,6 +68,18 @@ import ConfigIntegracoes from "./pages/app/config/Integracoes";
 import ModelosAnamnese from "./pages/configuracoes/ModelosAnamnese";
 import DocumentosInstitucionais from "./pages/app/config/DocumentosInstitucionais";
 
+// Comercial
+import ComercialDashboard from "./pages/app/comercial/ComercialDashboard";
+import LeadsPage from "./pages/app/comercial/LeadsPage";
+import OpportunitiesPage from "./pages/app/comercial/OpportunitiesPage";
+import QuotesPage from "./pages/app/comercial/QuotesPage";
+import PackagesCommercialPage from "./pages/app/comercial/PackagesCommercialPage";
+import ConversionsPage from "./pages/app/comercial/ConversionsPage";
+import FollowupsPage from "./pages/app/comercial/FollowupsPage";
+import GoalsPage from "./pages/app/comercial/GoalsPage";
+import CommercialReportsPage from "./pages/app/comercial/CommercialReportsPage";
+import DocumentosInstitucionais from "./pages/app/config/DocumentosInstitucionais";
+
 const queryClient = new QueryClient();
 
 const App = () => (
