@@ -287,13 +287,14 @@ export function FacialMapModule({
    const noAppointment = !appointmentId;
    const noMap = !facialMap && !noAppointment;
 
-   const getBaseImage = () => {
-     if (activeProcedure === 'filler' && viewType === 'frontal') return facialMapFillerFrontal;
-     if (viewType === 'frontal') return facialMapToxinaFrontal;
-     if (viewType === 'left_lateral') return facialMapToxinaLateralEsquerda;
-     if (viewType === 'right_lateral') return facialMapToxinaLateralDireita;
-     return undefined;
-   };
+    const getBaseImage = () => {
+      if (activeProcedure === 'filler' && viewType === 'frontal') return facialMapFillerFrontal;
+      if (activeProcedure === 'filler' && viewType === 'left_lateral') return facialMapFillerLeftLateral;
+      if (viewType === 'frontal') return facialMapToxinaFrontal;
+      if (viewType === 'left_lateral') return facialMapToxinaLateralEsquerda;
+      if (viewType === 'right_lateral') return facialMapToxinaLateralDireita;
+      return undefined;
+    };
 
    const viewingHistoryMap = viewingHistoryMapId ? allMaps.find(m => m.id === viewingHistoryMapId) : null;
 
