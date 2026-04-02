@@ -121,9 +121,13 @@ export function OpportunityKanbanBoard() {
     return (
       <ReportEmptyState
         title="Erro ao carregar pipeline"
-        description="Não foi possível carregar as etapas e oportunidades."
+        description="Verifique se você está logado e possui uma clínica associada. Consulte o console para detalhes técnicos."
         actionLabel="Tentar novamente"
-        onAction={() => refetch()}
+        onAction={() => {
+          queryClient.invalidateQueries({ queryKey: ["crm-pipeline-stages"] });
+          queryClient.invalidateQueries({ queryKey: ["crm-kanban-opportunities"] });
+          refetch();
+        }}
       />
     );
   }
