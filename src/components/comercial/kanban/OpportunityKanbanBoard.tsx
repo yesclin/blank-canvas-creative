@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePipelineStages } from "@/hooks/crm/usePipelineStages";
 import { useKanbanOpportunities, useMoveOpportunityStage, useWinOpportunity, useLoseOpportunity } from "@/hooks/crm/useKanbanOpportunities";
@@ -12,6 +13,7 @@ import { ReportEmptyState } from "@/components/relatorios/ReportEmptyState";
 import { Target } from "lucide-react";
 
 export function OpportunityKanbanBoard() {
+  const queryClient = useQueryClient();
   const { data: stages, isLoading: stagesLoading } = usePipelineStages();
   const { data: opportunities, isLoading: oppsLoading, isError, refetch } = useKanbanOpportunities();
   const moveStage = useMoveOpportunityStage();
@@ -121,9 +123,13 @@ export function OpportunityKanbanBoard() {
     return (
       <ReportEmptyState
         title="Erro ao carregar pipeline"
-        description="Não foi possível carregar as etapas e oportunidades."
+        description="Verifique se você está logado e possui uma clínica associada. Consulte o console para detalhes técnicos."
         actionLabel="Tentar novamente"
-        onAction={() => refetch()}
+        onAction={() => {
+          queryClient.invalidateQueries({ queryKey: ["crm-pipeline-stages"] });
+          queryClient.invalidateQueries({ queryKey: ["crm-kanban-opportunities"] });
+          refetch();
+        }}
       />
     );
   }
