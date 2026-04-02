@@ -377,6 +377,12 @@ export function AppointmentDetailDrawer({
             })()}
           </div>
 
+          {/* Payment History */}
+          <AppointmentPaymentsHistory
+            appointmentId={appointment.id}
+            clinicId={appointment.clinic_id}
+          />
+
           {/* Teleconsulta Section */}
           {isTeleconsulta && (() => {
             const hasSession = !!teleSession;
