@@ -224,6 +224,21 @@ export const typeLabels: Record<AppointmentType, string> = {
   encaixe: 'Encaixe',
 };
 
+export const paymentStatusLabels: Record<PaymentStatus, string> = {
+  pendente: 'Pendente',
+  parcial: 'Parcial',
+  pago: 'Pago',
+  isento: 'Isento',
+  faturar_convenio: 'Faturar Convênio',
+};
+
+export const paymentTypeLabels: Record<PaymentType, string> = {
+  particular: 'Particular',
+  convenio: 'Convênio',
+  cortesia: 'Cortesia',
+  pacote: 'Pacote',
+};
+
 export interface ScheduleBlock {
   id: string;
   clinic_id: string;
