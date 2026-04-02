@@ -236,7 +236,7 @@ export function useAppointmentsForPeriod(
           consent_telehealth_accepted_at,
           technical_issue_count,
           teleconsultation_notes,
-          patients!inner(id, full_name, phone, email, cpf, birth_date, gender, has_clinical_alert, clinical_alert_text, is_active),
+          patients!inner(id, full_name, phone, email, cpf, birth_date, gender, avatar_url, has_clinical_alert, clinical_alert_text, is_active),
           professionals!inner(id, full_name, color, specialty_id),
           rooms(id, name),
           specialties(id, name, color),
