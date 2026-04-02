@@ -6,12 +6,14 @@ import type { CrmOpportunity } from "@/types/crm";
 async function getClinicId(): Promise<string> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Usuário não autenticado");
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("user_roles")
     .select("clinic_id")
     .eq("user_id", user.id)
-    .single();
-  if (!data?.clinic_id) throw new Error("Clínica não encontrada");
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(`Erro ao buscar clínica: ${error.message}`);
+  if (!data?.clinic_id) throw new Error("Clínica não encontrada para o usuário");
   return data.clinic_id;
 }
 
@@ -31,9 +33,16 @@ export function useKanbanOpportunities() {
         `)
         .eq("clinic_id", clinicId)
         .order("updated_at", { ascending: false });
-      if (error) throw error;
+
+      if (error) {
+        console.error("[Kanban] Erro ao carregar oportunidades:", error.message);
+        throw error;
+      }
+
+      console.info("[Kanban] Oportunidades carregadas:", data?.length ?? 0);
       return (data || []) as (CrmOpportunity & { lead?: { id: string; name: string; phone?: string } | null })[];
     },
+    retry: 1,
   });
 }
 
@@ -45,7 +54,6 @@ export function useMoveOpportunityStage() {
       fromStageId,
       toStageId,
       toStageName,
-      notes,
     }: {
       opportunityId: string;
       fromStageId: string | null;
@@ -56,14 +64,13 @@ export function useMoveOpportunityStage() {
       const clinicId = await getClinicId();
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Get from stage name
       let fromStageName: string | null = null;
       if (fromStageId) {
         const { data: fromStage } = await supabase
           .from("crm_pipeline_stages")
           .select("name")
           .eq("id", fromStageId)
-          .single();
+          .maybeSingle();
         fromStageName = fromStage?.name || null;
       }
 
@@ -73,7 +80,6 @@ export function useMoveOpportunityStage() {
         .eq("id", opportunityId);
       if (error) throw error;
 
-      // Record history
       await supabase.from("crm_opportunity_history").insert({
         clinic_id: clinicId,
         opportunity_id: opportunityId,
