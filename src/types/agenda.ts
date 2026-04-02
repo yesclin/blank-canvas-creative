@@ -128,6 +128,10 @@ export interface Appointment {
   payment_type: PaymentType;
   expected_value?: number;
   procedure_cost?: number;
+  payment_status: PaymentStatus;
+  amount_expected: number;
+  amount_received: number;
+  amount_due: number;
   notes?: string;
   cancellation_reason?: string;
   arrived_at?: string;
