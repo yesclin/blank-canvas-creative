@@ -270,7 +270,7 @@ export function HistoricoTimelineBlock({
               />
             </div>
           </div>
-          <Select value={filterType || "all"} onValueChange={setFilterType}>
+          <Select value={filterType || "all"} onValueChange={v => setFilterType(v === "all" ? "" : v)}>
             <SelectTrigger className="w-[200px]">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Tipo de registro" />

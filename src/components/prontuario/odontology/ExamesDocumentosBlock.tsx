@@ -281,7 +281,7 @@ export function ExamesDocumentosBlock({
               />
             </div>
           </div>
-          <Select value={filterTipo || "all"} onValueChange={setFilterTipo}>
+          <Select value={filterTipo || "all"} onValueChange={v => setFilterTipo(v === "all" ? "" : v)}>
             <SelectTrigger className="w-[200px]">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Tipo" />

@@ -251,7 +251,7 @@ export function ProcedimentosRealizadosBlock({
               />
             </div>
           </div>
-          <Select value={filterDente || "all"} onValueChange={setFilterDente}>
+          <Select value={filterDente || "all"} onValueChange={v => setFilterDente(v === "all" ? "" : v)}>
             <SelectTrigger className="w-[140px]">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Dente" />

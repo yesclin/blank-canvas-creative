@@ -258,7 +258,7 @@ export function MateriaisUtilizadosBlock({
               />
             </div>
           </div>
-          <Select value={filterLote || "all"} onValueChange={setFilterLote}>
+          <Select value={filterLote || "all"} onValueChange={v => setFilterLote(v === "all" ? "" : v)}>
             <SelectTrigger className="w-[160px]">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Lote" />
