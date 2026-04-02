@@ -52,6 +52,7 @@ import { useAppointmentFinancialStatus } from "@/hooks/useAppointmentFinancialSt
 import { PatientAvatar } from "./PatientAvatar";
 import { AppointmentPaymentBadge } from "./AppointmentPaymentBadge";
 import { AppointmentReceivePaymentDialog } from "./AppointmentReceivePaymentDialog";
+import { AppointmentPaymentsHistory } from "./AppointmentPaymentsHistory";
 import { toast } from "sonner";
 
 interface AppointmentDetailDrawerProps {
