@@ -256,3 +256,52 @@ export interface ScheduleBlock {
   end_time: string | null;
   all_day: boolean;
 }
+
+export const bookingSourceLabels: Record<BookingSource, string> = {
+  manual: 'Manual',
+  link_publico: 'Link Público',
+  retorno: 'Retorno',
+  encaixe: 'Encaixe',
+  whatsapp: 'WhatsApp',
+  campanha: 'Campanha',
+  outro: 'Outro',
+};
+
+/** View model unificado para card, preview e drawer da agenda */
+export interface AgendaAppointmentViewModel {
+  id: string;
+  patientName: string;
+  patientPhone?: string;
+  patientEmail?: string;
+  patientBirthDate?: string;
+  patientAge?: number;
+  patientAvatarUrl?: string;
+  professionalName?: string;
+  specialtyName?: string;
+  procedureName?: string;
+  insuranceName?: string;
+  paymentType: PaymentType;
+  paymentTypeLabel: string;
+  paymentStatus: PaymentStatus;
+  paymentStatusLabel: string;
+  amountExpected: number;
+  amountReceived: number;
+  amountDue: number;
+  appointmentType: AppointmentType;
+  appointmentTypeLabel: string;
+  careMode: CareMode;
+  careModeLabel: string;
+  status: AppointmentStatus;
+  statusLabel: string;
+  bookingSource?: BookingSource;
+  bookingSourceLabel?: string;
+  notes?: string;
+  isFirstVisit: boolean;
+  isReturn: boolean;
+  isFitIn: boolean;
+  hasClinicalAlert: boolean;
+  clinicalAlertText?: string;
+  startTime: string;
+  endTime: string;
+  scheduledDate: string;
+}
