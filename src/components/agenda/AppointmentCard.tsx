@@ -28,6 +28,8 @@ import {
   ShoppingCart,
   Package,
   Video,
+  MessageSquare,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Appointment, MeetingStatus } from "@/types/agenda";
@@ -104,24 +106,26 @@ export function AppointmentCard({
 
   const statusActions = getStatusActions();
 
+  // Compact card for monthly/small slots
   if (compact) {
     return (
       <AppointmentHoverPreview appointment={appointment}>
         <div 
           className={cn(
-            "p-2 rounded-md border cursor-pointer hover:shadow-sm transition-shadow",
+            "px-2 py-1.5 rounded-md border cursor-pointer transition-all duration-150",
+            "hover:shadow-sm hover:scale-[1.01] active:scale-[0.99]",
             statusColors[status]
           )}
           onClick={() => onClick?.(appointment)}
         >
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-1.5">
             <div className="flex items-center gap-1.5 min-w-0">
               <PatientAvatar name={patient?.full_name} avatarUrl={patient?.avatar_url} size="sm" />
               <span className="text-xs font-medium truncate">{patient?.full_name}</span>
             </div>
             <div className="flex items-center gap-1 shrink-0">
               <AppointmentPaymentBadge paymentStatus={financial.paymentStatus} compact />
-              <span className="text-xs">{start_time.slice(0, 5)}</span>
+              <span className="text-[10px] text-muted-foreground font-mono">{start_time.slice(0, 5)}</span>
             </div>
           </div>
         </div>
@@ -133,161 +137,156 @@ export function AppointmentCard({
     <AppointmentHoverPreview appointment={appointment}>
       <div 
         className={cn(
-          "p-3 rounded-lg border shadow-sm hover:shadow-md transition-shadow cursor-pointer",
-          "bg-card"
+          "group relative p-3 rounded-lg border bg-card transition-all duration-150 cursor-pointer",
+          "hover:shadow-md hover:border-primary/20 active:scale-[0.995]",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         )}
         onClick={() => onClick?.(appointment)}
+        tabIndex={0}
+        role="button"
       >
-        <div className="flex items-start justify-between gap-2">
+        {/* Top row: avatar + name + time + menu */}
+        <div className="flex items-start gap-2.5">
+          <PatientAvatar 
+            name={patient?.full_name} 
+            avatarUrl={patient?.avatar_url} 
+            size="sm" 
+          />
+          
           <div className="flex-1 min-w-0">
-            {/* Time & Status */}
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-sm font-semibold">
-                {start_time.slice(0, 5)} - {end_time.slice(0, 5)}
+            {/* Name + time row */}
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-semibold truncate leading-tight">
+                {patient?.full_name}
+              </p>
+              <span className="text-xs text-muted-foreground font-mono shrink-0">
+                {start_time.slice(0, 5)}–{end_time.slice(0, 5)}
               </span>
-              <Badge variant="outline" className={cn("text-xs", statusColors[status])}>
+            </div>
+
+            {/* Secondary info: procedure/professional */}
+            <p className="text-xs text-muted-foreground truncate mt-0.5">
+              {appointment.procedure?.name || appointment.specialty?.name || professional?.full_name}
+            </p>
+
+            {/* Status + financial badges row */}
+            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+              <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 font-medium", statusColors[status])}>
                 {statusLabels[status]}
               </Badge>
               <AppointmentPaymentBadge paymentStatus={financial.paymentStatus} />
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground">
+                {typeLabels[appointment_type]}
+              </Badge>
             </div>
-            
-            {/* Patient with avatar */}
-            <div className="flex items-center gap-2 mb-0.5">
-              <PatientAvatar name={patient?.full_name} avatarUrl={patient?.avatar_url} size="sm" />
-              <p className="font-medium truncate">{patient?.full_name}</p>
-            </div>
-            <p className="text-sm text-muted-foreground truncate">
-              {appointment.procedure?.name || professional?.full_name}
-            </p>
-            
-            {/* Flags */}
-            <div className="flex items-center gap-1 mt-2 flex-wrap">
+
+            {/* Indicator icons row */}
+            <div className="flex items-center gap-1 mt-1.5">
               {is_first_visit && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Badge variant="secondary" className="text-xs gap-1">
-                      <Sparkles className="h-3 w-3" />
-                      1ª Consulta
-                    </Badge>
+                    <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-amber-100 dark:bg-amber-900/30">
+                      <Sparkles className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                    </span>
                   </TooltipTrigger>
-                  <TooltipContent>Primeira consulta do paciente</TooltipContent>
+                  <TooltipContent>Primeira consulta</TooltipContent>
                 </Tooltip>
               )}
-              
               {is_return && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Badge variant="secondary" className="text-xs gap-1">
-                      <RotateCcw className="h-3 w-3" />
-                      Retorno
-                    </Badge>
+                    <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-blue-100 dark:bg-blue-900/30">
+                      <RotateCcw className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                    </span>
                   </TooltipTrigger>
-                  <TooltipContent>Consulta de retorno</TooltipContent>
+                  <TooltipContent>Retorno</TooltipContent>
                 </Tooltip>
               )}
-              
-              {/* Clinical alert - hidden for receptionist */}
+              {is_fit_in && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-purple-100 dark:bg-purple-900/30">
+                      <Zap className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>Encaixe</TooltipContent>
+                </Tooltip>
+              )}
               {!isReceptionist && patient?.has_clinical_alert && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Badge variant="destructive" className="text-xs gap-1">
-                      <AlertTriangle className="h-3 w-3" />
-                      Alerta
-                    </Badge>
+                    <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-destructive/10">
+                      <AlertTriangle className="h-3 w-3 text-destructive" />
+                    </span>
                   </TooltipTrigger>
                   <TooltipContent>{patient.clinical_alert_text}</TooltipContent>
                 </Tooltip>
               )}
-              
               {has_pending_payment && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Badge variant="outline" className="text-xs gap-1 text-amber-600 border-amber-300">
-                      <DollarSign className="h-3 w-3" />
-                      Pendente
-                    </Badge>
+                    <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-amber-100 dark:bg-amber-900/30">
+                      <DollarSign className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                    </span>
                   </TooltipTrigger>
                   <TooltipContent>Pagamento pendente</TooltipContent>
                 </Tooltip>
               )}
-              
-              {is_fit_in && (
-                <Badge variant="secondary" className="text-xs">
-                  Encaixe
-                </Badge>
-              )}
-              
               {appointment.care_mode === 'teleconsulta' && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Badge variant="secondary" className="text-xs gap-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-                      <Video className="h-3 w-3" />
-                      Teleconsulta
-                    </Badge>
+                    <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-blue-100 dark:bg-blue-900/30">
+                      <Video className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                    </span>
                   </TooltipTrigger>
                   <TooltipContent>
-                    {meetingStatusLabels[appointment.meeting_status as MeetingStatus] || appointment.meeting_status}
-                    {appointment.precheck_status && appointment.precheck_status !== 'pendente' && (
-                      <> • Pré-check: {precheckStatusLabels[appointment.precheck_status] || appointment.precheck_status}</>
-                    )}
+                    Teleconsulta • {meetingStatusLabels[appointment.meeting_status as MeetingStatus] || appointment.meeting_status}
                   </TooltipContent>
                 </Tooltip>
               )}
-              
-              {appointment.care_mode === 'teleconsulta' && appointment.meeting_status === 'nao_gerada' && (
-                <Badge variant="outline" className="text-xs gap-1 text-amber-600 border-amber-300">
-                  Sem sala
-                </Badge>
+              {notes && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-muted">
+                      <MessageSquare className="h-3 w-3 text-muted-foreground" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-[200px]">
+                    <p className="line-clamp-3 text-xs">{notes}</p>
+                  </TooltipContent>
+                </Tooltip>
               )}
-              
-              {appointment.care_mode === 'teleconsulta' && appointment.technical_issue_count > 0 && (
-                <Badge variant="outline" className="text-xs gap-1 text-red-600 border-red-300">
-                  {appointment.technical_issue_count} falha(s)
-                </Badge>
-              )}
-              
-              <Badge variant="outline" className="text-xs">
-                {typeLabels[appointment_type]}
-              </Badge>
-              
               {sourceLabel && sourceLabel !== 'Manual' && (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                <span className="text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
                   {sourceLabel}
-                </Badge>
+                </span>
               )}
-              
-              {/* Show procedure cost for finalized appointments - only for authorized users */}
               {status === 'finalizado' && canViewCost && procedure_cost !== undefined && procedure_cost !== null && procedure_cost > 0 && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Badge variant="outline" className="text-xs gap-1 text-emerald-600 border-emerald-300">
+                    <span className="inline-flex items-center gap-0.5 text-[10px] text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 dark:text-emerald-400 px-1.5 py-0.5 rounded-full">
                       <Package className="h-3 w-3" />
-                      {new Intl.NumberFormat("pt-BR", {
-                        style: "currency",
-                        currency: "BRL",
-                      }).format(procedure_cost)}
-                    </Badge>
+                      {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(procedure_cost)}
+                    </span>
                   </TooltipTrigger>
-                  <TooltipContent>Custo do procedimento (materiais consumidos)</TooltipContent>
+                  <TooltipContent>Custo do procedimento</TooltipContent>
                 </Tooltip>
               )}
             </div>
-            
-            {notes && (
-              <p className="text-xs text-muted-foreground mt-2 line-clamp-1">
-                {notes}
-              </p>
-            )}
           </div>
           
-          {/* Actions */}
+          {/* Actions menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+              >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="w-48">
               {statusActions.map((action, idx) => (
                 <DropdownMenuItem 
                   key={idx}
@@ -323,6 +322,7 @@ export function AppointmentCard({
               
               {status !== 'faltou' && status !== 'cancelado' && status !== 'finalizado' && (
                 <>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={(e) => {
                     e.stopPropagation();
                     onStatusChange?.(appointment.id, 'faltou');
@@ -335,7 +335,7 @@ export function AppointmentCard({
                       e.stopPropagation();
                       onStatusChange?.(appointment.id, 'cancelado');
                     }}
-                    className="text-destructive"
+                    className="text-destructive focus:text-destructive"
                   >
                     <XCircle className="mr-2 h-4 w-4" />
                     Cancelar

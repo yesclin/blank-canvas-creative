@@ -5,7 +5,7 @@ import {
 } from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Phone, Mail, User, Stethoscope, FileText, CreditCard, Video } from "lucide-react";
+import { Phone, Mail, User, Stethoscope, FileText, Clock, DollarSign, Video, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PatientAvatar } from "./PatientAvatar";
 import { AppointmentPaymentBadge } from "./AppointmentPaymentBadge";
@@ -31,20 +31,19 @@ export function AppointmentHoverPreview({ appointment, children }: AppointmentHo
 
   if (!preview) return <>{children}</>;
 
-  // On mobile, just render children without hover
   return (
-    <HoverCard openDelay={300} closeDelay={100}>
+    <HoverCard openDelay={350} closeDelay={150}>
       <HoverCardTrigger asChild>
         {children}
       </HoverCardTrigger>
       <HoverCardContent
         side="right"
         align="start"
-        className="w-80 p-0 hidden md:block"
+        className="w-80 p-0 hidden md:block rounded-xl shadow-xl border-border/50"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-3 flex items-center gap-3">
+        <div className="p-4 pb-3 flex items-center gap-3 bg-muted/30">
           <PatientAvatar
             name={preview.patientName}
             avatarUrl={preview.patientAvatarUrl}
@@ -52,67 +51,29 @@ export function AppointmentHoverPreview({ appointment, children }: AppointmentHo
           />
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm truncate">{preview.patientName}</p>
-            {preview.patientAge !== undefined && (
-              <p className="text-xs text-muted-foreground">{preview.patientAge} anos</p>
-            )}
-            <div className="flex items-center gap-1 mt-1">
-              <Badge variant="outline" className={cn("text-[10px]", statusColors[appointment.status])}>
+            <div className="flex items-center gap-1.5 mt-1">
+              <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0", statusColors[appointment.status])}>
                 {statusLabels[appointment.status]}
               </Badge>
+              <AppointmentPaymentBadge paymentStatus={financial.paymentStatus} />
             </div>
           </div>
         </div>
 
-        <Separator />
-
-        {/* Contact */}
-        <div className="px-3 py-2 space-y-1.5">
-          {preview.patientPhone && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Phone className="h-3 w-3 shrink-0" />
-              <span>{preview.patientPhone}</span>
-            </div>
-          )}
-          {preview.professionalName && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <User className="h-3 w-3 shrink-0" />
-              <span>{preview.professionalName}</span>
-            </div>
-          )}
-          {preview.specialtyName && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Stethoscope className="h-3 w-3 shrink-0" />
-              <span>{preview.specialtyName}</span>
-            </div>
-          )}
-          {preview.procedureName && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <FileText className="h-3 w-3 shrink-0" />
-              <span>{preview.procedureName}</span>
-            </div>
-          )}
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <CreditCard className="h-3 w-3 shrink-0" />
-            <span>{preview.paymentTypeLabel}</span>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="text-muted-foreground">Tipo:</span>
-            <span>{preview.appointmentTypeLabel}</span>
-          </div>
+        {/* Atendimento */}
+        <div className="px-4 py-2.5 space-y-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Atendimento</p>
+          <PreviewRow icon={Clock} value={`${appointment.start_time.slice(0,5)} – ${appointment.end_time.slice(0,5)}`} />
+          {preview.professionalName && <PreviewRow icon={User} value={preview.professionalName} />}
+          {preview.specialtyName && <PreviewRow icon={Stethoscope} value={preview.specialtyName} />}
+          {preview.procedureName && <PreviewRow icon={FileText} value={preview.procedureName} />}
           {appointment.care_mode !== "presencial" && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Video className="h-3 w-3 shrink-0" />
-              <span>{preview.careModeLabel}</span>
-            </div>
+            <PreviewRow icon={Video} value={preview.careModeLabel} />
           )}
-          {preview.bookingSourceLabel && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="text-muted-foreground">Origem:</span>
-              <span>{preview.bookingSourceLabel}</span>
-            </div>
-          )}
-          {/* Badges */}
-          <div className="flex items-center gap-1 flex-wrap mt-1">
+          <div className="flex items-center gap-1 flex-wrap pt-0.5">
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground">
+              {preview.appointmentTypeLabel}
+            </Badge>
             {preview.isFirstVisit && (
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0">1ª Consulta</Badge>
             )}
@@ -122,42 +83,60 @@ export function AppointmentHoverPreview({ appointment, children }: AppointmentHo
             {preview.isFitIn && (
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Encaixe</Badge>
             )}
+            {preview.bookingSourceLabel && preview.bookingSourceLabel !== "Manual" && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground">
+                {preview.bookingSourceLabel}
+              </Badge>
+            )}
           </div>
         </div>
 
         <Separator />
 
-        {/* Financial */}
-        <div className="px-3 py-2 space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Status financeiro</span>
-            <AppointmentPaymentBadge
-              paymentStatus={financial.paymentStatus}
-            />
-          </div>
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Valor previsto</span>
-            <span className="font-medium">{formatCurrency(financial.amountExpected)}</span>
-          </div>
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Recebido</span>
-            <span className="font-medium text-green-600">{formatCurrency(financial.amountReceived)}</span>
-          </div>
-          {financial.amountDue > 0 && (
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Pendente</span>
-              <span className="font-medium text-red-600">{formatCurrency(financial.amountDue)}</span>
+        {/* Financeiro */}
+        <div className="px-4 py-2.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Financeiro</p>
+          <div className="grid grid-cols-3 gap-1.5 text-center">
+            <div className="rounded-md bg-muted/50 p-1.5">
+              <p className="text-[10px] text-muted-foreground">Previsto</p>
+              <p className="text-xs font-semibold">{formatCurrency(financial.amountExpected)}</p>
             </div>
-          )}
+            <div className="rounded-md bg-muted/50 p-1.5">
+              <p className="text-[10px] text-muted-foreground">Recebido</p>
+              <p className="text-xs font-semibold text-green-600">{formatCurrency(financial.amountReceived)}</p>
+            </div>
+            {financial.amountDue > 0 && (
+              <div className="rounded-md bg-destructive/5 p-1.5">
+                <p className="text-[10px] text-muted-foreground">Pendente</p>
+                <p className="text-xs font-semibold text-red-600">{formatCurrency(financial.amountDue)}</p>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Clinical alert - hidden for receptionist */}
+        {/* Contato */}
+        {(preview.patientPhone || preview.patientAge !== undefined) && (
+          <>
+            <Separator />
+            <div className="px-4 py-2.5 space-y-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Contato</p>
+              {preview.patientPhone && <PreviewRow icon={Phone} value={preview.patientPhone} />}
+              {preview.patientAge !== undefined && (
+                <PreviewRow icon={Calendar} value={`${preview.patientAge} anos`} />
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Clinical alert */}
         {!isReceptionist && appointment.patient?.has_clinical_alert && (
           <>
             <Separator />
-            <div className="px-3 py-2">
-              <p className="text-xs text-destructive font-medium">⚠ Alerta clínico</p>
-              <p className="text-xs text-destructive/80 line-clamp-2">{appointment.patient.clinical_alert_text}</p>
+            <div className="px-4 py-2.5">
+              <div className="flex items-start gap-2 p-2 rounded-md bg-destructive/10">
+                <span className="text-destructive text-xs">⚠</span>
+                <p className="text-xs text-destructive/90 line-clamp-2">{appointment.patient.clinical_alert_text}</p>
+              </div>
             </div>
           </>
         )}
@@ -166,12 +145,22 @@ export function AppointmentHoverPreview({ appointment, children }: AppointmentHo
         {preview.notes && (
           <>
             <Separator />
-            <div className="px-3 py-2">
-              <p className="text-xs text-muted-foreground line-clamp-2">{preview.notes}</p>
+            <div className="px-4 py-2.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Observações</p>
+              <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{preview.notes}</p>
             </div>
           </>
         )}
       </HoverCardContent>
     </HoverCard>
+  );
+}
+
+function PreviewRow({ icon: Icon, value }: { icon: typeof Clock; value: string }) {
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <Icon className="h-3 w-3 text-muted-foreground shrink-0" />
+      <span className="truncate">{value}</span>
+    </div>
   );
 }
