@@ -52,6 +52,7 @@ import { useAppointmentFinancialStatus } from "@/hooks/useAppointmentFinancialSt
 import { PatientAvatar } from "./PatientAvatar";
 import { AppointmentPaymentBadge } from "./AppointmentPaymentBadge";
 import { AppointmentReceivePaymentDialog } from "./AppointmentReceivePaymentDialog";
+import { AppointmentPaymentsHistory } from "./AppointmentPaymentsHistory";
 import { toast } from "sonner";
 
 interface AppointmentDetailDrawerProps {
@@ -375,6 +376,12 @@ export function AppointmentDetailDrawer({
               return null;
             })()}
           </div>
+
+          {/* Payment History */}
+          <AppointmentPaymentsHistory
+            appointmentId={appointment.id}
+            clinicId={appointment.clinic_id}
+          />
 
           {/* Teleconsulta Section */}
           {isTeleconsulta && (() => {
