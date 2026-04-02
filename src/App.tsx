@@ -154,6 +154,17 @@ const App = () => (
             <Route path="config/modelos-anamnese" element={<ProtectedRoute module="configuracoes"><ModelosAnamnese /></ProtectedRoute>} />
             <Route path="config/documentos-institucionais" element={<ProtectedRoute module="configuracoes"><DocumentosInstitucionais /></ProtectedRoute>} />
             
+            {/* Comercial */}
+            <Route path="comercial" element={<ProtectedRoute module="comercial"><ComercialDashboard /></ProtectedRoute>} />
+            <Route path="comercial/leads" element={<ProtectedRoute module="comercial"><LeadsPage /></ProtectedRoute>} />
+            <Route path="comercial/oportunidades" element={<ProtectedRoute module="comercial"><OpportunitiesPage /></ProtectedRoute>} />
+            <Route path="comercial/orcamentos" element={<ProtectedRoute module="comercial"><QuotesPage /></ProtectedRoute>} />
+            <Route path="comercial/pacotes" element={<ProtectedRoute module="comercial"><PackagesCommercialPage /></ProtectedRoute>} />
+            <Route path="comercial/conversoes" element={<ProtectedRoute module="comercial"><ConversionsPage /></ProtectedRoute>} />
+            <Route path="comercial/follow-ups" element={<ProtectedRoute module="comercial"><FollowupsPage /></ProtectedRoute>} />
+            <Route path="comercial/metas" element={<ProtectedRoute module="comercial"><GoalsPage /></ProtectedRoute>} />
+            <Route path="comercial/relatorios" element={<ProtectedRoute module="comercial"><CommercialReportsPage /></ProtectedRoute>} />
+            
             {/* Teleconsulta - Sala do Profissional */}
             <Route path="teleconsulta/:appointmentId/sala" element={<ProtectedRoute module="agenda"><TeleconsultaSala /></ProtectedRoute>} />
           </Route>
