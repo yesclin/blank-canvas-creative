@@ -87,6 +87,7 @@ const ownerAdminConfigMenu: MenuItem[] = [
   { title: "LGPD & Segurança", url: "/app/config/seguranca", icon: Shield },
   { title: "Integrações", url: "/app/config/integracoes", icon: Plug },
   { title: "Documentos Institucionais", url: "/app/config/documentos-institucionais", icon: FileText },
+  { title: "Formas de Recebimento", url: "/app/config/formas-recebimento", icon: CreditCard },
 ];
 
 // Profissional de Saúde - Limited menus (own data only)
