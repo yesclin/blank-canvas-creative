@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -5,9 +6,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { FileText, CheckCircle, XCircle, Copy, Send, DollarSign, Calendar, User } from "lucide-react";
+import { FileText, CheckCircle, XCircle, Copy, Send, DollarSign, Calendar, User, CalendarPlus, Package } from "lucide-react";
 import { useQuoteWithItems, useUpdateQuoteStatus, useDuplicateQuote } from "@/hooks/crm/useQuotes";
 import { QuoteStatusBadge } from "./QuoteStatusBadge";
+import { QuoteToAppointmentDialog } from "@/components/comercial/conversions/QuoteToAppointmentDialog";
+import { QuoteToPackageDialog } from "@/components/comercial/conversions/QuoteToPackageDialog";
+import { QuoteToFinanceDialog } from "@/components/comercial/conversions/QuoteToFinanceDialog";
 import type { CrmQuote } from "@/types/quote";
 
 interface QuoteDetailsDrawerProps {
@@ -21,6 +25,10 @@ export function QuoteDetailsDrawer({ quoteId, open, onOpenChange, onGeneratePdf 
   const { data: quote, isLoading } = useQuoteWithItems(quoteId);
   const updateStatus = useUpdateQuoteStatus();
   const duplicateQuote = useDuplicateQuote();
+
+  const [appointmentOpen, setAppointmentOpen] = useState(false);
+  const [packageOpen, setPackageOpen] = useState(false);
+  const [financeOpen, setFinanceOpen] = useState(false);
 
   const handleCopyText = () => {
     if (!quote) return;
@@ -36,139 +44,171 @@ export function QuoteDetailsDrawer({ quoteId, open, onOpenChange, onGeneratePdf 
 
   if (!open) return null;
 
+  const isApprovedOrConverted = quote?.status === "approved" || quote?.status === "converted";
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            {isLoading ? "Carregando..." : `Orçamento ${quote?.quote_number || ""}`}
-          </SheetTitle>
-        </SheetHeader>
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              {isLoading ? "Carregando..." : `Orçamento ${quote?.quote_number || ""}`}
+            </SheetTitle>
+          </SheetHeader>
 
-        {isLoading ? (
-          <div className="space-y-3 mt-6">
-            <Skeleton className="h-8 w-full" />
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-16 w-full" />
-          </div>
-        ) : quote ? (
-          <div className="mt-6 space-y-5">
-            <div className="flex items-center gap-2">
-              <QuoteStatusBadge status={quote.status} />
+          {isLoading ? (
+            <div className="space-y-3 mt-6">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-16 w-full" />
             </div>
-
-            {/* Info */}
-            <div className="space-y-2 text-sm">
-              {quote.lead && (
-                <div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" /> Lead: {quote.lead.name}</div>
-              )}
-              {quote.professional && (
-                <div>Profissional: {quote.professional.name}</div>
-              )}
-              {quote.valid_until && (
-                <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-muted-foreground" /> Válido até: {format(new Date(quote.valid_until), "dd/MM/yyyy", { locale: ptBR })}</div>
-              )}
-              <div className="text-xs text-muted-foreground">
-                Criado em: {format(new Date(quote.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+          ) : quote ? (
+            <div className="mt-6 space-y-5">
+              <div className="flex items-center gap-2">
+                <QuoteStatusBadge status={quote.status} />
               </div>
-            </div>
 
-            <Separator />
-
-            {/* Items */}
-            <div>
-              <h4 className="text-sm font-semibold mb-2">Itens</h4>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">Descrição</TableHead>
-                    <TableHead className="text-xs text-right">Qtd</TableHead>
-                    <TableHead className="text-xs text-right">Unitário</TableHead>
-                    <TableHead className="text-xs text-right">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(quote.items || []).map(item => (
-                    <TableRow key={item.id}>
-                      <TableCell className="text-xs">{item.description}</TableCell>
-                      <TableCell className="text-xs text-right">{item.quantity}</TableCell>
-                      <TableCell className="text-xs text-right">R$ {Number(item.unit_value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
-                      <TableCell className="text-xs text-right font-medium">R$ {Number(item.total_value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* Totals */}
-            <div className="bg-muted/50 rounded-md p-3 space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span>Subtotal:</span>
-                <span>R$ {Number(quote.total_value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-              </div>
-              {Number(quote.discount_value) > 0 && (
-                <div className="flex justify-between text-destructive">
-                  <span>Desconto:</span>
-                  <span>- R$ {Number(quote.discount_value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+              {/* Info */}
+              <div className="space-y-2 text-sm">
+                {quote.lead && (
+                  <div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" /> Lead: {quote.lead.name}</div>
+                )}
+                {quote.patient && (
+                  <div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" /> Paciente: {quote.patient.full_name}</div>
+                )}
+                {quote.professional && (
+                  <div>Profissional: {quote.professional.name}</div>
+                )}
+                {quote.valid_until && (
+                  <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-muted-foreground" /> Válido até: {format(new Date(quote.valid_until), "dd/MM/yyyy", { locale: ptBR })}</div>
+                )}
+                <div className="text-xs text-muted-foreground">
+                  Criado em: {format(new Date(quote.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                 </div>
-              )}
-              <div className="flex justify-between font-bold text-base pt-1 border-t">
-                <span>Total:</span>
-                <span className="flex items-center gap-1"><DollarSign className="h-4 w-4" /> R$ {Number(quote.final_value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
               </div>
-            </div>
 
-            {/* Notes */}
-            {quote.notes && (
-              <>
-                <Separator />
-                <div>
-                  <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-1">Observações</h4>
-                  <p className="text-sm whitespace-pre-wrap">{quote.notes}</p>
-                </div>
-              </>
-            )}
+              <Separator />
 
-            {quote.terms_text && (
+              {/* Items */}
               <div>
-                <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-1">Termos</h4>
-                <p className="text-xs whitespace-pre-wrap text-muted-foreground">{quote.terms_text}</p>
+                <h4 className="text-sm font-semibold mb-2">Itens</h4>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Descrição</TableHead>
+                      <TableHead className="text-xs text-right">Qtd</TableHead>
+                      <TableHead className="text-xs text-right">Unitário</TableHead>
+                      <TableHead className="text-xs text-right">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(quote.items || []).map(item => (
+                      <TableRow key={item.id}>
+                        <TableCell className="text-xs">{item.description}</TableCell>
+                        <TableCell className="text-xs text-right">{item.quantity}</TableCell>
+                        <TableCell className="text-xs text-right">R$ {Number(item.unit_value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
+                        <TableCell className="text-xs text-right font-medium">R$ {Number(item.total_value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
-            )}
 
-            <Separator />
+              {/* Totals */}
+              <div className="bg-muted/50 rounded-md p-3 space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span>Subtotal:</span>
+                  <span>R$ {Number(quote.total_value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                </div>
+                {Number(quote.discount_value) > 0 && (
+                  <div className="flex justify-between text-destructive">
+                    <span>Desconto:</span>
+                    <span>- R$ {Number(quote.discount_value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold text-base pt-1 border-t">
+                  <span>Total:</span>
+                  <span className="flex items-center gap-1"><DollarSign className="h-4 w-4" /> R$ {Number(quote.final_value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
 
-            {/* Actions */}
-            <div className="flex flex-col gap-2">
-              {quote.status === "draft" && (
-                <Button variant="outline" onClick={() => updateStatus.mutate({ id: quote.id, status: "sent" })} disabled={updateStatus.isPending}>
-                  <Send className="h-4 w-4 mr-2" /> Marcar como Enviado
-                </Button>
-              )}
-              {(quote.status === "draft" || quote.status === "sent" || quote.status === "viewed") && (
+              {/* Notes */}
+              {quote.notes && (
                 <>
-                  <Button variant="outline" className="text-green-700" onClick={() => updateStatus.mutate({ id: quote.id, status: "approved" })} disabled={updateStatus.isPending}>
-                    <CheckCircle className="h-4 w-4 mr-2" /> Aprovar
-                  </Button>
-                  <Button variant="outline" className="text-destructive" onClick={() => updateStatus.mutate({ id: quote.id, status: "rejected" })} disabled={updateStatus.isPending}>
-                    <XCircle className="h-4 w-4 mr-2" /> Recusar
-                  </Button>
+                  <Separator />
+                  <div>
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-1">Observações</h4>
+                    <p className="text-sm whitespace-pre-wrap">{quote.notes}</p>
+                  </div>
                 </>
               )}
-              <Button variant="outline" onClick={() => onGeneratePdf(quote)}>
-                <FileText className="h-4 w-4 mr-2" /> Gerar PDF
-              </Button>
-              <Button variant="outline" onClick={handleCopyText}>
-                <Copy className="h-4 w-4 mr-2" /> Copiar para WhatsApp
-              </Button>
-              <Button variant="outline" onClick={() => duplicateQuote.mutate(quote.id)} disabled={duplicateQuote.isPending}>
-                <Copy className="h-4 w-4 mr-2" /> Duplicar Orçamento
-              </Button>
+
+              {quote.terms_text && (
+                <div>
+                  <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-1">Termos</h4>
+                  <p className="text-xs whitespace-pre-wrap text-muted-foreground">{quote.terms_text}</p>
+                </div>
+              )}
+
+              <Separator />
+
+              {/* Status Actions */}
+              <div className="flex flex-col gap-2">
+                {quote.status === "draft" && (
+                  <Button variant="outline" onClick={() => updateStatus.mutate({ id: quote.id, status: "sent" })} disabled={updateStatus.isPending}>
+                    <Send className="h-4 w-4 mr-2" /> Marcar como Enviado
+                  </Button>
+                )}
+                {(quote.status === "draft" || quote.status === "sent" || quote.status === "viewed") && (
+                  <>
+                    <Button variant="outline" className="text-green-700" onClick={() => updateStatus.mutate({ id: quote.id, status: "approved" })} disabled={updateStatus.isPending}>
+                      <CheckCircle className="h-4 w-4 mr-2" /> Aprovar
+                    </Button>
+                    <Button variant="outline" className="text-destructive" onClick={() => updateStatus.mutate({ id: quote.id, status: "rejected" })} disabled={updateStatus.isPending}>
+                      <XCircle className="h-4 w-4 mr-2" /> Recusar
+                    </Button>
+                  </>
+                )}
+
+                {/* Conversion actions - only for approved quotes */}
+                {isApprovedOrConverted && (
+                  <>
+                    <Separator />
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase">Conversões</h4>
+                    <Button variant="outline" onClick={() => setAppointmentOpen(true)}>
+                      <CalendarPlus className="h-4 w-4 mr-2" /> Converter em Agendamento
+                    </Button>
+                    <Button variant="outline" onClick={() => setPackageOpen(true)}>
+                      <Package className="h-4 w-4 mr-2" /> Converter em Pacote
+                    </Button>
+                    <Button variant="outline" onClick={() => setFinanceOpen(true)}>
+                      <DollarSign className="h-4 w-4 mr-2" /> Lançar no Financeiro
+                    </Button>
+                  </>
+                )}
+
+                <Separator />
+
+                <Button variant="outline" onClick={() => onGeneratePdf(quote)}>
+                  <FileText className="h-4 w-4 mr-2" /> Gerar PDF
+                </Button>
+                <Button variant="outline" onClick={handleCopyText}>
+                  <Copy className="h-4 w-4 mr-2" /> Copiar para WhatsApp
+                </Button>
+                <Button variant="outline" onClick={() => duplicateQuote.mutate(quote.id)} disabled={duplicateQuote.isPending}>
+                  <Copy className="h-4 w-4 mr-2" /> Duplicar Orçamento
+                </Button>
+              </div>
             </div>
-          </div>
-        ) : null}
-      </SheetContent>
-    </Sheet>
+          ) : null}
+        </SheetContent>
+      </Sheet>
+
+      {/* Conversion Dialogs */}
+      <QuoteToAppointmentDialog open={appointmentOpen} onOpenChange={setAppointmentOpen} quote={quote || null} />
+      <QuoteToPackageDialog open={packageOpen} onOpenChange={setPackageOpen} quote={quote || null} />
+      <QuoteToFinanceDialog open={financeOpen} onOpenChange={setFinanceOpen} quote={quote || null} />
+    </>
   );
 }
