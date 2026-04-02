@@ -291,6 +291,7 @@ export function FacialMapModule({
     const getBaseImage = () => {
       if (activeProcedure === 'filler' && viewType === 'frontal') return facialMapFillerFrontal;
       if (activeProcedure === 'filler' && viewType === 'left_lateral') return facialMapFillerLeftLateral;
+      if (activeProcedure === 'filler' && viewType === 'right_lateral') return facialMapFillerRightLateral;
       if (viewType === 'frontal') return facialMapToxinaFrontal;
       if (viewType === 'left_lateral') return facialMapToxinaLateralEsquerda;
       if (viewType === 'right_lateral') return facialMapToxinaLateralDireita;
