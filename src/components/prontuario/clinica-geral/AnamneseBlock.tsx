@@ -69,6 +69,10 @@ import { useConsolidatedFillerPdf } from "@/hooks/aesthetics/useConsolidatedFill
 import { FileDown, Printer, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { ADVANCED_TEMPLATE_MAP } from "@/hooks/prontuario/estetica/esteticaAdvancedTemplates";
+import { DynamicAnamneseRenderer } from "@/components/prontuario/aesthetics/DynamicAnamneseRenderer";
+import { useDynamicAnamneseEstetica } from "@/hooks/aesthetics/useDynamicAnamneseEstetica";
+import type { DynamicFormValues } from "@/components/prontuario/aesthetics/anamnese-fields/types";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
