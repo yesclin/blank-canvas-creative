@@ -37,37 +37,37 @@ import { DynamicAnamneseRenderer } from './DynamicAnamneseRenderer';
 import { StandardTemplateRenderer } from './StandardTemplateRenderer';
 import { useDynamicAnamneseEstetica } from '@/hooks/aesthetics/useDynamicAnamneseEstetica';
 import { ADVANCED_TEMPLATE_MAP } from '@/hooks/prontuario/estetica/esteticaAdvancedTemplates';
+import {
+  getCatalogEntry,
+  getRendererKind,
+  ESTETICA_TEMPLATE_CATALOG,
+  CATEGORY_LABELS,
+  type RendererKind,
+  type TemplateCategory,
+} from '@/hooks/prontuario/estetica/esteticaTemplateCatalog';
 import type { DynamicFormValues } from './anamnese-fields/types';
 import { useAnamnesisTemplatesV2, useAnamnesisRecords } from '@/hooks/useAnamnesisTemplatesV2';
 import type { AnamnesisTemplateV2 } from '@/hooks/useAnamnesisTemplatesV2';
 import { cn } from '@/lib/utils';
 
-// ─── Template classification ───────────────────────────────────────
+// ─── Template classification using catalog ─────────────────────────
 type TemplateKind = 'advanced' | 'standard' | 'incomplete';
 
 function classifyTemplate(t: AnamnesisTemplateV2): TemplateKind {
-  // Advanced: has a matching entry in ADVANCED_TEMPLATE_MAP
-  if (t.template_type && ADVANCED_TEMPLATE_MAP[t.template_type]) return 'advanced';
-  // Standard: has usable structure sections
+  const kind = getRendererKind({ template_type: t.template_type, name: t.name });
+  if (kind === 'dynamic') return 'advanced';
   if (t.structure && t.structure.length > 0) return 'standard';
-  // Incomplete: no renderable structure
   return 'incomplete';
 }
 
-function kindLabel(kind: TemplateKind): string {
-  switch (kind) {
-    case 'advanced': return 'Avançado';
-    case 'standard': return 'Padrão';
-    case 'incomplete': return 'Incompleto';
-  }
+function getTemplateCategory(t: AnamnesisTemplateV2): TemplateCategory {
+  const entry = getCatalogEntry({ template_type: t.template_type, name: t.name });
+  return entry?.category || 'procedural';
 }
 
-function kindBadgeClass(kind: TemplateKind): string {
-  switch (kind) {
-    case 'advanced': return 'bg-primary/10 text-primary border-primary/20';
-    case 'standard': return 'bg-secondary text-secondary-foreground';
-    case 'incomplete': return 'bg-destructive/10 text-destructive border-destructive/20';
-  }
+function getDisplayOrder(t: AnamnesisTemplateV2): number {
+  const entry = getCatalogEntry({ template_type: t.template_type, name: t.name });
+  return entry?.displayOrder ?? 99;
 }
 
 // ─── Props ──────────────────────────────────────────────────────────
