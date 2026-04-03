@@ -27,6 +27,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { format, differenceInYears, differenceInDays } from 'date-fns';
+import { calculateAgeFromDateOnly } from '@/utils/dateUtils';
 import { ptBR } from 'date-fns/locale';
 import { 
   STATUS_ACOMPANHAMENTO_LABELS,
