@@ -551,14 +551,25 @@ export function AppointmentDetailDrawer({
           )}
 
           {/* ── Section: Histórico de status ── */}
-          {(arrived_at || started_at || finished_at) && (
+          {(arrived_at || started_at || finished_at || (session?.pause_events && session.pause_events.length > 0)) && (
             <>
               <Separator />
               <Section title="Histórico" icon={History}>
                 <div className="space-y-1.5">
                   {arrived_at && <p className="text-xs text-muted-foreground">✓ Chegou às {formatTimestamp(arrived_at)}</p>}
                   {started_at && <p className="text-xs text-muted-foreground">▶ Atendimento iniciado às {formatTimestamp(started_at)}</p>}
+                  {session?.pause_events?.map((pe, i) => (
+                    <div key={i} className="text-xs text-muted-foreground">
+                      <p>⏸ Pausado às {formatTimestamp(pe.paused_at)}{pe.reason ? ` — ${pe.reason}` : ''}</p>
+                      {pe.resumed_at && <p>▶ Retomado às {formatTimestamp(pe.resumed_at)}</p>}
+                    </div>
+                  ))}
                   {finished_at && <p className="text-xs text-muted-foreground">■ Finalizado às {formatTimestamp(finished_at)}</p>}
+                  {session && session.total_paused_seconds > 0 && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      ⏱ Tempo total em pausa: {Math.floor(session.total_paused_seconds / 60)}min {session.total_paused_seconds % 60}s
+                    </p>
+                  )}
                 </div>
               </Section>
             </>
