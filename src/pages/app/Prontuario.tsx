@@ -1071,6 +1071,8 @@ export default function Prontuario() {
         />
       );
     }
+
+    switch (activeTab) {
       case 'resumo':
         // Render specialty-specific Visão Geral
         if (activeSpecialtyKey === 'psicologia') {
