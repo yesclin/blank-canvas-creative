@@ -37,21 +37,37 @@ import { DynamicAnamneseRenderer } from './DynamicAnamneseRenderer';
 import { StandardTemplateRenderer } from './StandardTemplateRenderer';
 import { useDynamicAnamneseEstetica } from '@/hooks/aesthetics/useDynamicAnamneseEstetica';
 import { ADVANCED_TEMPLATE_MAP } from '@/hooks/prontuario/estetica/esteticaAdvancedTemplates';
+import {
+  getCatalogEntry,
+  getRendererKind,
+  ESTETICA_TEMPLATE_CATALOG,
+  CATEGORY_LABELS,
+  type RendererKind,
+  type TemplateCategory,
+} from '@/hooks/prontuario/estetica/esteticaTemplateCatalog';
 import type { DynamicFormValues } from './anamnese-fields/types';
 import { useAnamnesisTemplatesV2, useAnamnesisRecords } from '@/hooks/useAnamnesisTemplatesV2';
 import type { AnamnesisTemplateV2 } from '@/hooks/useAnamnesisTemplatesV2';
 import { cn } from '@/lib/utils';
 
-// ─── Template classification ───────────────────────────────────────
+// ─── Template classification using catalog ─────────────────────────
 type TemplateKind = 'advanced' | 'standard' | 'incomplete';
 
 function classifyTemplate(t: AnamnesisTemplateV2): TemplateKind {
-  // Advanced: has a matching entry in ADVANCED_TEMPLATE_MAP
-  if (t.template_type && ADVANCED_TEMPLATE_MAP[t.template_type]) return 'advanced';
-  // Standard: has usable structure sections
+  const kind = getRendererKind({ template_type: t.template_type, name: t.name });
+  if (kind === 'dynamic') return 'advanced';
   if (t.structure && t.structure.length > 0) return 'standard';
-  // Incomplete: no renderable structure
   return 'incomplete';
+}
+
+function getTemplateCategory(t: AnamnesisTemplateV2): TemplateCategory {
+  const entry = getCatalogEntry({ template_type: t.template_type, name: t.name });
+  return entry?.category || 'procedural';
+}
+
+function getDisplayOrder(t: AnamnesisTemplateV2): number {
+  const entry = getCatalogEntry({ template_type: t.template_type, name: t.name });
+  return entry?.displayOrder ?? 99;
 }
 
 function kindLabel(kind: TemplateKind): string {
@@ -115,9 +131,11 @@ export function AnamneseEsteticaBlock({
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
 
-  // Classify all templates, exclude incomplete from selector
+  // Classify, filter incomplete, and sort by catalog display order
   const selectableTemplates = useMemo(() => {
-    return allTemplates.filter(t => classifyTemplate(t) !== 'incomplete');
+    return allTemplates
+      .filter(t => classifyTemplate(t) !== 'incomplete')
+      .sort((a, b) => getDisplayOrder(a) - getDisplayOrder(b));
   }, [allTemplates]);
 
   // Active template
@@ -403,9 +421,31 @@ export function AnamneseEsteticaBlock({
   const renderTemplateSelector = () => {
     if (selectableTemplates.length <= 1) return null;
 
-    // Group templates
-    const advancedTemplates = selectableTemplates.filter(t => classifyTemplate(t) === 'advanced');
-    const standardTemplates = selectableTemplates.filter(t => classifyTemplate(t) === 'standard');
+    // Group by catalog category
+    const baseTemplates = selectableTemplates.filter(t => getTemplateCategory(t) === 'avaliacao_base');
+    const proceduralTemplates = selectableTemplates.filter(t => getTemplateCategory(t) === 'procedural');
+
+    const renderGroup = (label: string, templates: AnamnesisTemplateV2[], showBorder = false) => {
+      if (!templates.length) return null;
+      return (
+        <>
+          <div className={cn(
+            "px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider",
+            showBorder && "mt-1 border-t border-border"
+          )}>
+            {label}
+          </div>
+          {templates.map(t => (
+            <SelectItem key={t.id} value={t.id}>
+              <div className="flex items-center gap-2">
+                <span className="truncate">{t.name}</span>
+                {t.is_system && <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
+              </div>
+            </SelectItem>
+          ))}
+        </>
+      );
+    };
 
     return (
       <Select value={selectedTemplateId || ''} onValueChange={handleTemplateChange}>
@@ -413,32 +453,8 @@ export function AnamneseEsteticaBlock({
           <SelectValue placeholder="Selecionar modelo..." />
         </SelectTrigger>
         <SelectContent>
-          {advancedTemplates.length > 0 && standardTemplates.length > 0 && (
-            <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-              Avançados
-            </div>
-          )}
-          {advancedTemplates.map(t => (
-            <SelectItem key={t.id} value={t.id}>
-              <div className="flex items-center gap-2">
-                <span className="truncate">{t.name}</span>
-                {t.is_system && <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
-              </div>
-            </SelectItem>
-          ))}
-          {advancedTemplates.length > 0 && standardTemplates.length > 0 && (
-            <div className="px-2 py-1 mt-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-t">
-              Padrão / Procedurais
-            </div>
-          )}
-          {standardTemplates.map(t => (
-            <SelectItem key={t.id} value={t.id}>
-              <div className="flex items-center gap-2">
-                <span className="truncate">{t.name}</span>
-                {t.is_system && <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
-              </div>
-            </SelectItem>
-          ))}
+          {renderGroup(CATEGORY_LABELS.avaliacao_base, baseTemplates)}
+          {renderGroup(CATEGORY_LABELS.procedural, proceduralTemplates, baseTemplates.length > 0)}
         </SelectContent>
       </Select>
     );
