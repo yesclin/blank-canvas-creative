@@ -314,59 +314,8 @@ export function AnamneseBlock({
     }
   }, [activeTemplate, selectedTemplateId]);
 
-  // ─── Dynamic template detection (estetica advanced) ─────────────
-  const isDynamicAdvanced = !!(activeTemplate?.template_type && ADVANCED_TEMPLATE_MAP[activeTemplate.template_type]);
-  const dynamicFields = isDynamicAdvanced && activeTemplate?.template_type
-    ? (ADVANCED_TEMPLATE_MAP[activeTemplate.template_type] || [])
-    : [];
 
-  // Dynamic anamnese hook (always called, but patientId gated)
-  const {
-    record: dynamicRecord,
-    loading: dynamicLoading,
-    saving: dynamicSaving,
-    saveResponses: saveDynamicResponses,
-    isSigned: dynamicSigned,
-  } = useDynamicAnamneseEstetica({
-    patientId: isDynamicAdvanced ? patientIdForRecords : null,
-    appointmentId: isDynamicAdvanced ? appointmentId : null,
-    templateId: isDynamicAdvanced ? activeTemplate?.id || null : null,
-    templateVersionId: isDynamicAdvanced && activeTemplate ? (v2Templates.find(t => t.id === activeTemplate.id)?.current_version_id || null) : null,
-    templateType: isDynamicAdvanced ? activeTemplate?.template_type || null : null,
-    specialtyId: isDynamicAdvanced ? specialtyId || null : null,
-  });
 
-  // Dynamic form values state
-  const [dynamicValues, setDynamicValues] = useState<DynamicFormValues>({});
-  const [dynamicHasChanges, setDynamicHasChanges] = useState(false);
-  const dynamicAutosaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Load dynamic record into form
-  useEffect(() => {
-    if (dynamicRecord?.responses) {
-      setDynamicValues(dynamicRecord.responses);
-      setDynamicHasChanges(false);
-    }
-  }, [dynamicRecord]);
-
-  const handleDynamicFieldChange = useCallback((fieldId: string, value: unknown) => {
-    setDynamicValues(prev => ({ ...prev, [fieldId]: value }));
-    setDynamicHasChanges(true);
-    if (dynamicAutosaveRef.current) clearTimeout(dynamicAutosaveRef.current);
-    dynamicAutosaveRef.current = setTimeout(() => {
-      setDynamicValues(latest => {
-        saveDynamicResponses(latest);
-        return latest;
-      });
-      setDynamicHasChanges(false);
-    }, 3000);
-  }, [saveDynamicResponses]);
-
-  const handleDynamicSave = useCallback(() => {
-    if (dynamicAutosaveRef.current) clearTimeout(dynamicAutosaveRef.current);
-    saveDynamicResponses(dynamicValues);
-    setDynamicHasChanges(false);
-  }, [saveDynamicResponses, dynamicValues]);
 
   // ─── Selected record from records list ────────────────────────────
   const selectedRecord = useMemo(() => {
