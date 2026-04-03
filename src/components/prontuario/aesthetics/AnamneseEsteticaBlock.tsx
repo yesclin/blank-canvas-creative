@@ -88,16 +88,21 @@ export function AnamneseEsteticaBlock({
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
 
-  // Active template
+  // Filter to only show templates compatible with the dynamic renderer
+  const dynamicTemplates = useMemo(() => {
+    return v2Templates.filter(t => t.template_type && !!ADVANCED_TEMPLATE_MAP[t.template_type]);
+  }, [v2Templates]);
+
+  // Active template (only from dynamic-compatible templates)
   const activeTemplate = useMemo(() => {
-    if (!v2Templates.length) return null;
+    if (!dynamicTemplates.length) return null;
     if (selectedTemplateId) {
-      const found = v2Templates.find(t => t.id === selectedTemplateId);
+      const found = dynamicTemplates.find(t => t.id === selectedTemplateId);
       if (found) return found;
     }
-    const defaultTpl = v2Templates.find(t => t.is_default);
-    return defaultTpl || v2Templates[0];
-  }, [v2Templates, selectedTemplateId]);
+    const defaultTpl = dynamicTemplates.find(t => t.is_default);
+    return defaultTpl || dynamicTemplates[0];
+  }, [dynamicTemplates, selectedTemplateId]);
 
   // Auto-select first template
   useEffect(() => {
@@ -220,14 +225,14 @@ export function AnamneseEsteticaBlock({
   }
 
   // ─── No templates available ──────────────────────────────────────
-  if (v2Templates.length === 0) {
+  if (dynamicTemplates.length === 0) {
     return (
       <Card className="border-dashed">
         <CardContent className="p-10 text-center">
           <FileText className="h-10 w-10 mx-auto mb-4 text-muted-foreground opacity-50" />
-          <h3 className="font-semibold mb-2">Nenhum modelo de anamnese configurado</h3>
+          <h3 className="font-semibold mb-2">Nenhum modelo de anamnese avançado disponível</h3>
           <p className="text-sm text-muted-foreground">
-            Configure os modelos de anamnese para a especialidade Estética nas configurações.
+            Os modelos compatíveis com o fluxo dinâmico da estética não foram encontrados. Verifique as configurações.
           </p>
         </CardContent>
       </Card>
@@ -249,13 +254,13 @@ export function AnamneseEsteticaBlock({
             <FileText className="h-5 w-5 text-primary" />
             <h3 className="font-semibold">Anamnese Estética</h3>
           </div>
-          {v2Templates.length > 1 && (
+          {dynamicTemplates.length > 1 && (
             <Select value={selectedTemplateId || ''} onValueChange={handleTemplateChange}>
               <SelectTrigger className="w-64 h-8 text-xs">
                 <SelectValue placeholder="Selecionar modelo..." />
               </SelectTrigger>
               <SelectContent>
-                {v2Templates.map(t => (
+                {dynamicTemplates.map(t => (
                   <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -270,16 +275,11 @@ export function AnamneseEsteticaBlock({
             <p className="text-sm text-muted-foreground mb-4">
               {activeTemplate ? `Modelo: ${activeTemplate.name}` : 'Selecione um modelo para começar'}
             </p>
-            {canEdit && isDynamic && (
+            {canEdit && (
               <Button onClick={() => setIsCreatingNew(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Registrar Anamnese
               </Button>
-            )}
-            {!isDynamic && activeTemplate && (
-              <p className="text-sm text-muted-foreground">
-                Este modelo não possui estrutura avançada configurada.
-              </p>
             )}
           </CardContent>
         </Card>
@@ -315,13 +315,13 @@ export function AnamneseEsteticaBlock({
 
         <div className="flex items-center gap-2">
           {/* Template selector */}
-          {v2Templates.length > 1 && (
+          {dynamicTemplates.length > 1 && (
             <Select value={selectedTemplateId || ''} onValueChange={handleTemplateChange}>
               <SelectTrigger className="w-56 h-8 text-xs">
                 <SelectValue placeholder="Modelo..." />
               </SelectTrigger>
               <SelectContent>
-                {v2Templates.map(t => (
+                {dynamicTemplates.map(t => (
                   <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -402,24 +402,21 @@ export function AnamneseEsteticaBlock({
       )}
 
       {/* Dynamic form */}
-      {isDynamic ? (
-        dynamicLoading ? (
-          <Skeleton className="h-64 w-full" />
-        ) : (
-          <DynamicAnamneseRenderer
-            fields={dynamicFields}
-            values={dynamicValues}
-            onChange={handleDynamicFieldChange}
-            disabled={!canEdit || dynamicSigned}
-          />
-        )
+      {dynamicLoading ? (
+        <Skeleton className="h-64 w-full" />
+      ) : dynamicFields.length > 0 ? (
+        <DynamicAnamneseRenderer
+          fields={dynamicFields}
+          values={dynamicValues}
+          onChange={handleDynamicFieldChange}
+          disabled={!canEdit || dynamicSigned}
+        />
       ) : (
         <Card>
           <CardContent className="p-8 text-center">
             <FileText className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-50" />
             <p className="text-sm text-muted-foreground">
-              Este modelo não possui estrutura avançada configurada.
-              Selecione um modelo com estrutura dinâmica.
+              Não foi possível carregar a estrutura deste modelo. Tente selecionar outro modelo.
             </p>
           </CardContent>
         </Card>
