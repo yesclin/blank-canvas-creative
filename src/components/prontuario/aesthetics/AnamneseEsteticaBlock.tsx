@@ -421,9 +421,31 @@ export function AnamneseEsteticaBlock({
   const renderTemplateSelector = () => {
     if (selectableTemplates.length <= 1) return null;
 
-    // Group templates
-    const advancedTemplates = selectableTemplates.filter(t => classifyTemplate(t) === 'advanced');
-    const standardTemplates = selectableTemplates.filter(t => classifyTemplate(t) === 'standard');
+    // Group by catalog category
+    const baseTemplates = selectableTemplates.filter(t => getTemplateCategory(t) === 'avaliacao_base');
+    const proceduralTemplates = selectableTemplates.filter(t => getTemplateCategory(t) === 'procedural');
+
+    const renderGroup = (label: string, templates: AnamnesisTemplateV2[], showBorder = false) => {
+      if (!templates.length) return null;
+      return (
+        <>
+          <div className={cn(
+            "px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider",
+            showBorder && "mt-1 border-t border-border"
+          )}>
+            {label}
+          </div>
+          {templates.map(t => (
+            <SelectItem key={t.id} value={t.id}>
+              <div className="flex items-center gap-2">
+                <span className="truncate">{t.name}</span>
+                {t.is_system && <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
+              </div>
+            </SelectItem>
+          ))}
+        </>
+      );
+    };
 
     return (
       <Select value={selectedTemplateId || ''} onValueChange={handleTemplateChange}>
@@ -431,32 +453,8 @@ export function AnamneseEsteticaBlock({
           <SelectValue placeholder="Selecionar modelo..." />
         </SelectTrigger>
         <SelectContent>
-          {advancedTemplates.length > 0 && standardTemplates.length > 0 && (
-            <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-              Avançados
-            </div>
-          )}
-          {advancedTemplates.map(t => (
-            <SelectItem key={t.id} value={t.id}>
-              <div className="flex items-center gap-2">
-                <span className="truncate">{t.name}</span>
-                {t.is_system && <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
-              </div>
-            </SelectItem>
-          ))}
-          {advancedTemplates.length > 0 && standardTemplates.length > 0 && (
-            <div className="px-2 py-1 mt-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-t">
-              Padrão / Procedurais
-            </div>
-          )}
-          {standardTemplates.map(t => (
-            <SelectItem key={t.id} value={t.id}>
-              <div className="flex items-center gap-2">
-                <span className="truncate">{t.name}</span>
-                {t.is_system && <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
-              </div>
-            </SelectItem>
-          ))}
+          {renderGroup(CATEGORY_LABELS.avaliacao_base, baseTemplates)}
+          {renderGroup(CATEGORY_LABELS.procedural, proceduralTemplates, baseTemplates.length > 0)}
         </SelectContent>
       </Select>
     );
