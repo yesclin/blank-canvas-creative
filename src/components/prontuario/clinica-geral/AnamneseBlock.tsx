@@ -69,6 +69,10 @@ import { useConsolidatedFillerPdf } from "@/hooks/aesthetics/useConsolidatedFill
 import { FileDown, Printer, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { ADVANCED_TEMPLATE_MAP } from "@/hooks/prontuario/estetica/esteticaAdvancedTemplates";
+import { DynamicAnamneseRenderer } from "@/components/prontuario/aesthetics/DynamicAnamneseRenderer";
+import { useDynamicAnamneseEstetica } from "@/hooks/aesthetics/useDynamicAnamneseEstetica";
+import type { DynamicFormValues } from "@/components/prontuario/aesthetics/anamnese-fields/types";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -148,6 +152,7 @@ interface UnifiedTemplate {
   descricao: string;
   icon: string;
   is_system: boolean;
+  template_type: string | null;
   secoes: SecaoAnamnese[];
 }
 
@@ -189,6 +194,7 @@ function v2TemplateToUnified(t: AnamnesisTemplateV2): UnifiedTemplate {
     descricao: t.description || '',
     icon: t.icon || 'Stethoscope',
     is_system: t.is_system,
+    template_type: t.template_type || null,
     secoes: t.structure
       .map(section => {
         const filteredFields = (section.fields || []).filter(f => !IDENTIFICATION_FIELD_IDS.has(f.id));
@@ -313,6 +319,60 @@ export function AnamneseBlock({
       setSelectedTemplateId(activeTemplate.id);
     }
   }, [activeTemplate, selectedTemplateId]);
+
+  // ─── Dynamic template detection (estetica advanced) ─────────────
+  const isDynamicAdvanced = !!(activeTemplate?.template_type && ADVANCED_TEMPLATE_MAP[activeTemplate.template_type]);
+  const dynamicFields = isDynamicAdvanced && activeTemplate?.template_type
+    ? (ADVANCED_TEMPLATE_MAP[activeTemplate.template_type] || [])
+    : [];
+
+  // Dynamic anamnese hook (always called, but patientId gated)
+  const {
+    record: dynamicRecord,
+    loading: dynamicLoading,
+    saving: dynamicSaving,
+    saveResponses: saveDynamicResponses,
+    isSigned: dynamicSigned,
+  } = useDynamicAnamneseEstetica({
+    patientId: isDynamicAdvanced ? patientIdForRecords : null,
+    appointmentId: isDynamicAdvanced ? appointmentId : null,
+    templateId: isDynamicAdvanced ? activeTemplate?.id || null : null,
+    templateVersionId: isDynamicAdvanced && activeTemplate ? (v2Templates.find(t => t.id === activeTemplate.id)?.current_version_id || null) : null,
+    templateType: isDynamicAdvanced ? activeTemplate?.template_type || null : null,
+    specialtyId: isDynamicAdvanced ? specialtyId || null : null,
+  });
+
+  // Dynamic form values state
+  const [dynamicValues, setDynamicValues] = useState<DynamicFormValues>({});
+  const [dynamicHasChanges, setDynamicHasChanges] = useState(false);
+  const dynamicAutosaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load dynamic record into form
+  useEffect(() => {
+    if (dynamicRecord?.responses) {
+      setDynamicValues(dynamicRecord.responses);
+      setDynamicHasChanges(false);
+    }
+  }, [dynamicRecord]);
+
+  const handleDynamicFieldChange = useCallback((fieldId: string, value: unknown) => {
+    setDynamicValues(prev => ({ ...prev, [fieldId]: value }));
+    setDynamicHasChanges(true);
+    if (dynamicAutosaveRef.current) clearTimeout(dynamicAutosaveRef.current);
+    dynamicAutosaveRef.current = setTimeout(() => {
+      setDynamicValues(latest => {
+        saveDynamicResponses(latest);
+        return latest;
+      });
+      setDynamicHasChanges(false);
+    }, 3000);
+  }, [saveDynamicResponses]);
+
+  const handleDynamicSave = useCallback(() => {
+    if (dynamicAutosaveRef.current) clearTimeout(dynamicAutosaveRef.current);
+    saveDynamicResponses(dynamicValues);
+    setDynamicHasChanges(false);
+  }, [saveDynamicResponses, dynamicValues]);
 
   // ─── Selected record from records list ────────────────────────────
   const selectedRecord = useMemo(() => {
@@ -830,6 +890,74 @@ export function AnamneseBlock({
           </p>
         </CardContent>
       </Card>
+    );
+  }
+
+  // ─── Dynamic advanced template rendering ─────────────────────────
+  if (isDynamicAdvanced && activeTemplate) {
+    const renderTemplateSelector = () => (
+      allTemplates.length > 1 ? (
+        <select
+          value={selectedTemplateId || ''}
+          onChange={(e) => {
+            setSelectedTemplateId(e.target.value);
+            setDynamicValues({});
+            setDynamicHasChanges(false);
+          }}
+          className="h-8 rounded-md border bg-background px-2 text-xs"
+        >
+          {allTemplates.map((t) => (
+            <option key={t.id} value={t.id}>{t.nome}</option>
+          ))}
+        </select>
+      ) : null
+    );
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-3">
+            <FileText className="h-5 w-5 text-primary" />
+            <div>
+              <h3 className="font-semibold">{activeTemplate.nome}</h3>
+              <p className="text-xs text-muted-foreground">
+                {dynamicRecord ? 'Registro existente' : 'Novo registro'}
+                {dynamicSigned ? ' • Assinada' : ''}
+              </p>
+            </div>
+            {dynamicSigned && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <Lock className="h-3 w-3" />
+                Assinada
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {renderTemplateSelector()}
+            {canEdit && (
+              <Button
+                size="sm"
+                onClick={handleDynamicSave}
+                disabled={dynamicSaving || !dynamicHasChanges}
+              >
+                <Save className="h-4 w-4 mr-1.5" />
+                {dynamicSaving ? 'Salvando...' : 'Salvar'}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {dynamicLoading ? (
+          <Skeleton className="h-64 w-full" />
+        ) : (
+          <DynamicAnamneseRenderer
+            fields={dynamicFields}
+            values={dynamicValues}
+            onChange={handleDynamicFieldChange}
+            disabled={!canEdit || dynamicSigned}
+          />
+        )}
+      </div>
     );
   }
 
