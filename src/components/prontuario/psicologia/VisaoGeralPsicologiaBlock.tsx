@@ -17,6 +17,7 @@ import {
   XCircle
 } from "lucide-react";
 import { format, parseISO, differenceInYears, differenceInDays } from "date-fns";
+import { calculateAgeFromDateOnly } from "@/utils/dateUtils";
 import { ptBR } from "date-fns/locale";
 import type { 
   PsicologiaPatientData, 
@@ -65,12 +66,8 @@ export function VisaoGeralPsicologiaBlock({
 
   const calculateAge = (birthDate: string | null): string => {
     if (!birthDate) return 'Não informada';
-    try {
-      const years = differenceInYears(new Date(), parseISO(birthDate));
-      return `${years} anos`;
-    } catch {
-      return 'Não informada';
-    }
+    const age = calculateAgeFromDateOnly(birthDate);
+    return age !== null ? `${age} anos` : 'Não informada';
   };
 
   const formatGender = (gender: string | null): string => {

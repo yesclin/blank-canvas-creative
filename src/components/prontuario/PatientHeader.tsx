@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { PatientSummary, PatientClinicalData, ClinicalAlert, alertSeverityConfig } from "@/types/prontuario";
 import { format, differenceInYears, parseISO } from "date-fns";
+import { calculateAgeFromDateOnly, formatDateOnly } from "@/utils/dateUtils";
 import { ptBR } from "date-fns/locale";
 
 interface PatientHeaderProps {
@@ -29,7 +30,7 @@ export function PatientHeader({ patient, clinicalData, alerts }: PatientHeaderPr
   };
 
   const calculateAge = (birthDate: string) => {
-    return differenceInYears(new Date(), parseISO(birthDate));
+    return calculateAgeFromDateOnly(birthDate) ?? 0;
   };
 
   return (
@@ -83,7 +84,7 @@ export function PatientHeader({ patient, clinicalData, alerts }: PatientHeaderPr
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
                     <span>
-                      {format(parseISO(patient.birth_date), "dd/MM/yyyy", { locale: ptBR })}
+                      {formatDateOnly(patient.birth_date)}
                       {" "}({calculateAge(patient.birth_date)} anos)
                     </span>
                   </div>

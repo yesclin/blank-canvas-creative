@@ -25,6 +25,7 @@ import {
   Specialty
 } from "@/types/prontuario";
 import { format, parseISO, differenceInYears } from "date-fns";
+import { calculateAgeFromDateOnly } from "@/utils/dateUtils";
 import { ptBR } from "date-fns/locale";
 
 interface OverviewTabProps {
@@ -53,7 +54,7 @@ export function OverviewTab({
 
   const calculateAge = (birthDate?: string) => {
     if (!birthDate) return null;
-    return differenceInYears(new Date(), parseISO(birthDate));
+    return calculateAgeFromDateOnly(birthDate);
   };
 
   return (

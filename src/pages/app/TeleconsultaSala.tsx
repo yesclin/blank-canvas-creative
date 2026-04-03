@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { calculateAgeFromDateOnly } from "@/utils/dateUtils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -256,11 +257,7 @@ export default function TeleconsultaSala() {
 
   const calculateAge = (birthDate?: string) => {
     if (!birthDate) return null;
-    const birth = new Date(birthDate);
-    const now = new Date();
-    let age = now.getFullYear() - birth.getFullYear();
-    if (now.getMonth() < birth.getMonth() || (now.getMonth() === birth.getMonth() && now.getDate() < birth.getDate())) age--;
-    return age;
+    return calculateAgeFromDateOnly(birthDate);
   };
 
   // ══════════════════════════════════════════

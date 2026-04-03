@@ -2,15 +2,11 @@ import { useMemo } from "react";
 import type { Appointment, PaymentStatus, AgendaAppointmentViewModel } from "@/types/agenda";
 import { paymentStatusLabels, paymentTypeLabels, typeLabels, careModeLabels, statusLabels } from "@/types/agenda";
 import { getAppointmentSourceLabel } from "@/utils/appointmentSource";
+import { calculateAgeFromDateOnly } from "@/utils/dateUtils";
 
 function calculateAge(birthDate?: string): number | undefined {
   if (!birthDate) return undefined;
-  const birth = new Date(birthDate);
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return age;
+  return calculateAgeFromDateOnly(birthDate) ?? undefined;
 }
 
 export function useAppointmentPreviewData(appointment: Appointment | null): AgendaAppointmentViewModel | null {

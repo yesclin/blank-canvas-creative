@@ -27,6 +27,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { format, differenceInYears, differenceInDays } from 'date-fns';
+import { calculateAgeFromDateOnly } from '@/utils/dateUtils';
 import { ptBR } from 'date-fns/locale';
 import { 
   STATUS_ACOMPANHAMENTO_LABELS,
@@ -173,7 +174,7 @@ export function VisaoGeralFisioterapiaBlock({
   }
 
   const idade = patient.birth_date 
-    ? differenceInYears(new Date(), new Date(patient.birth_date))
+    ? calculateAgeFromDateOnly(patient.birth_date)
     : null;
 
   const diasDesdeUltimaSessao = summary.ultima_sessao

@@ -1,4 +1,5 @@
 import { format, parseISO, differenceInYears } from 'date-fns';
+import { calculateAgeFromDateOnly } from '@/utils/dateUtils';
 import { ptBR } from 'date-fns/locale';
 import {
   MoreHorizontal,
@@ -64,7 +65,7 @@ export function PatientTable({
 
   const calculateAge = (birthDate: string | null) => {
     if (!birthDate) return null;
-    return differenceInYears(new Date(), parseISO(birthDate));
+    return calculateAgeFromDateOnly(birthDate);
   };
 
   const formatDate = (dateString: string | null) => {

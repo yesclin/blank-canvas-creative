@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { formatDateOnly } from "@/utils/dateUtils";
 import { Mail, Phone, Calendar, User, Tag, Target, Edit, Archive, RotateCcw, UserCheck } from "lucide-react";
 import { LEAD_SOURCES, LEAD_STATUSES, getLeadStatusColor, type CrmLead } from "@/types/crm";
 import { useUpdateLead } from "@/hooks/crm/useLeads";
@@ -75,7 +76,7 @@ export function LeadDetailsDrawer({ lead, open, onOpenChange, onEdit, onCreateOp
               {lead.birth_date && (
                 <div className="flex items-center gap-2 text-sm">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>{format(new Date(lead.birth_date), "dd/MM/yyyy", { locale: ptBR })}</span>
+                  <span>{formatDateOnly(lead.birth_date)}</span>
                 </div>
               )}
             </div>

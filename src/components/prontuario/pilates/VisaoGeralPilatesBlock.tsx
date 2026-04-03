@@ -24,6 +24,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { format, differenceInYears, differenceInDays } from 'date-fns';
+import { calculateAgeFromDateOnly } from '@/utils/dateUtils';
 import { ptBR } from 'date-fns/locale';
 import { 
   useVisaoGeralPilatesData,
@@ -161,7 +162,7 @@ export function VisaoGeralPilatesBlock({
   }
 
   const idade = patient.birth_date 
-    ? differenceInYears(new Date(), new Date(patient.birth_date))
+    ? calculateAgeFromDateOnly(patient.birth_date)
     : null;
 
   const diasDesdeUltimaSessao = summary.ultima_sessao

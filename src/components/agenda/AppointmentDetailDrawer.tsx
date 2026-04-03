@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { calculateAgeFromDateOnly, formatDateOnly } from "@/utils/dateUtils";
 import { useNavigate } from "react-router-dom";
 import { PreRegistrationSection } from "@/components/agenda/PreRegistrationSection";
 import {
@@ -70,12 +71,7 @@ const formatCurrency = (value: number) =>
 
 function calculateAge(birthDate?: string): number | undefined {
   if (!birthDate) return undefined;
-  const birth = new Date(birthDate);
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return age;
+  return calculateAgeFromDateOnly(birthDate) ?? undefined;
 }
 
 export function AppointmentDetailDrawer({
@@ -367,7 +363,7 @@ export function AppointmentDetailDrawer({
                 {patient?.birth_date && (
                   <InfoRow 
                     label="Nascimento" 
-                    value={`${new Date(patient.birth_date).toLocaleDateString("pt-BR")}${patientAge !== undefined ? ` (${patientAge} anos)` : ''}`} 
+                    value={`${formatDateOnly(patient.birth_date)}${patientAge !== undefined ? ` (${patientAge} anos)` : ''}`} 
                   />
                 )}
               </Section>

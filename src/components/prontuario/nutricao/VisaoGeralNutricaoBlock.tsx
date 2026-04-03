@@ -41,6 +41,7 @@ import {
   Ruler
 } from 'lucide-react';
 import { format, differenceInYears, differenceInDays } from 'date-fns';
+import { calculateAgeFromDateOnly } from '@/utils/dateUtils';
 import { ptBR } from 'date-fns/locale';
 import { 
   OBJETIVO_NUTRICIONAL_LABELS, 
@@ -225,7 +226,7 @@ export function VisaoGeralNutricaoBlock({
   }
 
   const idade = patient.birth_date 
-    ? differenceInYears(new Date(), new Date(patient.birth_date))
+    ? calculateAgeFromDateOnly(patient.birth_date)
     : null;
 
   const diasDesdeUltimaConsulta = summary.ultima_consulta
