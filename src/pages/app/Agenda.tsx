@@ -112,6 +112,22 @@ export default function Agenda() {
     }
   }, []); // Run only once on mount
 
+  useEffect(() => {
+    if (!detailAppointment) return;
+
+    const updatedAppointment = appointments.find((item) => item.id === detailAppointment.id) || null;
+
+    if (!updatedAppointment) {
+      setDetailAppointment(null);
+      setDetailDrawerOpen(false);
+      return;
+    }
+
+    if (updatedAppointment !== detailAppointment) {
+      setDetailAppointment(updatedAppointment);
+    }
+  }, [appointments, detailAppointment]);
+
   // Mutations
   const updateStatusMutation = useUpdateAppointmentStatus();
   const createAppointmentMutation = useCreateAppointment();
@@ -190,9 +206,26 @@ export default function Agenda() {
     setAppointmentDialogOpen(true);
   };
 
-  // Navigate to prontuário when starting an appointment
-  const navigateToProntuario = useCallback((patientId: string) => {
-    navigate(`/app/prontuario/${patientId}`);
+  const buildProntuarioUrl = useCallback((appointment: Appointment, specialtyId?: string | null) => {
+    const params = new URLSearchParams({
+      appointmentId: appointment.id,
+      professionalId: appointment.professional_id,
+    });
+
+    const lockedSpecialtyId = specialtyId || appointment.specialty_id;
+    if (lockedSpecialtyId) {
+      params.set('specialtyId', lockedSpecialtyId);
+    }
+
+    if (appointment.procedure_id) {
+      params.set('procedureId', appointment.procedure_id);
+    }
+
+    return `/app/prontuario/${appointment.patient_id}?${params.toString()}`;
+  }, []);
+
+  const openProntuarioFromAppointment = useCallback((appointment: Appointment, specialtyId?: string | null) => {
+    navigate(buildProntuarioUrl(appointment, specialtyId));
   }, [navigate]);
 
   // Handle status change with stock validation and material consumption
@@ -227,6 +260,8 @@ export default function Agenda() {
     const apt = appointments.find(a => a.id === appointmentId);
     if (!apt) return;
 
+    let lockedSpecialtyId = apt.specialty_id || null;
+
     // ── Specialty validation before starting appointment ──
     if (newStatus === 'em_atendimento') {
       const resolvedSpecialtyId = await resolveSpecialtyId(apt);
@@ -234,6 +269,8 @@ export default function Agenda() {
         toast.error('Especialidade não definida para este atendimento. Defina uma especialidade no agendamento, procedimento ou profissional antes de iniciar.');
         return;
       }
+
+      lockedSpecialtyId = resolvedSpecialtyId;
 
       // Save specialty_id on the appointment if not already set
       if (!apt.specialty_id) {
@@ -277,23 +314,27 @@ export default function Agenda() {
     } else if (newStatus === 'em_atendimento') {
       try {
         await updateStatusMutation.mutateAsync({ id: appointmentId, status: newStatus });
-        // Create session tracking record
-        createSessionMutation.mutate({
+        await createSessionMutation.mutateAsync({
           appointmentId,
           clinicId: apt.clinic_id,
           patientId: apt.patient_id,
           professionalId: apt.professional_id,
         });
-        if (apt.patient_id) {
-          navigateToProntuario(apt.patient_id);
-        }
+        openProntuarioFromAppointment({
+          ...apt,
+          specialty_id: lockedSpecialtyId,
+        }, lockedSpecialtyId);
       } catch (error) {
         console.error("Error updating status:", error);
       }
     } else {
-      updateStatusMutation.mutate({ id: appointmentId, status: newStatus });
+      try {
+        await updateStatusMutation.mutateAsync({ id: appointmentId, status: newStatus });
+      } catch (error) {
+        console.error("Error updating status:", error);
+      }
     }
-  }, [appointments, navigateToProntuario, updateStatusMutation, resolveSpecialtyId]);
+  }, [appointments, createSessionMutation, finalizeSessionMutation, openProntuarioFromAppointment, resolveSpecialtyId, updateStatusMutation]);
 
   // Stock validation handlers
   const handleStockValidationConfirm = useCallback(async () => {
@@ -303,24 +344,33 @@ export default function Agenda() {
       toast.warning("Atenção: Estoque ficará negativo após consumo dos materiais");
       
       try {
-        await updateStatusMutation.mutateAsync({ 
-          id: pendingStatusChange.appointmentId, 
-          status: pendingStatusChange.status 
-        });
-        
         if (pendingStatusChange.status === 'em_atendimento') {
           const apt = appointments.find(a => a.id === pendingStatusChange.appointmentId);
           if (apt) {
-            createSessionMutation.mutate({
+            const resolvedSpecialtyId = await resolveSpecialtyId(apt);
+
+            await updateStatusMutation.mutateAsync({ 
+              id: pendingStatusChange.appointmentId, 
+              status: pendingStatusChange.status,
+            });
+
+            await createSessionMutation.mutateAsync({
               appointmentId: apt.id,
               clinicId: apt.clinic_id,
               patientId: apt.patient_id,
               professionalId: apt.professional_id,
             });
-            if (apt.patient_id) {
-              navigateToProntuario(apt.patient_id);
-            }
+
+            openProntuarioFromAppointment({
+              ...apt,
+              specialty_id: resolvedSpecialtyId || apt.specialty_id,
+            }, resolvedSpecialtyId || apt.specialty_id || null);
           }
+        } else {
+          await updateStatusMutation.mutateAsync({ 
+            id: pendingStatusChange.appointmentId, 
+            status: pendingStatusChange.status,
+          });
         }
       } catch (error) {
         console.error("Error updating status:", error);
@@ -329,7 +379,7 @@ export default function Agenda() {
     
     setStockValidationResult(null);
     setPendingStatusChange(null);
-  }, [pendingStatusChange, appointments, navigateToProntuario, updateStatusMutation]);
+  }, [pendingStatusChange, appointments, createSessionMutation, openProntuarioFromAppointment, resolveSpecialtyId, updateStatusMutation]);
 
   const handleStockValidationCancel = useCallback(() => {
     setStockValidationDialogOpen(false);
@@ -627,10 +677,7 @@ export default function Agenda() {
         appointment={detailAppointment}
         open={detailDrawerOpen}
         onOpenChange={setDetailDrawerOpen}
-        onStatusChange={(id, status) => {
-          setDetailDrawerOpen(false);
-          handleStatusChange(id, status);
-        }}
+        onStatusChange={handleStatusChange}
         onReschedule={(apt) => {
           setDetailDrawerOpen(false);
           handleReschedule(apt);
@@ -640,7 +687,6 @@ export default function Agenda() {
           handleLaunchSale(apt);
         }}
         onStartAtendimento={(apt) => {
-          setDetailDrawerOpen(false);
           handleStatusChange(apt.id, 'em_atendimento');
         }}
       />
