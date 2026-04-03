@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { format, parseISO, differenceInYears } from 'date-fns';
+import { calculateAgeFromDateOnly, formatDateOnly } from '@/utils/dateUtils';
 import { ptBR } from 'date-fns/locale';
 import {
   ArrowLeft,

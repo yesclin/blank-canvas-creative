@@ -1,4 +1,5 @@
 import { format, parseISO, differenceInYears } from 'date-fns';
+import { calculateAgeFromDateOnly } from '@/utils/dateUtils';
 import { ptBR } from 'date-fns/locale';
 import {
   MoreHorizontal,

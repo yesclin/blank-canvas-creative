@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { PatientSummary, PatientClinicalData, ClinicalAlert, alertSeverityConfig } from "@/types/prontuario";
 import { format, differenceInYears, parseISO } from "date-fns";
+import { calculateAgeFromDateOnly, formatDateOnly } from "@/utils/dateUtils";
 import { ptBR } from "date-fns/locale";
 
 interface PatientHeaderProps {
