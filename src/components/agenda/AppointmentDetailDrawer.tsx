@@ -642,6 +642,14 @@ export function AppointmentDetailDrawer({
         </div>
       </SheetContent>
 
+      {/* Payment Dialog */}
+      <AppointmentReceivePaymentDialog
+        appointment={appointment}
+        open={paymentDialogOpen}
+        onOpenChange={setPaymentDialogOpen}
+        financialStatus={financial}
+      />
+
       {/* Summary Modal */}
       <AppointmentSummaryModal
         open={summaryModalOpen}
