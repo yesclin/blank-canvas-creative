@@ -29,7 +29,7 @@ export function PatientHeader({ patient, clinicalData, alerts }: PatientHeaderPr
   };
 
   const calculateAge = (birthDate: string) => {
-    return differenceInYears(new Date(), parseISO(birthDate));
+    return calculateAgeFromDateOnly(birthDate) ?? 0;
   };
 
   return (

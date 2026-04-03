@@ -68,12 +68,13 @@ export function PatientProfile({
 
   const calculateAge = (birthDate: string | null) => {
     if (!birthDate) return null;
-    return differenceInYears(new Date(), parseISO(birthDate));
+    return calculateAgeFromDateOnly(birthDate);
   };
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '-';
-    return format(parseISO(dateString), 'dd/MM/yyyy', { locale: ptBR });
+    // For birth_date use timezone-safe formatting; for other dates use parseISO
+    return formatDateOnly(dateString) || format(parseISO(dateString), 'dd/MM/yyyy', { locale: ptBR });
   };
 
   const formatDateTime = (dateString: string) => {
