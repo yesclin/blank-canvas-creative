@@ -9,6 +9,7 @@
 import { AnamneseEsteticaBlock } from '../AnamneseEsteticaBlock';
 import { AvaliacaoEsteticaBlock } from '../AvaliacaoEsteticaBlock';
 import { VisaoGeralEsteticaBlock } from '../VisaoGeralEsteticaBlock';
+import { VisaoGeralEsteticaBlock } from '../VisaoGeralEsteticaBlock';
 import { EvolucoesEsteticaBlock } from '../EvolucoesEsteticaBlock';
 import { ProdutosUtilizadosBlock } from '../ProdutosUtilizadosBlock';
 import { AlertasEsteticaBlock } from '../AlertasEsteticaBlock';
