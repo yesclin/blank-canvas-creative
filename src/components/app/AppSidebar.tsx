@@ -65,6 +65,7 @@ const ownerAdminMainMenu: MenuItem[] = [
   { title: "Agenda", url: "/app/agenda", icon: Calendar, tourId: "agenda" },
   { title: "Pacientes", url: "/app/pacientes", icon: Users, tourId: "patients" },
   { title: "Prontuário", url: "/app/prontuario", icon: FileText, tourId: "medical-record" },
+  { title: "Atendimento", url: "/app/atendimento", icon: Activity, tourId: "atendimento" },
   { title: "Comercial", url: "/app/comercial", icon: Briefcase, tourId: "commercial" },
   { title: "Marketing", url: "/app/marketing", icon: Megaphone, tourId: "communication" },
 ];
