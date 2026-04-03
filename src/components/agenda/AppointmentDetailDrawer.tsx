@@ -505,6 +505,19 @@ export function AppointmentDetailDrawer({
             </>
           )}
 
+          {/* ── Section: Pré-cadastro ── */}
+          <Separator />
+          <Section title="Pré-cadastro" icon={FileText}>
+            <PreRegistrationSection
+              appointmentId={appointment.id}
+              clinicId={appointment.clinic_id}
+              patientId={appointment.patient_id}
+              patientName={patient?.full_name}
+              patientPhone={patient?.phone}
+              patientEmail={patient?.email}
+            />
+          </Section>
+
           {/* ── Actions ── */}
           <Separator />
           <div className="space-y-2 pb-2">
