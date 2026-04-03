@@ -275,16 +275,11 @@ export function AnamneseEsteticaBlock({
             <p className="text-sm text-muted-foreground mb-4">
               {activeTemplate ? `Modelo: ${activeTemplate.name}` : 'Selecione um modelo para começar'}
             </p>
-            {canEdit && isDynamic && (
+            {canEdit && (
               <Button onClick={() => setIsCreatingNew(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Registrar Anamnese
               </Button>
-            )}
-            {!isDynamic && activeTemplate && (
-              <p className="text-sm text-muted-foreground">
-                Este modelo não possui estrutura avançada configurada.
-              </p>
             )}
           </CardContent>
         </Card>
