@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { formatDateOnly } from "@/utils/dateUtils";
 import { Mail, Phone, Calendar, User, Tag, Target, Edit, Archive, RotateCcw, UserCheck } from "lucide-react";
 import { LEAD_SOURCES, LEAD_STATUSES, getLeadStatusColor, type CrmLead } from "@/types/crm";
 import { useUpdateLead } from "@/hooks/crm/useLeads";
