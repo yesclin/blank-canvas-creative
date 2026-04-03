@@ -20,6 +20,7 @@ import {
   Plug,
   Briefcase,
   CreditCard,
+  Activity,
   type LucideIcon,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
