@@ -42,6 +42,9 @@ import {
   FolderOpen,
   MessageSquare,
   History,
+  Pause,
+  PlayCircle,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Appointment, AppointmentStatus, MeetingStatus } from "@/types/agenda";
@@ -50,6 +53,9 @@ import { getAppointmentSourceLabel } from "@/utils/appointmentSource";
 import { useTeleconsultaActions, useTeleconsultaSession } from "@/hooks/useTeleconsulta";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAppointmentFinancialStatus } from "@/hooks/useAppointmentFinancialStatus";
+import { useAppointmentSession, usePauseSession, useResumeSession } from "@/hooks/useAppointmentSession";
+import { SessionTimerBadge } from "./SessionTimerBadge";
+import { AppointmentSummaryModal } from "./AppointmentSummaryModal";
 import { PatientAvatar } from "./PatientAvatar";
 import { AppointmentPaymentBadge } from "./AppointmentPaymentBadge";
 import { AppointmentReceivePaymentDialog } from "./AppointmentReceivePaymentDialog";
