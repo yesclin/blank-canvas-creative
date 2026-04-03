@@ -53,7 +53,7 @@ export function OverviewTab({
 
   const calculateAge = (birthDate?: string) => {
     if (!birthDate) return null;
-    return differenceInYears(new Date(), parseISO(birthDate));
+    return calculateAgeFromDateOnly(birthDate);
   };
 
   return (

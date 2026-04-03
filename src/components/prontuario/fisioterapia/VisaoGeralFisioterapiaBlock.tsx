@@ -173,7 +173,7 @@ export function VisaoGeralFisioterapiaBlock({
   }
 
   const idade = patient.birth_date 
-    ? differenceInYears(new Date(), new Date(patient.birth_date))
+    ? calculateAgeFromDateOnly(patient.birth_date)
     : null;
 
   const diasDesdeUltimaSessao = summary.ultima_sessao

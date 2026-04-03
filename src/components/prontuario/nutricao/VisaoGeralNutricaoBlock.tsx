@@ -225,7 +225,7 @@ export function VisaoGeralNutricaoBlock({
   }
 
   const idade = patient.birth_date 
-    ? differenceInYears(new Date(), new Date(patient.birth_date))
+    ? calculateAgeFromDateOnly(patient.birth_date)
     : null;
 
   const diasDesdeUltimaConsulta = summary.ultima_consulta

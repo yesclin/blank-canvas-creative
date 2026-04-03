@@ -155,12 +155,7 @@ function QuickLink({
  * Calcula a idade a partir da data de nascimento
  */
 function calculateAge(birthDate: string | null): number | null {
-  if (!birthDate) return null;
-  try {
-    return differenceInYears(new Date(), parseISO(birthDate));
-  } catch {
-    return null;
-  }
+  return calculateAgeFromDateOnly(birthDate);
 }
 
 /**

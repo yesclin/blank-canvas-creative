@@ -65,12 +65,8 @@ export function VisaoGeralPsicologiaBlock({
 
   const calculateAge = (birthDate: string | null): string => {
     if (!birthDate) return 'Não informada';
-    try {
-      const years = differenceInYears(new Date(), parseISO(birthDate));
-      return `${years} anos`;
-    } catch {
-      return 'Não informada';
-    }
+    const age = calculateAgeFromDateOnly(birthDate);
+    return age !== null ? `${age} anos` : 'Não informada';
   };
 
   const formatGender = (gender: string | null): string => {
