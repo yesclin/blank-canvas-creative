@@ -5818,6 +5818,82 @@ export type Database = {
           },
         ]
       }
+      patient_pre_registration_links: {
+        Row: {
+          appointment_id: string | null
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          email: string | null
+          expires_at: string
+          full_name: string | null
+          id: string
+          patient_id: string | null
+          phone: string | null
+          status: string
+          submitted_at: string | null
+          submitted_data: Json | null
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          expires_at: string
+          full_name?: string | null
+          id?: string
+          patient_id?: string | null
+          phone?: string | null
+          status?: string
+          submitted_at?: string | null
+          submitted_data?: Json | null
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          expires_at?: string
+          full_name?: string | null
+          id?: string
+          patient_id?: string | null
+          phone?: string | null
+          status?: string
+          submitted_at?: string | null
+          submitted_data?: Json | null
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_pre_registration_links_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_pre_registration_links_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_pre_registration_links_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patient_prescricao_itens: {
         Row: {
           created_at: string
@@ -9318,6 +9394,7 @@ export type Database = {
         Args: { p_clinic_id: string }
         Returns: number
       }
+      get_pre_registration_by_token: { Args: { _token: string }; Returns: Json }
       get_user_all_permissions: {
         Args: { _user_id: string }
         Returns: {
@@ -9380,6 +9457,10 @@ export type Database = {
       seed_default_payment_methods: {
         Args: { _clinic_id: string }
         Returns: undefined
+      }
+      submit_pre_registration: {
+        Args: { _data: Json; _token: string }
+        Returns: Json
       }
       sync_appointment_teleconsultation_status: {
         Args: { p_appointment_id: string }
