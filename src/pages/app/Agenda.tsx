@@ -7,6 +7,7 @@ import type { SlotClickData } from "@/components/agenda/AgendaGrid";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAgendaRealData } from "@/hooks/useAgendaRealData";
 import { useUpdateAppointmentStatus, useCreateAppointment, useRescheduleAppointment, type AppointmentFormData } from "@/hooks/useAppointments";
+import { useCreateSession, useFinalizeSession } from "@/hooks/useAppointmentSession";
 import { useTissGuideGeneration } from "@/hooks/useTissGuideGeneration";
 import { usePermissions } from "@/hooks/usePermissions";
 import { AgendaDateNavigation } from "@/components/agenda/AgendaDateNavigation";
