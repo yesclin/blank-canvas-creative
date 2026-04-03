@@ -131,9 +131,11 @@ export function AnamneseEsteticaBlock({
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
 
-  // Classify all templates, exclude incomplete from selector
+  // Classify, filter incomplete, and sort by catalog display order
   const selectableTemplates = useMemo(() => {
-    return allTemplates.filter(t => classifyTemplate(t) !== 'incomplete');
+    return allTemplates
+      .filter(t => classifyTemplate(t) !== 'incomplete')
+      .sort((a, b) => getDisplayOrder(a) - getDisplayOrder(b));
   }, [allTemplates]);
 
   // Active template
