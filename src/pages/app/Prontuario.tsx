@@ -1899,13 +1899,7 @@ export default function Prontuario() {
             />
           );
         }
-        if (activeSpecialtyKey === 'estetica') {
-          return (
-            <TimelineEsteticaBlock
-              patientId={patientId!}
-            />
-          );
-        }
+        // (estética handled by EsteticaProntuarioLayout above)
         if (activeSpecialtyKey === 'pediatria') {
           return (
             <LinhaDoTempoPediatriaBlock
