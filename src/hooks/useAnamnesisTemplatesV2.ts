@@ -220,6 +220,7 @@ export function useAnamnesisTemplatesV2(options?: {
           is_active: tmpl.is_active ?? true,
           current_version_id: tmpl.current_version_id,
           current_version_number: version?.version_number,
+          template_type: tmpl.template_type || null,
           structure,
           usage_count: tmpl.usage_count ?? 0,
           created_at: tmpl.created_at,
