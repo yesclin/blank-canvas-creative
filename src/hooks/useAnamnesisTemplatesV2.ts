@@ -42,6 +42,7 @@ export interface AnamnesisTemplateV2 {
   is_active: boolean;
   current_version_id: string | null;
   current_version_number?: number;
+  template_type: string | null;
   structure: TemplateSection[];
   usage_count: number;
   created_at: string;
