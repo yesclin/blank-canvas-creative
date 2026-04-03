@@ -46,6 +46,7 @@ import Prontuario from "./pages/app/Prontuario";
 import Pacientes from "./pages/app/Pacientes";
 import Convenios from "./pages/app/gestao/Convenios";
 import MeuFinanceiro from "./pages/app/MeuFinanceiro";
+import Atendimento from "./pages/app/Atendimento";
 
 // Marketing
 import MarketingLayout from "./pages/app/marketing/MarketingLayout";
