@@ -71,7 +71,6 @@ const formatCurrency = (value: number) =>
 
 function calculateAge(birthDate?: string): number | undefined {
   if (!birthDate) return undefined;
-  const { calculateAgeFromDateOnly } = require("@/utils/dateUtils");
   return calculateAgeFromDateOnly(birthDate) ?? undefined;
 }
 
