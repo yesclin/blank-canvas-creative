@@ -310,8 +310,16 @@ export default function Agenda() {
         
         if (pendingStatusChange.status === 'em_atendimento') {
           const apt = appointments.find(a => a.id === pendingStatusChange.appointmentId);
-          if (apt?.patient_id) {
-            navigateToProntuario(apt.patient_id);
+          if (apt) {
+            createSessionMutation.mutate({
+              appointmentId: apt.id,
+              clinicId: apt.clinic_id,
+              patientId: apt.patient_id,
+              professionalId: apt.professional_id,
+            });
+            if (apt.patient_id) {
+              navigateToProntuario(apt.patient_id);
+            }
           }
         }
       } catch (error) {
