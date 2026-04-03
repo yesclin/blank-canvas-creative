@@ -1,11 +1,10 @@
 /**
- * ESTÉTICA - Anamnese Estética (Unified)
+ * ESTÉTICA - Anamnese Estética (Unified Selector)
  *
- * Single entry point for aesthetics anamnesis.
- * - New records: anamnesis_records only (dynamic pipeline)
- * - Legacy records: read-only from clinical_evolutions (for history)
- * - Renderer: DynamicAnamneseRenderer only
- * - Field contract: DynamicField only
+ * Shows ALL aesthetics templates in a single dropdown:
+ * - Advanced dynamic templates → DynamicAnamneseRenderer
+ * - Legacy/standard templates → StandardTemplateRenderer
+ * - Persistence: anamnesis_records for all new records
  */
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -29,21 +28,49 @@ import {
   Download,
   Clock,
   Plus,
-  History,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-import { useResolvedAnamnesisTemplate } from '@/hooks/prontuario/useResolvedAnamnesisTemplate';
 import { useConsolidatedFillerPdf } from '@/hooks/aesthetics/useConsolidatedFillerPdf';
 import { DynamicAnamneseRenderer } from './DynamicAnamneseRenderer';
+import { StandardTemplateRenderer } from './StandardTemplateRenderer';
 import { useDynamicAnamneseEstetica } from '@/hooks/aesthetics/useDynamicAnamneseEstetica';
 import { ADVANCED_TEMPLATE_MAP } from '@/hooks/prontuario/estetica/esteticaAdvancedTemplates';
 import type { DynamicFormValues } from './anamnese-fields/types';
-import { supabase } from '@/integrations/supabase/client';
 import { useAnamnesisTemplatesV2, useAnamnesisRecords } from '@/hooks/useAnamnesisTemplatesV2';
+import type { AnamnesisTemplateV2 } from '@/hooks/useAnamnesisTemplatesV2';
 import { cn } from '@/lib/utils';
 
+// ─── Template classification ───────────────────────────────────────
+type TemplateKind = 'advanced' | 'standard' | 'incomplete';
+
+function classifyTemplate(t: AnamnesisTemplateV2): TemplateKind {
+  // Advanced: has a matching entry in ADVANCED_TEMPLATE_MAP
+  if (t.template_type && ADVANCED_TEMPLATE_MAP[t.template_type]) return 'advanced';
+  // Standard: has usable structure sections
+  if (t.structure && t.structure.length > 0) return 'standard';
+  // Incomplete: no renderable structure
+  return 'incomplete';
+}
+
+function kindLabel(kind: TemplateKind): string {
+  switch (kind) {
+    case 'advanced': return 'Avançado';
+    case 'standard': return 'Padrão';
+    case 'incomplete': return 'Incompleto';
+  }
+}
+
+function kindBadgeClass(kind: TemplateKind): string {
+  switch (kind) {
+    case 'advanced': return 'bg-primary/10 text-primary border-primary/20';
+    case 'standard': return 'bg-secondary text-secondary-foreground';
+    case 'incomplete': return 'bg-destructive/10 text-destructive border-destructive/20';
+  }
+}
+
+// ─── Props ──────────────────────────────────────────────────────────
 interface AnamneseEsteticaBlockProps {
   patientId: string | null;
   clinicId: string | null;
@@ -76,33 +103,35 @@ export function AnamneseEsteticaBlock({
   canExport = true,
 }: AnamneseEsteticaBlockProps) {
   // ─── Template resolution ──────────────────────────────────────────
-  const { templates: v2Templates, isLoading: loadingTemplates } = useAnamnesisTemplatesV2({
+  const { templates: allTemplates, isLoading: loadingTemplates } = useAnamnesisTemplatesV2({
     specialtyId,
     activeOnly: true,
   });
 
-  // ─── V2 Records (all records for this patient in this specialty) ──
+  // ─── V2 Records ──────────────────────────────────────────────────
   const { records: v2Records } = useAnamnesisRecords(patientId, null, specialtyId);
 
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
 
-  // Filter to only show templates compatible with the dynamic renderer
-  const dynamicTemplates = useMemo(() => {
-    return v2Templates.filter(t => t.template_type && !!ADVANCED_TEMPLATE_MAP[t.template_type]);
-  }, [v2Templates]);
+  // Classify all templates, exclude incomplete from selector
+  const selectableTemplates = useMemo(() => {
+    return allTemplates.filter(t => classifyTemplate(t) !== 'incomplete');
+  }, [allTemplates]);
 
-  // Active template (only from dynamic-compatible templates)
+  // Active template
   const activeTemplate = useMemo(() => {
-    if (!dynamicTemplates.length) return null;
+    if (!selectableTemplates.length) return null;
     if (selectedTemplateId) {
-      const found = dynamicTemplates.find(t => t.id === selectedTemplateId);
+      const found = selectableTemplates.find(t => t.id === selectedTemplateId);
       if (found) return found;
     }
-    const defaultTpl = dynamicTemplates.find(t => t.is_default);
-    return defaultTpl || dynamicTemplates[0];
-  }, [dynamicTemplates, selectedTemplateId]);
+    const defaultTpl = selectableTemplates.find(t => t.is_default);
+    return defaultTpl || selectableTemplates[0];
+  }, [selectableTemplates, selectedTemplateId]);
+
+  const activeKind = activeTemplate ? classifyTemplate(activeTemplate) : null;
 
   // Auto-select first template
   useEffect(() => {
@@ -111,11 +140,10 @@ export function AnamneseEsteticaBlock({
     }
   }, [activeTemplate, selectedTemplateId]);
 
-  // Resolve template_type for dynamic field lookup
+  // ─── Advanced dynamic pipeline ──────────────────────────────────
   const templateType = activeTemplate?.template_type || null;
-  const isDynamic = templateType ? !!ADVANCED_TEMPLATE_MAP[templateType] : false;
+  const isAdvanced = activeKind === 'advanced';
 
-  // ─── Dynamic anamnese hook ──────────────────────────────────────
   const {
     record: dynamicRecord,
     fields: dynamicFields,
@@ -123,22 +151,130 @@ export function AnamneseEsteticaBlock({
     saving: dynamicSaving,
     saveResponses,
     isSigned: dynamicSigned,
-    refetch: refetchDynamic,
   } = useDynamicAnamneseEstetica({
-    patientId: isDynamic ? patientId : null,
+    patientId: isAdvanced ? patientId : null,
     appointmentId,
-    templateId: isDynamic ? activeTemplate?.id || null : null,
-    templateVersionId: isDynamic ? activeTemplate?.current_version_id || null : null,
+    templateId: isAdvanced ? activeTemplate?.id || null : null,
+    templateVersionId: isAdvanced ? activeTemplate?.current_version_id || null : null,
     templateType,
     specialtyId,
   });
+
+  // ─── Standard template state (for legacy/standard templates) ────
+  const [standardValues, setStandardValues] = useState<Record<string, unknown>>({});
+  const [standardHasChanges, setStandardHasChanges] = useState(false);
+  const [standardSaving, setStandardSaving] = useState(false);
+  const [standardRecord, setStandardRecord] = useState<any>(null);
+  const [standardLoading, setStandardLoading] = useState(false);
+
+  // Load standard record when template changes
+  useEffect(() => {
+    if (activeKind !== 'standard' || !patientId || !activeTemplate?.id || !clinicId) {
+      setStandardRecord(null);
+      setStandardValues({});
+      return;
+    }
+
+    let cancelled = false;
+    setStandardLoading(true);
+
+    (async () => {
+      try {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { data } = await supabase
+          .from('anamnesis_records')
+          .select('*')
+          .eq('patient_id', patientId)
+          .eq('clinic_id', clinicId)
+          .eq('template_id', activeTemplate.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!cancelled) {
+          setStandardRecord(data);
+          setStandardValues((data?.responses as Record<string, unknown>) || {});
+          setStandardHasChanges(false);
+        }
+      } catch (err) {
+        console.error('Error loading standard record:', err);
+      } finally {
+        if (!cancelled) setStandardLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [activeKind, patientId, clinicId, activeTemplate?.id]);
+
+  const handleStandardFieldChange = useCallback((fieldId: string, value: unknown) => {
+    setStandardValues(prev => ({ ...prev, [fieldId]: value }));
+    setStandardHasChanges(true);
+  }, []);
+
+  const handleStandardSave = useCallback(async () => {
+    if (!patientId || !clinicId || !activeTemplate?.id) return;
+    setStandardSaving(true);
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { toast } = await import('sonner');
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error('Usuário não autenticado');
+
+      const { data: professional } = await supabase
+        .from('professionals')
+        .select('id')
+        .eq('user_id', userData.user.id)
+        .eq('clinic_id', clinicId)
+        .maybeSingle();
+
+      const professionalId = professional?.id || userData.user.id;
+
+      if (standardRecord && !standardRecord.signed_at) {
+        await supabase
+          .from('anamnesis_records')
+          .update({
+            responses: standardValues as any,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', standardRecord.id);
+        toast.success('Anamnese salva');
+      } else {
+        const { data } = await supabase
+          .from('anamnesis_records')
+          .insert({
+            patient_id: patientId,
+            clinic_id: clinicId,
+            professional_id: professionalId,
+            template_id: activeTemplate.id,
+            template_version_id: activeTemplate.current_version_id,
+            specialty_id: specialtyId,
+            appointment_id: appointmentId || null,
+            responses: standardValues as any,
+            structure_snapshot: activeTemplate.structure as any,
+            data: standardValues as any,
+            status: 'rascunho',
+            created_by: userData.user.id,
+          })
+          .select()
+          .single();
+        setStandardRecord(data);
+        toast.success('Anamnese criada');
+      }
+      setStandardHasChanges(false);
+    } catch (err) {
+      console.error('Error saving standard anamnese:', err);
+      const { toast } = await import('sonner');
+      toast.error('Erro ao salvar anamnese');
+    } finally {
+      setStandardSaving(false);
+    }
+  }, [patientId, clinicId, activeTemplate, standardValues, standardRecord, specialtyId, appointmentId]);
 
   // ─── Dynamic form state ──────────────────────────────────────────
   const [dynamicValues, setDynamicValues] = useState<DynamicFormValues>({});
   const [dynamicHasChanges, setDynamicHasChanges] = useState(false);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load dynamic record into form
   useEffect(() => {
     if (dynamicRecord?.responses) {
       setDynamicValues(dynamicRecord.responses);
@@ -150,7 +286,6 @@ export function AnamneseEsteticaBlock({
     setDynamicValues(prev => ({ ...prev, [fieldId]: value }));
     setDynamicHasChanges(true);
 
-    // Autosave after 3 seconds
     if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
     autosaveTimerRef.current = setTimeout(() => {
       setDynamicValues(latest => {
@@ -167,11 +302,27 @@ export function AnamneseEsteticaBlock({
     setDynamicHasChanges(false);
   }, [saveResponses, dynamicValues]);
 
+  // ─── Autosave for standard templates ─────────────────────────────
+  const standardAutosaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (activeKind !== 'standard' || !standardHasChanges) return;
+    if (standardAutosaveRef.current) clearTimeout(standardAutosaveRef.current);
+    standardAutosaveRef.current = setTimeout(() => {
+      handleStandardSave();
+    }, 3000);
+    return () => {
+      if (standardAutosaveRef.current) clearTimeout(standardAutosaveRef.current);
+    };
+  }, [standardValues, activeKind, standardHasChanges, handleStandardSave]);
+
   // ─── PDF export ──────────────────────────────────────────────────
   const { generateConsolidatedPdf, exporting: exportingPdf } = useConsolidatedFillerPdf();
 
   const handlePrint = useCallback(() => {
     if (!patientId) return;
+    const responses = isAdvanced
+      ? (dynamicRecord?.responses as Record<string, any> | null)
+      : standardValues;
     generateConsolidatedPdf({
       patientId,
       appointmentId: appointmentId || undefined,
@@ -183,25 +334,35 @@ export function AnamneseEsteticaBlock({
       },
       professionalName,
       professionalRegistration,
-      recordResponses: dynamicRecord?.responses as Record<string, any> | null,
-      recordData: dynamicRecord?.responses as Record<string, any> | null,
+      recordResponses: responses,
+      recordData: responses,
     });
-  }, [patientId, appointmentId, dynamicRecord, patientName, patientBirthDate, patientPhone, patientCpf, professionalName, professionalRegistration, generateConsolidatedPdf]);
+  }, [patientId, appointmentId, isAdvanced, dynamicRecord, standardValues, patientName, patientBirthDate, patientPhone, patientCpf, professionalName, professionalRegistration, generateConsolidatedPdf]);
 
   // Template change
   const handleTemplateChange = useCallback((templateId: string) => {
     setSelectedTemplateId(templateId);
     setDynamicValues({});
     setDynamicHasChanges(false);
+    setStandardValues({});
+    setStandardHasChanges(false);
     setIsCreatingNew(false);
   }, []);
 
-  // ─── Auto-select first record when loaded ──────────────────────
+  // Auto-select first record
   useEffect(() => {
     if (v2Records.length > 0 && !selectedRecordId) {
       setSelectedRecordId(v2Records[0].id);
     }
   }, [v2Records, selectedRecordId]);
+
+  // ─── Computed state ──────────────────────────────────────────────
+  const currentRecord = isAdvanced ? dynamicRecord : standardRecord;
+  const currentSigned = isAdvanced ? dynamicSigned : !!standardRecord?.signed_at;
+  const currentLoading = isAdvanced ? dynamicLoading : standardLoading;
+  const currentSaving = isAdvanced ? dynamicSaving : standardSaving;
+  const currentHasChanges = isAdvanced ? dynamicHasChanges : standardHasChanges;
+  const hasAnyRecord = !!currentRecord || v2Records.length > 0;
 
   // ─── Loading ──────────────────────────────────────────────────────
   if (loadingTemplates) {
@@ -224,62 +385,96 @@ export function AnamneseEsteticaBlock({
     );
   }
 
-  // ─── No templates available ──────────────────────────────────────
-  if (dynamicTemplates.length === 0) {
+  if (selectableTemplates.length === 0) {
     return (
       <Card className="border-dashed">
         <CardContent className="p-10 text-center">
           <FileText className="h-10 w-10 mx-auto mb-4 text-muted-foreground opacity-50" />
-          <h3 className="font-semibold mb-2">Nenhum modelo de anamnese avançado disponível</h3>
+          <h3 className="font-semibold mb-2">Nenhum modelo de anamnese disponível</h3>
           <p className="text-sm text-muted-foreground">
-            Os modelos compatíveis com o fluxo dinâmico da estética não foram encontrados. Verifique as configurações.
+            Não foram encontrados modelos de anamnese para a especialidade estética. Verifique as configurações.
           </p>
         </CardContent>
       </Card>
     );
   }
 
-  // ─── Determine what to show ──────────────────────────────────────
-  const hasDynamicRecord = !!dynamicRecord;
-  const showForm = isDynamic && (hasDynamicRecord || isCreatingNew);
-  const hasAnyRecord = hasDynamicRecord || v2Records.length > 0;
+  // ─── Template selector dropdown ──────────────────────────────────
+  const renderTemplateSelector = () => {
+    if (selectableTemplates.length <= 1) return null;
 
-  // ─── Empty state: no records yet ─────────────────────────────────
+    // Group templates
+    const advancedTemplates = selectableTemplates.filter(t => classifyTemplate(t) === 'advanced');
+    const standardTemplates = selectableTemplates.filter(t => classifyTemplate(t) === 'standard');
+
+    return (
+      <Select value={selectedTemplateId || ''} onValueChange={handleTemplateChange}>
+        <SelectTrigger className="w-72 h-8 text-xs">
+          <SelectValue placeholder="Selecionar modelo..." />
+        </SelectTrigger>
+        <SelectContent>
+          {advancedTemplates.length > 0 && standardTemplates.length > 0 && (
+            <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+              Avançados
+            </div>
+          )}
+          {advancedTemplates.map(t => (
+            <SelectItem key={t.id} value={t.id}>
+              <div className="flex items-center gap-2">
+                <span className="truncate">{t.name}</span>
+                {t.is_system && <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
+              </div>
+            </SelectItem>
+          ))}
+          {advancedTemplates.length > 0 && standardTemplates.length > 0 && (
+            <div className="px-2 py-1 mt-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-t">
+              Padrão / Procedurais
+            </div>
+          )}
+          {standardTemplates.map(t => (
+            <SelectItem key={t.id} value={t.id}>
+              <div className="flex items-center gap-2">
+                <span className="truncate">{t.name}</span>
+                {t.is_system && <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
+              </div>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  };
+
+  // ─── Empty state ─────────────────────────────────────────────────
   if (!hasAnyRecord && !isCreatingNew) {
     return (
       <div className="space-y-4">
-        {/* Template selector */}
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-3">
             <FileText className="h-5 w-5 text-primary" />
             <h3 className="font-semibold">Anamnese Estética</h3>
           </div>
-          {dynamicTemplates.length > 1 && (
-            <Select value={selectedTemplateId || ''} onValueChange={handleTemplateChange}>
-              <SelectTrigger className="w-64 h-8 text-xs">
-                <SelectValue placeholder="Selecionar modelo..." />
-              </SelectTrigger>
-              <SelectContent>
-                {dynamicTemplates.map(t => (
-                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+          {renderTemplateSelector()}
         </div>
 
         <Card className="border-dashed">
           <CardContent className="p-8 text-center">
             <FileText className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-50" />
             <h3 className="font-semibold mb-3">Nenhuma anamnese registrada</h3>
-            <p className="text-sm text-muted-foreground mb-4">
+            <p className="text-sm text-muted-foreground mb-1">
               {activeTemplate ? `Modelo: ${activeTemplate.name}` : 'Selecione um modelo para começar'}
             </p>
+            {activeKind && (
+              <Badge variant="outline" className={cn('mb-4 text-[10px]', kindBadgeClass(activeKind))}>
+                {kindLabel(activeKind)}
+              </Badge>
+            )}
             {canEdit && (
-              <Button onClick={() => setIsCreatingNew(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Registrar Anamnese
-              </Button>
+              <div>
+                <Button onClick={() => setIsCreatingNew(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Registrar Anamnese
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -287,7 +482,7 @@ export function AnamneseEsteticaBlock({
     );
   }
 
-  // ─── Main rendering: dynamic form ────────────────────────────────
+  // ─── Main rendering ──────────────────────────────────────────────
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -295,17 +490,24 @@ export function AnamneseEsteticaBlock({
         <div className="flex items-center gap-3">
           <FileText className="h-5 w-5 text-primary" />
           <div>
-            <h3 className="font-semibold">
-              {activeTemplate?.name || 'Anamnese Estética'}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold">
+                {activeTemplate?.name || 'Anamnese Estética'}
+              </h3>
+              {activeKind && (
+                <Badge variant="outline" className={cn('text-[10px]', kindBadgeClass(activeKind))}>
+                  {kindLabel(activeKind)}
+                </Badge>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground">
-              {dynamicRecord
-                ? `Registro de ${format(parseISO(dynamicRecord.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`
+              {currentRecord
+                ? `Registro de ${format(parseISO(currentRecord.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`
                 : 'Novo registro'}
-              {dynamicSigned && ' • Assinada'}
+              {currentSigned && ' • Assinada'}
             </p>
           </div>
-          {dynamicSigned && (
+          {currentSigned && (
             <Badge variant="secondary" className="flex items-center gap-1">
               <Lock className="h-3 w-3" />
               Assinada
@@ -314,61 +516,35 @@ export function AnamneseEsteticaBlock({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Template selector */}
-          {dynamicTemplates.length > 1 && (
-            <Select value={selectedTemplateId || ''} onValueChange={handleTemplateChange}>
-              <SelectTrigger className="w-56 h-8 text-xs">
-                <SelectValue placeholder="Modelo..." />
-              </SelectTrigger>
-              <SelectContent>
-                {dynamicTemplates.map(t => (
-                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+          {renderTemplateSelector()}
 
-          {/* PDF export */}
-          {canExport && dynamicRecord && (
+          {canExport && currentRecord && (
             <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePrint}
-                disabled={exportingPdf}
-                title="Imprimir ficha consolidada"
-              >
+              <Button variant="outline" size="sm" onClick={handlePrint} disabled={exportingPdf} title="Imprimir">
                 <Printer className="h-4 w-4 mr-1.5" />
                 {exportingPdf ? 'Gerando...' : 'Imprimir'}
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePrint}
-                disabled={exportingPdf}
-                title="Gerar PDF consolidado"
-              >
+              <Button variant="outline" size="sm" onClick={handlePrint} disabled={exportingPdf} title="PDF">
                 <Download className="h-4 w-4 mr-1.5" />
                 {exportingPdf ? 'Gerando...' : 'PDF'}
               </Button>
             </>
           )}
 
-          {/* Save button */}
-          {canEdit && isDynamic && (
+          {canEdit && (
             <Button
               size="sm"
-              onClick={handleDynamicSave}
-              disabled={dynamicSaving || !dynamicHasChanges}
+              onClick={isAdvanced ? handleDynamicSave : handleStandardSave}
+              disabled={currentSaving || !currentHasChanges}
             >
               <Save className="h-4 w-4 mr-1.5" />
-              {dynamicSaving ? 'Salvando...' : 'Salvar'}
+              {currentSaving ? 'Salvando...' : 'Salvar'}
             </Button>
           )}
         </div>
       </div>
 
-      {/* V2 Records list (if multiple) */}
+      {/* Records list */}
       {v2Records.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-2">
           {v2Records.map(record => (
@@ -401,15 +577,22 @@ export function AnamneseEsteticaBlock({
         </div>
       )}
 
-      {/* Dynamic form */}
-      {dynamicLoading ? (
+      {/* Form content — routed by template kind */}
+      {currentLoading ? (
         <Skeleton className="h-64 w-full" />
-      ) : dynamicFields.length > 0 ? (
+      ) : isAdvanced && dynamicFields.length > 0 ? (
         <DynamicAnamneseRenderer
           fields={dynamicFields}
           values={dynamicValues}
           onChange={handleDynamicFieldChange}
-          disabled={!canEdit || dynamicSigned}
+          disabled={!canEdit || currentSigned}
+        />
+      ) : activeKind === 'standard' && activeTemplate?.structure && activeTemplate.structure.length > 0 ? (
+        <StandardTemplateRenderer
+          sections={activeTemplate.structure}
+          values={standardValues}
+          onChange={handleStandardFieldChange}
+          disabled={!canEdit || currentSigned}
         />
       ) : (
         <Card>
