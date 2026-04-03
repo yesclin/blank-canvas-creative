@@ -1120,16 +1120,7 @@ export default function Prontuario() {
             />
           );
         }
-        if (activeSpecialtyKey === 'estetica') {
-          return (
-            <VisaoGeralEsteticaBlock
-              patientId={patientId}
-              clinicId={clinicIdForFisio || null}
-              canEdit={canEditCurrentTab}
-              onNavigateToModule={(moduleKey) => setActiveTab(moduleKey)}
-            />
-          );
-        }
+        // (estética handled by EsteticaProntuarioLayout above)
         if (activeSpecialtyKey === 'pediatria') {
           return (
             <VisaoGeralPediatriaBlock
