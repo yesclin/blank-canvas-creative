@@ -642,12 +642,12 @@ export function AppointmentDetailDrawer({
         </div>
       </SheetContent>
 
-      {/* Payment Dialog */}
-      <AppointmentReceivePaymentDialog
-        appointment={appointment}
-        open={paymentDialogOpen}
-        onOpenChange={setPaymentDialogOpen}
-        financialStatus={financial}
+      {/* Summary Modal */}
+      <AppointmentSummaryModal
+        open={summaryModalOpen}
+        onOpenChange={setSummaryModalOpen}
+        summary={session?.session_summary || null}
+        patientId={appointment.patient_id}
       />
     </Sheet>
   );
