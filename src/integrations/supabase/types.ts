@@ -497,6 +497,83 @@ export type Database = {
           },
         ]
       }
+      appointment_sessions: {
+        Row: {
+          appointment_id: string
+          clinic_id: string
+          created_at: string
+          current_pause_started_at: string | null
+          id: string
+          is_paused: boolean
+          patient_id: string
+          pause_events: Json
+          professional_id: string
+          session_notes: string | null
+          session_summary: Json | null
+          total_paused_seconds: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_id: string
+          clinic_id: string
+          created_at?: string
+          current_pause_started_at?: string | null
+          id?: string
+          is_paused?: boolean
+          patient_id: string
+          pause_events?: Json
+          professional_id: string
+          session_notes?: string | null
+          session_summary?: Json | null
+          total_paused_seconds?: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string
+          clinic_id?: string
+          created_at?: string
+          current_pause_started_at?: string | null
+          id?: string
+          is_paused?: boolean
+          patient_id?: string
+          pause_events?: Json
+          professional_id?: string
+          session_notes?: string | null
+          session_summary?: Json | null
+          total_paused_seconds?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_sessions_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: true
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_sessions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_sessions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_sessions_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointment_statuses: {
         Row: {
           clinic_id: string
@@ -626,6 +703,7 @@ export type Database = {
           patient_id: string
           patient_snapshot_name: string | null
           patient_snapshot_phone: string | null
+          paused_at: string | null
           payment_method_id: string | null
           payment_status: string
           payment_type: string | null
@@ -683,6 +761,7 @@ export type Database = {
           patient_id: string
           patient_snapshot_name?: string | null
           patient_snapshot_phone?: string | null
+          paused_at?: string | null
           payment_method_id?: string | null
           payment_status?: string
           payment_type?: string | null
@@ -740,6 +819,7 @@ export type Database = {
           patient_id?: string
           patient_snapshot_name?: string | null
           patient_snapshot_phone?: string | null
+          paused_at?: string | null
           payment_method_id?: string | null
           payment_status?: string
           payment_type?: string | null
