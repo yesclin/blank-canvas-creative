@@ -96,9 +96,6 @@ interface VisaoGeralDermatoBlockProps {
 function calculateAge(birthDate: string | null): number | null {
   return calculateAgeFromDateOnly(birthDate);
 }
-    return null;
-  }
-}
 
 /**
  * Formata o gênero do paciente
