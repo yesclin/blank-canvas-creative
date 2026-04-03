@@ -190,6 +190,7 @@ function v2TemplateToUnified(t: AnamnesisTemplateV2): UnifiedTemplate {
     descricao: t.description || '',
     icon: t.icon || 'Stethoscope',
     is_system: t.is_system,
+    template_type: t.template_type || null,
     secoes: t.structure
       .map(section => {
         const filteredFields = (section.fields || []).filter(f => !IDENTIFICATION_FIELD_IDS.has(f.id));
