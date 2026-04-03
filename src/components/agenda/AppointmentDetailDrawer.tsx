@@ -93,9 +93,15 @@ export function AppointmentDetailDrawer({
   const { role, can } = usePermissions();
   const financial = useAppointmentFinancialStatus(appointment);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [summaryModalOpen, setSummaryModalOpen] = useState(false);
   const isTeleconsulta = appointment?.care_mode === 'teleconsulta';
   const { data: teleSession } = useTeleconsultaSession(isTeleconsulta ? appointment?.id ?? null : null);
   const { generateRoom, copyLink, endSession, reportTechnicalIssue, convertToPresencial } = useTeleconsultaActions();
+  
+  // Session tracking hooks
+  const { data: session } = useAppointmentSession(appointment?.id);
+  const pauseSession = usePauseSession();
+  const resumeSession = useResumeSession();
 
   if (!appointment) return null;
 
