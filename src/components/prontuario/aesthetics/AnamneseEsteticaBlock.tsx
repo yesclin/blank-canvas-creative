@@ -2,11 +2,10 @@
  * ESTÉTICA - Anamnese Estética
  * 
  * Bloco para registro de anamnese estética com versionamento.
- * Campos: queixa principal, procedimentos anteriores, medicamentos,
- * alergias, intercorrências, expectativas.
+ * Supports both legacy fixed form and dynamic template-based rendering.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,7 +13,6 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Separator } from '@/components/ui/separator';
 import { 
   Collapsible,
   CollapsibleContent,
@@ -30,7 +28,6 @@ import {
   Target,
   Clock,
   ChevronDown,
-  ChevronRight,
   Lock,
   User,
   Printer,
@@ -47,6 +44,10 @@ import {
 import { useResolvedAnamnesisTemplate } from '@/hooks/prontuario/useResolvedAnamnesisTemplate';
 import { AnamneseModelSelector } from '@/components/prontuario/AnamneseModelSelector';
 import { useConsolidatedFillerPdf } from '@/hooks/aesthetics/useConsolidatedFillerPdf';
+import { DynamicAnamneseRenderer } from './DynamicAnamneseRenderer';
+import { useDynamicAnamneseEstetica } from '@/hooks/aesthetics/useDynamicAnamneseEstetica';
+import { ADVANCED_TEMPLATE_MAP } from '@/hooks/prontuario/estetica/esteticaAdvancedTemplates';
+import type { DynamicFormValues } from './anamnese-fields/types';
 
 interface AnamneseEsteticaBlockProps {
   patientId: string | null;
@@ -79,6 +80,7 @@ export function AnamneseEsteticaBlock({
   professionalRegistration,
   canExport = true,
 }: AnamneseEsteticaBlockProps) {
+  // Legacy data hook
   const { 
     current, 
     history, 
@@ -96,12 +98,110 @@ export function AnamneseEsteticaBlock({
   const [showHistory, setShowHistory] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   const {
     data: resolvedTemplate,
     allTemplates,
     isLoading: templateLoading,
+    loadTemplateById,
   } = useResolvedAnamnesisTemplate(specialtyId, procedureId);
+
+  // Determine if current template is a dynamic/advanced one
+  const activeTemplateId = selectedTemplateId || resolvedTemplate?.id || null;
+  const activeTemplate = allTemplates.find((t) => t.id === activeTemplateId);
+  
+  // We need to find the template_type - check by looking up in resolvedTemplate or fetch
+  const [activeTemplateType, setActiveTemplateType] = useState<string | null>(null);
+  const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchTemplateType = async () => {
+      if (!activeTemplateId) {
+        setActiveTemplateType(null);
+        setActiveVersionId(null);
+        return;
+      }
+      // Check if this is the resolved template
+      if (resolvedTemplate?.id === activeTemplateId) {
+        // Try to infer type from the DB - need to query
+        const { data } = await (await import('@/integrations/supabase/client')).supabase
+          .from('anamnesis_templates')
+          .select('template_type, current_version_id')
+          .eq('id', activeTemplateId)
+          .maybeSingle();
+        setActiveTemplateType(data?.template_type || null);
+        setActiveVersionId(data?.current_version_id || null);
+        return;
+      }
+      // Fetch template details
+      const resolved = await loadTemplateById(activeTemplateId);
+      if (resolved) {
+        // Query the template_type
+        const { data } = await (await import('@/integrations/supabase/client')).supabase
+          .from('anamnesis_templates')
+          .select('template_type, current_version_id')
+          .eq('id', activeTemplateId)
+          .maybeSingle();
+        setActiveTemplateType(data?.template_type || null);
+        setActiveVersionId(data?.current_version_id || null);
+      }
+    };
+    fetchTemplateType();
+  }, [activeTemplateId, resolvedTemplate]);
+
+  const isDynamicTemplate = activeTemplateType ? !!ADVANCED_TEMPLATE_MAP[activeTemplateType] : false;
+
+  // Dynamic anamnese hook
+  const {
+    record: dynamicRecord,
+    fields: dynamicFields,
+    loading: dynamicLoading,
+    saving: dynamicSaving,
+    saveResponses,
+    isSigned: dynamicSigned,
+  } = useDynamicAnamneseEstetica({
+    patientId: isDynamicTemplate ? patientId : null,
+    appointmentId,
+    templateId: isDynamicTemplate ? activeTemplateId : null,
+    templateVersionId: isDynamicTemplate ? activeVersionId : null,
+    templateType: activeTemplateType,
+    specialtyId,
+  });
+
+  // Dynamic form state
+  const [dynamicValues, setDynamicValues] = useState<DynamicFormValues>({});
+  const [dynamicHasChanges, setDynamicHasChanges] = useState(false);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load dynamic record into form
+  useEffect(() => {
+    if (dynamicRecord?.responses) {
+      setDynamicValues(dynamicRecord.responses);
+      setDynamicHasChanges(false);
+    }
+  }, [dynamicRecord]);
+
+  const handleDynamicFieldChange = useCallback((fieldId: string, value: unknown) => {
+    setDynamicValues((prev) => ({ ...prev, [fieldId]: value }));
+    setDynamicHasChanges(true);
+
+    // Autosave after 3 seconds of inactivity
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(() => {
+      setDynamicValues((latest) => {
+        saveResponses(latest);
+        return latest;
+      });
+      setDynamicHasChanges(false);
+    }, 3000);
+  }, [saveResponses]);
+
+  const handleDynamicSave = useCallback(() => {
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    saveResponses(dynamicValues);
+    setDynamicHasChanges(false);
+  }, [saveResponses, dynamicValues]);
 
   const { generateConsolidatedPdf, exporting: exportingPdf } = useConsolidatedFillerPdf();
 
@@ -123,7 +223,7 @@ export function AnamneseEsteticaBlock({
     });
   };
 
-  // Carregar dados atuais no formulário
+  // Legacy form handlers
   useEffect(() => {
     if (current) {
       setFormData({
@@ -153,7 +253,16 @@ export function AnamneseEsteticaBlock({
     setHasChanges(false);
   };
 
-  if (loading) {
+  const handleTemplateChange = (templateId: string) => {
+    setSelectedTemplateId(templateId);
+    setIsEditing(false);
+  };
+
+  const handleStartEditing = () => {
+    setIsEditing(true);
+  };
+
+  if (loading || templateLoading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-48" />
@@ -173,9 +282,97 @@ export function AnamneseEsteticaBlock({
     );
   }
 
+  // Show template selector when no record exists yet (or switching templates)
+  const hasLegacyRecord = !!current;
+  const hasDynamicRecord = !!dynamicRecord;
+  const showSelector = !hasLegacyRecord && !hasDynamicRecord && !isEditing;
+
+  if (showSelector) {
+    return (
+      <AnamneseModelSelector
+        resolvedTemplate={resolvedTemplate}
+        allTemplates={allTemplates}
+        isLoading={templateLoading}
+        selectedTemplateId={selectedTemplateId}
+        onTemplateChange={handleTemplateChange}
+        canEdit={canEdit}
+        onRegister={handleStartEditing}
+        specialtyLabel="Estética"
+      />
+    );
+  }
+
+  // ===== DYNAMIC TEMPLATE RENDERING =====
+  if (isDynamicTemplate && (isEditing || hasDynamicRecord)) {
+    return (
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-3">
+            <FileText className="h-5 w-5 text-primary" />
+            <div>
+              <h3 className="font-semibold">
+                {activeTemplate?.name || resolvedTemplate?.name || 'Anamnese'}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {dynamicRecord ? 'Registro existente' : 'Novo registro'}
+                {dynamicSigned && ' • Assinada'}
+              </p>
+            </div>
+            {dynamicSigned && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <Lock className="h-3 w-3" />
+                Assinada
+              </Badge>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Template selector */}
+            {allTemplates.length > 1 && (
+              <select
+                value={activeTemplateId || ''}
+                onChange={(e) => handleTemplateChange(e.target.value)}
+                className="h-8 rounded-md border bg-background px-2 text-xs"
+              >
+                {allTemplates.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            )}
+
+            {canEdit && (
+              <Button
+                size="sm"
+                onClick={handleDynamicSave}
+                disabled={dynamicSaving || !dynamicHasChanges}
+              >
+                <Save className="h-4 w-4 mr-1.5" />
+                {dynamicSaving ? 'Salvando...' : 'Salvar'}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Dynamic form */}
+        {dynamicLoading ? (
+          <Skeleton className="h-64 w-full" />
+        ) : (
+          <DynamicAnamneseRenderer
+            fields={dynamicFields}
+            values={dynamicValues}
+            onChange={handleDynamicFieldChange}
+            disabled={!canEdit || dynamicSigned}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // ===== LEGACY FORM RENDERING =====
   return (
     <div className="space-y-4">
-      {/* Header com versão e ações */}
+      {/* Header with template selector */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <FileText className="h-5 w-5 text-primary" />
@@ -197,7 +394,19 @@ export function AnamneseEsteticaBlock({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Print/Export buttons for current record */}
+          {/* Template selector */}
+          {allTemplates.length > 1 && (
+            <select
+              value={activeTemplateId || ''}
+              onChange={(e) => handleTemplateChange(e.target.value)}
+              className="h-8 rounded-md border bg-background px-2 text-xs"
+            >
+              {allTemplates.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          )}
+
           {current && canExport && (
             <>
               <Button
@@ -205,20 +414,20 @@ export function AnamneseEsteticaBlock({
                 size="sm"
                 onClick={handlePrintRecord}
                 disabled={exportingPdf}
-                title="Imprimir ficha consolidada deste registro"
+                title="Imprimir ficha consolidada"
               >
                 <Printer className="h-4 w-4 mr-1.5" />
-                Imprimir Registro
+                Imprimir
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handlePrintRecord}
                 disabled={exportingPdf}
-                title="Gerar PDF consolidado deste registro"
+                title="Gerar PDF consolidado"
               >
                 <Download className="h-4 w-4 mr-1.5" />
-                {exportingPdf ? 'Gerando...' : 'Gerar PDF'}
+                {exportingPdf ? 'Gerando...' : 'PDF'}
               </Button>
             </>
           )}
@@ -304,11 +513,10 @@ export function AnamneseEsteticaBlock({
         </Card>
       )}
 
-      {/* Formulário Principal */}
+      {/* Formulário Principal Legacy */}
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Coluna 1 */}
         <div className="space-y-4">
-          {/* Queixa Principal */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -331,7 +539,6 @@ export function AnamneseEsteticaBlock({
             </CardContent>
           </Card>
 
-          {/* Procedimentos Anteriores */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -364,7 +571,6 @@ export function AnamneseEsteticaBlock({
             </CardContent>
           </Card>
 
-          {/* Medicamentos */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -400,7 +606,6 @@ export function AnamneseEsteticaBlock({
 
         {/* Coluna 2 */}
         <div className="space-y-4">
-          {/* Alergias */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -433,7 +638,6 @@ export function AnamneseEsteticaBlock({
             </CardContent>
           </Card>
 
-          {/* Intercorrências */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -469,7 +673,6 @@ export function AnamneseEsteticaBlock({
             </CardContent>
           </Card>
 
-          {/* Expectativas */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -492,7 +695,6 @@ export function AnamneseEsteticaBlock({
             </CardContent>
           </Card>
 
-          {/* Observações Gerais */}
           <Card className="bg-muted/20">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Observações Gerais</CardTitle>
