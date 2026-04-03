@@ -118,7 +118,10 @@ const LEGACY_CORPORAL_ENTRY: CatalogEntry = {
 
 // ─── Lookup helpers ─────────────────────────────────────────────────
 
-const catalogByType = new Map(ESTETICA_TEMPLATE_CATALOG.map(e => [e.templateType, e]));
+const catalogByType = new Map([
+  ...ESTETICA_TEMPLATE_CATALOG.map(e => [e.templateType, e] as const),
+  [LEGACY_CORPORAL_ENTRY.templateType, LEGACY_CORPORAL_ENTRY],
+]);
 
 /**
  * Known legacy template_type values in the DB that map to catalog entries.
