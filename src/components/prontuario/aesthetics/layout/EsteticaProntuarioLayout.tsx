@@ -3,12 +3,10 @@
  * 
  * Centralized layout for aesthetics specialty.
  * Prontuario.tsx delegates to this layout when activeSpecialtyKey === 'estetica'.
- * All estética-specific tab rendering is handled here.
  */
 
 import { AnamneseEsteticaBlock } from '../AnamneseEsteticaBlock';
 import { AvaliacaoEsteticaBlock } from '../AvaliacaoEsteticaBlock';
-import { VisaoGeralEsteticaBlock } from '../VisaoGeralEsteticaBlock';
 import { VisaoGeralEsteticaBlock } from '../VisaoGeralEsteticaBlock';
 import { EvolucoesEsteticaBlock } from '../EvolucoesEsteticaBlock';
 import { ProdutosUtilizadosBlock } from '../ProdutosUtilizadosBlock';
@@ -33,10 +31,6 @@ export interface EsteticaLayoutProps {
   patientBirthDate?: string | null;
   patientPhone?: string | null;
   patientCpf?: string | null;
-  patientEmail?: string | null;
-  patientData?: any;
-  clinicalData?: { allergies: string[]; chronic_diseases: string[] };
-  loading?: boolean;
   onNavigateToModule?: (moduleKey: string) => void;
 }
 
@@ -54,20 +48,15 @@ export function EsteticaProntuarioLayout({
   patientBirthDate,
   patientPhone,
   patientCpf,
-  patientData,
-  clinicalData,
-  loading,
   onNavigateToModule,
 }: EsteticaLayoutProps) {
   switch (activeTab) {
     case 'resumo':
       return (
         <VisaoGeralEsteticaBlock
-          patient={patientData}
-          clinicalData={clinicalData || { allergies: [], chronic_diseases: [] }}
-          alerts={[]}
-          loading={loading || false}
-          onNavigateToModule={onNavigateToModule || (() => {})}
+          patientId={patientId}
+          clinicId={clinicId}
+          onNavigateToModule={onNavigateToModule}
         />
       );
 
