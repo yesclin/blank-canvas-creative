@@ -18,6 +18,7 @@ import AceitarConvite from "./pages/AceitarConvite";
 
 import NotFound from "./pages/NotFound";
 import ValidarDocumento from "./pages/ValidarDocumento";
+import PreCadastro from "./pages/PreCadastro";
 
 // Teleconsulta - Páginas Públicas
 import PrecheckPage from "./pages/teleconsulta/PrecheckPage";
