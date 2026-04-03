@@ -98,6 +98,7 @@ const professionalMainMenu: MenuItem[] = [
   { title: "Agenda", url: "/app/agenda", icon: Calendar, tourId: "agenda" }, // Own schedule
   { title: "Pacientes", url: "/app/pacientes", icon: Users, tourId: "patients" }, // Own patients
   { title: "Prontuário", url: "/app/prontuario", icon: FileText, tourId: "medical-record" },
+  { title: "Atendimento", url: "/app/atendimento", icon: Activity, tourId: "atendimento" },
   { title: "Meu Financeiro", url: "/app/meu-financeiro", icon: Wallet }, // Own financial
 ];
 
