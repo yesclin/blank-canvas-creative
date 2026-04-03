@@ -15,3 +15,5 @@ export { ProdutosUtilizadosBlock } from './ProdutosUtilizadosBlock';
 export { EvolucoesEsteticaBlock } from './EvolucoesEsteticaBlock';
 export { AlertasEsteticaBlock } from './AlertasEsteticaBlock';
 export { TimelineEsteticaBlock } from './TimelineEsteticaBlock';
+export { EsteticaProntuarioLayout } from './layout';
+export type { EsteticaLayoutProps } from './layout';
