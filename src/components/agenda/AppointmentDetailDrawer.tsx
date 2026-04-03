@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { PreRegistrationSection } from "@/components/agenda/PreRegistrationSection";
 import {
   Sheet,
   SheetContent,
@@ -503,6 +504,19 @@ export function AppointmentDetailDrawer({
               </Section>
             </>
           )}
+
+          {/* ── Section: Pré-cadastro ── */}
+          <Separator />
+          <Section title="Pré-cadastro" icon={FileText}>
+            <PreRegistrationSection
+              appointmentId={appointment.id}
+              clinicId={appointment.clinic_id}
+              patientId={appointment.patient_id}
+              patientName={patient?.full_name}
+              patientPhone={patient?.phone}
+              patientEmail={patient?.email}
+            />
+          </Section>
 
           {/* ── Actions ── */}
           <Separator />
