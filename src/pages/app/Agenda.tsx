@@ -116,6 +116,8 @@ export default function Agenda() {
   const updateStatusMutation = useUpdateAppointmentStatus();
   const createAppointmentMutation = useCreateAppointment();
   const rescheduleAppointmentMutation = useRescheduleAppointment();
+  const createSessionMutation = useCreateSession();
+  const finalizeSessionMutation = useFinalizeSession();
 
   // RBAC: Profissional vê apenas sua própria aba
   const effectiveSelectedProfessionalId = role === 'profissional' && userProfessionalId
