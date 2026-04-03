@@ -1050,7 +1050,27 @@ export default function Prontuario() {
     const tabEntries = getEntriesForTab(activeTab);
     const tabFiles = getFilesForTab(activeTab);
 
-    switch (activeTab) {
+    // ─── Estética: delegate ALL tabs to its own layout ──────────────
+    if (activeSpecialtyKey === 'estetica') {
+      return (
+        <EsteticaProntuarioLayout
+          activeTab={activeTab}
+          patientId={patientId!}
+          clinicId={clinicIdForFisio || null}
+          appointmentId={activeAppointment?.id}
+          canEdit={canEditCurrentTab}
+          specialtyId={resolvedSpecialtyId}
+          professionalId={currentProfessionalId}
+          professionalName={currentProfessionalName}
+          professionalRegistration={docClinicoProfReg}
+          patientName={patient?.full_name}
+          patientBirthDate={patient?.birth_date}
+          patientPhone={patient?.phone}
+          patientCpf={patient?.cpf}
+          onNavigateToModule={(moduleKey) => setActiveTab(moduleKey)}
+        />
+      );
+    }
       case 'resumo':
         // Render specialty-specific Visão Geral
         if (activeSpecialtyKey === 'psicologia') {
