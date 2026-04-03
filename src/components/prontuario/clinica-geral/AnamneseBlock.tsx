@@ -893,6 +893,74 @@ export function AnamneseBlock({
     );
   }
 
+  // ─── Dynamic advanced template rendering ─────────────────────────
+  if (isDynamicAdvanced && activeTemplate) {
+    const renderTemplateSelector = () => (
+      allTemplates.length > 1 ? (
+        <select
+          value={selectedTemplateId || ''}
+          onChange={(e) => {
+            setSelectedTemplateId(e.target.value);
+            setDynamicValues({});
+            setDynamicHasChanges(false);
+          }}
+          className="h-8 rounded-md border bg-background px-2 text-xs"
+        >
+          {allTemplates.map((t) => (
+            <option key={t.id} value={t.id}>{t.nome}</option>
+          ))}
+        </select>
+      ) : null
+    );
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-3">
+            <FileText className="h-5 w-5 text-primary" />
+            <div>
+              <h3 className="font-semibold">{activeTemplate.nome}</h3>
+              <p className="text-xs text-muted-foreground">
+                {dynamicRecord ? 'Registro existente' : 'Novo registro'}
+                {dynamicSigned ? ' • Assinada' : ''}
+              </p>
+            </div>
+            {dynamicSigned && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <Lock className="h-3 w-3" />
+                Assinada
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {renderTemplateSelector()}
+            {canEdit && (
+              <Button
+                size="sm"
+                onClick={handleDynamicSave}
+                disabled={dynamicSaving || !dynamicHasChanges}
+              >
+                <Save className="h-4 w-4 mr-1.5" />
+                {dynamicSaving ? 'Salvando...' : 'Salvar'}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {dynamicLoading ? (
+          <Skeleton className="h-64 w-full" />
+        ) : (
+          <DynamicAnamneseRenderer
+            fields={dynamicFields}
+            values={dynamicValues}
+            onChange={handleDynamicFieldChange}
+            disabled={!canEdit || dynamicSigned}
+          />
+        )}
+      </div>
+    );
+  }
+
   // ─── Template exists but no structure ───────────────────────────
   if (activeTemplate && activeTemplate.secoes.length === 0 && !currentAnamnese && v2Records.length === 0) {
     return (
