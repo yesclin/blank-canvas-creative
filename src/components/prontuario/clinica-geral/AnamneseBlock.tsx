@@ -235,9 +235,8 @@ export function AnamneseBlock({
 }: AnamneseBlockProps) {
   const navigate = useNavigate();
   const { generateAnamnesisPdf, generating } = useInstitutionalPdf();
-  const { generateConsolidatedPdf, exporting: exportingConsolidated } = useConsolidatedFillerPdf();
 
-  const isEstetica = specialtyKey === 'estetica';
+
 
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingExisting, setIsEditingExisting] = useState(false);
