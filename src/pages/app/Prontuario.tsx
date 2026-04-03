@@ -1756,15 +1756,7 @@ export default function Prontuario() {
 
       case 'termos_consentimentos':
         // Estética - Termos de Consentimento Estético
-        if (activeSpecialtyKey === 'estetica') {
-          return (
-            <ConsentModule
-              patientId={patientId!}
-              appointmentId={activeAppointment?.id}
-              canEdit={canEditCurrentTab}
-            />
-          );
-        }
+        // (estética handled by EsteticaProntuarioLayout above)
         // Psicologia - Termos de Consentimento Terapêutico
         return (
           <TermosConsentimentosPsicologiaBlock
