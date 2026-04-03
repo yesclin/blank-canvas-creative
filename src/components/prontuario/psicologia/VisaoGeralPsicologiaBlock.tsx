@@ -17,6 +17,7 @@ import {
   XCircle
 } from "lucide-react";
 import { format, parseISO, differenceInYears, differenceInDays } from "date-fns";
+import { calculateAgeFromDateOnly } from "@/utils/dateUtils";
 import { ptBR } from "date-fns/locale";
 import type { 
   PsicologiaPatientData, 
