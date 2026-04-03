@@ -363,7 +363,7 @@ export function AppointmentDetailDrawer({
                 {patient?.birth_date && (
                   <InfoRow 
                     label="Nascimento" 
-                    value={`${new Date(patient.birth_date).toLocaleDateString("pt-BR")}${patientAge !== undefined ? ` (${patientAge} anos)` : ''}`} 
+                    value={`${formatDateOnly(patient.birth_date)}${patientAge !== undefined ? ` (${patientAge} anos)` : ''}`} 
                   />
                 )}
               </Section>
