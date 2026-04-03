@@ -1226,16 +1226,7 @@ export default function Prontuario() {
 
       case 'exame_fisico':
         // Estética - Avaliação Estética
-        if (activeSpecialtyKey === 'estetica') {
-          return (
-            <AvaliacaoEsteticaBlock
-              patientId={patientId}
-              clinicId={clinicIdForFisio || null}
-              appointmentId={activeAppointment?.id}
-              canEdit={canEditCurrentTab}
-            />
-          );
-        }
+        // (estética handled by EsteticaProntuarioLayout above)
         // Default: Clínica Geral / Dermatologia / Odontologia - Exame Físico
         return (
           <ExameFisicoBlock
