@@ -254,13 +254,13 @@ export function AnamneseEsteticaBlock({
             <FileText className="h-5 w-5 text-primary" />
             <h3 className="font-semibold">Anamnese Estética</h3>
           </div>
-          {v2Templates.length > 1 && (
+          {dynamicTemplates.length > 1 && (
             <Select value={selectedTemplateId || ''} onValueChange={handleTemplateChange}>
               <SelectTrigger className="w-64 h-8 text-xs">
                 <SelectValue placeholder="Selecionar modelo..." />
               </SelectTrigger>
               <SelectContent>
-                {v2Templates.map(t => (
+                {dynamicTemplates.map(t => (
                   <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                 ))}
               </SelectContent>
