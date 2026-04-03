@@ -1177,7 +1177,25 @@ export default function Prontuario() {
         );
 
       case 'anamnese':
-        // Unified Anamnese for ALL specialties — uses V2 templates filtered by specialty
+        // Estética has its own dedicated anamnese module — fully decoupled
+        if (activeSpecialtyKey === 'estetica') {
+          return (
+            <AnamneseEsteticaBlock
+              patientId={patientId}
+              clinicId={clinicIdForFisio || null}
+              appointmentId={activeAppointment?.id || null}
+              canEdit={canEditCurrentTab}
+              specialtyId={resolvedSpecialtyId}
+              patientName={patient?.full_name}
+              patientBirthDate={patient?.birth_date}
+              patientPhone={patient?.phone}
+              patientCpf={patient?.cpf}
+              professionalName={currentProfessionalName}
+              professionalRegistration={docClinicoProfReg}
+            />
+          );
+        }
+        // All other specialties — uses generic V2 templates
         return (
           <AnamneseBlock
             currentAnamnese={activeSpecialtyKey === 'geral' ? currentAnamnese : null}
