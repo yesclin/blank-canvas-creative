@@ -107,6 +107,32 @@ export function usePublicPreRegistration(token?: string) {
         submitted_at: string | null;
         clinic_name: string;
         clinic_logo: string | null;
+        patient_data?: {
+          full_name: string | null;
+          birth_date: string | null;
+          cpf: string | null;
+          gender: string | null;
+          phone: string | null;
+          email: string | null;
+          address_street: string | null;
+          address_number: string | null;
+          address_complement: string | null;
+          address_neighborhood: string | null;
+          address_city: string | null;
+          address_state: string | null;
+          address_zip: string | null;
+          notes: string | null;
+        } | null;
+        insurance_data?: {
+          insurance_name: string | null;
+          card_number: string | null;
+        } | null;
+        guardian_data?: {
+          guardian_name: string | null;
+          guardian_cpf: string | null;
+          guardian_phone: string | null;
+          guardian_relationship: string | null;
+        } | null;
       } | null;
     },
   });

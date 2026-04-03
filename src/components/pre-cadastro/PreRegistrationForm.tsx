@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -64,6 +64,68 @@ interface PreRegistrationFormProps {
     phone: string | null;
     email: string | null;
     clinic_name: string;
+    patient_data?: {
+      full_name: string | null;
+      birth_date: string | null;
+      cpf: string | null;
+      gender: string | null;
+      phone: string | null;
+      email: string | null;
+      address_street: string | null;
+      address_number: string | null;
+      address_complement: string | null;
+      address_neighborhood: string | null;
+      address_city: string | null;
+      address_state: string | null;
+      address_zip: string | null;
+      notes: string | null;
+    } | null;
+    insurance_data?: {
+      insurance_name: string | null;
+      card_number: string | null;
+    } | null;
+    guardian_data?: {
+      guardian_name: string | null;
+      guardian_cpf: string | null;
+      guardian_phone: string | null;
+      guardian_relationship: string | null;
+    } | null;
+  };
+}
+
+/** Map gender from DB (M/F/O) to form values */
+function mapGenderToForm(gender: string | null | undefined): string {
+  if (!gender) return "";
+  const map: Record<string, string> = { M: "masculino", F: "feminino", O: "outro" };
+  return map[gender] || gender;
+}
+
+/** Build initial values prioritizing patient_data > link snapshot > empty */
+function buildInitialValues(link: PreRegistrationFormProps["link"]): FormData {
+  const p = link.patient_data;
+  const ins = link.insurance_data;
+  const g = link.guardian_data;
+
+  return {
+    full_name: p?.full_name || link.full_name || "",
+    birth_date: p?.birth_date || "",
+    cpf: p?.cpf || "",
+    gender: mapGenderToForm(p?.gender),
+    phone: p?.phone || link.phone || "",
+    email: p?.email || link.email || "",
+    address_zip: p?.address_zip || "",
+    address_street: p?.address_street || "",
+    address_number: p?.address_number || "",
+    address_complement: p?.address_complement || "",
+    address_neighborhood: p?.address_neighborhood || "",
+    address_city: p?.address_city || "",
+    address_state: p?.address_state || "",
+    insurance_name: ins?.insurance_name || "",
+    insurance_card_number: ins?.card_number || "",
+    guardian_name: g?.guardian_name || "",
+    guardian_cpf: g?.guardian_cpf || "",
+    guardian_phone: g?.guardian_phone || "",
+    notes: p?.notes || "",
   };
 }
 
@@ -73,28 +135,13 @@ export function PreRegistrationForm({ link }: PreRegistrationFormProps) {
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: {
-      full_name: link.full_name || "",
-      phone: link.phone || "",
-      email: link.email || "",
-      birth_date: "",
-      cpf: "",
-      gender: "",
-      address_zip: "",
-      address_street: "",
-      address_number: "",
-      address_complement: "",
-      address_neighborhood: "",
-      address_city: "",
-      address_state: "",
-      insurance_name: "",
-      insurance_card_number: "",
-      guardian_name: "",
-      guardian_cpf: "",
-      guardian_phone: "",
-      notes: "",
-    },
+    defaultValues: buildInitialValues(link),
   });
+
+  // Reset form when link data changes (e.g. after async load)
+  useEffect(() => {
+    form.reset(buildInitialValues(link));
+  }, [link.patient_data, link.insurance_data, link.guardian_data]);
 
   const onSubmit = async (values: FormData) => {
     try {
@@ -162,7 +209,7 @@ export function PreRegistrationForm({ link }: PreRegistrationFormProps) {
                 <FormField control={form.control} name="gender" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Sexo</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined}>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione" />
