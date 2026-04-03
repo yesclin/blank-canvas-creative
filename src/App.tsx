@@ -46,6 +46,7 @@ import Prontuario from "./pages/app/Prontuario";
 import Pacientes from "./pages/app/Pacientes";
 import Convenios from "./pages/app/gestao/Convenios";
 import MeuFinanceiro from "./pages/app/MeuFinanceiro";
+import Atendimento from "./pages/app/Atendimento";
 
 // Marketing
 import MarketingLayout from "./pages/app/marketing/MarketingLayout";
@@ -133,6 +134,7 @@ const App = () => (
             <Route path="pacientes" element={<ProtectedRoute module="pacientes"><Pacientes /></ProtectedRoute>} />
             <Route path="gestao/convenios" element={<ProtectedRoute module="convenios"><Convenios /></ProtectedRoute>} />
             <Route path="meu-financeiro" element={<ProtectedRoute module="meu_financeiro"><MeuFinanceiro /></ProtectedRoute>} />
+            <Route path="atendimento" element={<ProtectedRoute module="prontuario"><Atendimento /></ProtectedRoute>} />
             
             {/* Marketing - Página única com abas */}
             <Route path="marketing" element={<ProtectedRoute module="comunicacao"><MarketingLayout /></ProtectedRoute>} />
