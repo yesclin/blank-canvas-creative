@@ -123,6 +123,7 @@ import {
   ProdutosUtilizadosBlock,
   AlertasEsteticaBlock,
   TimelineEsteticaBlock,
+  EsteticaProntuarioLayout,
 } from "@/components/prontuario/aesthetics";
 import { VisaoGeralBlock, AnamneseBlock, EvolucoesBlock, ExameFisicoBlock, CondutaBlock, DocumentosBlock, AlertasBlock, AlertasBanner, LinhaTempoBlock, DiagnosticosBlock, PrescricoesBlock, DocumentosClinicosBlock } from "@/components/prontuario/clinica-geral";
 import { VisaoGeralPsicologiaBlock, AnamnesePsicologiaBlock, SessoesPsicologiaBlock, EvolucaoCasalBlock, PlanoTerapeuticoBlock, MetasTerapeuticasBlock, InstrumentosPsicologicosBlock, TermosConsentimentosPsicologiaBlock, AlertasPsicologiaBlock, AlertasBannerPsicologia, HistoricoPsicologiaBlock, RelatorioPsicologicoBlock, RelatorioEscolarBlock, RelatorioJudicialBlock, GraficosEvolucaoPsicologia, AnaliseTendenciaPsicologia, LaudoPsicologicoBlock } from "@/components/prontuario/psicologia";
