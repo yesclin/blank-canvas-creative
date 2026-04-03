@@ -1463,15 +1463,7 @@ export default function Prontuario() {
             />
           );
         }
-        if (activeSpecialtyKey === 'estetica') {
-          return (
-            <EvolucoesEsteticaBlock
-              patientId={patientId}
-              appointmentId={activeAppointment?.id}
-              canEdit={canEditCurrentTab}
-            />
-          );
-        }
+        // (estética handled by EsteticaProntuarioLayout above)
         // Default: Clínica Geral - Evoluções Clínicas
         return (
           <EvolucoesBlock
