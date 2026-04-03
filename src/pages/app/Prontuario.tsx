@@ -123,6 +123,7 @@ import {
   ProdutosUtilizadosBlock,
   AlertasEsteticaBlock,
   TimelineEsteticaBlock,
+  EsteticaProntuarioLayout,
 } from "@/components/prontuario/aesthetics";
 import { VisaoGeralBlock, AnamneseBlock, EvolucoesBlock, ExameFisicoBlock, CondutaBlock, DocumentosBlock, AlertasBlock, AlertasBanner, LinhaTempoBlock, DiagnosticosBlock, PrescricoesBlock, DocumentosClinicosBlock } from "@/components/prontuario/clinica-geral";
 import { VisaoGeralPsicologiaBlock, AnamnesePsicologiaBlock, SessoesPsicologiaBlock, EvolucaoCasalBlock, PlanoTerapeuticoBlock, MetasTerapeuticasBlock, InstrumentosPsicologicosBlock, TermosConsentimentosPsicologiaBlock, AlertasPsicologiaBlock, AlertasBannerPsicologia, HistoricoPsicologiaBlock, RelatorioPsicologicoBlock, RelatorioEscolarBlock, RelatorioJudicialBlock, GraficosEvolucaoPsicologia, AnaliseTendenciaPsicologia, LaudoPsicologicoBlock } from "@/components/prontuario/psicologia";
@@ -1049,6 +1050,28 @@ export default function Prontuario() {
     const tabEntries = getEntriesForTab(activeTab);
     const tabFiles = getFilesForTab(activeTab);
 
+    // ─── Estética: delegate ALL tabs to its own layout ──────────────
+    if (activeSpecialtyKey === 'estetica') {
+      return (
+        <EsteticaProntuarioLayout
+          activeTab={activeTab}
+          patientId={patientId!}
+          clinicId={clinicIdForFisio || null}
+          appointmentId={activeAppointment?.id}
+          canEdit={canEditCurrentTab}
+          specialtyId={resolvedSpecialtyId}
+          professionalId={currentProfessionalId}
+          professionalName={currentProfessionalName}
+          professionalRegistration={docClinicoProfReg}
+          patientName={patient?.full_name}
+          patientBirthDate={patient?.birth_date}
+          patientPhone={patient?.phone}
+          patientCpf={patient?.cpf}
+          onNavigateToModule={(moduleKey) => setActiveTab(moduleKey)}
+        />
+      );
+    }
+
     switch (activeTab) {
       case 'resumo':
         // Render specialty-specific Visão Geral
@@ -1097,16 +1120,7 @@ export default function Prontuario() {
             />
           );
         }
-        if (activeSpecialtyKey === 'estetica') {
-          return (
-            <VisaoGeralEsteticaBlock
-              patientId={patientId}
-              clinicId={clinicIdForFisio || null}
-              canEdit={canEditCurrentTab}
-              onNavigateToModule={(moduleKey) => setActiveTab(moduleKey)}
-            />
-          );
-        }
+        // (estética handled by EsteticaProntuarioLayout above)
         if (activeSpecialtyKey === 'pediatria') {
           return (
             <VisaoGeralPediatriaBlock
@@ -1178,23 +1192,7 @@ export default function Prontuario() {
 
       case 'anamnese':
         // Estética has its own dedicated anamnese module — fully decoupled
-        if (activeSpecialtyKey === 'estetica') {
-          return (
-            <AnamneseEsteticaBlock
-              patientId={patientId}
-              clinicId={clinicIdForFisio || null}
-              appointmentId={activeAppointment?.id || null}
-              canEdit={canEditCurrentTab}
-              specialtyId={resolvedSpecialtyId}
-              patientName={patient?.full_name}
-              patientBirthDate={patient?.birth_date}
-              patientPhone={patient?.phone}
-              patientCpf={patient?.cpf}
-              professionalName={currentProfessionalName}
-              professionalRegistration={docClinicoProfReg}
-            />
-          );
-        }
+        // (estética handled by EsteticaProntuarioLayout above)
         // All other specialties — uses generic V2 templates
         return (
           <AnamneseBlock
@@ -1228,16 +1226,7 @@ export default function Prontuario() {
 
       case 'exame_fisico':
         // Estética - Avaliação Estética
-        if (activeSpecialtyKey === 'estetica') {
-          return (
-            <AvaliacaoEsteticaBlock
-              patientId={patientId}
-              clinicId={clinicIdForFisio || null}
-              appointmentId={activeAppointment?.id}
-              canEdit={canEditCurrentTab}
-            />
-          );
-        }
+        // (estética handled by EsteticaProntuarioLayout above)
         // Default: Clínica Geral / Dermatologia / Odontologia - Exame Físico
         return (
           <ExameFisicoBlock
@@ -1474,15 +1463,7 @@ export default function Prontuario() {
             />
           );
         }
-        if (activeSpecialtyKey === 'estetica') {
-          return (
-            <EvolucoesEsteticaBlock
-              patientId={patientId}
-              appointmentId={activeAppointment?.id}
-              canEdit={canEditCurrentTab}
-            />
-          );
-        }
+        // (estética handled by EsteticaProntuarioLayout above)
         // Default: Clínica Geral - Evoluções Clínicas
         return (
           <EvolucoesBlock
@@ -1775,15 +1756,7 @@ export default function Prontuario() {
 
       case 'termos_consentimentos':
         // Estética - Termos de Consentimento Estético
-        if (activeSpecialtyKey === 'estetica') {
-          return (
-            <ConsentModule
-              patientId={patientId!}
-              appointmentId={activeAppointment?.id}
-              canEdit={canEditCurrentTab}
-            />
-          );
-        }
+        // (estética handled by EsteticaProntuarioLayout above)
         // Psicologia - Termos de Consentimento Terapêutico
         return (
           <TermosConsentimentosPsicologiaBlock
@@ -1853,14 +1826,7 @@ export default function Prontuario() {
             />
           );
         }
-        if (activeSpecialtyKey === 'estetica') {
-          return (
-            <AlertasEsteticaBlock
-              patientId={patientId!}
-              canEdit={canEditCurrentTab}
-            />
-          );
-        }
+        // (estética handled by EsteticaProntuarioLayout above)
         if (activeSpecialtyKey === 'pediatria') {
           return (
             <AlertasPediatriaBlock
@@ -1933,13 +1899,7 @@ export default function Prontuario() {
             />
           );
         }
-        if (activeSpecialtyKey === 'estetica') {
-          return (
-            <TimelineEsteticaBlock
-              patientId={patientId!}
-            />
-          );
-        }
+        // (estética handled by EsteticaProntuarioLayout above)
         if (activeSpecialtyKey === 'pediatria') {
           return (
             <LinhaDoTempoPediatriaBlock
