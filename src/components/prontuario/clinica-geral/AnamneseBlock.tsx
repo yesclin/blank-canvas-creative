@@ -65,14 +65,9 @@ import {
 } from "@/hooks/prontuario/clinica-geral/anamneseTemplates";
 import { useAnamnesisTemplatesV2, useAnamnesisRecords, type AnamnesisTemplateV2, type AnamnesisRecord } from "@/hooks/useAnamnesisTemplatesV2";
 import { useInstitutionalPdf } from "@/hooks/useInstitutionalPdf";
-import { useConsolidatedFillerPdf } from "@/hooks/aesthetics/useConsolidatedFillerPdf";
 import { FileDown, Printer, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { ADVANCED_TEMPLATE_MAP } from "@/hooks/prontuario/estetica/esteticaAdvancedTemplates";
-import { DynamicAnamneseRenderer } from "@/components/prontuario/aesthetics/DynamicAnamneseRenderer";
-import { useDynamicAnamneseEstetica } from "@/hooks/aesthetics/useDynamicAnamneseEstetica";
-import type { DynamicFormValues } from "@/components/prontuario/aesthetics/anamnese-fields/types";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
