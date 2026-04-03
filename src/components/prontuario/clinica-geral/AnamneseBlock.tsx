@@ -148,6 +148,7 @@ interface UnifiedTemplate {
   descricao: string;
   icon: string;
   is_system: boolean;
+  template_type: string | null;
   secoes: SecaoAnamnese[];
 }
 
