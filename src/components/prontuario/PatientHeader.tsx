@@ -84,7 +84,7 @@ export function PatientHeader({ patient, clinicalData, alerts }: PatientHeaderPr
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
                     <span>
-                      {format(parseISO(patient.birth_date), "dd/MM/yyyy", { locale: ptBR })}
+                      {formatDateOnly(patient.birth_date)}
                       {" "}({calculateAge(patient.birth_date)} anos)
                     </span>
                   </div>
