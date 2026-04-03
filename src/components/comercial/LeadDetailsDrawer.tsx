@@ -76,7 +76,7 @@ export function LeadDetailsDrawer({ lead, open, onOpenChange, onEdit, onCreateOp
               {lead.birth_date && (
                 <div className="flex items-center gap-2 text-sm">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>{format(new Date(lead.birth_date), "dd/MM/yyyy", { locale: ptBR })}</span>
+                  <span>{formatDateOnly(lead.birth_date)}</span>
                 </div>
               )}
             </div>
