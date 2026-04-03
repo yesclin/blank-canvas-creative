@@ -255,6 +255,42 @@ export function AppointmentDetailDrawer({
             )}
           </div>
 
+          {/* Session Timer */}
+          {status === "em_atendimento" && started_at && (
+            <div className="mt-3 flex items-center justify-between">
+              <SessionTimerBadge
+                startedAt={started_at}
+                isPaused={session?.is_paused || false}
+                totalPausedSeconds={session?.total_paused_seconds || 0}
+                currentPauseStartedAt={session?.current_pause_started_at}
+                size="lg"
+              />
+              {session?.is_paused ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 text-green-600 border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-950"
+                  onClick={() => resumeSession.mutate({ appointmentId: appointment.id })}
+                  disabled={resumeSession.isPending}
+                >
+                  <PlayCircle className="h-4 w-4" />
+                  Retomar
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 text-amber-600 border-amber-200 hover:bg-amber-50 dark:border-amber-800 dark:hover:bg-amber-950"
+                  onClick={() => pauseSession.mutate({ appointmentId: appointment.id })}
+                  disabled={pauseSession.isPending}
+                >
+                  <Pause className="h-4 w-4" />
+                  Pausar
+                </Button>
+              )}
+            </div>
+          )}
+
           {/* Primary action in header */}
           {statusActions.length > 0 && (
             <div className="mt-3">
@@ -264,6 +300,21 @@ export function AppointmentDetailDrawer({
                   {action.label}
                 </Button>
               ))}
+            </div>
+          )}
+
+          {/* View Summary for finalized appointments */}
+          {status === "finalizado" && session?.session_summary && (
+            <div className="mt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2"
+                onClick={() => setSummaryModalOpen(true)}
+              >
+                <Activity className="h-4 w-4" />
+                Ver Resumo do Atendimento
+              </Button>
             </div>
           )}
         </div>
