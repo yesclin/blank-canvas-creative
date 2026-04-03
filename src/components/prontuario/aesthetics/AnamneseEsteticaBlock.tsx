@@ -225,14 +225,14 @@ export function AnamneseEsteticaBlock({
   }
 
   // ─── No templates available ──────────────────────────────────────
-  if (v2Templates.length === 0) {
+  if (dynamicTemplates.length === 0) {
     return (
       <Card className="border-dashed">
         <CardContent className="p-10 text-center">
           <FileText className="h-10 w-10 mx-auto mb-4 text-muted-foreground opacity-50" />
-          <h3 className="font-semibold mb-2">Nenhum modelo de anamnese configurado</h3>
+          <h3 className="font-semibold mb-2">Nenhum modelo de anamnese avançado disponível</h3>
           <p className="text-sm text-muted-foreground">
-            Configure os modelos de anamnese para a especialidade Estética nas configurações.
+            Os modelos compatíveis com o fluxo dinâmico da estética não foram encontrados. Verifique as configurações.
           </p>
         </CardContent>
       </Card>
