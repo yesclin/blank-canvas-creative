@@ -82,23 +82,14 @@ export function AppointmentSummaryModal({
         </DialogHeader>
 
         <div className="space-y-5 mt-2">
-          {/* ── Header ── */}
+          {/* ── Contexto do Atendimento ── */}
           <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <User className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="font-semibold text-sm">{summary.patient_name}</p>
-                <p className="text-xs text-muted-foreground">{summary.professional_name}</p>
-              </div>
-            </div>
-
             <div className="grid grid-cols-2 gap-2 text-xs">
               <InfoItem icon={Calendar} label="Data" value={formatDate(summary.scheduled_date)} />
               <InfoItem icon={Stethoscope} label="Especialidade" value={summary.specialty_name || "—"} />
+              <InfoItem icon={User} label="Profissional" value={summary.professional_name || "—"} />
               {summary.procedure_name && (
-                <InfoItem icon={FileText} label="Procedimento" value={summary.procedure_name} className="col-span-2" />
+                <InfoItem icon={FileText} label="Procedimento" value={summary.procedure_name} />
               )}
             </div>
 
