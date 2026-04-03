@@ -1826,14 +1826,7 @@ export default function Prontuario() {
             />
           );
         }
-        if (activeSpecialtyKey === 'estetica') {
-          return (
-            <AlertasEsteticaBlock
-              patientId={patientId!}
-              canEdit={canEditCurrentTab}
-            />
-          );
-        }
+        // (estética handled by EsteticaProntuarioLayout above)
         if (activeSpecialtyKey === 'pediatria') {
           return (
             <AlertasPediatriaBlock
