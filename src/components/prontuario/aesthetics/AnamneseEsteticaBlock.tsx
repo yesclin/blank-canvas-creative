@@ -70,6 +70,22 @@ function getDisplayOrder(t: AnamnesisTemplateV2): number {
   return entry?.displayOrder ?? 99;
 }
 
+function kindLabel(kind: TemplateKind): string {
+  switch (kind) {
+    case 'advanced': return 'Avançado';
+    case 'standard': return 'Padrão';
+    case 'incomplete': return 'Incompleto';
+  }
+}
+
+function kindBadgeClass(kind: TemplateKind): string {
+  switch (kind) {
+    case 'advanced': return 'bg-primary/10 text-primary border-primary/20';
+    case 'standard': return 'bg-secondary text-secondary-foreground';
+    case 'incomplete': return 'bg-destructive/10 text-destructive border-destructive/20';
+  }
+}
+
 // ─── Props ──────────────────────────────────────────────────────────
 interface AnamneseEsteticaBlockProps {
   patientId: string | null;
