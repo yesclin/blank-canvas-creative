@@ -88,16 +88,21 @@ export function AnamneseEsteticaBlock({
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
 
-  // Active template
+  // Filter to only show templates compatible with the dynamic renderer
+  const dynamicTemplates = useMemo(() => {
+    return v2Templates.filter(t => t.template_type && !!ADVANCED_TEMPLATE_MAP[t.template_type]);
+  }, [v2Templates]);
+
+  // Active template (only from dynamic-compatible templates)
   const activeTemplate = useMemo(() => {
-    if (!v2Templates.length) return null;
+    if (!dynamicTemplates.length) return null;
     if (selectedTemplateId) {
-      const found = v2Templates.find(t => t.id === selectedTemplateId);
+      const found = dynamicTemplates.find(t => t.id === selectedTemplateId);
       if (found) return found;
     }
-    const defaultTpl = v2Templates.find(t => t.is_default);
-    return defaultTpl || v2Templates[0];
-  }, [v2Templates, selectedTemplateId]);
+    const defaultTpl = dynamicTemplates.find(t => t.is_default);
+    return defaultTpl || dynamicTemplates[0];
+  }, [dynamicTemplates, selectedTemplateId]);
 
   // Auto-select first template
   useEffect(() => {
