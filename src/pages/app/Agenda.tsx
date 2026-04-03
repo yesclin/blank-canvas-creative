@@ -266,11 +266,24 @@ export default function Agenda() {
     }
     
     if (newStatus === 'finalizado') {
+      // Finalize session summary before opening materials dialog
+      try {
+        await finalizeSessionMutation.mutateAsync({ appointmentId });
+      } catch (e) {
+        console.error("Error finalizing session:", e);
+      }
       setFinalizingAppointment(apt);
       setMaterialsDialogOpen(true);
     } else if (newStatus === 'em_atendimento') {
       try {
         await updateStatusMutation.mutateAsync({ id: appointmentId, status: newStatus });
+        // Create session tracking record
+        createSessionMutation.mutate({
+          appointmentId,
+          clinicId: apt.clinic_id,
+          patientId: apt.patient_id,
+          professionalId: apt.professional_id,
+        });
         if (apt.patient_id) {
           navigateToProntuario(apt.patient_id);
         }
