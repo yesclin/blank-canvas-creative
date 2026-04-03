@@ -42,6 +42,9 @@ import {
   FolderOpen,
   MessageSquare,
   History,
+  Pause,
+  PlayCircle,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Appointment, AppointmentStatus, MeetingStatus } from "@/types/agenda";
@@ -50,6 +53,9 @@ import { getAppointmentSourceLabel } from "@/utils/appointmentSource";
 import { useTeleconsultaActions, useTeleconsultaSession } from "@/hooks/useTeleconsulta";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAppointmentFinancialStatus } from "@/hooks/useAppointmentFinancialStatus";
+import { useAppointmentSession, usePauseSession, useResumeSession } from "@/hooks/useAppointmentSession";
+import { SessionTimerBadge } from "./SessionTimerBadge";
+import { AppointmentSummaryModal } from "./AppointmentSummaryModal";
 import { PatientAvatar } from "./PatientAvatar";
 import { AppointmentPaymentBadge } from "./AppointmentPaymentBadge";
 import { AppointmentReceivePaymentDialog } from "./AppointmentReceivePaymentDialog";
@@ -87,9 +93,15 @@ export function AppointmentDetailDrawer({
   const { role, can } = usePermissions();
   const financial = useAppointmentFinancialStatus(appointment);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [summaryModalOpen, setSummaryModalOpen] = useState(false);
   const isTeleconsulta = appointment?.care_mode === 'teleconsulta';
   const { data: teleSession } = useTeleconsultaSession(isTeleconsulta ? appointment?.id ?? null : null);
   const { generateRoom, copyLink, endSession, reportTechnicalIssue, convertToPresencial } = useTeleconsultaActions();
+  
+  // Session tracking hooks
+  const { data: session } = useAppointmentSession(appointment?.id);
+  const pauseSession = usePauseSession();
+  const resumeSession = useResumeSession();
 
   if (!appointment) return null;
 
@@ -243,6 +255,42 @@ export function AppointmentDetailDrawer({
             )}
           </div>
 
+          {/* Session Timer */}
+          {status === "em_atendimento" && started_at && (
+            <div className="mt-3 flex items-center justify-between">
+              <SessionTimerBadge
+                startedAt={started_at}
+                isPaused={session?.is_paused || false}
+                totalPausedSeconds={session?.total_paused_seconds || 0}
+                currentPauseStartedAt={session?.current_pause_started_at}
+                size="lg"
+              />
+              {session?.is_paused ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 text-green-600 border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-950"
+                  onClick={() => resumeSession.mutate({ appointmentId: appointment.id })}
+                  disabled={resumeSession.isPending}
+                >
+                  <PlayCircle className="h-4 w-4" />
+                  Retomar
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 text-amber-600 border-amber-200 hover:bg-amber-50 dark:border-amber-800 dark:hover:bg-amber-950"
+                  onClick={() => pauseSession.mutate({ appointmentId: appointment.id })}
+                  disabled={pauseSession.isPending}
+                >
+                  <Pause className="h-4 w-4" />
+                  Pausar
+                </Button>
+              )}
+            </div>
+          )}
+
           {/* Primary action in header */}
           {statusActions.length > 0 && (
             <div className="mt-3">
@@ -252,6 +300,21 @@ export function AppointmentDetailDrawer({
                   {action.label}
                 </Button>
               ))}
+            </div>
+          )}
+
+          {/* View Summary for finalized appointments */}
+          {status === "finalizado" && session?.session_summary && (
+            <div className="mt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2"
+                onClick={() => setSummaryModalOpen(true)}
+              >
+                <Activity className="h-4 w-4" />
+                Ver Resumo do Atendimento
+              </Button>
             </div>
           )}
         </div>
@@ -488,14 +551,25 @@ export function AppointmentDetailDrawer({
           )}
 
           {/* ── Section: Histórico de status ── */}
-          {(arrived_at || started_at || finished_at) && (
+          {(arrived_at || started_at || finished_at || (session?.pause_events && session.pause_events.length > 0)) && (
             <>
               <Separator />
               <Section title="Histórico" icon={History}>
                 <div className="space-y-1.5">
                   {arrived_at && <p className="text-xs text-muted-foreground">✓ Chegou às {formatTimestamp(arrived_at)}</p>}
                   {started_at && <p className="text-xs text-muted-foreground">▶ Atendimento iniciado às {formatTimestamp(started_at)}</p>}
+                  {session?.pause_events?.map((pe, i) => (
+                    <div key={i} className="text-xs text-muted-foreground">
+                      <p>⏸ Pausado às {formatTimestamp(pe.paused_at)}{pe.reason ? ` — ${pe.reason}` : ''}</p>
+                      {pe.resumed_at && <p>▶ Retomado às {formatTimestamp(pe.resumed_at)}</p>}
+                    </div>
+                  ))}
                   {finished_at && <p className="text-xs text-muted-foreground">■ Finalizado às {formatTimestamp(finished_at)}</p>}
+                  {session && session.total_paused_seconds > 0 && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      ⏱ Tempo total em pausa: {Math.floor(session.total_paused_seconds / 60)}min {session.total_paused_seconds % 60}s
+                    </p>
+                  )}
                 </div>
               </Section>
             </>
@@ -574,6 +648,14 @@ export function AppointmentDetailDrawer({
         open={paymentDialogOpen}
         onOpenChange={setPaymentDialogOpen}
         financialStatus={financial}
+      />
+
+      {/* Summary Modal */}
+      <AppointmentSummaryModal
+        open={summaryModalOpen}
+        onOpenChange={setSummaryModalOpen}
+        summary={session?.session_summary || null}
+        patientId={appointment.patient_id}
       />
     </Sheet>
   );

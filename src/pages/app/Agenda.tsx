@@ -7,6 +7,7 @@ import type { SlotClickData } from "@/components/agenda/AgendaGrid";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAgendaRealData } from "@/hooks/useAgendaRealData";
 import { useUpdateAppointmentStatus, useCreateAppointment, useRescheduleAppointment, type AppointmentFormData } from "@/hooks/useAppointments";
+import { useCreateSession, useFinalizeSession } from "@/hooks/useAppointmentSession";
 import { useTissGuideGeneration } from "@/hooks/useTissGuideGeneration";
 import { usePermissions } from "@/hooks/usePermissions";
 import { AgendaDateNavigation } from "@/components/agenda/AgendaDateNavigation";
@@ -115,6 +116,8 @@ export default function Agenda() {
   const updateStatusMutation = useUpdateAppointmentStatus();
   const createAppointmentMutation = useCreateAppointment();
   const rescheduleAppointmentMutation = useRescheduleAppointment();
+  const createSessionMutation = useCreateSession();
+  const finalizeSessionMutation = useFinalizeSession();
 
   // RBAC: Profissional vê apenas sua própria aba
   const effectiveSelectedProfessionalId = role === 'profissional' && userProfessionalId
@@ -263,11 +266,24 @@ export default function Agenda() {
     }
     
     if (newStatus === 'finalizado') {
+      // Finalize session summary before opening materials dialog
+      try {
+        await finalizeSessionMutation.mutateAsync({ appointmentId });
+      } catch (e) {
+        console.error("Error finalizing session:", e);
+      }
       setFinalizingAppointment(apt);
       setMaterialsDialogOpen(true);
     } else if (newStatus === 'em_atendimento') {
       try {
         await updateStatusMutation.mutateAsync({ id: appointmentId, status: newStatus });
+        // Create session tracking record
+        createSessionMutation.mutate({
+          appointmentId,
+          clinicId: apt.clinic_id,
+          patientId: apt.patient_id,
+          professionalId: apt.professional_id,
+        });
         if (apt.patient_id) {
           navigateToProntuario(apt.patient_id);
         }
@@ -294,8 +310,16 @@ export default function Agenda() {
         
         if (pendingStatusChange.status === 'em_atendimento') {
           const apt = appointments.find(a => a.id === pendingStatusChange.appointmentId);
-          if (apt?.patient_id) {
-            navigateToProntuario(apt.patient_id);
+          if (apt) {
+            createSessionMutation.mutate({
+              appointmentId: apt.id,
+              clinicId: apt.clinic_id,
+              patientId: apt.patient_id,
+              professionalId: apt.professional_id,
+            });
+            if (apt.patient_id) {
+              navigateToProntuario(apt.patient_id);
+            }
           }
         }
       } catch (error) {
