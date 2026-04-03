@@ -402,24 +402,21 @@ export function AnamneseEsteticaBlock({
       )}
 
       {/* Dynamic form */}
-      {isDynamic ? (
-        dynamicLoading ? (
-          <Skeleton className="h-64 w-full" />
-        ) : (
-          <DynamicAnamneseRenderer
-            fields={dynamicFields}
-            values={dynamicValues}
-            onChange={handleDynamicFieldChange}
-            disabled={!canEdit || dynamicSigned}
-          />
-        )
+      {dynamicLoading ? (
+        <Skeleton className="h-64 w-full" />
+      ) : dynamicFields.length > 0 ? (
+        <DynamicAnamneseRenderer
+          fields={dynamicFields}
+          values={dynamicValues}
+          onChange={handleDynamicFieldChange}
+          disabled={!canEdit || dynamicSigned}
+        />
       ) : (
         <Card>
           <CardContent className="p-8 text-center">
             <FileText className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-50" />
             <p className="text-sm text-muted-foreground">
-              Este modelo não possui estrutura avançada configurada.
-              Selecione um modelo com estrutura dinâmica.
+              Não foi possível carregar a estrutura deste modelo. Tente selecionar outro modelo.
             </p>
           </CardContent>
         </Card>
