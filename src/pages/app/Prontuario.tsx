@@ -482,6 +482,10 @@ export default function Prontuario() {
   const params = useParams<{ patientId: string }>();
   // Support both /app/prontuario/:patientId (path) and ?paciente=ID (legacy query param)
   const patientId = params.patientId || searchParams.get('paciente');
+
+  // Auto-redirect: when no patientId, check for active appointment and redirect
+  const { isCheckingAutoRedirect } = useAutoPatientRedirect(!patientId ? false : true);
+
   
   const {
     patient,
