@@ -92,6 +92,7 @@ import {
   type ActionKey,
 } from "@/hooks/prontuario";
 import { useActiveSpecialty } from "@/hooks/prontuario/useActiveSpecialty";
+import { useAutoPatientRedirect } from "@/hooks/prontuario/useAutoPatientRedirect";
 import { getClinicalBlockLabel, YESCLIN_CLINICAL_BLOCKS, type ClinicalBlockKey } from "@/hooks/prontuario/specialtyTabsConfig";
 import { isBlockEnabled } from "@/hooks/prontuario/specialtyCapabilities";
 import { getVisibleTabsForSpecialty } from "@/hooks/prontuario/specialtyTabsConfig";
