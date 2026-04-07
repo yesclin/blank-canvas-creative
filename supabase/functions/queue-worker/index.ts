@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version, x-worker-secret",
 };
 
 async function sendViaEvolution(integration: any, phone: string, message: string) {
@@ -21,6 +21,42 @@ async function sendViaEvolution(integration: any, phone: string, message: string
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Authentication: require shared secret
+  const workerSecret = Deno.env.get("QUEUE_WORKER_SECRET");
+  if (workerSecret) {
+    const providedSecret = req.headers.get("x-worker-secret") || "";
+    if (providedSecret !== workerSecret) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+  }
+
+  // Also accept calls with a valid JWT (e.g., from authenticated admin users)
+  const authHeader = req.headers.get("Authorization");
+  if (!workerSecret && !authHeader?.startsWith("Bearer ")) {
+    return new Response(
+      JSON.stringify({ error: "Unauthorized" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  if (!workerSecret && authHeader) {
+    const supabaseAuth = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data, error } = await supabaseAuth.auth.getUser();
+    if (error || !data?.user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
   }
 
   const supabase = createClient(
@@ -130,7 +166,7 @@ Deno.serve(async (req) => {
         await supabase.from("message_queue").update({
           status: shouldRetry ? "pending" : "failed",
           attempts: newAttempts,
-          error_message: `Erro de rede: ${fetchErr.message}`,
+          error_message: `Network error`,
           scheduled_for: shouldRetry
             ? new Date(Date.now() + 120000).toISOString()
             : null,
@@ -152,7 +188,7 @@ Deno.serve(async (req) => {
   } catch (err: any) {
     console.error("queue-worker error:", err);
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

@@ -11,11 +11,12 @@ interface DocumentInfo {
   id: string;
   document_type: string;
   title: string;
-  validation_code: string | null;
   status: string;
   signed_at: string | null;
   created_at: string;
   clinic_name: string;
+  is_revoked: boolean | null;
+  document_reference: string | null;
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -39,49 +40,27 @@ export default function ValidarDocumento() {
     async function fetchDocument() {
       if (!id) { setNotFound(true); setLoading(false); return; }
 
-      // Try finding by ID first, then by validation_code
-      let data: any = null;
+      // Use secure RPC that only returns safe fields
+      const { data, error } = await supabase.rpc('validate_clinical_document', {
+        p_code: id,
+      });
 
-      const { data: byId } = await supabase
-        .from('clinical_documents')
-        .select('id, document_type, title, validation_code, status, signed_at, created_at, clinic_id')
-        .eq('id', id)
-        .maybeSingle();
-
-      if (byId) {
-        data = byId;
-      } else {
-        // Try by validation_code
-        const { data: byCode } = await supabase
-          .from('clinical_documents')
-          .select('id, document_type, title, validation_code, status, signed_at, created_at, clinic_id')
-          .eq('validation_code', id)
-          .maybeSingle();
-        data = byCode;
-      }
-
-      if (!data) {
+      if (error || !data) {
         setNotFound(true);
         setLoading(false);
         return;
       }
 
-      // Get clinic name
-      const { data: clinic } = await supabase
-        .from('clinics')
-        .select('name')
-        .eq('id', data.clinic_id)
-        .maybeSingle();
-
       setDoc({
         id: data.id,
         document_type: data.document_type,
         title: data.title,
-        validation_code: data.validation_code,
         status: data.status,
         signed_at: data.signed_at,
         created_at: data.created_at,
-        clinic_name: clinic?.name || 'Clínica',
+        clinic_name: data.clinic_name || 'Clínica',
+        is_revoked: data.is_revoked,
+        document_reference: data.document_reference,
       });
       setLoading(false);
     }
@@ -103,27 +82,21 @@ export default function ValidarDocumento() {
           <AlertTriangle className="mx-auto h-16 w-16 text-amber-500 mb-4" />
           <h1 className="text-xl font-bold text-foreground mb-2">Documento não encontrado</h1>
           <p className="text-muted-foreground text-sm">
-            O documento solicitado não existe em nosso sistema. Verifique o código e tente novamente.
+            O código de validação informado não corresponde a nenhum documento em nosso sistema. Verifique o código e tente novamente.
           </p>
         </div>
       </div>
     );
   }
 
-  const isValid = doc && doc.status === 'assinado';
-  const isCancelled = doc?.status === 'cancelado';
+  const isRevoked = doc?.is_revoked === true;
+  const isValid = doc && doc.status === 'assinado' && !isRevoked;
+  const isCancelled = doc?.status === 'cancelado' || isRevoked;
   const dateFormatted = doc?.signed_at
     ? format(new Date(doc.signed_at), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })
     : doc?.created_at
     ? format(new Date(doc.created_at), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })
     : '';
-
-  const copyCode = () => {
-    if (doc?.validation_code) {
-      navigator.clipboard.writeText(doc.validation_code);
-      toast.success("Código copiado");
-    }
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -140,13 +113,13 @@ export default function ValidarDocumento() {
             <AlertTriangle className="mx-auto h-16 w-16 mb-3" />
           )}
           <h1 className="text-xl font-bold">
-            {isValid ? 'Documento Válido' : isCancelled ? 'Documento Cancelado' : 'Rascunho (Não Assinado)'}
+            {isValid ? 'Documento Válido' : isCancelled ? 'Documento Cancelado/Revogado' : 'Rascunho (Não Assinado)'}
           </h1>
           <p className="text-sm opacity-90 mt-1">
             {isValid
               ? 'Este documento foi assinado digitalmente e possui validade.'
               : isCancelled
-              ? 'Este documento foi cancelado e não possui mais validade.'
+              ? 'Este documento foi cancelado ou revogado e não possui mais validade.'
               : 'Este documento ainda não foi assinado digitalmente.'}
           </p>
         </div>
@@ -177,24 +150,22 @@ export default function ValidarDocumento() {
             </div>
           </div>
 
-          {/* Validation code */}
-          {doc!.validation_code && (
-            <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium text-primary">Código de Validação</span>
-                </div>
-                <Button variant="ghost" size="sm" className="h-7 px-2" onClick={copyCode}>
-                  <Copy className="h-3 w-3 mr-1" />
-                  Copiar
-                </Button>
-              </div>
-              <p className="font-mono text-xs text-muted-foreground mt-2 break-all">
-                {doc!.validation_code}
-              </p>
+          {doc!.document_reference && (
+            <div className="p-3 bg-muted rounded-lg">
+              <p className="text-xs text-muted-foreground">Referência</p>
+              <p className="font-mono font-medium text-foreground text-sm">{doc!.document_reference}</p>
             </div>
           )}
+
+          <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
+            <div className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium text-primary">Verificação Digital</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Este documento foi verificado através do sistema YesClin.
+            </p>
+          </div>
 
           <div className="pt-2 border-t text-center">
             <p className="text-xs text-muted-foreground">
