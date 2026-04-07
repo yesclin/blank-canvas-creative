@@ -92,6 +92,7 @@ import {
   type ActionKey,
 } from "@/hooks/prontuario";
 import { useActiveSpecialty } from "@/hooks/prontuario/useActiveSpecialty";
+import { useAutoPatientRedirect } from "@/hooks/prontuario/useAutoPatientRedirect";
 import { getClinicalBlockLabel, YESCLIN_CLINICAL_BLOCKS, type ClinicalBlockKey } from "@/hooks/prontuario/specialtyTabsConfig";
 import { isBlockEnabled } from "@/hooks/prontuario/specialtyCapabilities";
 import { getVisibleTabsForSpecialty } from "@/hooks/prontuario/specialtyTabsConfig";
@@ -481,6 +482,10 @@ export default function Prontuario() {
   const params = useParams<{ patientId: string }>();
   // Support both /app/prontuario/:patientId (path) and ?paciente=ID (legacy query param)
   const patientId = params.patientId || searchParams.get('paciente');
+
+  // Auto-redirect: when no patientId, check for active appointment and redirect
+  const { isCheckingAutoRedirect } = useAutoPatientRedirect(!patientId ? false : true);
+
   
   const {
     patient,
@@ -2135,8 +2140,19 @@ export default function Prontuario() {
     }
   }, [patientId, patient, activeAppointment, handleExport, isEsteticaSpecialty, generateConsolidatedPdf, currentProfessionalName, docClinicoProfReg]);
 
-  // No patient selected - show patient selector
+  // No patient selected - show patient selector (only after auto-redirect check completes)
   if (!patientId) {
+    if (isCheckingAutoRedirect) {
+      return (
+        <div className="flex items-center justify-center min-h-[80vh]">
+          <div className="space-y-4 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+            <p className="text-sm text-muted-foreground">Verificando atendimento ativo...</p>
+          </div>
+        </div>
+      );
+    }
+
     const handleSelectPatient = (selectedPatientId: string) => {
       navigate(`/app/prontuario/${selectedPatientId}`);
     };
