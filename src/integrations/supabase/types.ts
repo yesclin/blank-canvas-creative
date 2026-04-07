@@ -9556,6 +9556,7 @@ export type Database = {
         Returns: boolean
       }
       user_professional_id: { Args: { _user_id: string }; Returns: string }
+      validate_clinical_document: { Args: { p_code: string }; Returns: Json }
       validate_teleconsultation_token: {
         Args: { p_token: string; p_token_type: string }
         Returns: {
