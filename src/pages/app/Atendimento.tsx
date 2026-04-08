@@ -44,7 +44,8 @@ type StatusFilter = "all" | "em_atendimento" | "finalizado";
 
 export default function Atendimento() {
   const { isLoading: permLoading, hasAccess } = useScreenPermissionValidation("prontuario", "view");
-  const { clinicId } = usePermissions();
+  const { clinic } = useClinicData();
+  const clinicId = clinic?.id;
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
