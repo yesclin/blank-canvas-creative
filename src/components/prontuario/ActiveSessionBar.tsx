@@ -1,6 +1,5 @@
-import { Clock, Pause, PlayCircle, Square } from "lucide-react";
+import { Clock, Pause, PlayCircle, Square, X, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useSessionTimer } from "@/hooks/useSessionTimer";
 import { useAppointmentSession, usePauseSession, useResumeSession } from "@/hooks/useAppointmentSession";
 import { cn } from "@/lib/utils";
@@ -9,6 +8,7 @@ interface ActiveSessionBarProps {
   appointmentId: string;
   startedAt: string | null | undefined;
   onFinalize?: () => void;
+  onCancel?: () => void;
   className?: string;
 }
 
@@ -16,13 +16,14 @@ export function ActiveSessionBar({
   appointmentId,
   startedAt,
   onFinalize,
+  onCancel,
   className,
 }: ActiveSessionBarProps) {
   const { data: session } = useAppointmentSession(appointmentId);
   const pauseSession = usePauseSession();
   const resumeSession = useResumeSession();
 
-  const { formattedTime, isRunning } = useSessionTimer({
+  const { formattedTime } = useSessionTimer({
     startedAt,
     isPaused: session?.is_paused || false,
     totalPausedSeconds: session?.total_paused_seconds || 0,
@@ -36,78 +37,96 @@ export function ActiveSessionBar({
   return (
     <div
       className={cn(
-        "fixed bottom-6 right-6 z-50 flex flex-col gap-2 rounded-2xl border shadow-xl backdrop-blur-sm px-5 py-4 min-w-[240px] max-w-[320px] transition-colors duration-300",
-        isPaused
-          ? "bg-amber-50/95 dark:bg-amber-950/90 border-amber-300 dark:border-amber-700"
-          : "bg-emerald-50/95 dark:bg-emerald-950/90 border-emerald-300 dark:border-emerald-700",
+        "fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm shadow-[0_-2px_10px_rgba(0,0,0,0.08)]",
         className
       )}
     >
-      {/* Status label */}
-      <div className="flex items-center gap-2">
-        <span className={cn(
-          "h-2.5 w-2.5 rounded-full",
-          isPaused
-            ? "bg-amber-500 animate-pulse"
-            : "bg-emerald-500 animate-[pulse_2s_ease-in-out_infinite]"
-        )} />
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {isPaused ? "Pausado" : "Em atendimento"}
-        </span>
-      </div>
+      <div className="flex items-center justify-between px-6 py-3 max-w-screen-2xl mx-auto">
+        {/* Left: Timer + Status */}
+        <div className="flex items-center gap-4">
+          {/* Timer */}
+          <div className="flex items-center gap-2.5">
+            <span
+              className={cn(
+                "h-2.5 w-2.5 rounded-full shrink-0",
+                isPaused
+                  ? "bg-amber-500 animate-pulse"
+                  : "bg-emerald-500 animate-[pulse_2s_ease-in-out_infinite]"
+              )}
+            />
+            {isPaused ? (
+              <Pause className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            ) : (
+              <Clock className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            )}
+            <span
+              className={cn(
+                "font-mono tabular-nums text-lg font-semibold tracking-wide",
+                isPaused
+                  ? "text-amber-700 dark:text-amber-300"
+                  : "text-emerald-700 dark:text-emerald-300"
+              )}
+            >
+              {formattedTime}
+            </span>
+          </div>
 
-      {/* Timer */}
-      <Badge
-        variant="outline"
-        className={cn(
-          "gap-2 font-mono tabular-nums text-xl px-4 py-2 justify-center border-0 bg-transparent",
-          isPaused
-            ? "text-amber-800 dark:text-amber-200"
-            : "text-emerald-800 dark:text-emerald-200"
-        )}
-      >
-        {isPaused ? (
-          <Pause className="h-5 w-5" />
-        ) : (
-          <Clock className="h-5 w-5" />
-        )}
-        {formattedTime}
-      </Badge>
+          {/* Status badge */}
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground border rounded-md px-2.5 py-1">
+            <Lock className="h-3 w-3" />
+            <span>{isPaused ? "Pausado" : "Privado"}</span>
+          </div>
+        </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-2">
-        {isPaused ? (
+        {/* Right: Actions */}
+        <div className="flex items-center gap-2">
+          {/* Pause / Resume */}
+          {isPaused ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              onClick={() => resumeSession.mutate({ appointmentId })}
+              disabled={resumeSession.isPending}
+            >
+              <PlayCircle className="h-4 w-4" />
+              Retomar
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              onClick={() => pauseSession.mutate({ appointmentId })}
+              disabled={pauseSession.isPending}
+            >
+              <Pause className="h-4 w-4" />
+              Pausar
+            </Button>
+          )}
+
+          {/* Cancel */}
           <Button
             size="sm"
-            variant="outline"
-            className="flex-1 gap-1.5 text-emerald-700 border-emerald-300 hover:bg-emerald-100 dark:text-emerald-300 dark:border-emerald-700 dark:hover:bg-emerald-900"
-            onClick={() => resumeSession.mutate({ appointmentId })}
-            disabled={resumeSession.isPending}
+            variant="ghost"
+            className="gap-1.5 text-muted-foreground"
+            onClick={onCancel || onFinalize}
           >
-            <PlayCircle className="h-4 w-4" />
-            Retomar
+            <X className="h-4 w-4" />
+            Cancelar
           </Button>
-        ) : (
+
+          {/* Finalize */}
           <Button
             size="sm"
-            variant="outline"
-            className="flex-1 gap-1.5 text-amber-700 border-amber-300 hover:bg-amber-100 dark:text-amber-300 dark:border-amber-700 dark:hover:bg-amber-900"
-            onClick={() => pauseSession.mutate({ appointmentId })}
-            disabled={pauseSession.isPending}
+            variant="default"
+            className="gap-1.5"
+            onClick={onFinalize}
           >
-            <Pause className="h-4 w-4" />
-            Pausar
+            <Square className="h-4 w-4" />
+            Finalizar atendimento
           </Button>
-        )}
-        <Button
-          size="sm"
-          variant="outline"
-          className="gap-1.5 text-red-700 border-red-300 hover:bg-red-100 dark:text-red-300 dark:border-red-700 dark:hover:bg-red-900"
-          onClick={onFinalize}
-        >
-          <Square className="h-4 w-4" />
-          Finalizar
-        </Button>
+        </div>
       </div>
     </div>
   );
