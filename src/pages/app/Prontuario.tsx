@@ -2309,6 +2309,15 @@ export default function Prontuario() {
         clinicalDataLoading={clinicalDataLoading}
       />
 
+      {/* Active Session Bar - timer + pause/resume/finalize */}
+      {hasActiveAppointment && activeAppointment && activeAppointment.started_at && (
+        <ActiveSessionBar
+          appointmentId={activeAppointment.id}
+          startedAt={activeAppointment.started_at}
+          onFinalize={handleFinalizeFromProntuario}
+        />
+      )}
+
       {/* Teleconsulta Context Bar */}
       {activeAppointment && (activeAppointment as any).care_mode === 'teleconsulta' && (
         <div className="px-4 py-2 border-b">
