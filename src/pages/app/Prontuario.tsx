@@ -106,6 +106,8 @@ import { ProntuarioSearchBar, type SearchResult } from "@/components/prontuario/
 import { LgpdBlockingOverlay } from "@/components/prontuario/LgpdBlockingOverlay";
 import { TeleconsultaContextBar } from "@/components/prontuario/TeleconsultaContextBar";
 import { RemoteAttendanceBlock } from "@/components/prontuario/RemoteAttendanceBlock";
+import { ActiveSessionBar } from "@/components/prontuario/ActiveSessionBar";
+import { useFinalizeSession } from "@/hooks/useAppointmentSession";
 import { ConsentCollectionDialog } from "@/components/prontuario/ConsentCollectionDialog";
 import { SignatureDialog } from "@/components/prontuario/SignatureDialog";
 import { SignedRecordBadge } from "@/components/prontuario/SignedRecordBadge";
@@ -559,7 +561,27 @@ export default function Prontuario() {
     isLoading: appointmentLoading,
   } = useCanEditMedicalRecord(patientId);
 
-  // Active Specialty - determines which tabs are visible
+  // Session finalization
+  const finalizeSession = useFinalizeSession();
+
+  const handleFinalizeFromProntuario = useCallback(async () => {
+    if (!activeAppointment?.id) return;
+    try {
+      await finalizeSession.mutateAsync({ appointmentId: activeAppointment.id });
+      const { supabase } = await import("@/integrations/supabase/client");
+      await supabase
+        .from("appointments")
+        .update({ status: "finalizado", finished_at: new Date().toISOString() })
+        .eq("id", activeAppointment.id);
+      const { toast } = await import("sonner");
+      toast.success("Atendimento finalizado com sucesso");
+    } catch (e) {
+      console.error("Error finalizing:", e);
+      const { toast } = await import("sonner");
+      toast.error("Erro ao finalizar atendimento");
+    }
+  }, [activeAppointment?.id, finalizeSession]);
+
   const {
     activeSpecialtyId,
     activeSpecialty,
@@ -2286,6 +2308,15 @@ export default function Prontuario() {
         } : null)}
         clinicalDataLoading={clinicalDataLoading}
       />
+
+      {/* Active Session Bar - timer + pause/resume/finalize */}
+      {hasActiveAppointment && activeAppointment && activeAppointment.started_at && (
+        <ActiveSessionBar
+          appointmentId={activeAppointment.id}
+          startedAt={activeAppointment.started_at}
+          onFinalize={handleFinalizeFromProntuario}
+        />
+      )}
 
       {/* Teleconsulta Context Bar */}
       {activeAppointment && (activeAppointment as any).care_mode === 'teleconsulta' && (
