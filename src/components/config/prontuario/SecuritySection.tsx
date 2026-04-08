@@ -20,6 +20,8 @@ export function SecuritySection() {
   const [auditRetentionDays, setAuditRetentionDays] = useState(defaults.audit_retention_days);
   const [allowEditMinutes, setAllowEditMinutes] = useState(defaults.allow_evolution_edit_minutes);
   const [requireJustification, setRequireJustification] = useState(defaults.require_justification_for_edit);
+  const [requireAddendumJustification, setRequireAddendumJustification] = useState(defaults.require_justification_for_addendum);
+  const [sigBlocksImmediately, setSigBlocksImmediately] = useState(defaults.signature_blocks_immediately);
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
@@ -32,6 +34,8 @@ export function SecuritySection() {
         setAuditRetentionDays(settings.audit_retention_days);
         setAllowEditMinutes(settings.allow_evolution_edit_minutes);
         setRequireJustification(settings.require_justification_for_edit);
+        setRequireAddendumJustification(settings.require_justification_for_addendum ?? false);
+        setSigBlocksImmediately(settings.signature_blocks_immediately ?? true);
       }
       setInitialized(true);
     }
@@ -46,6 +50,8 @@ export function SecuritySection() {
       audit_retention_days: auditRetentionDays,
       allow_evolution_edit_minutes: allowEditMinutes,
       require_justification_for_edit: requireJustification,
+      require_justification_for_addendum: requireAddendumJustification,
+      signature_blocks_immediately: sigBlocksImmediately,
     });
   };
 
