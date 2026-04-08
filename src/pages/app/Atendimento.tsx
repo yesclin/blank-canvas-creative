@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useScreenPermissionValidation } from "@/hooks/usePermissionValidation";
 import { supabase } from "@/integrations/supabase/client";
-import { usePermissions } from "@/hooks/usePermissions";
+import { useClinicData } from "@/hooks/useClinicData";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, isToday, isYesterday, differenceInSeconds } from "date-fns";
 import { ptBR } from "date-fns/locale";
