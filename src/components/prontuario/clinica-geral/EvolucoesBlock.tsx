@@ -434,85 +434,127 @@ export function EvolucoesBlock({
           </DialogHeader>
 
           {selectedEvolucao && (
-            <>
-              {/* Status badges */}
-              <div className="flex items-center gap-2">
-                <Badge variant="outline">
-                  {tipoAtendimentoLabels[selectedEvolucao.tipo_atendimento]}
-                </Badge>
-                <Badge className={statusEvolucaoConfig[selectedEvolucao.status].color}>
-                  {selectedEvolucao.status === 'assinada' && <CheckCircle className="h-3 w-3 mr-1" />}
-                  {statusEvolucaoConfig[selectedEvolucao.status].label}
-                </Badge>
-                {selectedEvolucao.assinada_em && (
-                  <span className="text-xs text-muted-foreground">
-                    Assinada em {format(parseISO(selectedEvolucao.assinada_em), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                  </span>
-                )}
-              </div>
-
-              <ScrollArea className="flex-1 max-h-[400px]">
-                <div className="space-y-6 pr-4">
-                  {/* Descrição Clínica */}
-                  <div>
-                    <Label className="text-muted-foreground flex items-center gap-2 mb-2">
-                      <ClipboardList className="h-4 w-4" />
-                      Descrição Clínica
-                    </Label>
-                    <p className="text-sm whitespace-pre-wrap bg-muted/50 p-3 rounded-lg">
-                      {selectedEvolucao.descricao_clinica || <span className="italic text-muted-foreground">Não informado</span>}
-                    </p>
-                  </div>
-
-                  <Separator />
-
-                  {/* Hipóteses Diagnósticas */}
-                  <div>
-                    <Label className="text-muted-foreground flex items-center gap-2 mb-2">
-                      <Target className="h-4 w-4" />
-                      Hipóteses Diagnósticas
-                    </Label>
-                    <p className="text-sm whitespace-pre-wrap bg-muted/50 p-3 rounded-lg">
-                      {selectedEvolucao.hipoteses_diagnosticas || <span className="italic text-muted-foreground">Não informado</span>}
-                    </p>
-                  </div>
-
-                  <Separator />
-
-                  {/* Conduta */}
-                  <div>
-                    <Label className="text-muted-foreground flex items-center gap-2 mb-2">
-                      <Edit className="h-4 w-4" />
-                      Conduta Adotada
-                    </Label>
-                    <p className="text-sm whitespace-pre-wrap bg-muted/50 p-3 rounded-lg">
-                      {selectedEvolucao.conduta || <span className="italic text-muted-foreground">Não informado</span>}
-                    </p>
-                  </div>
-                </div>
-              </ScrollArea>
-
-              <DialogFooter>
-                {/* Sign button for drafts owned by current professional */}
-                {selectedEvolucao.status === 'rascunho' && 
-                 selectedEvolucao.profissional_id === currentProfessionalId && 
-                 onSign && (
-                  <Button 
-                    variant="default" 
-                    onClick={() => handleSignEvolucao(selectedEvolucao.id)}
-                  >
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    Assinar Evolução
-                  </Button>
-                )}
-                <Button variant="outline" onClick={() => setSelectedEvolucao(null)}>
-                  Fechar
-                </Button>
-              </DialogFooter>
-            </>
+            <EvolutionDetailWithLock
+              evolucao={selectedEvolucao}
+              currentProfessionalId={currentProfessionalId}
+              onSign={onSign ? handleSignEvolucao : undefined}
+              onClose={() => setSelectedEvolucao(null)}
+            />
           )}
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+/** Inner component for evolution detail with lock/addendum support */
+function EvolutionDetailWithLock({
+  evolucao,
+  currentProfessionalId,
+  onSign,
+  onClose,
+}: {
+  evolucao: EvolucaoClinica;
+  currentProfessionalId?: string;
+  onSign?: (id: string) => Promise<void>;
+  onClose: () => void;
+}) {
+  const editability = useRecordEditability({
+    recordId: evolucao.id,
+    recordType: "evolution",
+    createdAt: evolucao.created_at,
+    signedAt: evolucao.assinada_em || null,
+  });
+
+  return (
+    <>
+      {/* Lock banner */}
+      <RecordEditLockBanner editability={editability} />
+
+      {/* Status badges */}
+      <div className="flex items-center gap-2">
+        <Badge variant="outline">
+          {tipoAtendimentoLabels[evolucao.tipo_atendimento]}
+        </Badge>
+        <Badge className={statusEvolucaoConfig[evolucao.status].color}>
+          {evolucao.status === 'assinada' && <CheckCircle className="h-3 w-3 mr-1" />}
+          {statusEvolucaoConfig[evolucao.status].label}
+        </Badge>
+        {evolucao.assinada_em && (
+          <span className="text-xs text-muted-foreground">
+            Assinada em {format(parseISO(evolucao.assinada_em), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+          </span>
+        )}
+      </div>
+
+      <ScrollArea className="flex-1 max-h-[400px]">
+        <div className="space-y-6 pr-4">
+          {/* Descrição Clínica */}
+          <div>
+            <Label className="text-muted-foreground flex items-center gap-2 mb-2">
+              <ClipboardList className="h-4 w-4" />
+              Descrição Clínica
+            </Label>
+            <p className="text-sm whitespace-pre-wrap bg-muted/50 p-3 rounded-lg">
+              {evolucao.descricao_clinica || <span className="italic text-muted-foreground">Não informado</span>}
+            </p>
+          </div>
+
+          <Separator />
+
+          {/* Hipóteses Diagnósticas */}
+          <div>
+            <Label className="text-muted-foreground flex items-center gap-2 mb-2">
+              <Target className="h-4 w-4" />
+              Hipóteses Diagnósticas
+            </Label>
+            <p className="text-sm whitespace-pre-wrap bg-muted/50 p-3 rounded-lg">
+              {evolucao.hipoteses_diagnosticas || <span className="italic text-muted-foreground">Não informado</span>}
+            </p>
+          </div>
+
+          <Separator />
+
+          {/* Conduta */}
+          <div>
+            <Label className="text-muted-foreground flex items-center gap-2 mb-2">
+              <Edit className="h-4 w-4" />
+              Conduta Adotada
+            </Label>
+            <p className="text-sm whitespace-pre-wrap bg-muted/50 p-3 rounded-lg">
+              {evolucao.conduta || <span className="italic text-muted-foreground">Não informado</span>}
+            </p>
+          </div>
+
+          {/* Addendum section */}
+          <AddendumSection
+            recordType="evolution"
+            recordId={evolucao.id}
+            patientId={evolucao.patient_id}
+            professionalId={evolucao.profissional_id}
+            moduleOrigin="evolucao"
+            editability={editability}
+          />
+        </div>
+      </ScrollArea>
+
+      <DialogFooter>
+        {/* Sign button for drafts owned by current professional */}
+        {editability.canEdit && evolucao.status === 'rascunho' && 
+         evolucao.profissional_id === currentProfessionalId && 
+         onSign && (
+          <Button 
+            variant="default" 
+            onClick={() => onSign(evolucao.id)}
+          >
+            <CheckCircle className="h-4 w-4 mr-1" />
+            Assinar Evolução
+          </Button>
+        )}
+        <Button variant="outline" onClick={onClose}>
+          Fechar
+        </Button>
+      </DialogFooter>
+    </>
   );
 }
