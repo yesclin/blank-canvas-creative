@@ -561,7 +561,28 @@ export default function Prontuario() {
     isLoading: appointmentLoading,
   } = useCanEditMedicalRecord(patientId);
 
-  // Active Specialty - determines which tabs are visible
+  // Session finalization
+  const finalizeSession = useFinalizeSession();
+  const navigate = useNavigate();
+
+  const handleFinalizeFromProntuario = useCallback(async () => {
+    if (!activeAppointment?.id) return;
+    try {
+      await finalizeSession.mutateAsync({ appointmentId: activeAppointment.id });
+      // Update appointment status to finalizado
+      await supabase
+        .from("appointments")
+        .update({ status: "finalizado", finished_at: new Date().toISOString() })
+        .eq("id", activeAppointment.id);
+      // Invalidate queries
+      const { useQueryClient } = await import("@tanstack/react-query");
+      toast.success("Atendimento finalizado com sucesso");
+    } catch (e) {
+      console.error("Error finalizing:", e);
+      toast.error("Erro ao finalizar atendimento");
+    }
+  }, [activeAppointment?.id, finalizeSession]);
+
   const {
     activeSpecialtyId,
     activeSpecialty,
