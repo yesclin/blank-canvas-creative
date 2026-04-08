@@ -114,7 +114,25 @@ export function SecuritySection() {
               min={0}
               max={1440}
             />
-            <p className="text-xs text-muted-foreground">Tempo após criação em que evoluções podem ser editadas</p>
+            <p className="text-xs text-muted-foreground">
+              Tempo após criação em que registros clínicos podem ser editados. Após este prazo, apenas adendos são permitidos.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div>
+              <Label className="font-medium">Assinatura bloqueia imediatamente</Label>
+              <p className="text-sm text-muted-foreground">Registro assinado é bloqueado independente da janela de edição</p>
+            </div>
+            <Switch checked={sigBlocksImmediately} onCheckedChange={setSigBlocksImmediately} />
+          </div>
+
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div>
+              <Label className="font-medium">Exigir motivo para adendo</Label>
+              <p className="text-sm text-muted-foreground">Obriga informar o motivo ao adicionar adendo a registro bloqueado</p>
+            </div>
+            <Switch checked={requireAddendumJustification} onCheckedChange={setRequireAddendumJustification} />
           </div>
         </CardContent>
       </Card>
