@@ -364,7 +364,7 @@ export default function Atendimento() {
           open={summaryModalOpen}
           onOpenChange={setSummaryModalOpen}
           summary={selectedSession.session_summary}
-          appointmentId={selectedSession.id}
+          patientId={selectedSession.patient_id}
         />
       )}
     </div>
