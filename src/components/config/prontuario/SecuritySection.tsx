@@ -20,6 +20,8 @@ export function SecuritySection() {
   const [auditRetentionDays, setAuditRetentionDays] = useState(defaults.audit_retention_days);
   const [allowEditMinutes, setAllowEditMinutes] = useState(defaults.allow_evolution_edit_minutes);
   const [requireJustification, setRequireJustification] = useState(defaults.require_justification_for_edit);
+  const [requireAddendumJustification, setRequireAddendumJustification] = useState(defaults.require_justification_for_addendum);
+  const [sigBlocksImmediately, setSigBlocksImmediately] = useState(defaults.signature_blocks_immediately);
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
@@ -32,6 +34,8 @@ export function SecuritySection() {
         setAuditRetentionDays(settings.audit_retention_days);
         setAllowEditMinutes(settings.allow_evolution_edit_minutes);
         setRequireJustification(settings.require_justification_for_edit);
+        setRequireAddendumJustification(settings.require_justification_for_addendum ?? false);
+        setSigBlocksImmediately(settings.signature_blocks_immediately ?? true);
       }
       setInitialized(true);
     }
@@ -46,6 +50,8 @@ export function SecuritySection() {
       audit_retention_days: auditRetentionDays,
       allow_evolution_edit_minutes: allowEditMinutes,
       require_justification_for_edit: requireJustification,
+      require_justification_for_addendum: requireAddendumJustification,
+      signature_blocks_immediately: sigBlocksImmediately,
     });
   };
 
@@ -108,7 +114,25 @@ export function SecuritySection() {
               min={0}
               max={1440}
             />
-            <p className="text-xs text-muted-foreground">Tempo após criação em que evoluções podem ser editadas</p>
+            <p className="text-xs text-muted-foreground">
+              Tempo após criação em que registros clínicos podem ser editados. Após este prazo, apenas adendos são permitidos.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div>
+              <Label className="font-medium">Assinatura bloqueia imediatamente</Label>
+              <p className="text-sm text-muted-foreground">Registro assinado é bloqueado independente da janela de edição</p>
+            </div>
+            <Switch checked={sigBlocksImmediately} onCheckedChange={setSigBlocksImmediately} />
+          </div>
+
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div>
+              <Label className="font-medium">Exigir motivo para adendo</Label>
+              <p className="text-sm text-muted-foreground">Obriga informar o motivo ao adicionar adendo a registro bloqueado</p>
+            </div>
+            <Switch checked={requireAddendumJustification} onCheckedChange={setRequireAddendumJustification} />
           </div>
         </CardContent>
       </Card>

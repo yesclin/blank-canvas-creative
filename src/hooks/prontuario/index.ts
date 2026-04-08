@@ -93,3 +93,9 @@ export {
   type TabKey,
   type ActionKey,
 } from './useMedicalRecordPermissions';
+
+// Record Editability (global edit-lock policy)
+export { useRecordEditability, type RecordEditability, type LockReason } from './useRecordEditability';
+
+// Clinical Addendums
+export { useClinicalAddendums, type ClinicalAddendum, type AddendumInput } from './useClinicalAddendums';

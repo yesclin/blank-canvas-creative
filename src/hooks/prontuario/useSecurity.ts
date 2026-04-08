@@ -13,6 +13,8 @@ export interface SecuritySettings {
   audit_retention_days: number;
   allow_evolution_edit_minutes: number;
   require_justification_for_edit: boolean;
+  require_justification_for_addendum: boolean;
+  signature_blocks_immediately: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -25,6 +27,8 @@ export interface SecurityInput {
   audit_retention_days: number;
   allow_evolution_edit_minutes: number;
   require_justification_for_edit: boolean;
+  require_justification_for_addendum: boolean;
+  signature_blocks_immediately: boolean;
 }
 
 const DEFAULTS: SecurityInput = {
@@ -35,6 +39,8 @@ const DEFAULTS: SecurityInput = {
   audit_retention_days: 365,
   allow_evolution_edit_minutes: 60,
   require_justification_for_edit: true,
+  require_justification_for_addendum: false,
+  signature_blocks_immediately: true,
 };
 
 export function useSecurity() {
