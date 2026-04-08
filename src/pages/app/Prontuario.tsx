@@ -563,22 +563,21 @@ export default function Prontuario() {
 
   // Session finalization
   const finalizeSession = useFinalizeSession();
-  const navigate = useNavigate();
 
   const handleFinalizeFromProntuario = useCallback(async () => {
     if (!activeAppointment?.id) return;
     try {
       await finalizeSession.mutateAsync({ appointmentId: activeAppointment.id });
-      // Update appointment status to finalizado
+      const { supabase } = await import("@/integrations/supabase/client");
       await supabase
         .from("appointments")
         .update({ status: "finalizado", finished_at: new Date().toISOString() })
         .eq("id", activeAppointment.id);
-      // Invalidate queries
-      const { useQueryClient } = await import("@tanstack/react-query");
+      const { toast } = await import("sonner");
       toast.success("Atendimento finalizado com sucesso");
     } catch (e) {
       console.error("Error finalizing:", e);
+      const { toast } = await import("sonner");
       toast.error("Erro ao finalizar atendimento");
     }
   }, [activeAppointment?.id, finalizeSession]);
