@@ -27,23 +27,39 @@ export function useAutoPatientRedirect(hasPatientId: boolean) {
 
       const today = format(new Date(), "yyyy-MM-dd");
 
-      // Priority 1: Active appointment (em_atendimento or started)
-      const { data: active } = await supabase
+      // Priority 1: Any appointment currently in progress (started but not finished),
+      // regardless of scheduled_date — handles appointments started on previous days
+      const { data: activeStarted } = await supabase
+        .from("appointments")
+        .select("id, patient_id, specialty_id, procedure_id, professional_id")
+        .eq("professional_id", professionalId)
+        .not("started_at", "is", null)
+        .is("finished_at", null)
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (activeStarted) {
+        return activeStarted;
+      }
+
+      // Priority 2: Active appointment by status today (em_atendimento but maybe not started_at set)
+      const { data: activeStatus } = await supabase
         .from("appointments")
         .select("id, patient_id, specialty_id, procedure_id, professional_id")
         .eq("professional_id", professionalId)
         .eq("scheduled_date", today)
-        .or("status.eq.em_atendimento,status.eq.in_progress,status.eq.atendendo,status.eq.attending,started_at.not.is.null")
+        .in("status", ["em_atendimento", "in_progress", "atendendo", "attending"])
         .is("finished_at", null)
         .order("start_time", { ascending: true })
         .limit(1)
         .maybeSingle();
 
-      if (active) {
-        return active;
+      if (activeStatus) {
+        return activeStatus;
       }
 
-      // Priority 2: Patient that has arrived (chegou)
+      // Priority 3: Patient that has arrived (chegou) today
       const { data: arrived } = await supabase
         .from("appointments")
         .select("id, patient_id, specialty_id, procedure_id, professional_id")
