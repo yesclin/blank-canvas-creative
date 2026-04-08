@@ -299,41 +299,6 @@ export function VisaoGeralPediatriaBlock({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Patient Identity */}
-        <div className="flex items-start gap-4">
-          <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-            {patient.photo_url ? (
-              <img 
-                src={patient.photo_url} 
-                alt={patient.full_name}
-                className="h-16 w-16 rounded-full object-cover"
-              />
-            ) : (
-              <Baby className="h-8 w-8 text-primary" />
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-semibold truncate">{patient.full_name}</h3>
-            <div className="flex items-center gap-2 flex-wrap mt-1">
-              <Badge variant="secondary" className="font-normal">
-                <Calendar className="h-3 w-3 mr-1" />
-                {age.text}
-              </Badge>
-              <Badge variant="outline" className="font-normal">
-                <User className="h-3 w-3 mr-1" />
-                {getGenderLabel(patient.gender)}
-              </Badge>
-            </div>
-            {patient.birth_date && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Nascimento: {format(parseISO(patient.birth_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <Separator />
-
         {/* Summary Indicators Grid */}
         <div className="grid grid-cols-2 gap-2">
           <SummaryIndicator
