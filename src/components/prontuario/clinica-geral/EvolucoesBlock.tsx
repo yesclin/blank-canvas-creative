@@ -39,6 +39,9 @@ import {
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useRecordEditability } from "@/hooks/prontuario/useRecordEditability";
+import { RecordEditLockBanner } from "@/components/prontuario/RecordEditLockBanner";
+import { AddendumSection } from "@/components/prontuario/AddendumSection";
 
 /**
  * Tipo de atendimento
