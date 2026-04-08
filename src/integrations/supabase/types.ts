@@ -1506,6 +1506,77 @@ export type Database = {
           },
         ]
       }
+      clinical_addendums: {
+        Row: {
+          clinic_id: string
+          content: string
+          created_at: string
+          id: string
+          module_origin: string | null
+          patient_id: string
+          professional_id: string
+          reason: string | null
+          record_id: string
+          record_type: string
+          specialty_id: string | null
+        }
+        Insert: {
+          clinic_id: string
+          content: string
+          created_at?: string
+          id?: string
+          module_origin?: string | null
+          patient_id: string
+          professional_id: string
+          reason?: string | null
+          record_id: string
+          record_type: string
+          specialty_id?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          module_origin?: string | null
+          patient_id?: string
+          professional_id?: string
+          reason?: string | null
+          record_id?: string
+          record_type?: string
+          specialty_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_addendums_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_addendums_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_addendums_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_addendums_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinical_alerts: {
         Row: {
           alert_type: string
@@ -4132,7 +4203,9 @@ export type Database = {
           id: string
           lock_after_signature: boolean
           require_consent_before_access: boolean
+          require_justification_for_addendum: boolean
           require_justification_for_edit: boolean
+          signature_blocks_immediately: boolean
           signature_lock_hours: number
           updated_at: string
         }
@@ -4145,7 +4218,9 @@ export type Database = {
           id?: string
           lock_after_signature?: boolean
           require_consent_before_access?: boolean
+          require_justification_for_addendum?: boolean
           require_justification_for_edit?: boolean
+          signature_blocks_immediately?: boolean
           signature_lock_hours?: number
           updated_at?: string
         }
@@ -4158,7 +4233,9 @@ export type Database = {
           id?: string
           lock_after_signature?: boolean
           require_consent_before_access?: boolean
+          require_justification_for_addendum?: boolean
           require_justification_for_edit?: boolean
+          signature_blocks_immediately?: boolean
           signature_lock_hours?: number
           updated_at?: string
         }
