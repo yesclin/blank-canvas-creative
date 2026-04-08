@@ -106,6 +106,8 @@ import { ProntuarioSearchBar, type SearchResult } from "@/components/prontuario/
 import { LgpdBlockingOverlay } from "@/components/prontuario/LgpdBlockingOverlay";
 import { TeleconsultaContextBar } from "@/components/prontuario/TeleconsultaContextBar";
 import { RemoteAttendanceBlock } from "@/components/prontuario/RemoteAttendanceBlock";
+import { ActiveSessionBar } from "@/components/prontuario/ActiveSessionBar";
+import { useFinalizeSession } from "@/hooks/useAppointmentSession";
 import { ConsentCollectionDialog } from "@/components/prontuario/ConsentCollectionDialog";
 import { SignatureDialog } from "@/components/prontuario/SignatureDialog";
 import { SignedRecordBadge } from "@/components/prontuario/SignedRecordBadge";
