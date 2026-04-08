@@ -265,30 +265,6 @@ export function VisaoGeralDermatoBlock({
         </div>
       </div>
 
-      {/* Dados Básicos do Paciente */}
-      <Card className="bg-muted/30">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="h-6 w-6 text-primary" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-foreground">{patient.full_name}</h3>
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                {age !== null && <span>{age} anos</span>}
-                <span>•</span>
-                <span>{formatGender(patient.gender)}</span>
-                {clinicalData.skin_phototype && (
-                  <>
-                    <span>•</span>
-                    <span>Fototipo {clinicalData.skin_phototype}</span>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Grid de Cards de Resumo */}
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">

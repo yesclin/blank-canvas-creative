@@ -263,26 +263,6 @@ export function OdontologiaVisaoGeralBlock({
       {/* Grid de Cards de Resumo */}
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         
-        {/* Dados Básicos do Paciente */}
-        <SummaryCard
-          title="Dados do Paciente"
-          icon={User}
-          moduleKey="resumo"
-          onNavigate={onNavigateToModule}
-        >
-          <div className="space-y-1">
-            <p className="text-lg font-semibold text-foreground truncate">
-              {patient.full_name}
-            </p>
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              {age !== null && (
-                <span>{age} anos</span>
-              )}
-              <span className="text-muted-foreground/50">•</span>
-              <span>{formatGender(patient.gender)}</span>
-            </div>
-          </div>
-        </SummaryCard>
 
         {/* Alertas Críticos - Destaque */}
         {criticalAlerts.length > 0 && (

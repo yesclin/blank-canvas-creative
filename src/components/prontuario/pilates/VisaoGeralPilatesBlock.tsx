@@ -218,36 +218,6 @@ export function VisaoGeralPilatesBlock({
         </div>
       )}
 
-      {/* Cabeçalho do Paciente */}
-      <Card className="border-l-4 border-l-primary">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/20 rounded-full shrink-0">
-                <Dumbbell className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">{patient.full_name}</CardTitle>
-                <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  <Badge variant="outline" className="text-xs">
-                    {idade ? `${idade} anos` : 'Idade não informada'}
-                  </Badge>
-                  {patient.gender && (
-                    <Badge variant="outline" className="text-xs">
-                      {patient.gender === 'M' ? 'Masculino' : patient.gender === 'F' ? 'Feminino' : patient.gender}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge variant={getStatusBadgeVariant(summary.status_acompanhamento)}>
-                {STATUS_ACOMPANHAMENTO_PILATES[summary.status_acompanhamento]}
-              </Badge>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
 
       {/* Grid de Módulos */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
