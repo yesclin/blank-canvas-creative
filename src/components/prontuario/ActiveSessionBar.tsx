@@ -77,7 +77,7 @@ export function ActiveSessionBar({
           {/* Status badge */}
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground border rounded-md px-2.5 py-1">
             <Lock className="h-3 w-3" />
-            <span>{isPaused ? "Pausado" : "Privado"}</span>
+            <span>{isPaused ? "Atendimento pausado" : "Atendimento em andamento"}</span>
           </div>
         </div>
 

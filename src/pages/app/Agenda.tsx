@@ -29,6 +29,33 @@ import type { AgendaFilters as FiltersType, ViewMode, Appointment, AppointmentSt
 import { toast } from "sonner";
 import { validateProcedureStock, StockValidationResult } from "@/hooks/useProcedureStockValidation";
 import { supabase } from "@/integrations/supabase/client";
+import type { ActiveAppointment } from "@/hooks/prontuario/useActiveAppointment";
+
+interface StartedAppointmentSnapshot {
+  id: string;
+  scheduled_date: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+  appointment_type: string;
+  professional_id: string;
+  started_at: string | null;
+  procedure_id: string | null;
+  specialty_id: string | null;
+  professionals: {
+    full_name: string | null;
+  } | null;
+  procedures: {
+    name: string | null;
+    specialty_id: string | null;
+    specialties: {
+      name: string | null;
+    } | null;
+  } | null;
+  specialties: {
+    name: string | null;
+  } | null;
+}
 
 export default function Agenda() {
   const navigate = useNavigate();
@@ -210,6 +237,7 @@ export default function Agenda() {
     const params = new URLSearchParams({
       appointmentId: appointment.id,
       professionalId: appointment.professional_id,
+      status: appointment.status,
     });
 
     const lockedSpecialtyId = specialtyId || appointment.specialty_id;
@@ -221,12 +249,126 @@ export default function Agenda() {
       params.set('procedureId', appointment.procedure_id);
     }
 
+    if (appointment.started_at) {
+      params.set('started_at', appointment.started_at);
+    }
+
     return `/app/prontuario/${appointment.patient_id}?${params.toString()}`;
   }, []);
 
   const openProntuarioFromAppointment = useCallback((appointment: Appointment, specialtyId?: string | null) => {
     navigate(buildProntuarioUrl(appointment, specialtyId));
-  }, [navigate]);
+  }, [buildProntuarioUrl, navigate]);
+
+  const fetchStartedAppointmentSnapshot = useCallback(async (appointmentId: string): Promise<StartedAppointmentSnapshot | null> => {
+    const { data, error } = await supabase
+      .from('appointments')
+      .select(`
+        id,
+        scheduled_date,
+        start_time,
+        end_time,
+        status,
+        appointment_type,
+        professional_id,
+        started_at,
+        procedure_id,
+        specialty_id,
+        professionals(full_name),
+        procedures(
+          name,
+          specialty_id,
+          specialties:specialty_id(name)
+        ),
+        specialties(name)
+      `)
+      .eq('id', appointmentId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching started appointment snapshot:', error);
+      return null;
+    }
+
+    return data as StartedAppointmentSnapshot | null;
+  }, []);
+
+  const seedActiveAppointmentCache = useCallback((
+    appointment: Appointment,
+    specialtyId?: string | null,
+    snapshot?: StartedAppointmentSnapshot | null,
+  ) => {
+    const resolvedSpecialtyId = specialtyId
+      ?? snapshot?.specialty_id
+      ?? snapshot?.procedures?.specialty_id
+      ?? appointment.specialty_id
+      ?? null;
+
+    const resolvedSpecialtyName = snapshot?.specialties?.name
+      ?? snapshot?.procedures?.specialties?.name
+      ?? appointment.specialty?.name
+      ?? null;
+
+    const cacheValue: ActiveAppointment = {
+      id: appointment.id,
+      scheduled_date: appointment.scheduled_date,
+      start_time: appointment.start_time,
+      end_time: appointment.end_time,
+      status: snapshot?.status ?? appointment.status,
+      appointment_type: appointment.appointment_type,
+      professional_id: appointment.professional_id,
+      professional_name: snapshot?.professionals?.full_name ?? appointment.professional?.full_name ?? null,
+      procedure_id: appointment.procedure_id ?? null,
+      procedure_name: snapshot?.procedures?.name ?? appointment.procedure?.name ?? null,
+      procedure_specialty_id: snapshot?.procedures?.specialty_id ?? null,
+      procedure_specialty_name: snapshot?.procedures?.specialties?.name ?? null,
+      specialty_id: resolvedSpecialtyId,
+      specialty_name: snapshot?.specialties?.name ?? appointment.specialty?.name ?? null,
+      resolved_specialty_id: resolvedSpecialtyId,
+      resolved_specialty_name: resolvedSpecialtyName,
+      started_at: snapshot?.started_at ?? appointment.started_at ?? null,
+    };
+
+    const cacheKeys: Array<[string, string | null | undefined, string | null | undefined]> = [
+      ["active-appointment", appointment.patient_id, appointment.id],
+      ["active-appointment", appointment.patient_id, undefined],
+      ["active-appointment", appointment.patient_id, null],
+      ["active-appointment", null, appointment.id],
+      ["active-appointment", undefined, appointment.id],
+    ];
+
+    cacheKeys.forEach((queryKey) => {
+      queryClient.setQueryData(queryKey, cacheValue);
+    });
+  }, [queryClient]);
+
+  const bootstrapStartedAppointment = useCallback(async (appointment: Appointment, specialtyId?: string | null) => {
+    const optimisticStartedAt = appointment.started_at ?? new Date().toISOString();
+    const appointmentWithContext: Appointment = {
+      ...appointment,
+      status: 'em_atendimento',
+      specialty_id: specialtyId ?? appointment.specialty_id,
+      started_at: optimisticStartedAt,
+    };
+
+    await updateStatusMutation.mutateAsync({ id: appointment.id, status: 'em_atendimento' });
+    await createSessionMutation.mutateAsync({
+      appointmentId: appointment.id,
+      clinicId: appointment.clinic_id,
+      patientId: appointment.patient_id,
+      professionalId: appointment.professional_id,
+    });
+
+    const snapshot = await fetchStartedAppointmentSnapshot(appointment.id);
+    const appointmentForNavigation: Appointment = {
+      ...appointmentWithContext,
+      started_at: snapshot?.started_at ?? appointmentWithContext.started_at,
+      status: 'em_atendimento',
+    };
+
+    seedActiveAppointmentCache(appointmentForNavigation, specialtyId, snapshot);
+    openProntuarioFromAppointment(appointmentForNavigation, specialtyId ?? appointmentForNavigation.specialty_id ?? null);
+  }, [createSessionMutation, fetchStartedAppointmentSnapshot, openProntuarioFromAppointment, seedActiveAppointmentCache, updateStatusMutation]);
 
   // Handle status change with stock validation and material consumption
   // Resolve specialty for an appointment: appointment.specialty_id → procedure.specialty_id → professional's specialty
@@ -313,14 +455,7 @@ export default function Agenda() {
       setMaterialsDialogOpen(true);
     } else if (newStatus === 'em_atendimento') {
       try {
-        await updateStatusMutation.mutateAsync({ id: appointmentId, status: newStatus });
-        await createSessionMutation.mutateAsync({
-          appointmentId,
-          clinicId: apt.clinic_id,
-          patientId: apt.patient_id,
-          professionalId: apt.professional_id,
-        });
-        openProntuarioFromAppointment({
+        await bootstrapStartedAppointment({
           ...apt,
           specialty_id: lockedSpecialtyId,
         }, lockedSpecialtyId);
@@ -334,7 +469,7 @@ export default function Agenda() {
         console.error("Error updating status:", error);
       }
     }
-  }, [appointments, createSessionMutation, finalizeSessionMutation, openProntuarioFromAppointment, resolveSpecialtyId, updateStatusMutation]);
+  }, [appointments, bootstrapStartedAppointment, finalizeSessionMutation, resolveSpecialtyId, updateStatusMutation]);
 
   // Stock validation handlers
   const handleStockValidationConfirm = useCallback(async () => {
@@ -354,14 +489,7 @@ export default function Agenda() {
               status: pendingStatusChange.status,
             });
 
-            await createSessionMutation.mutateAsync({
-              appointmentId: apt.id,
-              clinicId: apt.clinic_id,
-              patientId: apt.patient_id,
-              professionalId: apt.professional_id,
-            });
-
-            openProntuarioFromAppointment({
+            await bootstrapStartedAppointment({
               ...apt,
               specialty_id: resolvedSpecialtyId || apt.specialty_id,
             }, resolvedSpecialtyId || apt.specialty_id || null);
@@ -379,7 +507,7 @@ export default function Agenda() {
     
     setStockValidationResult(null);
     setPendingStatusChange(null);
-  }, [pendingStatusChange, appointments, createSessionMutation, openProntuarioFromAppointment, resolveSpecialtyId, updateStatusMutation]);
+  }, [pendingStatusChange, appointments, bootstrapStartedAppointment, resolveSpecialtyId, updateStatusMutation]);
 
   const handleStockValidationCancel = useCallback(() => {
     setStockValidationDialogOpen(false);
