@@ -277,8 +277,8 @@ export function AnamnesePsicologiaBlock({
   const hasDynamicRecordsForTemplate = dynamicRecords.records.some(r => r.template_id === effectiveTemplateIdForCheck);
   const hasDynamicStructure = activeStructure && Array.isArray(activeStructure) && (activeStructure as any[]).length > 0;
 
-  // Empty state — show selector (but not when dynamic editing/records exist)
-  if (!currentAnamnese && !isEditing && !isDynamicEditing && !(hasDynamicStructure && hasDynamicRecordsForTemplate)) {
+  // Empty state — show selector (but not when dynamic structure is loaded, editing, or records exist)
+  if (!currentAnamnese && !isEditing && !isDynamicEditing && !hasDynamicStructure) {
     return (
       <>
         <AnamneseModelSelector
