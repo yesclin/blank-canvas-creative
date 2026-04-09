@@ -84,10 +84,22 @@ export function GlobalActiveAppointmentProvider({ children }: { children: ReactN
   );
 }
 
+const EMPTY_APPOINTMENTS: Appointment[] = [];
+const NOOP = () => {};
+const NOOP_SET = (_apt: Appointment | null) => {};
+
+const fallbackContext: GlobalActiveAppointmentContextType = {
+  appointments: EMPTY_APPOINTMENTS,
+  isLoading: false,
+  selectedAppointment: null,
+  setSelectedAppointment: NOOP_SET,
+  drawerOpen: false,
+  openDrawer: NOOP,
+  closeDrawer: NOOP,
+  refresh: NOOP,
+};
+
 export function useGlobalActiveAppointment() {
   const ctx = useContext(GlobalActiveAppointmentContext);
-  if (!ctx) {
-    throw new Error("useGlobalActiveAppointment must be used within GlobalActiveAppointmentProvider");
-  }
-  return ctx;
+  return ctx ?? fallbackContext;
 }
