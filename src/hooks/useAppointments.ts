@@ -264,6 +264,7 @@ export function useUpdateAppointmentStatus() {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
       queryClient.invalidateQueries({ queryKey: ["active-appointment"] });
+      queryClient.invalidateQueries({ queryKey: ["global-active-appointments"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
       
@@ -305,6 +306,7 @@ export function useCancelAppointment() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["global-active-appointments"] });
       toast.success("Agendamento cancelado!");
     },
     onError: (error: Error) => {
