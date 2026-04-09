@@ -8,6 +8,9 @@ import { Building2, ChevronDown } from "lucide-react";
 import logoFull from "@/assets/logo-full.png";
 import { ActiveSpecialtiesBadge } from "./ActiveSpecialtiesBadge";
 import { GlobalSpecialtyProvider } from "@/hooks/useGlobalSpecialty";
+import { GlobalActiveAppointmentProvider } from "@/contexts/GlobalActiveAppointmentContext";
+import { FloatingActiveAppointmentButton } from "./FloatingActiveAppointmentButton";
+import { ActiveAppointmentDrawer } from "./ActiveAppointmentDrawer";
 
 export function AppLayout() {
   const location = useLocation();
@@ -15,6 +18,7 @@ export function AppLayout() {
 
   return (
     <GlobalSpecialtyProvider>
+    <GlobalActiveAppointmentProvider>
     <SidebarProvider defaultOpen>
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
@@ -49,12 +53,17 @@ export function AppLayout() {
         </main>
       </div>
       
+      {/* Global Active Appointment Widget */}
+      <FloatingActiveAppointmentButton />
+      <ActiveAppointmentDrawer />
+      
       {/* Onboarding Wizard */}
       <OnboardingWizard />
       
       {/* Guided Tour for first-time users */}
       {location.pathname === "/app" && <GuidedTour />}
     </SidebarProvider>
+    </GlobalActiveAppointmentProvider>
     </GlobalSpecialtyProvider>
   );
 }
