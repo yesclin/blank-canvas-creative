@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { validateProcedureStock, StockValidationResult } from "@/hooks/useProcedureStockValidation";
 import { supabase } from "@/integrations/supabase/client";
 import type { ActiveAppointment } from "@/hooks/prontuario/useActiveAppointment";
+import { useGlobalActiveAppointment } from "@/contexts/GlobalActiveAppointmentContext";
 
 interface StartedAppointmentSnapshot {
   id: string;
@@ -94,6 +95,7 @@ export default function Agenda() {
   // Patient creation from appointment dialog
   const [patientFormOpen, setPatientFormOpen] = useState(false);
   const queryClient = useQueryClient();
+  const { refresh: refreshGlobalActive } = useGlobalActiveAppointment();
   
   // TISS Guide Generation
   const [tissDialogOpen, setTissDialogOpen] = useState(false);
@@ -367,8 +369,9 @@ export default function Agenda() {
     };
 
     seedActiveAppointmentCache(appointmentForNavigation, specialtyId, snapshot);
+    refreshGlobalActive();
     openProntuarioFromAppointment(appointmentForNavigation, specialtyId ?? appointmentForNavigation.specialty_id ?? null);
-  }, [createSessionMutation, fetchStartedAppointmentSnapshot, openProntuarioFromAppointment, seedActiveAppointmentCache, updateStatusMutation]);
+  }, [createSessionMutation, fetchStartedAppointmentSnapshot, openProntuarioFromAppointment, refreshGlobalActive, seedActiveAppointmentCache, updateStatusMutation]);
 
   // Handle status change with stock validation and material consumption
   // Resolve specialty for an appointment: appointment.specialty_id → procedure.specialty_id → professional's specialty
@@ -532,8 +535,9 @@ export default function Agenda() {
       console.error("Error finalizing appointment:", error);
     }
     
+    refreshGlobalActive();
     setFinalizingAppointment(null);
-  }, [finalizingAppointment, setPendingAppointment, updateStatusMutation]);
+  }, [finalizingAppointment, refreshGlobalActive, setPendingAppointment, updateStatusMutation]);
 
   const handleMaterialsCancel = useCallback(() => {
     setMaterialsDialogOpen(false);
