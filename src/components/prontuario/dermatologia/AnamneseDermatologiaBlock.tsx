@@ -97,6 +97,22 @@ export function AnamneseDermatologiaBlock({
   // Current (latest) record
   const currentRecord = dynamicRecords.records[0] || null;
 
+  // ─── Editability check ──────────────────────────────────────────────
+  const recordForEditability = useMemo(() => {
+    if (!currentRecord) return null;
+    return {
+      id: currentRecord.id,
+      created_at: currentRecord.created_at,
+      signed_at: (currentRecord as any).signed_at || null,
+      saved_at: (currentRecord as any).saved_at || null,
+      edit_window_until: (currentRecord as any).edit_window_until || null,
+      locked_at: (currentRecord as any).locked_at || null,
+      status: (currentRecord as any).status || null,
+    };
+  }, [currentRecord]);
+  const anamnesisEditability = useAnamnesisEditability(recordForEditability);
+  const effectiveCanEdit = canEdit && (!currentRecord || anamnesisEditability.editability.canEdit);
+
   // ─── Autosave (10s debounce, silent, non-intrusive) ────────────────
   const autosave = useAutosave({
     enabled: isEditing,
