@@ -147,16 +147,6 @@ export function useGlobalActiveAppointments() {
   useEffect(() => {
     if (!clinicId) return;
 
-    // Clean up any previous channel first
-    if (channelRef.current) {
-      try {
-        channelRef.current.unsubscribe();
-      } catch {
-        // ignore cleanup errors
-      }
-      channelRef.current = null;
-    }
-
     const channelName = `global-active-appointments-${clinicId}-${Date.now()}`;
     const channel = supabase
       .channel(channelName)
@@ -177,15 +167,8 @@ export function useGlobalActiveAppointments() {
     channelRef.current = channel;
 
     return () => {
-      const ch = channelRef.current;
       channelRef.current = null;
-      if (ch) {
-        try {
-          ch.unsubscribe();
-        } catch {
-          // ignore cleanup errors on destroyed channels
-        }
-      }
+      supabase.removeChannel(channel);
     };
   }, [clinicId, queryClient]);
 
