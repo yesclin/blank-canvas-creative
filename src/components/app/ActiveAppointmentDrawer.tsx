@@ -45,6 +45,7 @@ import type { Appointment } from "@/types/agenda";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { QuickClinicalSummary } from "./QuickClinicalSummary";
+import { removeGlobalActiveAppointment } from "@/lib/globalActiveAppointments";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -83,6 +84,19 @@ export function ActiveAppointmentDrawer() {
     refresh();
   }, [queryClient, refresh]);
 
+  const syncAfterFinalize = useCallback((appointmentId: string) => {
+    removeGlobalActiveAppointment(queryClient, appointmentId);
+
+    const nextAppointment = appointments.find((apt) => apt.id !== appointmentId) ?? null;
+    if (nextAppointment) {
+      setSelectedAppointment(nextAppointment);
+      return;
+    }
+
+    setSelectedAppointment(null);
+    closeDrawer();
+  }, [appointments, closeDrawer, queryClient, setSelectedAppointment]);
+
   // Step 1: Click "Finalizar" → finalize session summary → open materials dialog
   const handleFinalize = useCallback(async () => {
     if (!appointment) return;
@@ -106,6 +120,7 @@ export function ActiveAppointmentDrawer() {
         status: "finalizado",
       });
 
+      syncAfterFinalize(finalizingAppointment.id);
       toast.success("Atendimento finalizado com sucesso");
 
       // Check if TISS guide is needed
@@ -115,14 +130,13 @@ export function ActiveAppointmentDrawer() {
         setTissDialogOpen(true);
       } else {
         invalidateAll();
-        closeDrawer();
       }
     } catch (err: any) {
       toast.error(err?.message || "Erro ao finalizar atendimento");
     }
 
     setFinalizingAppointment(null);
-  }, [finalizingAppointment, updateStatusMutation, setPendingAppointment, invalidateAll, closeDrawer]);
+  }, [finalizingAppointment, updateStatusMutation, syncAfterFinalize, setPendingAppointment, invalidateAll]);
 
   const handleMaterialsCancel = useCallback(() => {
     setMaterialsDialogOpen(false);
@@ -135,15 +149,13 @@ export function ActiveAppointmentDrawer() {
     setPendingAppointment(null);
     setTissDialogOpen(false);
     invalidateAll();
-    closeDrawer();
-  }, [generateGuide, setPendingAppointment, invalidateAll, closeDrawer]);
+  }, [generateGuide, setPendingAppointment, invalidateAll]);
 
   const handleTissGuideSkip = useCallback(() => {
     setPendingAppointment(null);
     setTissDialogOpen(false);
     invalidateAll();
-    closeDrawer();
-  }, [setPendingAppointment, invalidateAll, closeDrawer]);
+  }, [setPendingAppointment, invalidateAll]);
 
   if (!appointment) return null;
 

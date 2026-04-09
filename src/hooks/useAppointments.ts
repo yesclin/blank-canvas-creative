@@ -262,6 +262,15 @@ export function useUpdateAppointmentStatus() {
       return { id, status };
     },
     onSuccess: (result) => {
+      if (result.status !== "em_atendimento") {
+        queryClient.setQueriesData<any[]>(
+          { queryKey: ["global-active-appointments"] },
+          (current) => Array.isArray(current)
+            ? current.filter((appointment) => appointment?.id !== result.id)
+            : current
+        );
+      }
+
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
       queryClient.invalidateQueries({ queryKey: ["active-appointment"] });
       queryClient.invalidateQueries({ queryKey: ["global-active-appointments"] });
