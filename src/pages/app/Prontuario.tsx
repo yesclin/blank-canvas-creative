@@ -567,7 +567,31 @@ export default function Prontuario() {
     isLoading: appointmentLoading,
   } = useCanEditMedicalRecord(patientId, preferredAppointmentId);
   const resolvedActiveStartedAt = activeAppointment?.started_at ?? preferredStartedAt ?? null;
-  const shouldShowActiveSessionBar = Boolean(activeAppointment?.id && resolvedActiveStartedAt);
+
+  // Use global active appointments as primary source for session bar visibility
+  const { appointments: globalActiveAppointments, refresh: refreshGlobalActiveFromProntuario } = useGlobalActiveAppointment();
+
+  // Find the global active appointment matching this patient/appointment
+  const globalActiveForCurrent = useMemo(() => {
+    if (!patientId) return null;
+    // First try by preferredAppointmentId
+    if (preferredAppointmentId) {
+      const found = globalActiveAppointments.find(a => a.id === preferredAppointmentId);
+      if (found) return found;
+    }
+    // Then try by local activeAppointment id
+    if (activeAppointment?.id) {
+      const found = globalActiveAppointments.find(a => a.id === activeAppointment.id);
+      if (found) return found;
+    }
+    // Then try by patient_id
+    return globalActiveAppointments.find(a => a.patient_id === patientId) ?? null;
+  }, [globalActiveAppointments, patientId, preferredAppointmentId, activeAppointment?.id]);
+
+  // Session bar should show if EITHER local or global state confirms an active appointment
+  const activeSessionBarAppointmentId = globalActiveForCurrent?.id ?? activeAppointment?.id ?? preferredAppointmentId ?? null;
+  const activeSessionBarStartedAt = globalActiveForCurrent?.started_at ?? resolvedActiveStartedAt;
+  const shouldShowActiveSessionBar = Boolean(activeSessionBarAppointmentId && activeSessionBarStartedAt);
 
   useEffect(() => {
     if (!import.meta.env.DEV) return;
