@@ -334,6 +334,24 @@ export function AnamneseBlock({
   // Backward compat alias
   const existingV2Record = selectedRecord;
 
+  // ─── Editability check (edit lock policy) ──────────────────────────
+  const recordForEditability = useMemo(() => {
+    if (!selectedRecord) return null;
+    return {
+      id: selectedRecord.id,
+      created_at: selectedRecord.created_at,
+      signed_at: (selectedRecord as any).signed_at || null,
+      saved_at: (selectedRecord as any).saved_at || null,
+      edit_window_until: (selectedRecord as any).edit_window_until || null,
+      locked_at: (selectedRecord as any).locked_at || null,
+      status: (selectedRecord as any).status || null,
+    };
+  }, [selectedRecord]);
+  const anamnesisEditability = useAnamnesisEditability(recordForEditability);
+
+  // Override canEdit based on editability policy
+  const effectiveCanEdit = canEdit && (!selectedRecord || anamnesisEditability.editability.canEdit);
+
   // Auto-select first record when records load
   useEffect(() => {
     if (v2Records.length > 0 && !selectedRecordId) {
