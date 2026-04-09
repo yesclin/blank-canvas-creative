@@ -8,6 +8,9 @@ import { Building2, ChevronDown } from "lucide-react";
 import logoFull from "@/assets/logo-full.png";
 import { ActiveSpecialtiesBadge } from "./ActiveSpecialtiesBadge";
 import { GlobalSpecialtyProvider } from "@/hooks/useGlobalSpecialty";
+import { GlobalActiveAppointmentProvider } from "@/contexts/GlobalActiveAppointmentContext";
+import { FloatingActiveAppointmentButton } from "./FloatingActiveAppointmentButton";
+import { ActiveAppointmentDrawer } from "./ActiveAppointmentDrawer";
 
 export function AppLayout() {
   const location = useLocation();
