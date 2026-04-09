@@ -369,8 +369,9 @@ export default function Agenda() {
     };
 
     seedActiveAppointmentCache(appointmentForNavigation, specialtyId, snapshot);
+    refreshGlobalActive();
     openProntuarioFromAppointment(appointmentForNavigation, specialtyId ?? appointmentForNavigation.specialty_id ?? null);
-  }, [createSessionMutation, fetchStartedAppointmentSnapshot, openProntuarioFromAppointment, seedActiveAppointmentCache, updateStatusMutation]);
+  }, [createSessionMutation, fetchStartedAppointmentSnapshot, openProntuarioFromAppointment, refreshGlobalActive, seedActiveAppointmentCache, updateStatusMutation]);
 
   // Handle status change with stock validation and material consumption
   // Resolve specialty for an appointment: appointment.specialty_id → procedure.specialty_id → professional's specialty
