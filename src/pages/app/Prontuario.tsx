@@ -2449,15 +2449,14 @@ export default function Prontuario() {
       </>
       )}
 
-      {/* Active Session Bar - fixed at bottom, outside all conditionals */}
-      {/* Primary: use resolved activeAppointment; Fallback: use preferredAppointmentId from URL */}
+      {/* Active Session Bar - fixed at bottom */}
       {shouldShowActiveSessionBar && activeAppointment ? (
         <ActiveSessionBar
           appointmentId={activeAppointment.id}
           startedAt={resolvedActiveStartedAt}
           onFinalize={handleFinalizeFromProntuario}
         />
-      ) : preferredAppointmentId && !shouldShowActiveSessionBar && !isLoading ? null : preferredAppointmentId && isLoading ? (
+      ) : preferredAppointmentId && appointmentLoading ? (
         <ActiveSessionBar
           appointmentId={preferredAppointmentId}
           startedAt={preferredStartedAt}
