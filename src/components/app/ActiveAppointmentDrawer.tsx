@@ -37,6 +37,7 @@ import { AppointmentPaymentBadge } from "@/components/agenda/AppointmentPaymentB
 import { AppointmentReceivePaymentDialog } from "@/components/agenda/AppointmentReceivePaymentDialog";
 import { AppointmentMaterialsDialog } from "@/components/agenda/AppointmentMaterialsDialog";
 import { TissGuideGenerationDialog, GeneratedGuideData } from "@/components/agenda/TissGuideGenerationDialog";
+import { ProductSaleDialog } from "@/components/agenda/ProductSaleDialog";
 import { calculateAgeFromDateOnly, formatDateOnly } from "@/utils/dateUtils";
 import { statusLabels, statusColors, typeLabels, careModeLabels, paymentTypeLabels } from "@/types/agenda";
 import { getAppointmentSourceLabel } from "@/utils/appointmentSource";
@@ -72,6 +73,7 @@ export function ActiveAppointmentDrawer() {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [materialsDialogOpen, setMaterialsDialogOpen] = useState(false);
   const [tissDialogOpen, setTissDialogOpen] = useState(false);
+  const [saleDialogOpen, setSaleDialogOpen] = useState(false);
   const [finalizingAppointment, setFinalizingAppointment] = useState<Appointment | null>(null);
 
   const invalidateAll = useCallback(() => {
@@ -414,10 +416,7 @@ export function ActiveAppointmentDrawer() {
                   }}>
                     <Calendar className="h-3.5 w-3.5" /> Agenda
                   </Button>
-                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
-                    closeDrawer();
-                    toast.info("Abrir venda para o atendimento");
-                  }}>
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setSaleDialogOpen(true)}>
                     <ShoppingCart className="h-3.5 w-3.5" /> Venda
                   </Button>
                 </div>
@@ -452,6 +451,19 @@ export function ActiveAppointmentDrawer() {
         appointment={pendingAppointment}
         onConfirm={handleTissGuideConfirm}
         onSkip={handleTissGuideSkip}
+      />
+
+      {/* Product Sale Dialog — same as Agenda flow */}
+      <ProductSaleDialog
+        open={saleDialogOpen}
+        onOpenChange={setSaleDialogOpen}
+        patientId={appointment.patient_id}
+        patientName={patient?.full_name}
+        appointmentId={appointment.id}
+        onSuccess={() => {
+          setSaleDialogOpen(false);
+          invalidateAll();
+        }}
       />
     </>
   );
