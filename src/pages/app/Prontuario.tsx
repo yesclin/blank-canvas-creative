@@ -2403,6 +2403,15 @@ export default function Prontuario() {
       </div>
       </>
       )}
+
+      {/* Active Session Bar - fixed at bottom, outside all conditionals */}
+      {shouldShowActiveSessionBar && activeAppointment && (
+        <ActiveSessionBar
+          appointmentId={activeAppointment.id}
+          startedAt={activeAppointment.started_at}
+          onFinalize={handleFinalizeFromProntuario}
+        />
+      )}
     </div>
     </ClinicalAccessGuard>
   );
