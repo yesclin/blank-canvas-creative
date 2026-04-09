@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useClinicData } from "@/hooks/useClinicData";
 import type { Appointment } from "@/types/agenda";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 const ACTIVE_APPOINTMENT_SELECT = `
   id,
@@ -119,10 +120,18 @@ export function useGlobalActiveAppointments() {
   });
 
   // Realtime subscription for appointment status changes
-  useEffect(() => {
-    if (!clinicId) return undefined;
+  const channelRef = useRef<RealtimeChannel | null>(null);
 
-    const channelName = `global-active-appointments-${clinicId}`;
+  useEffect(() => {
+    if (!clinicId) return;
+
+    // Clean up any previous channel first
+    if (channelRef.current) {
+      channelRef.current.unsubscribe();
+      channelRef.current = null;
+    }
+
+    const channelName = `global-active-appointments-${clinicId}-${Date.now()}`;
     const channel = supabase
       .channel(channelName)
       .on(
@@ -139,11 +148,12 @@ export function useGlobalActiveAppointments() {
       )
       .subscribe();
 
+    channelRef.current = channel;
+
     return () => {
-      try {
-        supabase.removeChannel(channel);
-      } catch {
-        // Channel may already be removed during HMR
+      if (channelRef.current) {
+        channelRef.current.unsubscribe();
+        channelRef.current = null;
       }
     };
   }, [clinicId, queryClient]);
