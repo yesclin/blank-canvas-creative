@@ -302,7 +302,7 @@ export function AnamneseDermatologiaBlock({
                 <History className="h-4 w-4 mr-1" /> Histórico ({dynamicRecords.records.length})
               </Button>
             )}
-            {canEdit && (
+            {effectiveCanEdit && (
               <>
                 <Button variant="outline" size="sm" onClick={handleDuplicate}>
                   <Copy className="h-4 w-4 mr-1" /> Duplicar
@@ -314,6 +314,9 @@ export function AnamneseDermatologiaBlock({
             )}
           </div>
         </div>
+
+        {/* Edit lock banner */}
+        <RecordEditLockBanner editability={anamnesisEditability.editability} />
 
         {/* Record view */}
         <DynamicAnamnesisFormRenderer
