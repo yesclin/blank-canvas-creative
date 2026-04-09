@@ -62,6 +62,7 @@ import {
 interface AvaliacaoNutricionalInicialBlockProps {
   patientId: string;
   appointmentId?: string;
+  appointmentDate?: string | null;
   canEdit: boolean;
   professionalId?: string;
 }

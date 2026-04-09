@@ -108,6 +108,7 @@ interface AnamneseBlockProps {
   specialtyName?: string | null;
   specialtyKey?: string | null;
   appointmentId?: string | null;
+  appointmentDate?: string | null;
   professionalName?: string | null;
   professionalRegistration?: string | null;
 }
