@@ -107,15 +107,17 @@ export function ActiveSessionBar({
           )}
 
           {/* Cancel */}
-          <Button
-            size="sm"
-            variant="ghost"
-            className="gap-1.5 text-muted-foreground"
-            onClick={onCancel || onFinalize}
-          >
-            <X className="h-4 w-4" />
-            Cancelar
-          </Button>
+          {onCancel && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="gap-1.5 text-muted-foreground"
+              onClick={onCancel}
+            >
+              <X className="h-4 w-4" />
+              Cancelar
+            </Button>
+          )}
 
           {/* Finalize */}
           <Button
