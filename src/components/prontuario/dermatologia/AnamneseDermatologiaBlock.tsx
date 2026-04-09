@@ -45,6 +45,7 @@ interface AnamneseDermatologiaBlockProps {
   canEdit?: boolean;
   specialtyId?: string | null;
   procedureId?: string | null;
+  appointmentDate?: string | null;
 }
 
 export function AnamneseDermatologiaBlock({
@@ -55,6 +56,7 @@ export function AnamneseDermatologiaBlock({
   canEdit = false,
   specialtyId,
   procedureId,
+  appointmentDate,
 }: AnamneseDermatologiaBlockProps) {
   const dynamicRecords = useDynamicAnamnesisRecords(patientId);
 
@@ -127,13 +129,14 @@ export function AnamneseDermatologiaBlock({
 
   // Start new anamnesis
   const handleStartNew = useCallback(() => {
+    const dateToUse = appointmentDate ? new Date(appointmentDate) : new Date();
     setResponses({
-      data_hora_anamnese: format(new Date(), "dd/MM/yyyy HH:mm"),
+      data_hora_anamnese: format(dateToUse, "dd/MM/yyyy HH:mm"),
     });
     setEditingRecordId(null);
     setIsEditing(true);
     autosave.resetStatus();
-  }, []);
+  }, [appointmentDate]);
 
   // Edit existing
   const handleStartEdit = useCallback(() => {

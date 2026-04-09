@@ -1255,6 +1255,7 @@ export default function Prontuario() {
             specialtyName={resolvedSpecialtyName}
             specialtyKey={activeSpecialtyKey}
             appointmentId={activeAppointment?.id || null}
+            appointmentDate={activeAppointment?.started_at || activeAppointment?.scheduled_date || null}
             professionalName={currentProfessionalName}
             professionalRegistration={docClinicoProfReg}
           />
@@ -1339,6 +1340,7 @@ export default function Prontuario() {
           <AvaliacaoNutricionalInicialBlock
             patientId={patientId}
             appointmentId={activeAppointment?.id}
+            appointmentDate={activeAppointment?.started_at || activeAppointment?.scheduled_date || null}
             canEdit={canEditCurrentTab}
             professionalId={currentProfessionalId || undefined}
           />
@@ -1380,6 +1382,7 @@ export default function Prontuario() {
             canEdit={canEditCurrentTab}
             specialtyId={activeSpecialtyId}
             procedureId={activeAppointment?.procedure_id || null}
+            appointmentDate={activeAppointment?.started_at || activeAppointment?.scheduled_date || null}
           />
         );
 

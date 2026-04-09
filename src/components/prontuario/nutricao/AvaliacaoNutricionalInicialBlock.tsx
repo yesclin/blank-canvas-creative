@@ -62,6 +62,7 @@ import {
 interface AvaliacaoNutricionalInicialBlockProps {
   patientId: string;
   appointmentId?: string;
+  appointmentDate?: string | null;
   canEdit: boolean;
   professionalId?: string;
 }
@@ -95,6 +96,7 @@ const initialFormData: AvaliacaoNutricionalInicialFormData = {
 export function AvaliacaoNutricionalInicialBlock({
   patientId,
   appointmentId,
+  appointmentDate,
   canEdit,
   professionalId,
 }: AvaliacaoNutricionalInicialBlockProps) {
@@ -124,9 +126,12 @@ export function AvaliacaoNutricionalInicialBlock({
   // Resetar formulário quando fecha
   useEffect(() => {
     if (!showForm) {
-      setFormData(initialFormData);
+      const resolvedDate = appointmentDate
+        ? new Date(appointmentDate).toISOString().split('T')[0]
+        : new Date().toISOString().split('T')[0];
+      setFormData({ ...initialFormData, data_avaliacao: resolvedDate });
     }
-  }, [showForm]);
+  }, [showForm, appointmentDate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

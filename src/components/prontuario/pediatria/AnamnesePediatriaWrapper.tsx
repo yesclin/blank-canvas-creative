@@ -45,6 +45,7 @@ interface AnamnesePediatriaWrapperProps {
   canEdit?: boolean;
   specialtyId?: string | null;
   procedureId?: string | null;
+  appointmentDate?: string | null;
 }
 
 export function AnamnesePediatriaWrapper({
@@ -55,6 +56,7 @@ export function AnamnesePediatriaWrapper({
   canEdit = false,
   specialtyId,
   procedureId,
+  appointmentDate,
 }: AnamnesePediatriaWrapperProps) {
   const dynamicRecords = useDynamicAnamnesisRecords(patientId);
 
@@ -121,13 +123,14 @@ export function AnamnesePediatriaWrapper({
   }, [autosave]);
 
   const handleStartNew = useCallback(() => {
+    const dateToUse = appointmentDate ? new Date(appointmentDate) : new Date();
     setResponses({
-      data_hora_anamnese: format(new Date(), "dd/MM/yyyy HH:mm"),
+      data_hora_anamnese: format(dateToUse, "dd/MM/yyyy HH:mm"),
     });
     setEditingRecordId(null);
     setIsEditing(true);
     autosave.resetStatus();
-  }, []);
+  }, [appointmentDate]);
 
   const handleStartEdit = useCallback(() => {
     if (currentRecord) {
