@@ -110,6 +110,8 @@ import { TeleconsultaContextBar } from "@/components/prontuario/TeleconsultaCont
 import { RemoteAttendanceBlock } from "@/components/prontuario/RemoteAttendanceBlock";
 import { ActiveSessionBar } from "@/components/prontuario/ActiveSessionBar";
 import { useFinalizeSession } from "@/hooks/useAppointmentSession";
+import { useGlobalActiveAppointment } from "@/contexts/GlobalActiveAppointmentContext";
+import type { Appointment } from "@/types/agenda";
 import { ConsentCollectionDialog } from "@/components/prontuario/ConsentCollectionDialog";
 import { SignatureDialog } from "@/components/prontuario/SignatureDialog";
 import { SignedRecordBadge } from "@/components/prontuario/SignedRecordBadge";
@@ -566,7 +568,31 @@ export default function Prontuario() {
     isLoading: appointmentLoading,
   } = useCanEditMedicalRecord(patientId, preferredAppointmentId);
   const resolvedActiveStartedAt = activeAppointment?.started_at ?? preferredStartedAt ?? null;
-  const shouldShowActiveSessionBar = Boolean(activeAppointment?.id && resolvedActiveStartedAt);
+
+  // Use global active appointments as primary source for session bar visibility
+  const { appointments: globalActiveAppointments, refresh: refreshGlobalActiveFromProntuario } = useGlobalActiveAppointment();
+
+  // Find the global active appointment matching this patient/appointment
+  const globalActiveForCurrent = useMemo(() => {
+    if (!patientId) return null;
+    // First try by preferredAppointmentId
+    if (preferredAppointmentId) {
+      const found = globalActiveAppointments.find(a => a.id === preferredAppointmentId);
+      if (found) return found;
+    }
+    // Then try by local activeAppointment id
+    if (activeAppointment?.id) {
+      const found = globalActiveAppointments.find(a => a.id === activeAppointment.id);
+      if (found) return found;
+    }
+    // Then try by patient_id
+    return globalActiveAppointments.find(a => a.patient_id === patientId) ?? null;
+  }, [globalActiveAppointments, patientId, preferredAppointmentId, activeAppointment?.id]);
+
+  // Session bar should show if EITHER local or global state confirms an active appointment
+  const activeSessionBarAppointmentId = globalActiveForCurrent?.id ?? activeAppointment?.id ?? preferredAppointmentId ?? null;
+  const activeSessionBarStartedAt = globalActiveForCurrent?.started_at ?? resolvedActiveStartedAt;
+  const shouldShowActiveSessionBar = Boolean(activeSessionBarAppointmentId && activeSessionBarStartedAt);
 
   useEffect(() => {
     if (!import.meta.env.DEV) return;
@@ -594,26 +620,28 @@ export default function Prontuario() {
   const finalizeSession = useFinalizeSession();
 
   const handleFinalizeFromProntuario = useCallback(async () => {
-    if (!activeAppointment?.id) return;
+    const appointmentIdToFinalize = activeSessionBarAppointmentId ?? activeAppointment?.id;
+    if (!appointmentIdToFinalize) return;
     try {
-      await finalizeSession.mutateAsync({ appointmentId: activeAppointment.id });
+      await finalizeSession.mutateAsync({ appointmentId: appointmentIdToFinalize });
       const { supabase } = await import("@/integrations/supabase/client");
       await supabase
         .from("appointments")
         .update({ status: "finalizado", finished_at: new Date().toISOString() })
-        .eq("id", activeAppointment.id);
+        .eq("id", appointmentIdToFinalize);
 
+      // Clear local active-appointment cache
       queryClient
         .getQueriesData<ActiveAppointmentData | null>({ queryKey: ["active-appointment"] })
         .forEach(([queryKey, cachedAppointment]) => {
-          if (cachedAppointment?.id === activeAppointment.id) {
+          if (cachedAppointment?.id === appointmentIdToFinalize) {
             queryClient.setQueryData(queryKey, null);
           }
         });
 
       [
         ["active-appointment", patientId, preferredAppointmentId],
-        ["active-appointment", patientId, activeAppointment.id],
+        ["active-appointment", patientId, appointmentIdToFinalize],
         ["active-appointment", patientId, undefined],
         ["active-appointment", patientId, null],
         ["active-appointment", null, preferredAppointmentId],
@@ -622,10 +650,17 @@ export default function Prontuario() {
         queryClient.setQueryData(queryKey, null);
       });
 
+      // Optimistically remove from global active appointments cache
+      queryClient.setQueriesData<Appointment[]>(
+        { queryKey: ["global-active-appointments"] },
+        (old) => old ? old.filter(a => a.id !== appointmentIdToFinalize) : []
+      );
+
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["active-appointment"] }),
         queryClient.invalidateQueries({ queryKey: ["appointments"] }),
-        queryClient.invalidateQueries({ queryKey: ["appointment-session", activeAppointment.id] }),
+        queryClient.invalidateQueries({ queryKey: ["appointment-session", appointmentIdToFinalize] }),
+        queryClient.invalidateQueries({ queryKey: ["global-active-appointments"] }),
       ]);
       const { toast } = await import("sonner");
       toast.success("Atendimento finalizado com sucesso");
@@ -634,7 +669,7 @@ export default function Prontuario() {
       const { toast } = await import("sonner");
       toast.error("Erro ao finalizar atendimento");
     }
-  }, [activeAppointment?.id, finalizeSession, queryClient]);
+  }, [activeSessionBarAppointmentId, activeAppointment?.id, finalizeSession, queryClient, patientId, preferredAppointmentId, refreshGlobalActiveFromProntuario]);
 
   const {
     activeSpecialtyId,
@@ -2449,17 +2484,11 @@ export default function Prontuario() {
       </>
       )}
 
-      {/* Active Session Bar - fixed at bottom */}
-      {shouldShowActiveSessionBar && activeAppointment ? (
+      {/* Active Session Bar - fixed at bottom, uses global state as primary source */}
+      {shouldShowActiveSessionBar && activeSessionBarAppointmentId ? (
         <ActiveSessionBar
-          appointmentId={activeAppointment.id}
-          startedAt={resolvedActiveStartedAt}
-          onFinalize={handleFinalizeFromProntuario}
-        />
-      ) : preferredAppointmentId && appointmentLoading ? (
-        <ActiveSessionBar
-          appointmentId={preferredAppointmentId}
-          startedAt={preferredStartedAt}
+          appointmentId={activeSessionBarAppointmentId}
+          startedAt={activeSessionBarStartedAt}
           onFinalize={handleFinalizeFromProntuario}
         />
       ) : null}
