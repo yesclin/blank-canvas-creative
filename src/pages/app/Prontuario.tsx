@@ -2484,17 +2484,11 @@ export default function Prontuario() {
       </>
       )}
 
-      {/* Active Session Bar - fixed at bottom */}
-      {shouldShowActiveSessionBar && activeAppointment ? (
+      {/* Active Session Bar - fixed at bottom, uses global state as primary source */}
+      {shouldShowActiveSessionBar && activeSessionBarAppointmentId ? (
         <ActiveSessionBar
-          appointmentId={activeAppointment.id}
-          startedAt={resolvedActiveStartedAt}
-          onFinalize={handleFinalizeFromProntuario}
-        />
-      ) : preferredAppointmentId && appointmentLoading ? (
-        <ActiveSessionBar
-          appointmentId={preferredAppointmentId}
-          startedAt={preferredStartedAt}
+          appointmentId={activeSessionBarAppointmentId}
+          startedAt={activeSessionBarStartedAt}
           onFinalize={handleFinalizeFromProntuario}
         />
       ) : null}
