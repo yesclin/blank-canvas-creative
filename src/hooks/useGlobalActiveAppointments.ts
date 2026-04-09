@@ -5,6 +5,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useClinicData } from "@/hooks/useClinicData";
 import type { Appointment } from "@/types/agenda";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import { isGloballyActiveAppointment } from "@/lib/globalActiveAppointments";
 
 const ACTIVE_APPOINTMENT_SELECT = `
   id,
@@ -111,10 +112,10 @@ export function useGlobalActiveAppointments() {
       const { data, error } = await q;
       if (error) {
         console.error("Error fetching global active appointments:", error);
-        return [];
+        throw error;
       }
 
-      return (data || []).map(mapAppointmentRow);
+      return (data || []).map(mapAppointmentRow).filter(isGloballyActiveAppointment);
     },
     enabled: !!clinicId && !permLoading && !clinicLoading,
     refetchInterval: 15000,
@@ -124,22 +125,31 @@ export function useGlobalActiveAppointments() {
     placeholderData: (prev) => prev,
   });
 
-  // Update lastKnownRef only when we have a successful, non-loading result
+  const hasConfirmedEmpty = query.isSuccess && !query.isFetching && (query.data?.length ?? 0) === 0;
+
+  // Update lastKnownRef only when the server has returned a confirmed result
   useEffect(() => {
-    if (query.data && !query.isLoading && !query.isFetching) {
-      lastKnownRef.current = query.data;
-    } else if (query.data && query.data.length > 0) {
-      // Also update if we got actual data even during refetch
+    if (query.isSuccess && Array.isArray(query.data)) {
       lastKnownRef.current = query.data;
     }
-  }, [query.data, query.isLoading, query.isFetching]);
+  }, [query.data, query.isSuccess]);
 
-  // Stable appointments: use query.data if available, fall back to lastKnown
-  const appointments = (query.data && query.data.length > 0)
-    ? query.data
-    : (query.isLoading || query.isFetching)
-      ? lastKnownRef.current
-      : (query.data ?? lastKnownRef.current);
+  // Stable appointments: keep the last valid non-empty result during transient states
+  const appointments = (() => {
+    if (query.data && query.data.length > 0) {
+      return query.data;
+    }
+
+    if (hasConfirmedEmpty) {
+      return [];
+    }
+
+    if (lastKnownRef.current.length > 0) {
+      return lastKnownRef.current;
+    }
+
+    return query.data ?? [];
+  })();
 
   // Realtime subscription for appointment status changes
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -178,7 +188,8 @@ export function useGlobalActiveAppointments() {
 
   return {
     appointments,
-    isLoading: query.isLoading && lastKnownRef.current.length === 0,
+    isLoading: (query.isLoading || query.isFetching) && lastKnownRef.current.length === 0 && !hasConfirmedEmpty,
+    hasConfirmedEmpty,
     error: query.error,
     refresh,
   };

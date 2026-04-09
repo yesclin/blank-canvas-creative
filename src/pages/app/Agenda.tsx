@@ -31,6 +31,7 @@ import { validateProcedureStock, StockValidationResult } from "@/hooks/useProced
 import { supabase } from "@/integrations/supabase/client";
 import type { ActiveAppointment } from "@/hooks/prontuario/useActiveAppointment";
 import { useGlobalActiveAppointment } from "@/contexts/GlobalActiveAppointmentContext";
+import { removeGlobalActiveAppointment, upsertGlobalActiveAppointment } from "@/lib/globalActiveAppointments";
 
 interface StartedAppointmentSnapshot {
   id: string;
@@ -95,7 +96,12 @@ export default function Agenda() {
   // Patient creation from appointment dialog
   const [patientFormOpen, setPatientFormOpen] = useState(false);
   const queryClient = useQueryClient();
-  const { refresh: refreshGlobalActive } = useGlobalActiveAppointment();
+  const {
+    appointments: globalActiveAppointments,
+    refresh: refreshGlobalActive,
+    setSelectedAppointment: setGlobalSelectedAppointment,
+    closeDrawer: closeGlobalActiveDrawer,
+  } = useGlobalActiveAppointment();
   
   // TISS Guide Generation
   const [tissDialogOpen, setTissDialogOpen] = useState(false);
@@ -365,13 +371,16 @@ export default function Agenda() {
     const appointmentForNavigation: Appointment = {
       ...appointmentWithContext,
       started_at: snapshot?.started_at ?? appointmentWithContext.started_at,
+      finished_at: null,
       status: 'em_atendimento',
     };
 
+    upsertGlobalActiveAppointment(queryClient, appointmentForNavigation);
+    setGlobalSelectedAppointment(appointmentForNavigation);
     seedActiveAppointmentCache(appointmentForNavigation, specialtyId, snapshot);
     refreshGlobalActive();
     openProntuarioFromAppointment(appointmentForNavigation, specialtyId ?? appointmentForNavigation.specialty_id ?? null);
-  }, [createSessionMutation, fetchStartedAppointmentSnapshot, openProntuarioFromAppointment, refreshGlobalActive, seedActiveAppointmentCache, updateStatusMutation]);
+  }, [createSessionMutation, fetchStartedAppointmentSnapshot, openProntuarioFromAppointment, queryClient, refreshGlobalActive, seedActiveAppointmentCache, setGlobalSelectedAppointment, updateStatusMutation]);
 
   // Handle status change with stock validation and material consumption
   // Resolve specialty for an appointment: appointment.specialty_id → procedure.specialty_id → professional's specialty
@@ -525,6 +534,16 @@ export default function Agenda() {
         id: finalizingAppointment.id, 
         status: 'finalizado' 
       });
+
+      removeGlobalActiveAppointment(queryClient, finalizingAppointment.id);
+      const nextGlobalAppointment = globalActiveAppointments.find((appointment) => appointment.id !== finalizingAppointment.id) ?? null;
+
+      if (nextGlobalAppointment) {
+        setGlobalSelectedAppointment(nextGlobalAppointment);
+      } else {
+        setGlobalSelectedAppointment(null);
+        closeGlobalActiveDrawer();
+      }
       
       if (finalizingAppointment.payment_type === 'convenio' && finalizingAppointment.insurance) {
         const finalizedApt: Appointment = { ...finalizingAppointment, status: 'finalizado' };
@@ -537,7 +556,7 @@ export default function Agenda() {
     
     refreshGlobalActive();
     setFinalizingAppointment(null);
-  }, [finalizingAppointment, refreshGlobalActive, setPendingAppointment, updateStatusMutation]);
+  }, [closeGlobalActiveDrawer, finalizingAppointment, globalActiveAppointments, queryClient, refreshGlobalActive, setGlobalSelectedAppointment, setPendingAppointment, updateStatusMutation]);
 
   const handleMaterialsCancel = useCallback(() => {
     setMaterialsDialogOpen(false);
@@ -547,11 +566,13 @@ export default function Agenda() {
   const handleTissGuideConfirm = useCallback(async (guideData: GeneratedGuideData) => {
     await generateGuide(guideData);
     setPendingAppointment(null);
-  }, [generateGuide, setPendingAppointment]);
+    refreshGlobalActive();
+  }, [generateGuide, refreshGlobalActive, setPendingAppointment]);
 
   const handleTissGuideSkip = useCallback(() => {
     setPendingAppointment(null);
-  }, [setPendingAppointment]);
+    refreshGlobalActive();
+  }, [refreshGlobalActive, setPendingAppointment]);
 
   const handleProfessionalTabChange = useCallback((professionalId: string | null) => {
     setSelectedProfessionalId(professionalId);

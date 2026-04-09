@@ -245,6 +245,7 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { removeGlobalActiveAppointment } from "@/lib/globalActiveAppointments";
 
 // Icon mapping for dynamic tabs
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -570,7 +571,11 @@ export default function Prontuario() {
   const resolvedActiveStartedAt = activeAppointment?.started_at ?? preferredStartedAt ?? null;
 
   // Use global active appointments as primary source for session bar visibility
-  const { appointments: globalActiveAppointments, refresh: refreshGlobalActiveFromProntuario } = useGlobalActiveAppointment();
+  const {
+    appointments: globalActiveAppointments,
+    setSelectedAppointment: setGlobalSelectedAppointment,
+    closeDrawer: closeGlobalActiveDrawer,
+  } = useGlobalActiveAppointment();
 
   // Find the global active appointment matching this patient/appointment
   const globalActiveForCurrent = useMemo(() => {
@@ -589,32 +594,11 @@ export default function Prontuario() {
     return globalActiveAppointments.find(a => a.patient_id === patientId) ?? null;
   }, [globalActiveAppointments, patientId, preferredAppointmentId, activeAppointment?.id]);
 
-  // Session bar should show if EITHER local or global state confirms an active appointment
-  const activeSessionBarAppointmentId = globalActiveForCurrent?.id ?? activeAppointment?.id ?? preferredAppointmentId ?? null;
-  const activeSessionBarStartedAt = globalActiveForCurrent?.started_at ?? resolvedActiveStartedAt;
+  const fallbackActiveSessionBarAppointmentId = preferredAppointmentId ?? activeAppointment?.id ?? null;
+  const fallbackActiveSessionBarStartedAt = preferredStartedAt ?? activeAppointment?.started_at ?? null;
+  const activeSessionBarAppointmentId = globalActiveForCurrent?.id ?? fallbackActiveSessionBarAppointmentId;
+  const activeSessionBarStartedAt = globalActiveForCurrent?.started_at ?? fallbackActiveSessionBarStartedAt;
   const shouldShowActiveSessionBar = Boolean(activeSessionBarAppointmentId && activeSessionBarStartedAt);
-
-  useEffect(() => {
-    if (!import.meta.env.DEV) return;
-
-    console.debug("[Prontuario] active session resolution", {
-      patientId,
-      preferredAppointmentId,
-      activeAppointmentId: activeAppointment?.id ?? null,
-      activeAppointmentStatus: activeAppointment?.status ?? null,
-      startedAt: resolvedActiveStartedAt,
-      shouldShowActiveSessionBar,
-      appointmentLoading,
-    });
-  }, [
-    activeAppointment?.id,
-    activeAppointment?.status,
-    appointmentLoading,
-    patientId,
-    preferredAppointmentId,
-    resolvedActiveStartedAt,
-    shouldShowActiveSessionBar,
-  ]);
 
   // Session finalization
   const finalizeSession = useFinalizeSession();
@@ -650,11 +634,15 @@ export default function Prontuario() {
         queryClient.setQueryData(queryKey, null);
       });
 
-      // Optimistically remove from global active appointments cache
-      queryClient.setQueriesData<Appointment[]>(
-        { queryKey: ["global-active-appointments"] },
-        (old) => old ? old.filter(a => a.id !== appointmentIdToFinalize) : []
-      );
+      removeGlobalActiveAppointment(queryClient, appointmentIdToFinalize);
+
+      const nextGlobalAppointment = globalActiveAppointments.find((appointment) => appointment.id !== appointmentIdToFinalize) ?? null;
+      if (nextGlobalAppointment) {
+        setGlobalSelectedAppointment(nextGlobalAppointment);
+      } else {
+        setGlobalSelectedAppointment(null);
+        closeGlobalActiveDrawer();
+      }
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["active-appointment"] }),
@@ -669,7 +657,7 @@ export default function Prontuario() {
       const { toast } = await import("sonner");
       toast.error("Erro ao finalizar atendimento");
     }
-  }, [activeSessionBarAppointmentId, activeAppointment?.id, finalizeSession, queryClient, patientId, preferredAppointmentId, refreshGlobalActiveFromProntuario]);
+  }, [activeSessionBarAppointmentId, activeAppointment?.id, closeGlobalActiveDrawer, finalizeSession, globalActiveAppointments, patientId, preferredAppointmentId, queryClient, setGlobalSelectedAppointment]);
 
   const {
     activeSpecialtyId,
