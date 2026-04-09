@@ -110,7 +110,22 @@ export function useClinicData() {
     };
 
     fetchClinicData();
-    return () => { cancelled = true; };
+
+    // Re-fetch when auth state changes (e.g. session restored after refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+        fetchClinicData();
+      }
+      if (event === 'SIGNED_OUT') {
+        setClinic(null);
+        setIsLoading(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const getFormattedAddress = () => {
