@@ -130,36 +130,10 @@ export function useActiveAppointment(patientId: string | null | undefined, prefe
       
       if (!data) return null;
       
-      // Get specialty from procedure if available
-      const procedureSpecialtyId = data.procedures?.specialty_id || null;
-      const procedureSpecialtyName = data.procedures?.specialties?.name || null;
-      
-      // Resolve specialty: prefer direct specialty, fallback to procedure's specialty
-      const resolvedSpecialtyId = data.specialty_id || procedureSpecialtyId;
-      const resolvedSpecialtyName = data.specialties?.name || procedureSpecialtyName;
-      
-      return {
-        id: data.id,
-        scheduled_date: data.scheduled_date,
-        start_time: data.start_time,
-        end_time: data.end_time,
-        status: data.status,
-        appointment_type: data.appointment_type,
-        professional_id: data.professional_id,
-        professional_name: data.professionals?.full_name || null,
-        procedure_id: data.procedure_id,
-        procedure_name: data.procedures?.name || null,
-        procedure_specialty_id: procedureSpecialtyId,
-        procedure_specialty_name: procedureSpecialtyName,
-        specialty_id: data.specialty_id || null,
-        specialty_name: data.specialties?.name || null,
-        resolved_specialty_id: resolvedSpecialtyId,
-        resolved_specialty_name: resolvedSpecialtyName,
-        started_at: data.started_at,
-      } as ActiveAppointment;
+      return mapAppointmentData(data);
     },
     enabled: !!patientId,
-    refetchInterval: 30000, // Refetch every 30 seconds to keep status updated
+    refetchInterval: 30000,
   });
 }
 
@@ -167,8 +141,8 @@ export function useActiveAppointment(patientId: string | null | undefined, prefe
  * Returns whether editing is allowed based on active appointment status.
  * Editing is allowed when there's an active appointment in progress.
  */
-export function useCanEditMedicalRecord(patientId: string | null | undefined) {
-  const { data: activeAppointment, isLoading } = useActiveAppointment(patientId);
+export function useCanEditMedicalRecord(patientId: string | null | undefined, preferredAppointmentId?: string | null) {
+  const { data: activeAppointment, isLoading } = useActiveAppointment(patientId, preferredAppointmentId);
   
   return {
     canEdit: !!activeAppointment,
