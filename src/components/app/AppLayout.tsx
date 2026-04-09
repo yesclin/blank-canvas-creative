@@ -18,6 +18,7 @@ export function AppLayout() {
 
   return (
     <GlobalSpecialtyProvider>
+    <GlobalActiveAppointmentProvider>
     <SidebarProvider defaultOpen>
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
@@ -52,12 +53,17 @@ export function AppLayout() {
         </main>
       </div>
       
+      {/* Global Active Appointment Widget */}
+      <FloatingActiveAppointmentButton />
+      <ActiveAppointmentDrawer />
+      
       {/* Onboarding Wizard */}
       <OnboardingWizard />
       
       {/* Guided Tour for first-time users */}
       {location.pathname === "/app" && <GuidedTour />}
     </SidebarProvider>
+    </GlobalActiveAppointmentProvider>
     </GlobalSpecialtyProvider>
   );
 }
