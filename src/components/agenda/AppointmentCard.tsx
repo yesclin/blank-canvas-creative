@@ -364,6 +364,7 @@ export function AppointmentCard({
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         </div>
       </div>
     </AppointmentHoverPreview>
