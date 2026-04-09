@@ -484,11 +484,6 @@ export default function Agenda() {
           if (apt) {
             const resolvedSpecialtyId = await resolveSpecialtyId(apt);
 
-            await updateStatusMutation.mutateAsync({ 
-              id: pendingStatusChange.appointmentId, 
-              status: pendingStatusChange.status,
-            });
-
             await bootstrapStartedAppointment({
               ...apt,
               specialty_id: resolvedSpecialtyId || apt.specialty_id,
