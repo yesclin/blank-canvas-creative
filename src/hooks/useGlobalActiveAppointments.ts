@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useClinicData } from "@/hooks/useClinicData";
@@ -116,6 +117,31 @@ export function useGlobalActiveAppointments() {
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   });
+
+  // Realtime subscription for appointment status changes
+  useEffect(() => {
+    if (!clinicId) return;
+
+    const channel = supabase
+      .channel("global-active-appointments-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "appointments",
+          filter: `clinic_id=eq.${clinicId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["global-active-appointments"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [clinicId, queryClient]);
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["global-active-appointments"] });
