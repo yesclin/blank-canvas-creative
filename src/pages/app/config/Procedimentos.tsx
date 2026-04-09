@@ -45,7 +45,7 @@ export default function ConfigProcedimentos() {
   const [productsDialogOpen, setProductsDialogOpen] = useState(false);
   const [productsDialogProcedure, setProductsDialogProcedure] = useState<Procedure | null>(null);
 
-  const { data: procedures, isLoading, error } = useProceduresList(true);
+  const { data: procedures, isLoading, error, refetch } = useProceduresList(true);
   const { data: productCosts } = useProcedureProductCosts();
   const toggleStatusMutation = useToggleProcedureStatus();
   const { can, isOwner, isAdmin } = usePermissions();
@@ -118,9 +118,12 @@ export default function ConfigProcedimentos() {
       <div className="flex flex-col items-center justify-center py-12">
         <ShieldAlert className="h-12 w-12 text-destructive mb-4" />
         <h2 className="text-xl font-semibold mb-2">Erro ao carregar procedimentos</h2>
-        <p className="text-muted-foreground">
-          Não foi possível carregar a lista de procedimentos. Tente novamente.
+        <p className="text-muted-foreground mb-4">
+          Não foi possível carregar a lista de procedimentos. Verifique os dados da clínica e tente novamente.
         </p>
+        <Button variant="outline" onClick={() => refetch()}>
+          Tentar novamente
+        </Button>
       </div>
     );
   }
@@ -226,7 +229,7 @@ export default function ConfigProcedimentos() {
                         </p>
                       )}
                     </TableCell>
-                    <TableCell>{procedure.specialty || "—"}</TableCell>
+                    <TableCell>{procedure.specialty_name || procedure.specialty || "Sem especialidade"}</TableCell>
                     <TableCell>{procedure.duration_minutes} min</TableCell>
                     <TableCell>
                       {procedure.price

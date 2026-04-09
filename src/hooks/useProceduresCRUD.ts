@@ -36,28 +36,50 @@ export function useProceduresList(includeInactive: boolean = true) {
   return useQuery({
     queryKey: ["procedures-list", includeInactive],
     queryFn: async () => {
+      // Try with join first
       let query = supabase
         .from("procedures")
-        .select(`
-          *,
-          specialties(name)
-        `)
+        .select(`*, specialties(name)`)
+        .order("is_active", { ascending: false })
         .order("name");
-      
+
       if (!includeInactive) {
         query = query.eq("is_active", true);
       }
-      
+
       const { data, error } = await query;
-      
-      if (error) throw error;
-      
-      // Map joined specialty name
+
+      if (error) {
+        console.warn("[Procedimentos] Join query failed, falling back to plain query:", error.message);
+        // Fallback: load without join
+        let fallbackQuery = supabase
+          .from("procedures")
+          .select("*")
+          .order("is_active", { ascending: false })
+          .order("name");
+
+        if (!includeInactive) {
+          fallbackQuery = fallbackQuery.eq("is_active", true);
+        }
+
+        const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+        if (fallbackError) {
+          console.error("[Procedimentos] Fallback query also failed:", fallbackError.message);
+          throw fallbackError;
+        }
+
+        return (fallbackData || []).map(p => ({
+          ...p,
+          specialty_name: null,
+        })) as Procedure[];
+      }
+
       return (data || []).map(p => ({
         ...p,
-        specialty_name: p.specialties?.name || null,
+        specialty_name: (p as any).specialties?.name || null,
       })) as Procedure[];
     },
+    retry: 1,
   });
 }
 
