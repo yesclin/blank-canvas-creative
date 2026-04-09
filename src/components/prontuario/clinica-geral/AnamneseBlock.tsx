@@ -1280,6 +1280,11 @@ export function AnamneseBlock({
         </div>
       </div>
 
+      {/* Edit lock banner */}
+      {selectedRecord && !isEditing && (
+        <RecordEditLockBanner editability={anamnesisEditability.editability} />
+      )}
+
       {/* Content */}
       <Card>
         <CardContent className="p-0 divide-y">
@@ -1292,6 +1297,19 @@ export function AnamneseBlock({
           )}
         </CardContent>
       </Card>
+
+      {/* Addendum section (when locked/signed) */}
+      {selectedRecord && anamnesisEditability.canAddAddendum && patientData?.id && (
+        <AddendumSection
+          recordType="anamnesis"
+          recordId={selectedRecord.id}
+          patientId={patientData.id}
+          professionalId={selectedRecord.professional_id || ""}
+          specialtyId={specialtyId}
+          moduleOrigin="anamnese"
+          editability={anamnesisEditability.editability}
+        />
+      )}
 
       {/* History Dialog */}
       <Dialog open={showHistory} onOpenChange={setShowHistory}>
