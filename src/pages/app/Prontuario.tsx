@@ -87,6 +87,7 @@ import {
   useMedicalRecordSignatures, 
   useCurrentUserMedicalRecordPermissions,
   useCanEditMedicalRecord,
+  type ActiveAppointment as ActiveAppointmentData,
   type TabConfig, 
   type MedicalRecordEntry,
   type TabKey,
@@ -557,13 +558,37 @@ export default function Prontuario() {
 
   // Active appointment check for edit control
   const preferredAppointmentId = searchParams.get('appointmentId');
+  const preferredStartedAt = searchParams.get('started_at');
   const {
     canEdit: hasActiveAppointment,
     activeAppointment,
     reason: appointmentReason,
     isLoading: appointmentLoading,
   } = useCanEditMedicalRecord(patientId, preferredAppointmentId);
-  const shouldShowActiveSessionBar = hasActiveAppointment && !!activeAppointment;
+  const resolvedActiveStartedAt = activeAppointment?.started_at ?? preferredStartedAt ?? null;
+  const shouldShowActiveSessionBar = Boolean(activeAppointment?.id && resolvedActiveStartedAt);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+
+    console.debug("[Prontuario] active session resolution", {
+      patientId,
+      preferredAppointmentId,
+      activeAppointmentId: activeAppointment?.id ?? null,
+      activeAppointmentStatus: activeAppointment?.status ?? null,
+      startedAt: resolvedActiveStartedAt,
+      shouldShowActiveSessionBar,
+      appointmentLoading,
+    });
+  }, [
+    activeAppointment?.id,
+    activeAppointment?.status,
+    appointmentLoading,
+    patientId,
+    preferredAppointmentId,
+    resolvedActiveStartedAt,
+    shouldShowActiveSessionBar,
+  ]);
 
   // Session finalization
   const finalizeSession = useFinalizeSession();
@@ -577,6 +602,26 @@ export default function Prontuario() {
         .from("appointments")
         .update({ status: "finalizado", finished_at: new Date().toISOString() })
         .eq("id", activeAppointment.id);
+
+      queryClient
+        .getQueriesData<ActiveAppointmentData | null>({ queryKey: ["active-appointment"] })
+        .forEach(([queryKey, cachedAppointment]) => {
+          if (cachedAppointment?.id === activeAppointment.id) {
+            queryClient.setQueryData(queryKey, null);
+          }
+        });
+
+      [
+        ["active-appointment", patientId, preferredAppointmentId],
+        ["active-appointment", patientId, activeAppointment.id],
+        ["active-appointment", patientId, undefined],
+        ["active-appointment", patientId, null],
+        ["active-appointment", null, preferredAppointmentId],
+        ["active-appointment", undefined, preferredAppointmentId],
+      ].forEach((queryKey) => {
+        queryClient.setQueryData(queryKey, null);
+      });
+
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["active-appointment"] }),
         queryClient.invalidateQueries({ queryKey: ["appointments"] }),
@@ -603,7 +648,7 @@ export default function Prontuario() {
     loading: specialtyLoading,
     isResolved: isSpecialtyResolved,
     noSpecialtyConfigured,
-  } = useActiveSpecialty(patientId);
+  } = useActiveSpecialty(patientId, preferredAppointmentId);
 
   // Visão Geral Data - specific for Clínica Geral specialty
   const {
@@ -2408,7 +2453,7 @@ export default function Prontuario() {
       {shouldShowActiveSessionBar && activeAppointment && (
         <ActiveSessionBar
           appointmentId={activeAppointment.id}
-          startedAt={activeAppointment.started_at}
+          startedAt={resolvedActiveStartedAt}
           onFinalize={handleFinalizeFromProntuario}
         />
       )}

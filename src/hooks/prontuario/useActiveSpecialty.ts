@@ -57,8 +57,8 @@ function toSpecialtyOption(resolved: ResolvedSpecialty): SpecialtyOption | null 
   };
 }
 
-export function useActiveSpecialty(patientId: string | null | undefined) {
-  const { data: activeAppointment, isLoading: appointmentLoading } = useActiveAppointment(patientId);
+export function useActiveSpecialty(patientId: string | null | undefined, preferredAppointmentId?: string | null) {
+  const { data: activeAppointment, isLoading: appointmentLoading } = useActiveAppointment(patientId, preferredAppointmentId);
 
   const {
     enabledSpecialties: globalEnabledSpecialties,

@@ -35,7 +35,7 @@ function isActiveAppointmentStatus(status: string | null | undefined) {
   );
 }
 
-function mapAppointmentData(data: any): ActiveAppointment {
+function mapAppointmentData(data: any, startedAtOverride?: string | null): ActiveAppointment {
   const procedureSpecialtyId = data.procedures?.specialty_id || null;
   const procedureSpecialtyName = data.procedures?.specialties?.name || null;
   const resolvedSpecialtyId = data.specialty_id || procedureSpecialtyId;
@@ -58,8 +58,28 @@ function mapAppointmentData(data: any): ActiveAppointment {
     specialty_name: data.specialties?.name || null,
     resolved_specialty_id: resolvedSpecialtyId,
     resolved_specialty_name: resolvedSpecialtyName,
-    started_at: data.started_at,
+    started_at: startedAtOverride ?? data.started_at,
   };
+}
+
+async function getSessionStartedAt(appointmentId: string) {
+  const { data, error } = await supabase
+    .from("appointment_sessions")
+    .select("created_at")
+    .eq("appointment_id", appointmentId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Error fetching appointment session fallback:", error);
+    return null;
+  }
+
+  return data?.created_at ?? null;
+}
+
+async function mapActiveAppointmentWithFallback(data: any): Promise<ActiveAppointment> {
+  const resolvedStartedAt = data?.started_at ?? (data?.id ? await getSessionStartedAt(data.id) : null);
+  return mapAppointmentData(data, resolvedStartedAt);
 }
 
 /**
@@ -80,7 +100,7 @@ export function useActiveAppointment(patientId: string | null | undefined, prefe
   return useQuery({
     queryKey: ["active-appointment", patientId, preferredAppointmentId],
     queryFn: async () => {
-      if (!patientId) return null;
+      if (!patientId && !preferredAppointmentId) return null;
       
       const today = format(new Date(), "yyyy-MM-dd");
       
@@ -106,18 +126,32 @@ export function useActiveAppointment(patientId: string | null | undefined, prefe
 
       // If we have a preferred appointment ID from URL, try it first
       if (preferredAppointmentId) {
-        const { data: preferred } = await supabase
+        let preferredQuery = supabase
           .from("appointments")
           .select(selectFields)
           .eq("id", preferredAppointmentId)
-          .eq("patient_id", patientId)
-          .is("finished_at", null)
-          .maybeSingle();
+          .is("finished_at", null);
+
+        if (patientId) {
+          preferredQuery = preferredQuery.eq("patient_id", patientId);
+        }
+
+        const { data: preferred, error: preferredError } = await preferredQuery.maybeSingle();
+
+        if (preferredError) {
+          console.error("Error fetching preferred appointment:", preferredError);
+        }
         
-        if (preferred && (isActiveAppointmentStatus(preferred.status) || preferred.started_at)) {
-          return mapAppointmentData(preferred);
+        if (preferred) {
+          const preferredStartedAt = preferred.started_at ?? await getSessionStartedAt(preferred.id);
+
+          if (isActiveAppointmentStatus(preferred.status) || preferredStartedAt) {
+            return mapAppointmentData(preferred, preferredStartedAt);
+          }
         }
       }
+
+      if (!patientId) return null;
 
       const { data: startedAppointment, error: startedAppointmentError } = await supabase
         .from("appointments")
@@ -134,7 +168,7 @@ export function useActiveAppointment(patientId: string | null | undefined, prefe
       }
 
       if (startedAppointment) {
-        return mapAppointmentData(startedAppointment);
+        return mapActiveAppointmentWithFallback(startedAppointment);
       }
       
       const { data, error } = await supabase
@@ -155,10 +189,13 @@ export function useActiveAppointment(patientId: string | null | undefined, prefe
       
       if (!data) return null;
       
-      return mapAppointmentData(data);
+      return mapActiveAppointmentWithFallback(data);
     },
-    enabled: !!patientId,
-    refetchInterval: 30000,
+    enabled: !!patientId || !!preferredAppointmentId,
+    refetchOnMount: "always",
+    refetchOnReconnect: true,
+    refetchOnWindowFocus: true,
+    refetchInterval: preferredAppointmentId ? 5000 : 30000,
   });
 }
 
