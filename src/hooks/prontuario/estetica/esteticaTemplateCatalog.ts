@@ -107,21 +107,11 @@ export const ESTETICA_TEMPLATE_CATALOG: CatalogEntry[] = [
   },
 ];
 
-// Also map the legacy corporal duplicate
-const LEGACY_CORPORAL_ENTRY: CatalogEntry = {
-  templateType: 'anamnese_corporal_legacy',
-  displayName: 'Avaliação Corporal Estética',
-  category: 'avaliacao_base',
-  rendererKind: 'standard',
-  displayOrder: 5, // same position as corporal
-};
-
 // ─── Lookup helpers ─────────────────────────────────────────────────
 
-const catalogByType = new Map([
-  ...ESTETICA_TEMPLATE_CATALOG.map(e => [e.templateType, e] as const),
-  [LEGACY_CORPORAL_ENTRY.templateType, LEGACY_CORPORAL_ENTRY],
-]);
+const catalogByType = new Map(
+  ESTETICA_TEMPLATE_CATALOG.map(e => [e.templateType, e] as const),
+);
 
 /**
  * Known legacy template_type values in the DB that map to catalog entries.
@@ -134,7 +124,6 @@ const LEGACY_NAME_TO_TYPE: Record<string, string> = {
   'Anamnese para Bioestimulador de Colágeno': 'anamnese_bioestimulador',
   'Anamnese para Microagulhamento / Skinbooster / Revitalização': 'anamnese_skinbooster',
   'Anamnese para Procedimentos Estéticos Combinados': 'anamnese_combinados',
-  'Avaliação Corporal Estética': 'anamnese_corporal_avancada', // duplicate of advanced corporal
 };
 
 /**
