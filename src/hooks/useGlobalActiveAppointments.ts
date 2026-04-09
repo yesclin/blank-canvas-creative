@@ -120,10 +120,11 @@ export function useGlobalActiveAppointments() {
 
   // Realtime subscription for appointment status changes
   useEffect(() => {
-    if (!clinicId) return;
+    if (!clinicId) return undefined;
 
+    const channelName = `global-active-appointments-${clinicId}`;
     const channel = supabase
-      .channel("global-active-appointments-realtime")
+      .channel(channelName)
       .on(
         "postgres_changes",
         {
@@ -139,7 +140,11 @@ export function useGlobalActiveAppointments() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      try {
+        supabase.removeChannel(channel);
+      } catch {
+        // Channel may already be removed during HMR
+      }
     };
   }, [clinicId, queryClient]);
 
