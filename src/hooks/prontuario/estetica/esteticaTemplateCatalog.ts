@@ -124,7 +124,6 @@ const LEGACY_NAME_TO_TYPE: Record<string, string> = {
   'Anamnese para Bioestimulador de Colágeno': 'anamnese_bioestimulador',
   'Anamnese para Microagulhamento / Skinbooster / Revitalização': 'anamnese_skinbooster',
   'Anamnese para Procedimentos Estéticos Combinados': 'anamnese_combinados',
-  'Avaliação Corporal Estética': 'anamnese_corporal_avancada', // duplicate of advanced corporal
 };
 
 /**
