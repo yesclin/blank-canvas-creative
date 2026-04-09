@@ -13,14 +13,40 @@ export interface ActiveAppointment {
   professional_name: string | null;
   procedure_id: string | null;
   procedure_name: string | null;
-  procedure_specialty_id: string | null; // Specialty from procedure
+  procedure_specialty_id: string | null;
   procedure_specialty_name: string | null;
-  specialty_id: string | null; // Direct specialty on appointment
+  specialty_id: string | null;
   specialty_name: string | null;
-  // Resolved specialty (either direct or from procedure)
   resolved_specialty_id: string | null;
   resolved_specialty_name: string | null;
   started_at: string | null;
+}
+
+function mapAppointmentData(data: any): ActiveAppointment {
+  const procedureSpecialtyId = data.procedures?.specialty_id || null;
+  const procedureSpecialtyName = data.procedures?.specialties?.name || null;
+  const resolvedSpecialtyId = data.specialty_id || procedureSpecialtyId;
+  const resolvedSpecialtyName = data.specialties?.name || procedureSpecialtyName;
+  
+  return {
+    id: data.id,
+    scheduled_date: data.scheduled_date,
+    start_time: data.start_time,
+    end_time: data.end_time,
+    status: data.status,
+    appointment_type: data.appointment_type,
+    professional_id: data.professional_id,
+    professional_name: data.professionals?.full_name || null,
+    procedure_id: data.procedure_id,
+    procedure_name: data.procedures?.name || null,
+    procedure_specialty_id: procedureSpecialtyId,
+    procedure_specialty_name: procedureSpecialtyName,
+    specialty_id: data.specialty_id || null,
+    specialty_name: data.specialties?.name || null,
+    resolved_specialty_id: resolvedSpecialtyId,
+    resolved_specialty_name: resolvedSpecialtyName,
+    started_at: data.started_at,
+  };
 }
 
 /**
