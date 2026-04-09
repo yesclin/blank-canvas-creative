@@ -97,5 +97,8 @@ export {
 // Record Editability (global edit-lock policy)
 export { useRecordEditability, type RecordEditability, type LockReason } from './useRecordEditability';
 
+// Anamnesis Editability (edit-lock policy for anamnesis records)
+export { useAnamnesisEditability, type AnamnesisEditabilityResult, type AnamnesisStatus } from './useAnamnesisEditability';
+
 // Clinical Addendums
 export { useClinicalAddendums, type ClinicalAddendum, type AddendumInput } from './useClinicalAddendums';
