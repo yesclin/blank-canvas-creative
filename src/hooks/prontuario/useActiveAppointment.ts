@@ -37,39 +37,62 @@ export interface ActiveAppointment {
  *   - OR started_at is not null (appointment was explicitly started)
  * - AND finished_at is null (not finished yet)
  */
-export function useActiveAppointment(patientId: string | null | undefined) {
+export function useActiveAppointment(patientId: string | null | undefined, preferredAppointmentId?: string | null) {
   return useQuery({
-    queryKey: ["active-appointment", patientId],
+    queryKey: ["active-appointment", patientId, preferredAppointmentId],
     queryFn: async () => {
       if (!patientId) return null;
       
       const today = format(new Date(), "yyyy-MM-dd");
       
+      const selectFields = `
+        id,
+        scheduled_date,
+        start_time,
+        end_time,
+        status,
+        appointment_type,
+        professional_id,
+        started_at,
+        procedure_id,
+        specialty_id,
+        professionals(full_name),
+        procedures(
+          name,
+          specialty_id,
+          specialties:specialty_id(name)
+        ),
+        specialties(name)
+      `;
+
+      // If we have a preferred appointment ID from URL, try it first
+      if (preferredAppointmentId) {
+        const { data: preferred } = await supabase
+          .from("appointments")
+          .select(selectFields)
+          .eq("id", preferredAppointmentId)
+          .eq("patient_id", patientId)
+          .is("finished_at", null)
+          .maybeSingle();
+        
+        if (preferred && (
+          preferred.status === 'em_atendimento' || 
+          preferred.status === 'in_progress' || 
+          preferred.status === 'atendendo' || 
+          preferred.status === 'attending' || 
+          preferred.started_at
+        )) {
+          return mapAppointmentData(preferred);
+        }
+      }
+      
       const { data, error } = await supabase
         .from("appointments")
-        .select(`
-          id,
-          scheduled_date,
-          start_time,
-          end_time,
-          status,
-          appointment_type,
-          professional_id,
-          started_at,
-          procedure_id,
-          specialty_id,
-          professionals(full_name),
-          procedures(
-            name,
-            specialty_id,
-            specialties:specialty_id(name)
-          ),
-          specialties(name)
-        `)
+        .select(selectFields)
         .eq("patient_id", patientId)
         .eq("scheduled_date", today)
         .or("status.eq.em_atendimento,status.eq.in_progress,status.eq.atendendo,status.eq.attending,started_at.not.is.null")
-        .is("finished_at", null) // Not finished yet
+        .is("finished_at", null)
         .order("start_time", { ascending: true })
         .limit(1)
         .maybeSingle();
