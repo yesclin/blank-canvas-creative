@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Sheet,
@@ -23,23 +23,25 @@ import {
   Pause,
   PlayCircle,
   AlertTriangle,
-  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGlobalActiveAppointment } from "@/contexts/GlobalActiveAppointmentContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAppointmentFinancialStatus } from "@/hooks/useAppointmentFinancialStatus";
 import { useAppointmentSession, usePauseSession, useResumeSession, useFinalizeSession } from "@/hooks/useAppointmentSession";
+import { useUpdateAppointmentStatus } from "@/hooks/useAppointments";
+import { useTissGuideGeneration } from "@/hooks/useTissGuideGeneration";
 import { SessionTimerBadge } from "@/components/agenda/SessionTimerBadge";
 import { PatientAvatar } from "@/components/agenda/PatientAvatar";
 import { AppointmentPaymentBadge } from "@/components/agenda/AppointmentPaymentBadge";
 import { AppointmentReceivePaymentDialog } from "@/components/agenda/AppointmentReceivePaymentDialog";
+import { AppointmentMaterialsDialog } from "@/components/agenda/AppointmentMaterialsDialog";
+import { TissGuideGenerationDialog, GeneratedGuideData } from "@/components/agenda/TissGuideGenerationDialog";
 import { calculateAgeFromDateOnly, formatDateOnly } from "@/utils/dateUtils";
 import { statusLabels, statusColors, typeLabels, careModeLabels, paymentTypeLabels } from "@/types/agenda";
 import { getAppointmentSourceLabel } from "@/utils/appointmentSource";
-import type { Appointment, AppointmentStatus } from "@/types/agenda";
+import type { Appointment } from "@/types/agenda";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 
 const formatCurrency = (value: number) =>
@@ -63,44 +65,82 @@ export function ActiveAppointmentDrawer() {
   const pauseSession = usePauseSession();
   const resumeSession = useResumeSession();
   const finalizeSession = useFinalizeSession();
+  const updateStatusMutation = useUpdateAppointmentStatus();
+  const { pendingAppointment, setPendingAppointment, generateGuide } = useTissGuideGeneration();
+
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  const [finalizing, setFinalizing] = useState(false);
+  const [materialsDialogOpen, setMaterialsDialogOpen] = useState(false);
+  const [tissDialogOpen, setTissDialogOpen] = useState(false);
+  const [finalizingAppointment, setFinalizingAppointment] = useState<Appointment | null>(null);
 
-  const isReceptionist = role === "recepcionista";
+  const invalidateAll = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["global-active-appointments"] });
+    queryClient.invalidateQueries({ queryKey: ["appointments"] });
+    queryClient.invalidateQueries({ queryKey: ["active-appointment"] });
+    refresh();
+  }, [queryClient, refresh]);
 
-  const handleFinalize = async () => {
+  // Step 1: Click "Finalizar" → finalize session summary → open materials dialog
+  const handleFinalize = useCallback(async () => {
     if (!appointment) return;
-    setFinalizing(true);
     try {
-      // Generate session summary
       await finalizeSession.mutateAsync({ appointmentId: appointment.id });
+    } catch (e) {
+      console.error("Error finalizing session:", e);
+    }
+    setFinalizingAppointment(appointment);
+    setMaterialsDialogOpen(true);
+  }, [appointment, finalizeSession]);
 
-      // Update appointment status
-      const { error } = await supabase
-        .from("appointments")
-        .update({
-          status: "finalizado",
-          finished_at: new Date().toISOString(),
-        })
-        .eq("id", appointment.id);
+  // Step 2: Materials confirmed → update status → check TISS
+  const handleMaterialsConfirm = useCallback(async () => {
+    setMaterialsDialogOpen(false);
+    if (!finalizingAppointment) return;
 
-      if (error) throw error;
+    try {
+      await updateStatusMutation.mutateAsync({
+        id: finalizingAppointment.id,
+        status: "finalizado",
+      });
 
       toast.success("Atendimento finalizado com sucesso");
-      
-      // Invalidate all relevant queries
-      queryClient.invalidateQueries({ queryKey: ["global-active-appointments"] });
-      queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      queryClient.invalidateQueries({ queryKey: ["active-appointment"] });
-      
-      refresh();
-      closeDrawer();
+
+      // Check if TISS guide is needed
+      if (finalizingAppointment.payment_type === "convenio" && finalizingAppointment.insurance) {
+        const finalizedApt: Appointment = { ...finalizingAppointment, status: "finalizado" };
+        setPendingAppointment(finalizedApt);
+        setTissDialogOpen(true);
+      } else {
+        invalidateAll();
+        closeDrawer();
+      }
     } catch (err: any) {
       toast.error(err?.message || "Erro ao finalizar atendimento");
-    } finally {
-      setFinalizing(false);
     }
-  };
+
+    setFinalizingAppointment(null);
+  }, [finalizingAppointment, updateStatusMutation, setPendingAppointment, invalidateAll, closeDrawer]);
+
+  const handleMaterialsCancel = useCallback(() => {
+    setMaterialsDialogOpen(false);
+    setFinalizingAppointment(null);
+  }, []);
+
+  // Step 3 (optional): TISS guide confirmed or skipped
+  const handleTissGuideConfirm = useCallback(async (guideData: GeneratedGuideData) => {
+    await generateGuide(guideData);
+    setPendingAppointment(null);
+    setTissDialogOpen(false);
+    invalidateAll();
+    closeDrawer();
+  }, [generateGuide, setPendingAppointment, invalidateAll, closeDrawer]);
+
+  const handleTissGuideSkip = useCallback(() => {
+    setPendingAppointment(null);
+    setTissDialogOpen(false);
+    invalidateAll();
+    closeDrawer();
+  }, [setPendingAppointment, invalidateAll, closeDrawer]);
 
   if (!appointment) return null;
 
@@ -233,10 +273,10 @@ export function ActiveAppointmentDrawer() {
               className="w-full gap-2 mt-3"
               size="sm"
               onClick={handleFinalize}
-              disabled={finalizing}
+              disabled={finalizeSession.isPending || materialsDialogOpen}
             >
               <Square className="h-4 w-4" />
-              {finalizing ? "Finalizando..." : "Finalizar Atendimento"}
+              {finalizeSession.isPending ? "Preparando..." : "Finalizar Atendimento"}
             </Button>
           </div>
 
@@ -349,7 +389,7 @@ export function ActiveAppointmentDrawer() {
                   )}
                   <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
                     closeDrawer();
-                    navigate(`/app/pacientes/${appointment.patient_id}`);
+                    navigate(`/app/pacientes`);
                   }}>
                     <User className="h-3.5 w-3.5" /> Paciente
                   </Button>
@@ -361,7 +401,6 @@ export function ActiveAppointmentDrawer() {
                   </Button>
                   <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
                     closeDrawer();
-                    // Navigate to sales if available
                     toast.info("Abrir venda para o atendimento");
                   }}>
                     <ShoppingCart className="h-3.5 w-3.5" /> Venda
@@ -379,6 +418,25 @@ export function ActiveAppointmentDrawer() {
         open={paymentDialogOpen}
         onOpenChange={setPaymentDialogOpen}
         financialStatus={financial}
+      />
+
+      {/* Materials Dialog — same as Agenda flow */}
+      <AppointmentMaterialsDialog
+        open={materialsDialogOpen}
+        onOpenChange={setMaterialsDialogOpen}
+        appointmentId={finalizingAppointment?.id || appointment.id}
+        procedureName={finalizingAppointment?.procedure?.name || procedure?.name}
+        onConfirm={handleMaterialsConfirm}
+        onCancel={handleMaterialsCancel}
+      />
+
+      {/* TISS Guide Dialog — same as Agenda flow */}
+      <TissGuideGenerationDialog
+        open={tissDialogOpen}
+        onOpenChange={setTissDialogOpen}
+        appointment={pendingAppointment}
+        onConfirm={handleTissGuideConfirm}
+        onSkip={handleTissGuideSkip}
       />
     </>
   );
