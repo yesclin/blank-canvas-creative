@@ -43,6 +43,7 @@ import { getAppointmentSourceLabel } from "@/utils/appointmentSource";
 import type { Appointment } from "@/types/agenda";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { QuickClinicalSummary } from "./QuickClinicalSummary";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -370,6 +371,20 @@ export function ActiveAppointmentDrawer() {
                   <Section title="Observações" icon={Clock}>
                     <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/80">{notes}</p>
                   </Section>
+                </>
+              )}
+
+              {/* Resumo Clínico Rápido — only for clinical roles */}
+              {canAccessClinicalContent && (
+                <>
+                  <Separator />
+                  <QuickClinicalSummary
+                    patientId={appointment.patient_id}
+                    appointmentId={appointment.id}
+                    clinicId={appointment.clinic_id}
+                    specialtyName={specialty?.name}
+                    onCloseDrawer={closeDrawer}
+                  />
                 </>
               )}
 
