@@ -95,6 +95,7 @@ export default function Agenda() {
   // Patient creation from appointment dialog
   const [patientFormOpen, setPatientFormOpen] = useState(false);
   const queryClient = useQueryClient();
+  const { refresh: refreshGlobalActive } = useGlobalActiveAppointment();
   
   // TISS Guide Generation
   const [tissDialogOpen, setTissDialogOpen] = useState(false);
