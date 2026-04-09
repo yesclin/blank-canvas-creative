@@ -374,6 +374,20 @@ export function ActiveAppointmentDrawer() {
                 </>
               )}
 
+              {/* Resumo Clínico Rápido — only for clinical roles */}
+              {canAccessClinicalContent && (
+                <>
+                  <Separator />
+                  <QuickClinicalSummary
+                    patientId={appointment.patient_id}
+                    appointmentId={appointment.id}
+                    clinicId={appointment.clinic_id}
+                    specialtyName={specialty?.name}
+                    onCloseDrawer={closeDrawer}
+                  />
+                </>
+              )}
+
               <Separator />
 
               {/* Atalhos rápidos */}
