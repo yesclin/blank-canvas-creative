@@ -38,9 +38,11 @@ export function AnamnesisEditLockWrapper({
       {/* Lock/edit status banner */}
       <RecordEditLockBanner editability={editability} />
 
-      {/* Signed badge */}
+      {/* Signed indicator */}
       {status === "signed" && (
-        <SignedRecordBadge />
+        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-blue-50 border border-blue-200 text-xs text-blue-800 dark:bg-blue-950/30 dark:border-blue-800 dark:text-blue-300">
+          <span className="font-semibold">🔒 Registro assinado digitalmente — imutável</span>
+        </div>
       )}
 
       {/* Form/view content (parent handles readonly) */}
