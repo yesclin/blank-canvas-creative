@@ -2321,14 +2321,6 @@ export default function Prontuario() {
         clinicalDataLoading={clinicalDataLoading}
       />
 
-      {/* Active Session Bar - timer + pause/resume/finalize */}
-      {shouldShowActiveSessionBar && activeAppointment && (
-        <ActiveSessionBar
-          appointmentId={activeAppointment.id}
-          startedAt={activeAppointment.started_at}
-          onFinalize={handleFinalizeFromProntuario}
-        />
-      )}
 
       {/* Teleconsulta Context Bar */}
       {activeAppointment && (activeAppointment as any).care_mode === 'teleconsulta' && (
@@ -2410,6 +2402,15 @@ export default function Prontuario() {
         </main>
       </div>
       </>
+      )}
+
+      {/* Active Session Bar - fixed at bottom, outside all conditionals */}
+      {shouldShowActiveSessionBar && activeAppointment && (
+        <ActiveSessionBar
+          appointmentId={activeAppointment.id}
+          startedAt={activeAppointment.started_at}
+          onFinalize={handleFinalizeFromProntuario}
+        />
       )}
     </div>
     </ClinicalAccessGuard>
