@@ -8,7 +8,8 @@
  *  • Botão "Registrar Anamnese" (somente se canEdit)
  */
 
-import { FileText, Settings, Edit3, AlertTriangle, Lock } from "lucide-react";
+import { FileText, Settings, Edit3, AlertTriangle, Lock, Shield, User } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -110,8 +111,14 @@ export function AnamneseModelSelector({
                     <SelectItem key={t.id} value={t.id}>
                       <div className="flex items-center gap-2">
                         <span className="truncate">{t.name}</span>
-                        {t.is_system && (
-                          <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                        {t.is_system ? (
+                          <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-primary/30 text-primary">
+                            Oficial
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-muted-foreground/30 text-muted-foreground">
+                            Personalizado
+                          </Badge>
                         )}
                       </div>
                     </SelectItem>

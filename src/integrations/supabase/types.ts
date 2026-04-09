@@ -243,6 +243,7 @@ export type Database = {
           procedure_id: string | null
           specialty: string | null
           specialty_id: string | null
+          system_locked: boolean
           template_type: string | null
           updated_at: string
           usage_count: number
@@ -266,6 +267,7 @@ export type Database = {
           procedure_id?: string | null
           specialty?: string | null
           specialty_id?: string | null
+          system_locked?: boolean
           template_type?: string | null
           updated_at?: string
           usage_count?: number
@@ -289,6 +291,7 @@ export type Database = {
           procedure_id?: string | null
           specialty?: string | null
           specialty_id?: string | null
+          system_locked?: boolean
           template_type?: string | null
           updated_at?: string
           usage_count?: number

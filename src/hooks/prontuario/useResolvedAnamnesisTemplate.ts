@@ -10,6 +10,7 @@ export interface TemplateOption {
   procedure_id: string | null;
   is_default: boolean;
   is_system: boolean;
+  system_locked: boolean;
   current_version_id: string | null;
 }
 
@@ -59,11 +60,12 @@ export function useResolvedAnamnesisTemplate(
 
       const { data: templates, error } = await supabase
         .from("anamnesis_templates")
-        .select("id, name, description, specialty_id, procedure_id, is_default, is_system, current_version_id, campos")
+        .select("id, name, description, specialty_id, procedure_id, is_default, is_system, system_locked, current_version_id, campos")
         .eq("specialty_id", specialtyId)
         .eq("is_active", true)
         .eq("archived", false)
         .or(`clinic_id.eq.${clinic.id},clinic_id.is.null`)
+        .order("is_system", { ascending: false })
         .order("is_default", { ascending: false })
         .order("name", { ascending: true });
 
@@ -82,6 +84,7 @@ export function useResolvedAnamnesisTemplate(
         procedure_id: t.procedure_id,
         is_default: t.is_default,
         is_system: t.is_system,
+        system_locked: !!(t as any).system_locked,
         current_version_id: t.current_version_id,
       }));
 
