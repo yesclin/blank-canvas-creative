@@ -30,6 +30,7 @@ import {
   Video,
   MessageSquare,
   Zap,
+  Timer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Appointment, MeetingStatus } from "@/types/agenda";
@@ -182,24 +183,6 @@ export function AppointmentCard({
 
             {/* Indicator icons row */}
             <div className="flex items-center gap-1 mt-1.5">
-              {status === 'em_atendimento' && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1 text-[10px] font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/40 border border-green-300 dark:border-green-700 px-2 py-0.5 rounded-full animate-pulse hover:bg-green-200 dark:hover:bg-green-900/60 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onClick?.(appointment);
-                      }}
-                    >
-                      <Play className="h-3 w-3 fill-current" />
-                      Em atendimento
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>Abrir painel do atendimento ativo</TooltipContent>
-                </Tooltip>
-              )}
               {is_first_visit && (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -293,7 +276,26 @@ export function AppointmentCard({
             </div>
           </div>
           
-          {/* Actions menu */}
+          {/* Active session shortcut + Actions menu */}
+          <div className="flex flex-col items-center gap-1 shrink-0">
+            {status === 'em_atendimento' && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-green-600 dark:text-green-400 animate-pulse hover:bg-green-100 dark:hover:bg-green-900/40"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onClick?.(appointment);
+                    }}
+                  >
+                    <Timer className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Abrir atendimento</TooltipContent>
+              </Tooltip>
+            )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button 
@@ -362,6 +364,7 @@ export function AppointmentCard({
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         </div>
       </div>
     </AppointmentHoverPreview>
