@@ -97,6 +97,7 @@ export function useGlobalActiveAppointments() {
         .select(ACTIVE_APPOINTMENT_SELECT)
         .eq("clinic_id", clinicId)
         .eq("status", "em_atendimento")
+        .not("started_at", "is", null)
         .is("finished_at", null)
         .order("started_at", { ascending: false });
 
