@@ -306,6 +306,7 @@ export function useCancelAppointment() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["global-active-appointments"] });
       toast.success("Agendamento cancelado!");
     },
     onError: (error: Error) => {
