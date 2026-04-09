@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { validateProcedureStock, StockValidationResult } from "@/hooks/useProcedureStockValidation";
 import { supabase } from "@/integrations/supabase/client";
 import type { ActiveAppointment } from "@/hooks/prontuario/useActiveAppointment";
+import { useGlobalActiveAppointment } from "@/contexts/GlobalActiveAppointmentContext";
 
 interface StartedAppointmentSnapshot {
   id: string;
