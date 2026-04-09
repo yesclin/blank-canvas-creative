@@ -110,6 +110,7 @@ import { TeleconsultaContextBar } from "@/components/prontuario/TeleconsultaCont
 import { RemoteAttendanceBlock } from "@/components/prontuario/RemoteAttendanceBlock";
 import { ActiveSessionBar } from "@/components/prontuario/ActiveSessionBar";
 import { useFinalizeSession } from "@/hooks/useAppointmentSession";
+import { useGlobalActiveAppointment } from "@/contexts/GlobalActiveAppointmentContext";
 import { ConsentCollectionDialog } from "@/components/prontuario/ConsentCollectionDialog";
 import { SignatureDialog } from "@/components/prontuario/SignatureDialog";
 import { SignedRecordBadge } from "@/components/prontuario/SignedRecordBadge";
