@@ -1,6 +1,9 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinicData } from "@/hooks/useClinicData";
+import { useAnamnesisEditability } from "@/hooks/prontuario/useAnamnesisEditability";
+import { RecordEditLockBanner } from "@/components/prontuario/RecordEditLockBanner";
+import { AddendumSection } from "@/components/prontuario/AddendumSection";
 import { AnamnesisTemplateBuilderDialog } from "@/components/configuracoes/AnamnesisTemplateBuilderDialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
