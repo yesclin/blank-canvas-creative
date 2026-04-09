@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -481,6 +482,7 @@ const DEFAULT_NAV_ITEMS = [
 export default function Prontuario() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const params = useParams<{ patientId: string }>();
   // Support both /app/prontuario/:patientId (path) and ?paciente=ID (legacy query param)
   const patientId = params.patientId || searchParams.get('paciente');
@@ -561,6 +563,7 @@ export default function Prontuario() {
     reason: appointmentReason,
     isLoading: appointmentLoading,
   } = useCanEditMedicalRecord(patientId, preferredAppointmentId);
+  const shouldShowActiveSessionBar = hasActiveAppointment && !!activeAppointment;
 
   // Session finalization
   const finalizeSession = useFinalizeSession();
@@ -574,6 +577,11 @@ export default function Prontuario() {
         .from("appointments")
         .update({ status: "finalizado", finished_at: new Date().toISOString() })
         .eq("id", activeAppointment.id);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["active-appointment"] }),
+        queryClient.invalidateQueries({ queryKey: ["appointments"] }),
+        queryClient.invalidateQueries({ queryKey: ["appointment-session", activeAppointment.id] }),
+      ]);
       const { toast } = await import("sonner");
       toast.success("Atendimento finalizado com sucesso");
     } catch (e) {
@@ -581,7 +589,7 @@ export default function Prontuario() {
       const { toast } = await import("sonner");
       toast.error("Erro ao finalizar atendimento");
     }
-  }, [activeAppointment?.id, finalizeSession]);
+  }, [activeAppointment?.id, finalizeSession, queryClient]);
 
   const {
     activeSpecialtyId,
@@ -2311,7 +2319,7 @@ export default function Prontuario() {
       />
 
       {/* Active Session Bar - timer + pause/resume/finalize */}
-      {hasActiveAppointment && activeAppointment && activeAppointment.started_at && (
+      {shouldShowActiveSessionBar && activeAppointment && (
         <ActiveSessionBar
           appointmentId={activeAppointment.id}
           startedAt={activeAppointment.started_at}
@@ -2377,7 +2385,7 @@ export default function Prontuario() {
 
         {/* Content Area */}
         <main className="flex-1 min-h-0 overflow-auto">
-          <div className="p-4 md:p-6">
+          <div className={cn("p-4 md:p-6", shouldShowActiveSessionBar && "pb-36 md:pb-32")}>
             {/* Alerts Banner - shown at top when there are active alerts */}
             {/* Psychology specialty uses specialized banner with risk indicators */}
             {activeSpecialtyKey === 'psicologia' && activeAlertasPsico.length > 0 && activeTab !== 'alertas' && (

@@ -22,15 +22,16 @@ export function ActiveSessionBar({
   const { data: session } = useAppointmentSession(appointmentId);
   const pauseSession = usePauseSession();
   const resumeSession = useResumeSession();
+  const effectiveStartedAt = startedAt ?? session?.created_at;
 
   const { formattedTime } = useSessionTimer({
-    startedAt,
+    startedAt: effectiveStartedAt,
     isPaused: session?.is_paused || false,
     totalPausedSeconds: session?.total_paused_seconds || 0,
     currentPauseStartedAt: session?.current_pause_started_at,
   });
 
-  if (!startedAt) return null;
+  if (!effectiveStartedAt) return null;
 
   const isPaused = session?.is_paused || false;
 
@@ -41,9 +42,9 @@ export function ActiveSessionBar({
         className
       )}
     >
-      <div className="flex items-center justify-between px-6 py-3 max-w-screen-2xl mx-auto">
+      <div className="mx-auto flex max-w-screen-2xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         {/* Left: Timer + Status */}
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           {/* Timer */}
           <div className="flex items-center gap-2.5">
             <span
@@ -79,7 +80,7 @@ export function ActiveSessionBar({
         </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           {/* Pause / Resume */}
           {isPaused ? (
             <Button

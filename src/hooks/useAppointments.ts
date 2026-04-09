@@ -263,6 +263,7 @@ export function useUpdateAppointmentStatus() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["active-appointment"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
       

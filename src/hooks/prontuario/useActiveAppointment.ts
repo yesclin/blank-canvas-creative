@@ -22,6 +22,19 @@ export interface ActiveAppointment {
   started_at: string | null;
 }
 
+const ACTIVE_APPOINTMENT_STATUSES = [
+  "em_atendimento",
+  "in_progress",
+  "atendendo",
+  "attending",
+] as const;
+
+function isActiveAppointmentStatus(status: string | null | undefined) {
+  return ACTIVE_APPOINTMENT_STATUSES.includes(
+    status as (typeof ACTIVE_APPOINTMENT_STATUSES)[number]
+  );
+}
+
 function mapAppointmentData(data: any): ActiveAppointment {
   const procedureSpecialtyId = data.procedures?.specialty_id || null;
   const procedureSpecialtyName = data.procedures?.specialties?.name || null;
@@ -54,8 +67,8 @@ function mapAppointmentData(data: any): ActiveAppointment {
  * This determines whether the medical record fields can be edited.
  * 
  * An appointment is considered "active" if:
- * - It's scheduled for today AND
- * - Its status indicates the appointment is in progress:
+ * - It has started_at filled and finished_at is null, regardless of the scheduled date, OR
+ * - It's scheduled for today and its status indicates the appointment is in progress:
  *   - "em_atendimento" (in progress - Portuguese)
  *   - "in_progress" (in progress - English)
  *   - "atendendo" (attending - Portuguese alternative)
@@ -101,15 +114,27 @@ export function useActiveAppointment(patientId: string | null | undefined, prefe
           .is("finished_at", null)
           .maybeSingle();
         
-        if (preferred && (
-          preferred.status === 'em_atendimento' || 
-          preferred.status === 'in_progress' || 
-          preferred.status === 'atendendo' || 
-          preferred.status === 'attending' || 
-          preferred.started_at
-        )) {
+        if (preferred && (isActiveAppointmentStatus(preferred.status) || preferred.started_at)) {
           return mapAppointmentData(preferred);
         }
+      }
+
+      const { data: startedAppointment, error: startedAppointmentError } = await supabase
+        .from("appointments")
+        .select(selectFields)
+        .eq("patient_id", patientId)
+        .not("started_at", "is", null)
+        .is("finished_at", null)
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (startedAppointmentError) {
+        console.error("Error fetching started appointment:", startedAppointmentError);
+      }
+
+      if (startedAppointment) {
+        return mapAppointmentData(startedAppointment);
       }
       
       const { data, error } = await supabase
