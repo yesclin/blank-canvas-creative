@@ -140,6 +140,8 @@ export function useMedicalRecordEntries() {
       const isAnamnesis = input.entry_type === 'anamnesis';
 
       if (isAnamnesis) {
+        const { getEditWindowFields } = await import('@/hooks/prontuario/anamnesisEditWindowUtils');
+        const editWindowFields = getEditWindowFields();
         const { data, error } = await supabase
           .from('anamnesis_records')
           .insert({
@@ -150,6 +152,7 @@ export function useMedicalRecordEntries() {
             specialty_id: input.specialty_id || null,
             data: input.content as unknown as Json,
             status: 'rascunho',
+            ...editWindowFields,
           })
           .select()
           .single();

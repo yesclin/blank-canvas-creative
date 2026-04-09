@@ -6,7 +6,7 @@
  * Same pattern as Dermatologia / Psicologia.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +36,9 @@ import { AnamneseModelSelector } from "@/components/prontuario/AnamneseModelSele
 import { useAutosave } from "@/hooks/prontuario/useAutosave";
 import { AutosaveIndicator } from "@/components/prontuario/AutosaveIndicator";
 import type { Json } from "@/integrations/supabase/types";
+import { useAnamnesisEditability } from "@/hooks/prontuario/useAnamnesisEditability";
+import { RecordEditLockBanner } from "@/components/prontuario/RecordEditLockBanner";
+import { AddendumSection } from "@/components/prontuario/AddendumSection";
 
 interface AnamnesePediatriaWrapperProps {
   patientId: string | null;
@@ -88,6 +91,22 @@ export function AnamnesePediatriaWrapper({
   const activeVersionId = resolvedTemplate?.current_version_id;
 
   const currentRecord = dynamicRecords.records[0] || null;
+
+  // ─── Editability check ──────────────────────────────────────────────
+  const recordForEditability = useMemo(() => {
+    if (!currentRecord) return null;
+    return {
+      id: currentRecord.id,
+      created_at: currentRecord.created_at,
+      signed_at: (currentRecord as any).signed_at || null,
+      saved_at: (currentRecord as any).saved_at || null,
+      edit_window_until: (currentRecord as any).edit_window_until || null,
+      locked_at: (currentRecord as any).locked_at || null,
+      status: (currentRecord as any).status || null,
+    };
+  }, [currentRecord]);
+  const anamnesisEditability = useAnamnesisEditability(recordForEditability);
+  const effectiveCanEdit = canEdit && (!currentRecord || anamnesisEditability.editability.canEdit);
 
   // Autosave
   const autosave = useAutosave({
@@ -260,7 +279,7 @@ export function AnamnesePediatriaWrapper({
                 <History className="h-4 w-4 mr-1" /> Histórico ({dynamicRecords.records.length})
               </Button>
             )}
-            {canEdit && (
+            {effectiveCanEdit && (
               <>
                 <Button variant="outline" size="sm" onClick={handleDuplicate}>
                   <Copy className="h-4 w-4 mr-1" /> Duplicar
@@ -273,17 +292,33 @@ export function AnamnesePediatriaWrapper({
           </div>
         </div>
 
+        {/* Edit lock banner */}
+        <RecordEditLockBanner editability={anamnesisEditability.editability} />
+
         <DynamicAnamnesisFormRenderer
           structure={(currentRecord.structure_snapshot || activeStructure) as Json}
           templateName={currentRecord.template_name || activeTemplateName}
           responses={currentRecord.responses as Record<string, any>}
           isEditing={false}
-          canEdit={canEdit}
+          canEdit={effectiveCanEdit}
           onResponseChange={() => {}}
           onSave={() => {}}
           onCancel={() => {}}
           onStartEdit={handleStartEdit}
         />
+
+        {/* Addendum section */}
+        {patientId && anamnesisEditability.canAddAddendum && (
+          <AddendumSection
+            recordType="anamnesis"
+            recordId={currentRecord.id}
+            patientId={patientId}
+            professionalId={professionalId || ""}
+            specialtyId={specialtyId}
+            moduleOrigin="anamnese-pediatria"
+            editability={anamnesisEditability.editability}
+          />
+        )}
 
         {/* History dialog */}
         <Dialog open={showHistory} onOpenChange={setShowHistory}>

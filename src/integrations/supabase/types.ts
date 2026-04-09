@@ -68,10 +68,13 @@ export type Database = {
           created_at: string
           created_by: string | null
           data: Json
+          edit_window_until: string | null
           id: string
+          locked_at: string | null
           patient_id: string
           professional_id: string
           responses: Json | null
+          saved_at: string | null
           signed_at: string | null
           signed_by: string | null
           specialty_id: string | null
@@ -88,10 +91,13 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           data?: Json
+          edit_window_until?: string | null
           id?: string
+          locked_at?: string | null
           patient_id: string
           professional_id: string
           responses?: Json | null
+          saved_at?: string | null
           signed_at?: string | null
           signed_by?: string | null
           specialty_id?: string | null
@@ -108,10 +114,13 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           data?: Json
+          edit_window_until?: string | null
           id?: string
+          locked_at?: string | null
           patient_id?: string
           professional_id?: string
           responses?: Json | null
+          saved_at?: string | null
           signed_at?: string | null
           signed_by?: string | null
           specialty_id?: string | null

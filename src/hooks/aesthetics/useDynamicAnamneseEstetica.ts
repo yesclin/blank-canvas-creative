@@ -126,7 +126,8 @@ export function useDynamicAnamneseEstetica({
       } else {
         // Create new record
         const structureSnapshot = fields as unknown as Json;
-
+        const { getEditWindowFields } = await import('@/hooks/prontuario/anamnesisEditWindowUtils');
+        const editWindowFields = getEditWindowFields();
         const { data, error } = await supabase
           .from('anamnesis_records')
           .insert({
@@ -142,6 +143,7 @@ export function useDynamicAnamneseEstetica({
             data: responses as unknown as Json,
             status: 'rascunho',
             created_by: userData.user.id,
+            ...editWindowFields,
           })
           .select()
           .single();

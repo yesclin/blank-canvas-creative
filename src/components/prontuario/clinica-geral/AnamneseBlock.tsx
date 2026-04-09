@@ -1,6 +1,9 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinicData } from "@/hooks/useClinicData";
+import { useAnamnesisEditability } from "@/hooks/prontuario/useAnamnesisEditability";
+import { RecordEditLockBanner } from "@/components/prontuario/RecordEditLockBanner";
+import { AddendumSection } from "@/components/prontuario/AddendumSection";
 import { AnamnesisTemplateBuilderDialog } from "@/components/configuracoes/AnamnesisTemplateBuilderDialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -330,6 +333,24 @@ export function AnamneseBlock({
 
   // Backward compat alias
   const existingV2Record = selectedRecord;
+
+  // ─── Editability check (edit lock policy) ──────────────────────────
+  const recordForEditability = useMemo(() => {
+    if (!selectedRecord) return null;
+    return {
+      id: selectedRecord.id,
+      created_at: selectedRecord.created_at,
+      signed_at: (selectedRecord as any).signed_at || null,
+      saved_at: (selectedRecord as any).saved_at || null,
+      edit_window_until: (selectedRecord as any).edit_window_until || null,
+      locked_at: (selectedRecord as any).locked_at || null,
+      status: (selectedRecord as any).status || null,
+    };
+  }, [selectedRecord]);
+  const anamnesisEditability = useAnamnesisEditability(recordForEditability);
+
+  // Override canEdit based on editability policy
+  const effectiveCanEdit = canEdit && (!selectedRecord || anamnesisEditability.editability.canEdit);
 
   // Auto-select first record when records load
   useEffect(() => {
@@ -929,7 +950,7 @@ export function AnamneseBlock({
           <h3 className="text-sm font-semibold text-foreground">
             Registros de Anamnese ({v2Records.length})
           </h3>
-          {canEdit && (
+          {effectiveCanEdit && (
             <Button variant="outline" size="sm" onClick={handleStartNewAnamnese}>
               <Plus className="h-3.5 w-3.5 mr-1.5" />
               Nova Anamnese
@@ -983,7 +1004,7 @@ export function AnamneseBlock({
             <div className="flex flex-col items-center gap-3 mb-4">
               {renderTemplateSelector()}
             </div>
-            {canEdit && activeTemplate && (
+            {effectiveCanEdit && activeTemplate && (
               <Button onClick={handleStartNewAnamnese}>
                 <Edit3 className="h-4 w-4 mr-2" />
                 Registrar Anamnese
@@ -1244,13 +1265,13 @@ export function AnamneseBlock({
               Histórico ({anamneseHistory.length})
             </Button>
           )}
-          {canEdit && onUpdate && selectedRecord && (
+          {effectiveCanEdit && onUpdate && selectedRecord && (
             <Button variant="outline" size="sm" onClick={handleStartEdit}>
               <Edit3 className="h-4 w-4 mr-1.5" />
               Editar
             </Button>
           )}
-          {canEdit && selectedRecord && (
+          {effectiveCanEdit && selectedRecord && (
             <Button size="sm" onClick={handleStartNewVersion}>
               <Edit3 className="h-4 w-4 mr-1.5" />
               Nova Versão
@@ -1258,6 +1279,11 @@ export function AnamneseBlock({
           )}
         </div>
       </div>
+
+      {/* Edit lock banner */}
+      {selectedRecord && !isEditing && (
+        <RecordEditLockBanner editability={anamnesisEditability.editability} />
+      )}
 
       {/* Content */}
       <Card>
@@ -1271,6 +1297,19 @@ export function AnamneseBlock({
           )}
         </CardContent>
       </Card>
+
+      {/* Addendum section (when locked/signed) */}
+      {selectedRecord && anamnesisEditability.canAddAddendum && patientData?.id && (
+        <AddendumSection
+          recordType="anamnesis"
+          recordId={selectedRecord.id}
+          patientId={patientData.id}
+          professionalId={(selectedRecord as any).professional_id || ""}
+          specialtyId={specialtyId}
+          moduleOrigin="anamnese"
+          editability={anamnesisEditability.editability}
+        />
+      )}
 
       {/* History Dialog */}
       <Dialog open={showHistory} onOpenChange={setShowHistory}>
