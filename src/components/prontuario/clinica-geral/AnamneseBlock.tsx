@@ -1304,7 +1304,7 @@ export function AnamneseBlock({
           recordType="anamnesis"
           recordId={selectedRecord.id}
           patientId={patientData.id}
-          professionalId={selectedRecord.professional_id || ""}
+          professionalId={(selectedRecord as any).professional_id || ""}
           specialtyId={specialtyId}
           moduleOrigin="anamnese"
           editability={anamnesisEditability.editability}
