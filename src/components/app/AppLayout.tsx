@@ -53,16 +53,17 @@ export function AppLayout() {
         </main>
       </div>
       
-      {/* Global Active Appointment Widget */}
-      <FloatingActiveAppointmentButton />
-      <ActiveAppointmentDrawer />
-      
-      {/* Onboarding Wizard */}
-      <OnboardingWizard />
-      
-      {/* Guided Tour for first-time users */}
-      {location.pathname === "/app" && <GuidedTour />}
     </SidebarProvider>
+    
+    {/* Global Active Appointment Widget - must be inside GlobalActiveAppointmentProvider */}
+    <FloatingActiveAppointmentButton />
+    <ActiveAppointmentDrawer />
+    
+    {/* Onboarding Wizard */}
+    <OnboardingWizard />
+    
+    {/* Guided Tour for first-time users */}
+    {location.pathname === "/app" && <GuidedTour />}
     </GlobalActiveAppointmentProvider>
     </GlobalSpecialtyProvider>
   );
