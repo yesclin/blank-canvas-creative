@@ -324,12 +324,25 @@ export function AnamneseDermatologiaBlock({
           templateName={currentRecord.template_name || activeTemplateName}
           responses={currentRecord.responses as Record<string, any>}
           isEditing={false}
-          canEdit={canEdit}
+          canEdit={effectiveCanEdit}
           onResponseChange={() => {}}
           onSave={() => {}}
           onCancel={() => {}}
           onStartEdit={handleStartEdit}
         />
+
+        {/* Addendum section (when locked/signed) */}
+        {patientId && anamnesisEditability.canAddAddendum && (
+          <AddendumSection
+            recordType="anamnesis"
+            recordId={currentRecord.id}
+            patientId={patientId}
+            professionalId={professionalId || ""}
+            specialtyId={specialtyId}
+            moduleOrigin="anamnese-dermatologia"
+            editability={anamnesisEditability.editability}
+          />
+        )}
 
         {/* History dialog */}
         <Dialog open={showHistory} onOpenChange={setShowHistory}>
