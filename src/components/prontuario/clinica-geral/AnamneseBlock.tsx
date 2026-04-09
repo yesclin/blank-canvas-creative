@@ -231,6 +231,7 @@ export function AnamneseBlock({
   specialtyName,
   specialtyKey,
   appointmentId,
+  appointmentDate,
   professionalName,
   professionalRegistration,
 }: AnamneseBlockProps) {
@@ -504,14 +505,18 @@ export function AnamneseBlock({
   }, []);
 
   const handleStartNewAnamnese = useCallback(() => {
-    const nextData = {};
+    const nextData: Record<string, unknown> = {};
+    if (appointmentDate) {
+      const dateToUse = new Date(appointmentDate);
+      nextData.data_hora_anamnese = format(dateToUse, "dd/MM/yyyy HH:mm");
+    }
     editingInitialData.current = JSON.stringify(nextData);
     setStructuredData(nextData);
     setIsCreatingNew(true);
     setIsEditingExisting(false);
     setIsEditing(true);
     setLastAutoSave(null);
-  }, []);
+  }, [appointmentDate]);
 
   const handleStartEdit = () => {
     let nextData: Record<string, unknown> = {};
