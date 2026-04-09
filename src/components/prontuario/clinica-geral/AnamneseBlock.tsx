@@ -950,7 +950,7 @@ export function AnamneseBlock({
           <h3 className="text-sm font-semibold text-foreground">
             Registros de Anamnese ({v2Records.length})
           </h3>
-          {canEdit && (
+          {effectiveCanEdit && (
             <Button variant="outline" size="sm" onClick={handleStartNewAnamnese}>
               <Plus className="h-3.5 w-3.5 mr-1.5" />
               Nova Anamnese
@@ -1004,7 +1004,7 @@ export function AnamneseBlock({
             <div className="flex flex-col items-center gap-3 mb-4">
               {renderTemplateSelector()}
             </div>
-            {canEdit && activeTemplate && (
+            {effectiveCanEdit && activeTemplate && (
               <Button onClick={handleStartNewAnamnese}>
                 <Edit3 className="h-4 w-4 mr-2" />
                 Registrar Anamnese
@@ -1265,13 +1265,13 @@ export function AnamneseBlock({
               Histórico ({anamneseHistory.length})
             </Button>
           )}
-          {canEdit && onUpdate && selectedRecord && (
+          {effectiveCanEdit && onUpdate && selectedRecord && (
             <Button variant="outline" size="sm" onClick={handleStartEdit}>
               <Edit3 className="h-4 w-4 mr-1.5" />
               Editar
             </Button>
           )}
-          {canEdit && selectedRecord && (
+          {effectiveCanEdit && selectedRecord && (
             <Button size="sm" onClick={handleStartNewVersion}>
               <Edit3 className="h-4 w-4 mr-1.5" />
               Nova Versão
