@@ -2457,6 +2457,13 @@ export default function Prontuario() {
           onFinalize={handleFinalizeFromProntuario}
         />
       )}
+
+      {/* DEBUG: Test bar — renders whenever appointmentId is in the URL */}
+      {preferredAppointmentId && (
+        <div className="fixed bottom-0 left-0 right-0 z-[9999] bg-red-600 text-white text-center py-3 text-sm font-bold tracking-wide">
+          ATENDIMENTO ATIVO — appointmentId: {preferredAppointmentId}
+        </div>
+      )}
     </div>
     </ClinicalAccessGuard>
   );
