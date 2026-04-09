@@ -1,5 +1,5 @@
 /**
- * Catálogo oficial dos 10 modelos de anamnese/planejamento da especialidade Estética.
+ * Catálogo oficial dos 9 modelos de anamnese/planejamento da especialidade Estética.
  *
  * Este catálogo é a fonte de verdade para:
  * - ordem de exibição no seletor
@@ -35,18 +35,11 @@ export interface CatalogEntry {
 export const ESTETICA_TEMPLATE_CATALOG: CatalogEntry[] = [
   // ── GRUPO 1: Avaliação Base ──────────────────────────────────────
   {
-    templateType: 'anamnese_geral_estetica',
-    displayName: 'Anamnese Geral Estética',
-    category: 'avaliacao_base',
-    rendererKind: 'standard',
-    displayOrder: 1,
-  },
-  {
     templateType: 'anamnese_estetica_facial',
     displayName: 'Anamnese Estética Facial - YesClin',
     category: 'avaliacao_base',
     rendererKind: 'dynamic',
-    displayOrder: 2,
+    displayOrder: 1,
   },
   {
     templateType: 'anamnese_pele_avaliacao',
@@ -118,7 +111,6 @@ const catalogByType = new Map(
  * Legacy templates provisioned with template_type='anamnese' are matched by name.
  */
 const LEGACY_NAME_TO_TYPE: Record<string, string> = {
-  'Anamnese Estética Facial Geral': 'anamnese_geral_estetica',
   'Plano de Aplicação de Toxina Botulínica': 'anamnese_toxina',
   'Plano de Preenchimento com Ácido Hialurônico': 'anamnese_preenchimento',
   'Anamnese para Bioestimulador de Colágeno': 'anamnese_bioestimulador',
