@@ -619,26 +619,28 @@ export default function Prontuario() {
   const finalizeSession = useFinalizeSession();
 
   const handleFinalizeFromProntuario = useCallback(async () => {
-    if (!activeAppointment?.id) return;
+    const appointmentIdToFinalize = activeSessionBarAppointmentId ?? activeAppointment?.id;
+    if (!appointmentIdToFinalize) return;
     try {
-      await finalizeSession.mutateAsync({ appointmentId: activeAppointment.id });
+      await finalizeSession.mutateAsync({ appointmentId: appointmentIdToFinalize });
       const { supabase } = await import("@/integrations/supabase/client");
       await supabase
         .from("appointments")
         .update({ status: "finalizado", finished_at: new Date().toISOString() })
-        .eq("id", activeAppointment.id);
+        .eq("id", appointmentIdToFinalize);
 
+      // Clear local active-appointment cache
       queryClient
         .getQueriesData<ActiveAppointmentData | null>({ queryKey: ["active-appointment"] })
         .forEach(([queryKey, cachedAppointment]) => {
-          if (cachedAppointment?.id === activeAppointment.id) {
+          if (cachedAppointment?.id === appointmentIdToFinalize) {
             queryClient.setQueryData(queryKey, null);
           }
         });
 
       [
         ["active-appointment", patientId, preferredAppointmentId],
-        ["active-appointment", patientId, activeAppointment.id],
+        ["active-appointment", patientId, appointmentIdToFinalize],
         ["active-appointment", patientId, undefined],
         ["active-appointment", patientId, null],
         ["active-appointment", null, preferredAppointmentId],
@@ -647,10 +649,17 @@ export default function Prontuario() {
         queryClient.setQueryData(queryKey, null);
       });
 
+      // Optimistically remove from global active appointments cache
+      queryClient.setQueriesData<Appointment[]>(
+        { queryKey: ["global-active-appointments"] },
+        (old) => old ? old.filter(a => a.id !== appointmentIdToFinalize) : []
+      );
+
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["active-appointment"] }),
         queryClient.invalidateQueries({ queryKey: ["appointments"] }),
-        queryClient.invalidateQueries({ queryKey: ["appointment-session", activeAppointment.id] }),
+        queryClient.invalidateQueries({ queryKey: ["appointment-session", appointmentIdToFinalize] }),
+        queryClient.invalidateQueries({ queryKey: ["global-active-appointments"] }),
       ]);
       const { toast } = await import("sonner");
       toast.success("Atendimento finalizado com sucesso");
@@ -659,7 +668,7 @@ export default function Prontuario() {
       const { toast } = await import("sonner");
       toast.error("Erro ao finalizar atendimento");
     }
-  }, [activeAppointment?.id, finalizeSession, queryClient]);
+  }, [activeSessionBarAppointmentId, activeAppointment?.id, finalizeSession, queryClient, patientId, preferredAppointmentId, refreshGlobalActiveFromProntuario]);
 
   const {
     activeSpecialtyId,
