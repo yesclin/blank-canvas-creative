@@ -229,7 +229,7 @@ export default function ConfigProcedimentos() {
                         </p>
                       )}
                     </TableCell>
-                    <TableCell>{procedure.specialty || "—"}</TableCell>
+                    <TableCell>{procedure.specialty_name || procedure.specialty || "Sem especialidade"}</TableCell>
                     <TableCell>{procedure.duration_minutes} min</TableCell>
                     <TableCell>
                       {procedure.price
