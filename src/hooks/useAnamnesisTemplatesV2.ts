@@ -659,7 +659,9 @@ export function useAnamnesisRecords(patientId: string | null, appointmentId?: st
           throw new Error('Profissional não encontrado. Verifique se seu cadastro de profissional está ativo.');
         }
 
-        // Create new record with immutable context snapshot
+        // Create new record with immutable context snapshot + edit window
+        const { getEditWindowFields } = await import('@/hooks/prontuario/anamnesisEditWindowUtils');
+        const editWindowFields = getEditWindowFields();
         const insertData: Record<string, unknown> = {
           appointment_id: input.appointment_id || null,
           patient_id: input.patient_id,
@@ -670,6 +672,7 @@ export function useAnamnesisRecords(patientId: string | null, appointmentId?: st
           responses: input.responses as unknown as Json,
           data: input.responses as unknown as Json,
           created_by: userData.user.id,
+          ...editWindowFields,
         };
 
         // Persist immutable context

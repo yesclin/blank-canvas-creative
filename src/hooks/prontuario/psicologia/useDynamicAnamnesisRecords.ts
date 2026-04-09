@@ -176,6 +176,8 @@ export function useDynamicAnamnesisRecords(patientId: string | null) {
         .maybeSingle();
       professionalId = prof?.id || null;
 
+      const { getEditWindowFields } = await import('@/hooks/prontuario/anamnesisEditWindowUtils');
+      const editWindowFields = getEditWindowFields();
       const { data, error } = await supabase
         .from('anamnesis_records')
         .insert({
@@ -185,11 +187,11 @@ export function useDynamicAnamnesisRecords(patientId: string | null) {
           template_id: params.templateId,
           template_version_id: params.templateVersionId,
           specialty_id: params.specialtyId || null,
-          // procedure_id is not a column in anamnesis_records
           appointment_id: params.appointmentId || null,
           responses: params.responses as unknown as Json,
           structure_snapshot: params.structureSnapshot as unknown as Json,
           created_by: user.id,
+          ...editWindowFields,
         })
         .select()
         .single();
