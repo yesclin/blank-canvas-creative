@@ -9524,6 +9524,7 @@ export type Database = {
         Args: { _clinic_id: string; _specialty_slug: string }
         Returns: Json
       }
+      ensure_system_templates_integrity: { Args: never; Returns: Json }
       find_or_create_public_patient: {
         Args: {
           _birth_date?: string
