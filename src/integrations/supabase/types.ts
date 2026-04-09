@@ -6871,6 +6871,7 @@ export type Database = {
           price: number | null
           return_days: number | null
           specialty: string | null
+          specialty_id: string | null
           updated_at: string
         }
         Insert: {
@@ -6885,6 +6886,7 @@ export type Database = {
           price?: number | null
           return_days?: number | null
           specialty?: string | null
+          specialty_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -6899,6 +6901,7 @@ export type Database = {
           price?: number | null
           return_days?: number | null
           specialty?: string | null
+          specialty_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -6907,6 +6910,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procedures_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
             referencedColumns: ["id"]
           },
         ]
