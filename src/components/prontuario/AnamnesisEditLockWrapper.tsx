@@ -6,7 +6,6 @@
  */
 import { RecordEditLockBanner } from "./RecordEditLockBanner";
 import { AddendumSection } from "./AddendumSection";
-import { SignedRecordBadge } from "./SignedRecordBadge";
 import type { AnamnesisEditabilityResult } from "@/hooks/prontuario/useAnamnesisEditability";
 
 interface Props {
