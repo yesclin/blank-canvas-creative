@@ -1,5 +1,5 @@
 /**
- * Catálogo oficial dos 10 modelos de anamnese/planejamento da especialidade Estética.
+ * Catálogo oficial dos 9 modelos de anamnese/planejamento da especialidade Estética.
  *
  * Este catálogo é a fonte de verdade para:
  * - ordem de exibição no seletor
@@ -35,39 +35,32 @@ export interface CatalogEntry {
 export const ESTETICA_TEMPLATE_CATALOG: CatalogEntry[] = [
   // ── GRUPO 1: Avaliação Base ──────────────────────────────────────
   {
-    templateType: 'anamnese_geral_estetica',
-    displayName: 'Anamnese Geral Estética',
-    category: 'avaliacao_base',
-    rendererKind: 'standard',
-    displayOrder: 1,
-  },
-  {
     templateType: 'anamnese_estetica_facial',
     displayName: 'Anamnese Estética Facial - YesClin',
     category: 'avaliacao_base',
     rendererKind: 'dynamic',
-    displayOrder: 2,
+    displayOrder: 1,
   },
   {
     templateType: 'anamnese_pele_avaliacao',
     displayName: 'Anamnese Pele e Avaliação Facial - YesClin',
     category: 'avaliacao_base',
     rendererKind: 'dynamic',
-    displayOrder: 3,
+    displayOrder: 2,
   },
   {
     templateType: 'anamnese_capilar',
     displayName: 'Anamnese Capilar - YesClin',
     category: 'avaliacao_base',
     rendererKind: 'dynamic',
-    displayOrder: 4,
+    displayOrder: 3,
   },
   {
     templateType: 'anamnese_corporal_avancada',
     displayName: 'Anamnese Corporal - YesClin',
     category: 'avaliacao_base',
     rendererKind: 'dynamic',
-    displayOrder: 5,
+    displayOrder: 4,
   },
   // ── GRUPO 2: Modelos Procedurais ─────────────────────────────────
   {
@@ -75,35 +68,35 @@ export const ESTETICA_TEMPLATE_CATALOG: CatalogEntry[] = [
     displayName: 'Plano de Toxina Botulínica',
     category: 'procedural',
     rendererKind: 'standard',
-    displayOrder: 6,
+    displayOrder: 5,
   },
   {
     templateType: 'anamnese_preenchimento',
     displayName: 'Plano de Preenchimento com Ácido Hialurônico',
     category: 'procedural',
     rendererKind: 'standard',
-    displayOrder: 7,
+    displayOrder: 6,
   },
   {
     templateType: 'anamnese_bioestimulador',
     displayName: 'Plano de Bioestimulador',
     category: 'procedural',
     rendererKind: 'standard',
-    displayOrder: 8,
+    displayOrder: 7,
   },
   {
     templateType: 'anamnese_skinbooster',
     displayName: 'Anamnese Skinbooster',
     category: 'procedural',
     rendererKind: 'standard',
-    displayOrder: 9,
+    displayOrder: 8,
   },
   {
     templateType: 'anamnese_combinados',
     displayName: 'Anamnese de Combinados',
     category: 'procedural',
     rendererKind: 'standard',
-    displayOrder: 10,
+    displayOrder: 9,
   },
 ];
 
@@ -118,7 +111,6 @@ const catalogByType = new Map(
  * Legacy templates provisioned with template_type='anamnese' are matched by name.
  */
 const LEGACY_NAME_TO_TYPE: Record<string, string> = {
-  'Anamnese Estética Facial Geral': 'anamnese_geral_estetica',
   'Plano de Aplicação de Toxina Botulínica': 'anamnese_toxina',
   'Plano de Preenchimento com Ácido Hialurônico': 'anamnese_preenchimento',
   'Anamnese para Bioestimulador de Colágeno': 'anamnese_bioestimulador',
