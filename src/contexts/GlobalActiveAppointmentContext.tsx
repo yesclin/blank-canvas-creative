@@ -21,29 +21,37 @@ export function GlobalActiveAppointmentProvider({ children }: { children: ReactN
   const [drawerOpen, setDrawerOpen] = useState(false);
   const prevAppointmentIdsRef = useRef<string[]>([]);
 
-  // Derive selectedAppointment from appointments list
-  const selectedAppointment = selectedId
-    ? appointments.find((a) => a.id === selectedId) ?? null
-    : null;
+  // Derive selectedAppointment with automatic fallback to first item
+  const selectedAppointment = (() => {
+    if (selectedId) {
+      const found = appointments.find((a) => a.id === selectedId);
+      if (found) return found;
+    }
+    // Fallback: if we have appointments but selectedId is invalid/null, use first
+    return appointments.length > 0 ? appointments[0] : null;
+  })();
 
   // Sync selected appointment when appointments list changes
   useEffect(() => {
     if (isLoading) return;
+    if (appointments.length === 0) return;
 
     const currentIds = appointments.map((a) => a.id);
-    const prevIds = prevAppointmentIdsRef.current;
     prevAppointmentIdsRef.current = currentIds;
 
-    // If selected appointment is gone
+    // If selected appointment is gone, reset to first
     if (selectedId && !currentIds.includes(selectedId)) {
-      if (appointments.length > 0) {
-        setSelectedId(appointments[0].id);
-      } else {
-        setSelectedId(null);
-        setDrawerOpen(false);
-      }
+      setSelectedId(appointments[0].id);
     }
   }, [appointments, isLoading, selectedId]);
+
+  // Only clear state when we truly have zero appointments (confirmed, not loading)
+  useEffect(() => {
+    if (!isLoading && appointments.length === 0) {
+      setSelectedId(null);
+      setDrawerOpen(false);
+    }
+  }, [appointments.length, isLoading]);
 
   const setSelectedAppointment = useCallback((apt: Appointment | null) => {
     setSelectedId(apt?.id ?? null);

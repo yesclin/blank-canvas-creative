@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useClinicData } from "@/hooks/useClinicData";
@@ -87,6 +87,9 @@ export function useGlobalActiveAppointments() {
   const clinicId = clinic?.id;
   const isProfessional = role === "profissional";
 
+  // Preserve last known appointments to prevent flicker during refetch/loading
+  const lastKnownRef = useRef<Appointment[]>([]);
+
   const query = useQuery({
     queryKey: ["global-active-appointments", clinicId, isProfessional ? professionalId : "all"],
     queryFn: async (): Promise<Appointment[]> => {
@@ -101,7 +104,6 @@ export function useGlobalActiveAppointments() {
         .is("finished_at", null)
         .order("started_at", { ascending: false });
 
-      // Professional sees only their own
       if (isProfessional && professionalId) {
         q = q.eq("professional_id", professionalId);
       }
@@ -118,7 +120,26 @@ export function useGlobalActiveAppointments() {
     refetchInterval: 15000,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
+    // Keep previous data during refetch to prevent UI flicker
+    placeholderData: (prev) => prev,
   });
+
+  // Update lastKnownRef only when we have a successful, non-loading result
+  useEffect(() => {
+    if (query.data && !query.isLoading && !query.isFetching) {
+      lastKnownRef.current = query.data;
+    } else if (query.data && query.data.length > 0) {
+      // Also update if we got actual data even during refetch
+      lastKnownRef.current = query.data;
+    }
+  }, [query.data, query.isLoading, query.isFetching]);
+
+  // Stable appointments: use query.data if available, fall back to lastKnown
+  const appointments = (query.data && query.data.length > 0)
+    ? query.data
+    : (query.isLoading || query.isFetching)
+      ? lastKnownRef.current
+      : (query.data ?? lastKnownRef.current);
 
   // Realtime subscription for appointment status changes
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -128,7 +149,11 @@ export function useGlobalActiveAppointments() {
 
     // Clean up any previous channel first
     if (channelRef.current) {
-      channelRef.current.unsubscribe();
+      try {
+        channelRef.current.unsubscribe();
+      } catch {
+        // ignore cleanup errors
+      }
       channelRef.current = null;
     }
 
@@ -152,20 +177,25 @@ export function useGlobalActiveAppointments() {
     channelRef.current = channel;
 
     return () => {
-      if (channelRef.current) {
-        channelRef.current.unsubscribe();
-        channelRef.current = null;
+      const ch = channelRef.current;
+      channelRef.current = null;
+      if (ch) {
+        try {
+          ch.unsubscribe();
+        } catch {
+          // ignore cleanup errors on destroyed channels
+        }
       }
     };
   }, [clinicId, queryClient]);
 
-  const refresh = () => {
+  const refresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["global-active-appointments"] });
-  };
+  }, [queryClient]);
 
   return {
-    appointments: query.data || [],
-    isLoading: query.isLoading,
+    appointments,
+    isLoading: query.isLoading && lastKnownRef.current.length === 0,
     error: query.error,
     refresh,
   };
