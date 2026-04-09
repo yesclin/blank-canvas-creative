@@ -111,6 +111,7 @@ import { RemoteAttendanceBlock } from "@/components/prontuario/RemoteAttendanceB
 import { ActiveSessionBar } from "@/components/prontuario/ActiveSessionBar";
 import { useFinalizeSession } from "@/hooks/useAppointmentSession";
 import { useGlobalActiveAppointment } from "@/contexts/GlobalActiveAppointmentContext";
+import type { Appointment } from "@/types/agenda";
 import { ConsentCollectionDialog } from "@/components/prontuario/ConsentCollectionDialog";
 import { SignatureDialog } from "@/components/prontuario/SignatureDialog";
 import { SignedRecordBadge } from "@/components/prontuario/SignedRecordBadge";
