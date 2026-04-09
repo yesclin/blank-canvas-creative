@@ -38,7 +38,9 @@ export function ActiveSessionBar({
   return (
     <div
       className={cn(
-        "fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm shadow-[0_-2px_10px_rgba(0,0,0,0.08)]",
+        "fixed bottom-0 right-0 z-40 border-t bg-background/95 backdrop-blur-sm shadow-[0_-2px_10px_rgba(0,0,0,0.08)]",
+        "left-0 md:left-[var(--sidebar-width)]",
+        "group-data-[state=collapsed]/sidebar-wrapper:md:left-[var(--sidebar-width-icon)]",
         className
       )}
     >
