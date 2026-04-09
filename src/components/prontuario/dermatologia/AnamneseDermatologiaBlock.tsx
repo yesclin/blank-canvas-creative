@@ -6,7 +6,7 @@
  * Suporta: criação, edição, autosave, histórico e visualização.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +36,9 @@ import { AnamneseModelSelector } from "@/components/prontuario/AnamneseModelSele
 import { useAutosave } from "@/hooks/prontuario/useAutosave";
 import { AutosaveIndicator } from "@/components/prontuario/AutosaveIndicator";
 import type { Json } from "@/integrations/supabase/types";
+import { useAnamnesisEditability } from "@/hooks/prontuario/useAnamnesisEditability";
+import { RecordEditLockBanner } from "@/components/prontuario/RecordEditLockBanner";
+import { AddendumSection } from "@/components/prontuario/AddendumSection";
 
 interface AnamneseDermatologiaBlockProps {
   patientId: string | null;
