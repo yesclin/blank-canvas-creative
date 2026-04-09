@@ -2448,7 +2448,7 @@ export default function Prontuario() {
 
         {/* Content Area */}
         <main className="flex-1 min-h-0 overflow-auto">
-          <div className={cn("p-4 md:p-6", shouldShowActiveSessionBar && "pb-36 md:pb-32")}>
+          <div className="p-4 md:p-6">
             {/* Alerts Banner - shown at top when there are active alerts */}
             {/* Psychology specialty uses specialized banner with risk indicators */}
             {activeSpecialtyKey === 'psicologia' && activeAlertasPsico.length > 0 && activeTab !== 'alertas' && (
@@ -2472,14 +2472,7 @@ export default function Prontuario() {
       </>
       )}
 
-      {/* Active Session Bar - fixed at bottom, uses global state as primary source */}
-      {shouldShowActiveSessionBar && activeSessionBarAppointmentId ? (
-        <ActiveSessionBar
-          appointmentId={activeSessionBarAppointmentId}
-          startedAt={activeSessionBarStartedAt}
-          onFinalize={handleFinalizeFromProntuario}
-        />
-      ) : null}
+      {/* Active session bar removed — global floating widget handles timer */}
     </div>
     </ClinicalAccessGuard>
   );
