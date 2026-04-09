@@ -535,8 +535,9 @@ export default function Agenda() {
       console.error("Error finalizing appointment:", error);
     }
     
+    refreshGlobalActive();
     setFinalizingAppointment(null);
-  }, [finalizingAppointment, setPendingAppointment, updateStatusMutation]);
+  }, [finalizingAppointment, refreshGlobalActive, setPendingAppointment, updateStatusMutation]);
 
   const handleMaterialsCancel = useCallback(() => {
     setMaterialsDialogOpen(false);
