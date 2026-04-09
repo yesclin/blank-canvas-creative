@@ -13,14 +13,40 @@ export interface ActiveAppointment {
   professional_name: string | null;
   procedure_id: string | null;
   procedure_name: string | null;
-  procedure_specialty_id: string | null; // Specialty from procedure
+  procedure_specialty_id: string | null;
   procedure_specialty_name: string | null;
-  specialty_id: string | null; // Direct specialty on appointment
+  specialty_id: string | null;
   specialty_name: string | null;
-  // Resolved specialty (either direct or from procedure)
   resolved_specialty_id: string | null;
   resolved_specialty_name: string | null;
   started_at: string | null;
+}
+
+function mapAppointmentData(data: any): ActiveAppointment {
+  const procedureSpecialtyId = data.procedures?.specialty_id || null;
+  const procedureSpecialtyName = data.procedures?.specialties?.name || null;
+  const resolvedSpecialtyId = data.specialty_id || procedureSpecialtyId;
+  const resolvedSpecialtyName = data.specialties?.name || procedureSpecialtyName;
+  
+  return {
+    id: data.id,
+    scheduled_date: data.scheduled_date,
+    start_time: data.start_time,
+    end_time: data.end_time,
+    status: data.status,
+    appointment_type: data.appointment_type,
+    professional_id: data.professional_id,
+    professional_name: data.professionals?.full_name || null,
+    procedure_id: data.procedure_id,
+    procedure_name: data.procedures?.name || null,
+    procedure_specialty_id: procedureSpecialtyId,
+    procedure_specialty_name: procedureSpecialtyName,
+    specialty_id: data.specialty_id || null,
+    specialty_name: data.specialties?.name || null,
+    resolved_specialty_id: resolvedSpecialtyId,
+    resolved_specialty_name: resolvedSpecialtyName,
+    started_at: data.started_at,
+  };
 }
 
 /**
@@ -37,39 +63,62 @@ export interface ActiveAppointment {
  *   - OR started_at is not null (appointment was explicitly started)
  * - AND finished_at is null (not finished yet)
  */
-export function useActiveAppointment(patientId: string | null | undefined) {
+export function useActiveAppointment(patientId: string | null | undefined, preferredAppointmentId?: string | null) {
   return useQuery({
-    queryKey: ["active-appointment", patientId],
+    queryKey: ["active-appointment", patientId, preferredAppointmentId],
     queryFn: async () => {
       if (!patientId) return null;
       
       const today = format(new Date(), "yyyy-MM-dd");
       
+      const selectFields = `
+        id,
+        scheduled_date,
+        start_time,
+        end_time,
+        status,
+        appointment_type,
+        professional_id,
+        started_at,
+        procedure_id,
+        specialty_id,
+        professionals(full_name),
+        procedures(
+          name,
+          specialty_id,
+          specialties:specialty_id(name)
+        ),
+        specialties(name)
+      `;
+
+      // If we have a preferred appointment ID from URL, try it first
+      if (preferredAppointmentId) {
+        const { data: preferred } = await supabase
+          .from("appointments")
+          .select(selectFields)
+          .eq("id", preferredAppointmentId)
+          .eq("patient_id", patientId)
+          .is("finished_at", null)
+          .maybeSingle();
+        
+        if (preferred && (
+          preferred.status === 'em_atendimento' || 
+          preferred.status === 'in_progress' || 
+          preferred.status === 'atendendo' || 
+          preferred.status === 'attending' || 
+          preferred.started_at
+        )) {
+          return mapAppointmentData(preferred);
+        }
+      }
+      
       const { data, error } = await supabase
         .from("appointments")
-        .select(`
-          id,
-          scheduled_date,
-          start_time,
-          end_time,
-          status,
-          appointment_type,
-          professional_id,
-          started_at,
-          procedure_id,
-          specialty_id,
-          professionals(full_name),
-          procedures(
-            name,
-            specialty_id,
-            specialties:specialty_id(name)
-          ),
-          specialties(name)
-        `)
+        .select(selectFields)
         .eq("patient_id", patientId)
         .eq("scheduled_date", today)
         .or("status.eq.em_atendimento,status.eq.in_progress,status.eq.atendendo,status.eq.attending,started_at.not.is.null")
-        .is("finished_at", null) // Not finished yet
+        .is("finished_at", null)
         .order("start_time", { ascending: true })
         .limit(1)
         .maybeSingle();
@@ -81,36 +130,10 @@ export function useActiveAppointment(patientId: string | null | undefined) {
       
       if (!data) return null;
       
-      // Get specialty from procedure if available
-      const procedureSpecialtyId = data.procedures?.specialty_id || null;
-      const procedureSpecialtyName = data.procedures?.specialties?.name || null;
-      
-      // Resolve specialty: prefer direct specialty, fallback to procedure's specialty
-      const resolvedSpecialtyId = data.specialty_id || procedureSpecialtyId;
-      const resolvedSpecialtyName = data.specialties?.name || procedureSpecialtyName;
-      
-      return {
-        id: data.id,
-        scheduled_date: data.scheduled_date,
-        start_time: data.start_time,
-        end_time: data.end_time,
-        status: data.status,
-        appointment_type: data.appointment_type,
-        professional_id: data.professional_id,
-        professional_name: data.professionals?.full_name || null,
-        procedure_id: data.procedure_id,
-        procedure_name: data.procedures?.name || null,
-        procedure_specialty_id: procedureSpecialtyId,
-        procedure_specialty_name: procedureSpecialtyName,
-        specialty_id: data.specialty_id || null,
-        specialty_name: data.specialties?.name || null,
-        resolved_specialty_id: resolvedSpecialtyId,
-        resolved_specialty_name: resolvedSpecialtyName,
-        started_at: data.started_at,
-      } as ActiveAppointment;
+      return mapAppointmentData(data);
     },
     enabled: !!patientId,
-    refetchInterval: 30000, // Refetch every 30 seconds to keep status updated
+    refetchInterval: 30000,
   });
 }
 
@@ -118,8 +141,8 @@ export function useActiveAppointment(patientId: string | null | undefined) {
  * Returns whether editing is allowed based on active appointment status.
  * Editing is allowed when there's an active appointment in progress.
  */
-export function useCanEditMedicalRecord(patientId: string | null | undefined) {
-  const { data: activeAppointment, isLoading } = useActiveAppointment(patientId);
+export function useCanEditMedicalRecord(patientId: string | null | undefined, preferredAppointmentId?: string | null) {
+  const { data: activeAppointment, isLoading } = useActiveAppointment(patientId, preferredAppointmentId);
   
   return {
     canEdit: !!activeAppointment,

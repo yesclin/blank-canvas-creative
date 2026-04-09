@@ -554,12 +554,13 @@ export default function Prontuario() {
   } = useCurrentUserMedicalRecordPermissions();
 
   // Active appointment check for edit control
+  const preferredAppointmentId = searchParams.get('appointmentId');
   const {
     canEdit: hasActiveAppointment,
     activeAppointment,
     reason: appointmentReason,
     isLoading: appointmentLoading,
-  } = useCanEditMedicalRecord(patientId);
+  } = useCanEditMedicalRecord(patientId, preferredAppointmentId);
 
   // Session finalization
   const finalizeSession = useFinalizeSession();
