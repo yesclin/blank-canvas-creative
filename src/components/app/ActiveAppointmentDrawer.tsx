@@ -43,6 +43,7 @@ import { getAppointmentSourceLabel } from "@/utils/appointmentSource";
 import type { Appointment } from "@/types/agenda";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { QuickClinicalSummary } from "./QuickClinicalSummary";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
