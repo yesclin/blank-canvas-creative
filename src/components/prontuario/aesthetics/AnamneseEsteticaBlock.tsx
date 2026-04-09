@@ -257,6 +257,8 @@ export function AnamneseEsteticaBlock({
           .eq('id', standardRecord.id);
         toast.success('Anamnese salva');
       } else {
+        const { getEditWindowFields } = await import('@/hooks/prontuario/anamnesisEditWindowUtils');
+        const editWindowFields = getEditWindowFields();
         const { data } = await supabase
           .from('anamnesis_records')
           .insert({
@@ -272,6 +274,7 @@ export function AnamneseEsteticaBlock({
             data: standardValues as any,
             status: 'rascunho',
             created_by: userData.user.id,
+            ...editWindowFields,
           })
           .select()
           .single();
