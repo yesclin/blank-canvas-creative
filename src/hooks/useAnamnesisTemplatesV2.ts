@@ -40,6 +40,7 @@ export interface AnamnesisTemplateV2 {
   is_system: boolean;
   is_default: boolean;
   is_active: boolean;
+  system_locked: boolean;
   current_version_id: string | null;
   current_version_number?: number;
   template_type: string | null;
@@ -218,6 +219,7 @@ export function useAnamnesisTemplatesV2(options?: {
           is_system: tmpl.is_system ?? false,
           is_default: tmpl.is_default ?? false,
           is_active: tmpl.is_active ?? true,
+          system_locked: tmpl.system_locked ?? false,
           current_version_id: tmpl.current_version_id,
           current_version_number: version?.version_number,
           template_type: tmpl.template_type || null,
@@ -308,6 +310,18 @@ export function useAnamnesisTemplatesV2(options?: {
       is_active?: boolean;
       structure?: TemplateSection[];
     }) => {
+      // Pre-check: block destructive updates on locked templates
+      const tmpl = templatesQuery.data?.find(t => t.id === input.id);
+      if (tmpl?.system_locked) {
+        // Allow only is_default toggle on locked templates
+        const keys = Object.keys(input).filter(k => k !== 'id');
+        const allowedOnLocked = ['is_default'];
+        const hasDisallowed = keys.some(k => !allowedOnLocked.includes(k));
+        if (hasDisallowed) {
+          throw new Error('Modelo oficial travado não pode ser editado.');
+        }
+      }
+
       const { data: userData } = await supabase.auth.getUser();
 
       // Update template metadata
@@ -432,9 +446,15 @@ export function useAnamnesisTemplatesV2(options?: {
     },
   });
 
-  // ─── Delete template (blocked if linked to records) ──────────
+  // ─── Delete template (blocked if linked to records or locked) ──────────
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Pre-check: verify template is not locked
+      const tmpl = templatesQuery.data?.find(t => t.id === id);
+      if (tmpl?.system_locked) {
+        throw new Error('Modelo oficial travado não pode ser excluído.');
+      }
+
       // Pre-check: verify no linked records exist (friendlier UX than DB error)
       const { count, error: countErr } = await supabase
         .from('anamnesis_records')

@@ -75,7 +75,7 @@ export default function ModelosAnamnese() {
   };
 
   const handleDeleteClick = (template: AnamnesisTemplateV2) => {
-    if (template.is_system) return;
+    if (template.is_system || template.system_locked) return;
     if (template.usage_count > 0) return;
     setTemplateToDelete(template);
     setDeleteDialogOpen(true);
@@ -90,7 +90,7 @@ export default function ModelosAnamnese() {
   };
 
   const handleToggleActive = async (template: AnamnesisTemplateV2) => {
-    if (template.is_system) return;
+    if (template.is_system || template.system_locked) return;
     await updateTemplate({ id: template.id, is_active: !template.is_active });
   };
 
@@ -162,12 +162,12 @@ export default function ModelosAnamnese() {
               </TableHeader>
               <TableBody>
                 {templates.map(template => (
-                  <TableRow key={template.id} className={template.is_system ? 'bg-muted/30' : ''}>
+                  <TableRow key={template.id} className={template.system_locked ? 'bg-primary/5' : template.is_system ? 'bg-muted/30' : ''}>
                     <TableCell>
                       <Switch
                         checked={template.is_active}
                         onCheckedChange={() => handleToggleActive(template)}
-                        disabled={template.is_system}
+                        disabled={template.is_system || template.system_locked}
                       />
                     </TableCell>
                     <TableCell>
@@ -185,6 +185,11 @@ export default function ModelosAnamnese() {
                             </p>
                             <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                             {template.is_system && <Lock className="h-3 w-3 text-muted-foreground" />}
+                            {template.system_locked && (
+                              <Badge variant="outline" className="text-[10px] h-4 px-1 border-primary/40 text-primary">
+                                Modelo Oficial
+                              </Badge>
+                            )}
                             {template.is_default && (
                               <Badge variant="default" className="text-[10px] h-4 px-1">
                                 <Star className="h-2.5 w-2.5 mr-0.5" /> Padrão
@@ -218,7 +223,7 @@ export default function ModelosAnamnese() {
                           <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-background z-50">
-                          {!template.is_system && (
+                          {!template.is_system && !template.system_locked && (
                             <DropdownMenuItem onClick={() => handleEdit(template)}>
                               <Pencil className="h-4 w-4 mr-2" /> Editar
                             </DropdownMenuItem>
@@ -226,12 +231,12 @@ export default function ModelosAnamnese() {
                           <DropdownMenuItem onClick={() => handleClone(template)} disabled={isCloning}>
                             <Copy className="h-4 w-4 mr-2" /> Clonar
                           </DropdownMenuItem>
-                          {!template.is_default && !template.is_system && (
+                          {!template.is_default && !template.is_system && !template.system_locked && (
                             <DropdownMenuItem onClick={() => handleSetDefault(template)}>
                               <Star className="h-4 w-4 mr-2" /> Definir como Padrão
                             </DropdownMenuItem>
                           )}
-                          {!template.is_system && template.usage_count === 0 && (
+                          {!template.is_system && !template.system_locked && template.usage_count === 0 && (
                             <>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
@@ -315,8 +320,8 @@ export default function ModelosAnamnese() {
               Resetar todos os modelos de anamnese
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3">
-              <p>Isso arquiva todos os modelos atuais. <strong>Não afeta anamneses já registradas.</strong></p>
-              <p>Os modelos não aparecerão mais para seleção no prontuário. Você poderá criar novos modelos por especialidade após o reset.</p>
+              <p>Isso arquiva todos os modelos atuais, <strong>exceto os Modelos Oficiais (travados)</strong>. Não afeta anamneses já registradas.</p>
+              <p>Os modelos não-oficiais não aparecerão mais para seleção no prontuário. Modelos Oficiais permanecerão intactos.</p>
               <p className="font-medium">Digite <span className="font-bold text-destructive">RESETAR</span> para confirmar:</p>
               <Input
                 value={resetConfirmText}
