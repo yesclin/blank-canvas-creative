@@ -19,6 +19,18 @@ import savinII2Img from './savin_ii2.jpg';
 import savinIIIImg from './savin_iii.jpg';
 import savinAvancadaImg from './savin_avancada.jpg';
 import savinFrontalImg from './savin_frontal.jpg';
+import norwoodIImg from './norwood_i.jpg';
+import norwoodIIImg from './norwood_ii.jpg';
+import norwoodIIIImg from './norwood_iii.jpg';
+import norwoodIIIVertexImg from './norwood_iii_vertex.jpg';
+import norwoodIIIAImg from './norwood_iii_a.jpg';
+import norwoodIVImg from './norwood_iv.jpg';
+import norwoodIVAImg from './norwood_iv_a.jpg';
+import norwoodVImg from './norwood_v.jpg';
+import norwoodVAImg from './norwood_v_a.jpg';
+import norwoodVIImg from './norwood_vi.jpg';
+import norwoodVIIImg from './norwood_vii.jpg';
+import norwoodVIIIImg from './norwood_viii.jpg';
 
 /**
  * Mapping of capilar image placeholder keys to actual imported images.
@@ -46,4 +58,16 @@ export const CAPILAR_IMAGES: Record<string, string> = {
   'estetica/capilar/savin_iii': savinIIIImg,
   'estetica/capilar/savin_avancada': savinAvancadaImg,
   'estetica/capilar/savin_frontal': savinFrontalImg,
+  'estetica/capilar/norwood_i': norwoodIImg,
+  'estetica/capilar/norwood_ii': norwoodIIImg,
+  'estetica/capilar/norwood_iii': norwoodIIIImg,
+  'estetica/capilar/norwood_iii_vertex': norwoodIIIVertexImg,
+  'estetica/capilar/norwood_iii_a': norwoodIIIAImg,
+  'estetica/capilar/norwood_iv': norwoodIVImg,
+  'estetica/capilar/norwood_iv_a': norwoodIVAImg,
+  'estetica/capilar/norwood_v': norwoodVImg,
+  'estetica/capilar/norwood_v_a': norwoodVAImg,
+  'estetica/capilar/norwood_vi': norwoodVIImg,
+  'estetica/capilar/norwood_vii': norwoodVIIImg,
+  'estetica/capilar/norwood_viii': norwoodVIIIImg,
 };
