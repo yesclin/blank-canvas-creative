@@ -33,8 +33,10 @@ import {
   createCarouselBodyTypeOptions,
   FitzpatrickScaleSelector,
   AcneScarSelector,
+  RosaceaSubtypeSelector,
 } from './anamnese-fields';
 import type { DynamicField, DynamicFormValues } from './anamnese-fields/types';
+import type { RosaceaValues } from './anamnese-fields/RosaceaSubtypeSelector';
 
 interface DynamicAnamneseRendererProps {
   fields: DynamicField[];
@@ -374,6 +376,18 @@ function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disable
           {!hideLabel && <Label className="text-sm">{field.label}</Label>}
           <AcneScarSelector
             value={value as string | null | undefined}
+            onChange={(v) => onChange(v)}
+            disabled={disabled}
+          />
+        </div>
+      );
+
+    case 'rosacea_subtypes_selector':
+      return (
+        <div className="space-y-2">
+          {!hideLabel && <Label className="text-sm">{field.label}</Label>}
+          <RosaceaSubtypeSelector
+            value={value as RosaceaValues | null | undefined}
             onChange={(v) => onChange(v)}
             disabled={disabled}
           />

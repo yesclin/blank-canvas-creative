@@ -13,3 +13,5 @@ export { BodyTypeCarouselSelector, createCarouselBodyTypeOptions } from './BodyT
 export type { CarouselBodyTypeOption } from './BodyTypeCarouselSelector';
 export { FitzpatrickScaleSelector } from './FitzpatrickScaleSelector';
 export { AcneScarSelector } from './AcneScarSelector';
+export { RosaceaSubtypeSelector } from './RosaceaSubtypeSelector';
+export type { RosaceaValues } from './RosaceaSubtypeSelector';
