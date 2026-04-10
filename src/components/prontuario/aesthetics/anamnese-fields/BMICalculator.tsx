@@ -111,11 +111,11 @@ export function BMICalculator({
         </div>
 
         {/* Right: body illustration */}
-        <div className="hidden sm:flex items-center justify-center w-36 shrink-0">
+        <div className="hidden sm:flex items-end justify-center w-40 shrink-0 self-stretch">
           <img
             src={getBmiImage(bmi)}
             alt="Ilustração corporal"
-            className="h-56 w-auto object-contain transition-all duration-300"
+            className="max-h-full w-auto object-contain transition-all duration-300"
             loading="lazy"
           />
         </div>
