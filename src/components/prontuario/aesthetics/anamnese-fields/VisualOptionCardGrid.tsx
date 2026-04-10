@@ -72,7 +72,7 @@ export function VisualOptionCardGrid({
                 <Check className="h-3 w-3 text-primary-foreground" />
               </div>
             )}
-            <div className="relative aspect-square w-full items-center justify-center rounded-md bg-muted/40 overflow-hidden flex">
+            <div className="relative aspect-square w-3/4 mx-auto items-center justify-center rounded-md bg-muted/40 overflow-hidden flex">
               {(() => {
                 const imgSrc = opt.image_url || resolveCardImage(opt.image_placeholder_key);
                 return imgSrc ? (
