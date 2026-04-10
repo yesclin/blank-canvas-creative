@@ -29,6 +29,8 @@ import {
   PerimetryFields,
   BodyTypeSelector,
   createBodyTypeOptions,
+  BodyTypeCarouselSelector,
+  createCarouselBodyTypeOptions,
 } from './anamnese-fields';
 import type { DynamicField, DynamicFormValues } from './anamnese-fields/types';
 
