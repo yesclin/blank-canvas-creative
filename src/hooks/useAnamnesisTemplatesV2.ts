@@ -310,6 +310,18 @@ export function useAnamnesisTemplatesV2(options?: {
       is_active?: boolean;
       structure?: TemplateSection[];
     }) => {
+      // Pre-check: block destructive updates on locked templates
+      const tmpl = templatesQuery.data?.find(t => t.id === input.id);
+      if (tmpl?.system_locked) {
+        // Allow only is_default toggle on locked templates
+        const keys = Object.keys(input).filter(k => k !== 'id');
+        const allowedOnLocked = ['is_default'];
+        const hasDisallowed = keys.some(k => !allowedOnLocked.includes(k));
+        if (hasDisallowed) {
+          throw new Error('Modelo oficial travado não pode ser editado.');
+        }
+      }
+
       const { data: userData } = await supabase.auth.getUser();
 
       // Update template metadata
