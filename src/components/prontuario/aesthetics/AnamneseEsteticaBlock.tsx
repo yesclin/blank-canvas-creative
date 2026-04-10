@@ -131,11 +131,16 @@ export function AnamneseEsteticaBlock({
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
 
-  // Classify, filter incomplete, and sort by catalog display order
+  // Classify, filter incomplete, sort locked first then by catalog display order
   const selectableTemplates = useMemo(() => {
     return allTemplates
       .filter(t => classifyTemplate(t) !== 'incomplete')
-      .sort((a, b) => getDisplayOrder(a) - getDisplayOrder(b));
+      .sort((a, b) => {
+        // Locked templates always first
+        if (a.system_locked && !b.system_locked) return -1;
+        if (!a.system_locked && b.system_locked) return 1;
+        return getDisplayOrder(a) - getDisplayOrder(b);
+      });
   }, [allTemplates]);
 
   // Active template
