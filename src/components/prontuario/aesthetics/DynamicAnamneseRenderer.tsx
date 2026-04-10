@@ -92,6 +92,7 @@ interface FieldRendererProps {
 }
 
 function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disabled }: FieldRendererProps) {
+  const hideLabel = !!(field.section && field.label === field.section);
   switch (field.type) {
     case 'rich_text':
     case 'textarea':
