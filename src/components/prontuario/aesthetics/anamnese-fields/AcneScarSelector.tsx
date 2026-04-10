@@ -1,8 +1,8 @@
 /**
  * AcneScarSelector
  *
- * Visual card selector for acne scar types with inline SVG cross-section
- * illustrations. No external image dependencies — pure SVG + UI.
+ * Visual card selector for acne scar types with real clinical photos,
+ * labels, and inline SVG cross-section illustrations below.
  */
 
 import { useState } from 'react';
@@ -15,19 +15,25 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
+import icepickImg from '@/assets/skin/acne-scars/icepick.jpg';
+import boxcarImg from '@/assets/skin/acne-scars/boxcar.jpg';
+import rollingImg from '@/assets/skin/acne-scars/rolling.jpg';
+import hipertroficaImg from '@/assets/skin/acne-scars/hipertrofica.jpg';
+
 /* ---- Scar type definitions ---- */
 
 export interface AcneScarOption {
   value: string;
   label: string;
   description: string;
+  image: string;
 }
 
 const ACNE_SCAR_OPTIONS: AcneScarOption[] = [
-  { value: 'icepick', label: 'Icepick', description: 'Cicatrizes pontuais e profundas em forma de V estreito.' },
-  { value: 'boxcar', label: 'Boxcar', description: 'Depressões com bordas retas e base mais plana.' },
-  { value: 'rolling', label: 'Rolling', description: 'Ondulações suaves e largas na superfície da pele.' },
-  { value: 'hipertrofica', label: 'Hipertrófica', description: 'Cicatrizes elevadas acima da linha da pele.' },
+  { value: 'icepick', label: 'Icepick', description: 'Cicatrizes pontuais e profundas em forma de V estreito.', image: icepickImg },
+  { value: 'boxcar', label: 'Boxcar', description: 'Depressões com bordas retas e base mais plana.', image: boxcarImg },
+  { value: 'rolling', label: 'Rolling', description: 'Ondulações suaves e largas na superfície da pele.', image: rollingImg },
+  { value: 'hipertrofica', label: 'Hipertrófica', description: 'Cicatrizes elevadas acima da linha da pele.', image: hipertroficaImg },
 ];
 
 /* ---- Inline SVG cross-section illustrations ---- */
@@ -35,10 +41,8 @@ const ACNE_SCAR_OPTIONS: AcneScarOption[] = [
 function IcepickIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 80 40" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Skin surface */}
       <line x1="0" y1="12" x2="30" y2="12" stroke="currentColor" strokeWidth="2" />
       <line x1="50" y1="12" x2="80" y2="12" stroke="currentColor" strokeWidth="2" />
-      {/* Deep V notch */}
       <polyline points="30,12 40,36 50,12" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
     </svg>
   );
@@ -49,7 +53,6 @@ function BoxcarIcon({ className }: { className?: string }) {
     <svg viewBox="0 0 80 40" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
       <line x1="0" y1="12" x2="24" y2="12" stroke="currentColor" strokeWidth="2" />
       <line x1="56" y1="12" x2="80" y2="12" stroke="currentColor" strokeWidth="2" />
-      {/* Rectangular depression */}
       <polyline points="24,12 24,28 56,28 56,12" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
     </svg>
   );
@@ -58,7 +61,6 @@ function BoxcarIcon({ className }: { className?: string }) {
 function RollingIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 80 40" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Wavy surface */}
       <path d="M0,16 C10,16 15,24 25,24 C35,24 38,12 48,12 C58,12 62,22 72,22 C76,22 78,18 80,16" stroke="currentColor" strokeWidth="2" fill="none" />
     </svg>
   );
@@ -69,7 +71,6 @@ function HipertroficaIcon({ className }: { className?: string }) {
     <svg viewBox="0 0 80 40" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
       <line x1="0" y1="28" x2="24" y2="28" stroke="currentColor" strokeWidth="2" />
       <line x1="56" y1="28" x2="80" y2="28" stroke="currentColor" strokeWidth="2" />
-      {/* Raised bump */}
       <path d="M24,28 C24,28 26,10 40,10 C54,10 56,28 56,28" stroke="currentColor" strokeWidth="2" />
     </svg>
   );
@@ -80,15 +81,6 @@ const SCAR_ICONS: Record<string, React.FC<{ className?: string }>> = {
   boxcar: BoxcarIcon,
   rolling: RollingIcon,
   hipertrofica: HipertroficaIcon,
-};
-
-/* ---- Gradient top illustration (skin texture placeholder) ---- */
-
-const SCAR_GRADIENTS: Record<string, { from: string; to: string }> = {
-  icepick:      { from: '#f5d6c3', to: '#e8b89e' },
-  boxcar:       { from: '#f0d0b8', to: '#dfa88a' },
-  rolling:      { from: '#eecfb8', to: '#d4a07a' },
-  hipertrofica: { from: '#f2d8c5', to: '#e0b59a' },
 };
 
 /* ---- Main component ---- */
@@ -121,7 +113,6 @@ export function AcneScarSelector({
         {ACNE_SCAR_OPTIONS.map((opt) => {
           const isSelected = selected === opt.value;
           const IconComponent = SCAR_ICONS[opt.value];
-          const grad = SCAR_GRADIENTS[opt.value];
 
           return (
             <Tooltip key={opt.value}>
@@ -142,17 +133,18 @@ export function AcneScarSelector({
                     isDisabled && 'opacity-60 pointer-events-none cursor-not-allowed',
                   )}
                 >
-                  {/* Top illustration area */}
-                  <div
-                    className="w-full aspect-[4/3] flex items-center justify-center relative"
-                    style={{
-                      background: `linear-gradient(135deg, ${grad.from}, ${grad.to})`,
-                    }}
-                  >
-                    {/* SVG scar cross-section, centered */}
-                    {IconComponent && (
-                      <IconComponent className="w-16 h-10 text-foreground/70" />
-                    )}
+                  {/* Clinical photo */}
+                  <div className="w-full aspect-square relative overflow-hidden bg-muted">
+                    <img
+                      src={opt.image}
+                      alt={opt.label}
+                      loading="lazy"
+                      className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                      onError={(e) => {
+                        // Fallback: hide broken image, show label instead
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
 
                     {/* Selection check */}
                     {isSelected && (
@@ -162,7 +154,7 @@ export function AcneScarSelector({
                     )}
                   </div>
 
-                  {/* Label */}
+                  {/* Label + cross-section icon */}
                   <div className="py-2.5 px-2 flex flex-col items-center gap-1 w-full">
                     <span
                       className={cn(
@@ -173,9 +165,9 @@ export function AcneScarSelector({
                       {opt.label}
                     </span>
 
-                    {/* Small decorative cross-section below label */}
+                    {/* Small cross-section illustration */}
                     {IconComponent && (
-                      <IconComponent className="w-10 h-4 text-muted-foreground/50" />
+                      <IconComponent className="w-12 h-5 text-muted-foreground/60" />
                     )}
                   </div>
                 </button>
