@@ -1,5 +1,5 @@
-import androideImg from './androide.png';
-import ginoideImg from './ginoide.png';
+import androideImg from './androide.svg';
+import ginoideImg from './ginoide.svg';
 
 export const CORPORAL_IMAGES: Record<string, string> = {
   'estetica/corporal/androide': androideImg,
