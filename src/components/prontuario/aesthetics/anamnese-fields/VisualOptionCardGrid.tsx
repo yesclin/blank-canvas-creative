@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
-import { ImageOff, Check } from 'lucide-react';
+import { ImageOff, Check, HelpCircle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { VisualCardOption } from './types';
 import { resolveCardImage } from '@/utils/visualCardImageRegistry';
 
@@ -86,10 +87,19 @@ export function VisualOptionCardGrid({
                 );
               })()}
             </div>
-            <span className="text-xs font-medium leading-tight">{opt.label}</span>
-            {opt.description && (
-              <span className="text-[10px] text-muted-foreground leading-tight">{opt.description}</span>
-            )}
+            <div className="flex items-center gap-1">
+              <span className="text-xs font-medium leading-tight">{opt.label}</span>
+              {opt.description && (
+                <Tooltip>
+                  <TooltipTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-muted-foreground cursor-help shrink-0" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[220px] text-xs">
+                    {opt.description}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
           </button>
         );
       })}
