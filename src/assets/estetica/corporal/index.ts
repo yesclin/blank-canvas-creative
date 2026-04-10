@@ -1,4 +1,4 @@
-import androideImg from './androide.svg';
+import androideImg from './androide.png';
 import ginoideImg from './ginoide.svg';
 import celulite1Img from './celulite_1.jpg';
 import celulite2Img from './celulite_2.jpg';
