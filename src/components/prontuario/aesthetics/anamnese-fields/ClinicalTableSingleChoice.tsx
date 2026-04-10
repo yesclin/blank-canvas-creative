@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
-import { Check } from 'lucide-react';
+import { Check, HelpCircle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface TableRow {
   id: string;
@@ -49,10 +50,17 @@ export function ClinicalTableSingleChoice({
               {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-baseline gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
                 <span className="font-medium text-sm">{row.label}</span>
                 {row.description && (
-                  <span className="text-xs text-muted-foreground">{row.description}</span>
+                  <Tooltip>
+                    <TooltipTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <HelpCircle className="h-4 w-4 text-muted-foreground/60 hover:text-muted-foreground cursor-help shrink-0" />
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-[300px] text-xs">
+                      {row.description}
+                    </TooltipContent>
+                  </Tooltip>
                 )}
               </div>
               {row.extra && (

@@ -281,6 +281,18 @@ export const TEMPLATE_CAPILAR: DynamicField[] = [
       ],
     },
   },
+  {
+    id: 'classificacao_etiologica', type: 'clinical_table_choice', label: 'Classificação etiológica de alopecias', section: 'Classificação Etiológica',
+    config: {
+      rows: [
+        { id: 'congenitas', label: 'Congênitas', description: 'Alopecias presentes desde o nascimento ou manifestadas na infância, geralmente de origem genética (ex: aplasia cutis, displasias ectodérmicas)' },
+        { id: 'infecciosas', label: 'Infecciosas', description: 'Alopecias causadas por agentes infecciosos como fungos (tinea capitis), bactérias ou vírus que afetam o folículo piloso' },
+        { id: 'neoplasias', label: 'Neoplasias', description: 'Perda capilar associada a tumores benignos ou malignos do couro cabeludo, ou como efeito colateral do tratamento oncológico' },
+        { id: 'agentes_fisicos', label: 'Agentes físicos', description: 'Alopecias causadas por trauma mecânico (tração, tricotilomania), queimaduras, radiação ou pressão prolongada' },
+        { id: 'dermatoses_origens_incertas', label: 'Dermatoses de origens incertas e síndromes', description: 'Condições dermatológicas de etiologia multifatorial ou desconhecida que cursam com alopecia (ex: líquen plano pilar, lúpus discoide, alopecia frontal fibrosante)' },
+      ],
+    },
+  },
   { id: 'tricoscopia', type: 'image_upload', label: 'Tricoscopia', section: 'Tricoscopia', placeholder: 'Upload de imagem de tricoscopia' },
   { id: 'utiliza_bone', type: 'radio', label: 'Utiliza Boné?', section: 'Hábitos', options: ['Sim', 'Não', 'Outro'] },
   { id: 'cabelo_preso', type: 'radio', label: 'Utiliza o Cabelo Preso?', section: 'Hábitos', options: ['Sim', 'Não', 'Outro'] },
