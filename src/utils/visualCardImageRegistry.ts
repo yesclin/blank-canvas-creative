@@ -4,9 +4,11 @@
  * Add new entries here as images are created for each specialty/template.
  */
 import { CAPILAR_IMAGES } from '@/assets/estetica/capilar';
+import { CORPORAL_IMAGES } from '@/assets/estetica/corporal';
 
 const IMAGE_REGISTRY: Record<string, string> = {
   ...CAPILAR_IMAGES,
+  ...CORPORAL_IMAGES,
 };
 
 /**
