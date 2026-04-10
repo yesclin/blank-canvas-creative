@@ -59,7 +59,7 @@ export function VisualOptionCardGrid({
             disabled={disabled}
             onClick={() => handleSelect(opt.id)}
             className={cn(
-              'relative flex flex-col items-center gap-2 rounded-lg border-2 p-3 text-center transition-all',
+              'relative flex flex-col items-center gap-1.5 rounded-lg border-2 p-2 text-center transition-all',
               'hover:shadow-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
               isSelected
                 ? 'border-primary bg-primary/5 shadow-sm'
@@ -72,7 +72,7 @@ export function VisualOptionCardGrid({
                 <Check className="h-3 w-3 text-primary-foreground" />
               </div>
             )}
-            <div className="relative aspect-square w-3/4 mx-auto items-center justify-center rounded-md bg-muted/40 overflow-hidden flex">
+            <div className="relative aspect-square w-28 max-w-full mx-auto items-center justify-center rounded-md bg-muted/40 overflow-hidden flex">
               {(() => {
                 const imgSrc = opt.image_url || resolveCardImage(opt.image_placeholder_key);
                 return imgSrc ? (
