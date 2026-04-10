@@ -31,6 +31,12 @@ import norwoodVAImg from './norwood_v_a.jpg';
 import norwoodVIImg from './norwood_vi.jpg';
 import norwoodVIIImg from './norwood_vii.jpg';
 import norwoodVIIIImg from './norwood_viii.jpg';
+import alopeciaUnifocalImg from './alopecia_unifocal.jpg';
+import alopeciaTotalImg from './alopecia_total.jpg';
+import alopeciaMultilocularImg from './alopecia_multilocular.jpg';
+import alopeciaDifusaImg from './alopecia_difusa.jpg';
+import alopeciaOfiasicaImg from './alopecia_ofiasica.jpg';
+import alopeciaUniversalImg from './alopecia_universal.jpg';
 
 /**
  * Mapping of capilar image placeholder keys to actual imported images.
@@ -70,4 +76,10 @@ export const CAPILAR_IMAGES: Record<string, string> = {
   'estetica/capilar/norwood_vi': norwoodVIImg,
   'estetica/capilar/norwood_vii': norwoodVIIImg,
   'estetica/capilar/norwood_viii': norwoodVIIIImg,
+  'estetica/capilar/alopecia_unifocal': alopeciaUnifocalImg,
+  'estetica/capilar/alopecia_total': alopeciaTotalImg,
+  'estetica/capilar/alopecia_multilocular': alopeciaMultilocularImg,
+  'estetica/capilar/alopecia_difusa': alopeciaDifusaImg,
+  'estetica/capilar/alopecia_ofiasica': alopeciaOfiasicaImg,
+  'estetica/capilar/alopecia_universal': alopeciaUniversalImg,
 };
