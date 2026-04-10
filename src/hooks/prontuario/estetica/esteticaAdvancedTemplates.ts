@@ -187,9 +187,9 @@ export const TEMPLATE_CAPILAR: DynamicField[] = [
     config: {
       columns: 3, selection: 'single',
       options: [
-        { id: 'liso', label: 'Liso', image_placeholder_key: 'estetica/capilar/liso', image_url: null, display_order: 1 },
-        { id: 'ondulado', label: 'Ondulado', image_placeholder_key: 'estetica/capilar/ondulado', image_url: null, display_order: 2 },
-        { id: 'crespo', label: 'Crespo', image_placeholder_key: 'estetica/capilar/crespo', image_url: null, display_order: 3 },
+        { id: 'liso', label: 'Liso', description: 'Fios alinhados sem ondulação, com cutículas fechadas que refletem mais luz, conferindo brilho natural', image_placeholder_key: 'estetica/capilar/liso', image_url: null, display_order: 1 },
+        { id: 'ondulado', label: 'Ondulado', description: 'Fios com curvatura em forma de "S", variando de leve a pronunciada, com tendência ao frizz', image_placeholder_key: 'estetica/capilar/ondulado', image_url: null, display_order: 2 },
+        { id: 'crespo', label: 'Crespo', description: 'Comuns na etnia negra, possuem formato elíptico e achatado helicoidal, o que lhe confere aspecto encaracolado', image_placeholder_key: 'estetica/capilar/crespo', image_url: null, display_order: 3 },
       ],
     },
   },
