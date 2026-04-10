@@ -12,18 +12,7 @@ export const TEMPLATE_ESTETICA_FACIAL: DynamicField[] = [
   { id: 'tratamentos_anteriores', type: 'rich_text', label: 'Tratamentos Anteriores', section: 'Tratamentos Anteriores' },
   { id: 'alergias', type: 'rich_text', label: 'Alergias', section: 'Alergias' },
   {
-    id: 'fitzpatrick', type: 'visual_card_grid', label: 'Escala de Fitzpatrick', section: 'Escala de Fitzpatrick',
-    config: {
-      columns: 6, selection: 'single',
-      options: [
-        { id: 'tipo_1', label: 'Tipo I', description: 'Pele muito clara, sempre queima, nunca bronzeia', image_placeholder_key: 'estetica/fitzpatrick/tipo_1', image_url: null, display_order: 1 },
-        { id: 'tipo_2', label: 'Tipo II', description: 'Pele clara, queima facilmente, bronzeia pouco', image_placeholder_key: 'estetica/fitzpatrick/tipo_2', image_url: null, display_order: 2 },
-        { id: 'tipo_3', label: 'Tipo III', description: 'Pele morena clara, queima moderadamente', image_placeholder_key: 'estetica/fitzpatrick/tipo_3', image_url: null, display_order: 3 },
-        { id: 'tipo_4', label: 'Tipo IV', description: 'Pele morena moderada, queima pouco', image_placeholder_key: 'estetica/fitzpatrick/tipo_4', image_url: null, display_order: 4 },
-        { id: 'tipo_5', label: 'Tipo V', description: 'Pele morena escura, raramente queima', image_placeholder_key: 'estetica/fitzpatrick/tipo_5', image_url: null, display_order: 5 },
-        { id: 'tipo_6', label: 'Tipo VI', description: 'Pele negra, nunca queima', image_placeholder_key: 'estetica/fitzpatrick/tipo_6', image_url: null, display_order: 6 },
-      ],
-    },
+    id: 'fitzpatrick', type: 'fitzpatrick_scale', label: 'Escala de Fitzpatrick', section: 'Escala de Fitzpatrick',
   },
   {
     id: 'baumann', type: 'select_row', label: 'Tipo de Pele segundo Baumann', section: 'Classificação de Baumann',
@@ -79,18 +68,7 @@ export const TEMPLATE_ESTETICA_FACIAL: DynamicField[] = [
 // ========== TEMPLATE 2: Anamnese Pele e Avaliação Facial ==========
 export const TEMPLATE_PELE_AVALIACAO: DynamicField[] = [
   {
-    id: 'fitzpatrick', type: 'visual_card_grid', label: 'Escala de Fitzpatrick', section: 'Escala de Fitzpatrick',
-    config: {
-      columns: 6, selection: 'single',
-      options: [
-        { id: 'tipo_1', label: 'Tipo I', description: 'Pele muito clara', image_placeholder_key: 'estetica/fitzpatrick/tipo_1', image_url: null, display_order: 1 },
-        { id: 'tipo_2', label: 'Tipo II', description: 'Pele clara', image_placeholder_key: 'estetica/fitzpatrick/tipo_2', image_url: null, display_order: 2 },
-        { id: 'tipo_3', label: 'Tipo III', description: 'Morena clara', image_placeholder_key: 'estetica/fitzpatrick/tipo_3', image_url: null, display_order: 3 },
-        { id: 'tipo_4', label: 'Tipo IV', description: 'Morena moderada', image_placeholder_key: 'estetica/fitzpatrick/tipo_4', image_url: null, display_order: 4 },
-        { id: 'tipo_5', label: 'Tipo V', description: 'Morena escura', image_placeholder_key: 'estetica/fitzpatrick/tipo_5', image_url: null, display_order: 5 },
-        { id: 'tipo_6', label: 'Tipo VI', description: 'Pele negra', image_placeholder_key: 'estetica/fitzpatrick/tipo_6', image_url: null, display_order: 6 },
-      ],
-    },
+    id: 'fitzpatrick', type: 'fitzpatrick_scale', label: 'Escala de Fitzpatrick', section: 'Escala de Fitzpatrick',
   },
   {
     id: 'baumann', type: 'select_row', label: 'Tipo de Pele de Baumann', section: 'Classificação de Baumann',
