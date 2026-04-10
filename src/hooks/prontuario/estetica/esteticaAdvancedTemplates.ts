@@ -210,11 +210,11 @@ export const TEMPLATE_CAPILAR: DynamicField[] = [
     config: {
       columns: 5, selection: 'multiple',
       options: [
-        { id: 'moniletrix', label: 'Moniletrix', image_placeholder_key: 'estetica/capilar/moniletrix', image_url: null, display_order: 1 },
-        { id: 'tricorrexe_invaginata', label: 'Tricorrexe Invaginata', image_placeholder_key: 'estetica/capilar/tricorrexe_invaginata', image_url: null, display_order: 2 },
-        { id: 'tricoclasia', label: 'Tricoclasia / Tricorrexe', image_placeholder_key: 'estetica/capilar/tricoclasia', image_url: null, display_order: 3 },
-        { id: 'anageno_frouxo', label: 'Cabelo Anágeno Frouxo', image_placeholder_key: 'estetica/capilar/anageno_frouxo', image_url: null, display_order: 4 },
-        { id: 'sindrome_cabelos', label: 'Síndrome dos Cabelos', image_placeholder_key: 'estetica/capilar/sindrome_cabelos', image_url: null, display_order: 5 },
+        { id: 'moniletrix', label: 'Moniletrix', description: 'Haste capilar com estreitamentos periódicos em forma de contas, causando fragilidade e quebra', image_placeholder_key: 'estetica/capilar/moniletrix', image_url: null, display_order: 1 },
+        { id: 'tricorrexe_invaginata', label: 'Tricorrexe Invaginata', description: 'Cabelo em bambu — a parte distal da haste invagina sobre a proximal, formando nós tipo encaixe', image_placeholder_key: 'estetica/capilar/tricorrexe_invaginata', image_url: null, display_order: 2 },
+        { id: 'tricoclasia', label: 'Tricopoliodistrofia', description: 'Cabelos quebradiços, curtos e irregulares com alternância de faixas claras e escuras (cabelos em tigre)', image_placeholder_key: 'estetica/capilar/tricoclasia', image_url: null, display_order: 3 },
+        { id: 'anageno_frouxo', label: 'Cabelos Anágenos Frouxos', description: 'Fios facilmente arrancados sem dor, com raiz em fase anágena mal ancorada ao folículo', image_placeholder_key: 'estetica/capilar/anageno_frouxo', image_url: null, display_order: 4 },
+        { id: 'sindrome_cabelos', label: 'Síndrome dos Cabelos Impenteáveis', description: 'Fios secos, brilhantes e arrepiados que resistem ao penteamento, com secção transversal triangular', image_placeholder_key: 'estetica/capilar/sindrome_cabelos', image_url: null, display_order: 5 },
       ],
     },
   },
@@ -223,10 +223,10 @@ export const TEMPLATE_CAPILAR: DynamicField[] = [
     config: {
       columns: 4, selection: 'multiple',
       options: [
-        { id: 'tricorrexe_nodosa', label: 'Tricorrexe Nodosa', image_placeholder_key: 'estetica/capilar/tricorrexe_nodosa', image_url: null, display_order: 1 },
-        { id: 'tricoptilose', label: 'Tricoptilose', image_placeholder_key: 'estetica/capilar/tricoptilose', image_url: null, display_order: 2 },
-        { id: 'triconodose', label: 'Triconodose', image_placeholder_key: 'estetica/capilar/triconodose', image_url: null, display_order: 3 },
-        { id: 'haste_partida', label: 'Haste Partida', image_placeholder_key: 'estetica/capilar/haste_partida', image_url: null, display_order: 4 },
+        { id: 'tricorrexe_nodosa', label: 'Tricorrexe Nodosa', description: 'Nódulos esbranquiçados ao longo da haste onde as fibras se desfiavam como uma escova, principal causa de quebra capilar', image_placeholder_key: 'estetica/capilar/tricorrexe_nodosa', image_url: null, display_order: 1 },
+        { id: 'tricoptilose', label: 'Tricoptilose', description: 'Divisão longitudinal da extremidade distal do fio (pontas duplas), causada por dano químico ou mecânico', image_placeholder_key: 'estetica/capilar/tricoptilose', image_url: null, display_order: 2 },
+        { id: 'triconodose', label: 'Triconodose', description: 'Formação de nós verdadeiros ao longo da haste capilar, mais comum em cabelos crespos e encaracolados', image_placeholder_key: 'estetica/capilar/triconodose', image_url: null, display_order: 3 },
+        { id: 'haste_partida', label: 'Haste Partida', description: 'Fratura transversal abrupta da haste capilar, geralmente associada a trauma mecânico ou químico intenso', image_placeholder_key: 'estetica/capilar/haste_partida', image_url: null, display_order: 4 },
       ],
     },
   },
