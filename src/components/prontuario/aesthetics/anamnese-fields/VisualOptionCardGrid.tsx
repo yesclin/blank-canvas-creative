@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import { ImageOff, Check } from 'lucide-react';
 import type { VisualCardOption } from './types';
+import { resolveCardImage } from '@/utils/visualCardImageRegistry';
 
 interface VisualOptionCardGridProps {
   options: VisualCardOption[];
