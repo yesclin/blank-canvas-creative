@@ -5,10 +5,12 @@
  */
 import { CAPILAR_IMAGES } from '@/assets/estetica/capilar';
 import { CORPORAL_IMAGES } from '@/assets/estetica/corporal';
+import { DISCROMIA_IMAGES } from '@/assets/estetica/discromia';
 
 const IMAGE_REGISTRY: Record<string, string> = {
   ...CAPILAR_IMAGES,
   ...CORPORAL_IMAGES,
+  ...DISCROMIA_IMAGES,
 };
 
 /**
