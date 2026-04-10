@@ -394,7 +394,7 @@ export const TEMPLATE_CORPORAL: DynamicField[] = [
   },
   { id: 'observacoes_diastase', type: 'textarea', label: 'Observações da Diástase', section: 'Diástase' },
   {
-    id: 'aparencia_percebida', type: 'body_type_selector', label: 'Aparência Percebida', section: 'Aparência',
+    id: 'aparencia_percebida', type: 'body_type_carousel', label: 'Aparência Percebida', section: 'Aparência',
     config: {
       selection: 'single',
       options: Array.from({ length: 9 }, (_, i) => ({
@@ -407,7 +407,7 @@ export const TEMPLATE_CORPORAL: DynamicField[] = [
     },
   },
   {
-    id: 'aparencia_desejada', type: 'body_type_selector', label: 'Aparência Desejada', section: 'Aparência',
+    id: 'aparencia_desejada', type: 'body_type_carousel', label: 'Aparência Desejada', section: 'Aparência',
     config: {
       selection: 'single',
       options: Array.from({ length: 9 }, (_, i) => ({

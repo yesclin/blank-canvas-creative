@@ -29,6 +29,8 @@ import {
   PerimetryFields,
   BodyTypeSelector,
   createBodyTypeOptions,
+  BodyTypeCarouselSelector,
+  createCarouselBodyTypeOptions,
 } from './anamnese-fields';
 import type { DynamicField, DynamicFormValues } from './anamnese-fields/types';
 
@@ -313,7 +315,32 @@ function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disable
       );
     }
 
-    case 'image_upload':
+    case 'body_type_carousel': {
+      const carouselPrefix = field.config?.options?.[0]?.image_placeholder_key
+        ? field.config.options[0].image_placeholder_key.replace(/\d+$/, '')
+        : `estetica/corporal/aparencia_`;
+      const carouselOptions = field.config?.options?.length
+        ? field.config.options.map((o, i) => ({
+            value: o.display_order || i + 1,
+            label: o.label || `${i + 1}`,
+            image_placeholder_key: o.image_placeholder_key,
+            image_url: o.image_url,
+          }))
+        : createCarouselBodyTypeOptions(carouselPrefix);
+      return (
+        <div className="space-y-2">
+          <BodyTypeCarouselSelector
+            title={hideLabel ? undefined : field.label}
+            options={carouselOptions}
+            value={value != null ? Number(value) : null}
+            onChange={(v) => onChange(v)}
+            disabled={disabled}
+            ariaLabelPrefix={field.label}
+          />
+        </div>
+      );
+    }
+
       return (
         <div className="space-y-2">
           {!hideLabel && <Label className="text-sm">{field.label}</Label>}

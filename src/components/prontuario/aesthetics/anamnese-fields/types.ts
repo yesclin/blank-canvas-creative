@@ -43,7 +43,8 @@ export interface DynamicField {
     | 'bmi_calculator'
     | 'image_carousel'
     | 'image_upload'
-    | 'body_type_selector';
+    | 'body_type_selector'
+    | 'body_type_carousel';
   label: string;
   section?: string;
   required?: boolean;
