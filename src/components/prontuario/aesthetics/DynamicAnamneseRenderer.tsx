@@ -368,6 +368,18 @@ function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disable
         </div>
       );
 
+    case 'acne_scar_selector':
+      return (
+        <div className="space-y-2">
+          {!hideLabel && <Label className="text-sm">{field.label}</Label>}
+          <AcneScarSelector
+            value={value as string | null | undefined}
+            onChange={(v) => onChange(v)}
+            disabled={disabled}
+          />
+        </div>
+      );
+
     default:
       return (
         <div className="space-y-1.5">

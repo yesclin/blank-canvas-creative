@@ -94,16 +94,7 @@ export const TEMPLATE_PELE_AVALIACAO: DynamicField[] = [
   },
   { id: 'localizacao_acne', type: 'text', label: 'Localização Anatômica da Acne', section: 'Acne', placeholder: 'Ex: Face, região frontal, dorso...' },
   {
-    id: 'cicatrizes_acne', type: 'visual_card_grid', label: 'Cicatrizes de Acne', section: 'Cicatrizes de Acne',
-    config: {
-      columns: 4, selection: 'multiple',
-      options: [
-        { id: 'icepick', label: 'Icepick', description: 'Pontuais e profundas', image_placeholder_key: 'estetica/cicatrizes/icepick', image_url: null, display_order: 1 },
-        { id: 'boxcar', label: 'Boxcar', description: 'Bordas definidas', image_placeholder_key: 'estetica/cicatrizes/boxcar', image_url: null, display_order: 2 },
-        { id: 'rolling', label: 'Rolling', description: 'Onduladas', image_placeholder_key: 'estetica/cicatrizes/rolling', image_url: null, display_order: 3 },
-        { id: 'hipertrofica', label: 'Hipertrófica', description: 'Elevadas', image_placeholder_key: 'estetica/cicatrizes/hipertrofica', image_url: null, display_order: 4 },
-      ],
-    },
+    id: 'cicatrizes_acne', type: 'acne_scar_selector', label: 'Cicatrizes de Acne', section: 'Cicatrizes de Acne',
   },
   { id: 'localizacao_cicatrizes', type: 'text', label: 'Localização Anatômica das Cicatrizes', section: 'Cicatrizes de Acne', placeholder: 'Ex: Bochechas, têmporas...' },
   {
