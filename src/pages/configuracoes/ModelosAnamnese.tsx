@@ -320,8 +320,8 @@ export default function ModelosAnamnese() {
               Resetar todos os modelos de anamnese
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3">
-              <p>Isso arquiva todos os modelos atuais. <strong>Não afeta anamneses já registradas.</strong></p>
-              <p>Os modelos não aparecerão mais para seleção no prontuário. Você poderá criar novos modelos por especialidade após o reset.</p>
+              <p>Isso arquiva todos os modelos atuais, <strong>exceto os Modelos Oficiais (travados)</strong>. Não afeta anamneses já registradas.</p>
+              <p>Os modelos não-oficiais não aparecerão mais para seleção no prontuário. Modelos Oficiais permanecerão intactos.</p>
               <p className="font-medium">Digite <span className="font-bold text-destructive">RESETAR</span> para confirmar:</p>
               <Input
                 value={resetConfirmText}
