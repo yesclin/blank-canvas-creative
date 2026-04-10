@@ -3,7 +3,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Ruler, Scale } from 'lucide-react';
-import bmiBodyImg from '@/assets/estetica/corporal/bmi-body.png';
+import bmiUnderweight from '@/assets/estetica/corporal/bmi-underweight.png';
+import bmiNormal from '@/assets/estetica/corporal/bmi-normal.png';
+import bmiOverweight from '@/assets/estetica/corporal/bmi-overweight.png';
+import bmiObese1 from '@/assets/estetica/corporal/bmi-obese1.png';
+import bmiObese2 from '@/assets/estetica/corporal/bmi-obese2.png';
+
+function getBmiImage(bmi: number | null): string {
+  if (!bmi) return bmiNormal;
+  if (bmi < 18.5) return bmiUnderweight;
+  if (bmi < 25) return bmiNormal;
+  if (bmi < 30) return bmiOverweight;
+  if (bmi < 35) return bmiObese1;
+  return bmiObese2;
+}
 
 interface BMICalculatorProps {
   weight: number | null;
