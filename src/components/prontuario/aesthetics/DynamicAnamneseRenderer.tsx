@@ -31,6 +31,7 @@ import {
   createBodyTypeOptions,
   BodyTypeCarouselSelector,
   createCarouselBodyTypeOptions,
+  FitzpatrickScaleSelector,
 } from './anamnese-fields';
 import type { DynamicField, DynamicFormValues } from './anamnese-fields/types';
 
@@ -350,6 +351,18 @@ function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disable
             disabled={disabled}
             label={field.placeholder || 'Upload de imagem clínica'}
             accept={field.config?.accept || 'image/*'}
+          />
+        </div>
+      );
+
+    case 'fitzpatrick_scale':
+      return (
+        <div className="space-y-2">
+          {!hideLabel && <Label className="text-sm">{field.label}</Label>}
+          <FitzpatrickScaleSelector
+            value={value as number | string | null | undefined}
+            onChange={(v) => onChange(v)}
+            disabled={disabled}
           />
         </div>
       );
