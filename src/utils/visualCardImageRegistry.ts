@@ -6,11 +6,13 @@
 import { CAPILAR_IMAGES } from '@/assets/estetica/capilar';
 import { CORPORAL_IMAGES } from '@/assets/estetica/corporal';
 import { DISCROMIA_IMAGES } from '@/assets/estetica/discromia';
+import { PERIOCULAR_IMAGES } from '@/assets/estetica/periocular';
 
 const IMAGE_REGISTRY: Record<string, string> = {
   ...CAPILAR_IMAGES,
   ...CORPORAL_IMAGES,
   ...DISCROMIA_IMAGES,
+  ...PERIOCULAR_IMAGES,
 };
 
 /**
