@@ -394,11 +394,12 @@ export const TEMPLATE_CORPORAL: DynamicField[] = [
   },
   { id: 'observacoes_diastase', type: 'textarea', label: 'Observações da Diástase', section: 'Diástase' },
   {
-    id: 'aparencia_percebida', type: 'image_carousel', label: 'Aparência Percebida', section: 'Aparência',
+    id: 'aparencia_percebida', type: 'body_type_selector', label: 'Aparência Percebida', section: 'Aparência',
     config: {
+      selection: 'single',
       options: Array.from({ length: 9 }, (_, i) => ({
         id: `fig_${i + 1}`,
-        label: `Figura ${i + 1}`,
+        label: `${i + 1}`,
         image_placeholder_key: `estetica/corporal/aparencia_${i + 1}`,
         image_url: null,
         display_order: i + 1,
@@ -406,11 +407,12 @@ export const TEMPLATE_CORPORAL: DynamicField[] = [
     },
   },
   {
-    id: 'aparencia_desejada', type: 'image_carousel', label: 'Aparência Desejada', section: 'Aparência',
+    id: 'aparencia_desejada', type: 'body_type_selector', label: 'Aparência Desejada', section: 'Aparência',
     config: {
+      selection: 'single',
       options: Array.from({ length: 9 }, (_, i) => ({
         id: `fig_${i + 1}`,
-        label: `Figura ${i + 1}`,
+        label: `${i + 1}`,
         image_placeholder_key: `estetica/corporal/aparencia_desejada_${i + 1}`,
         image_url: null,
         display_order: i + 1,
