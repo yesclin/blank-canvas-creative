@@ -71,16 +71,20 @@ export function VisualOptionCardGrid({
                 <Check className="h-3 w-3 text-primary-foreground" />
               </div>
             )}
-            <div className="flex h-16 w-full items-center justify-center rounded-md bg-muted/40">
-              {opt.image_url ? (
-                <img
-                  src={opt.image_url}
-                  alt={opt.label}
-                  className="h-full w-full object-contain rounded-md"
-                />
-              ) : (
-                <ImageOff className="h-6 w-6 text-muted-foreground/40" />
-              )}
+            <div className="flex h-16 w-full items-center justify-center rounded-md bg-muted/40 overflow-hidden">
+              {(() => {
+                const imgSrc = opt.image_url || resolveCardImage(opt.image_placeholder_key);
+                return imgSrc ? (
+                  <img
+                    src={imgSrc}
+                    alt={opt.label}
+                    loading="lazy"
+                    className="h-full w-full object-cover rounded-md"
+                  />
+                ) : (
+                  <ImageOff className="h-6 w-6 text-muted-foreground/40" />
+                );
+              })()}
             </div>
             <span className="text-xs font-medium leading-tight">{opt.label}</span>
             {opt.description && (
