@@ -98,16 +98,7 @@ export const TEMPLATE_PELE_AVALIACAO: DynamicField[] = [
   },
   { id: 'localizacao_cicatrizes', type: 'text', label: 'Localização Anatômica das Cicatrizes', section: 'Cicatrizes de Acne', placeholder: 'Ex: Bochechas, têmporas...' },
   {
-    id: 'rosacea', type: 'visual_card_grid', label: 'Subtipos de Rosácea', section: 'Rosácea',
-    config: {
-      columns: 4, selection: 'single',
-      options: [
-        { id: 'subtipo_1', label: 'Subtipo 1', description: 'Eritematotelangiectásica', image_placeholder_key: 'estetica/rosacea/subtipo_1', image_url: null, display_order: 1 },
-        { id: 'subtipo_2', label: 'Subtipo 2', description: 'Papulopustulosa', image_placeholder_key: 'estetica/rosacea/subtipo_2', image_url: null, display_order: 2 },
-        { id: 'subtipo_3', label: 'Subtipo 3', description: 'Fimatosa', image_placeholder_key: 'estetica/rosacea/subtipo_3', image_url: null, display_order: 3 },
-        { id: 'subtipo_4', label: 'Subtipo 4', description: 'Ocular', image_placeholder_key: 'estetica/rosacea/subtipo_4', image_url: null, display_order: 4 },
-      ],
-    },
+    id: 'rosacea', type: 'rosacea_subtypes_selector', label: 'Subtipos e Grau de Rosácea', section: 'Rosácea',
   },
   {
     id: 'discromia_facial', type: 'visual_card_grid', label: 'Discromia Facial', section: 'Discromia Facial',

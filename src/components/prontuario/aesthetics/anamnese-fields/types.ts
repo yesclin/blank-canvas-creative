@@ -46,7 +46,8 @@ export interface DynamicField {
     | 'body_type_selector'
     | 'body_type_carousel'
     | 'fitzpatrick_scale'
-    | 'acne_scar_selector';
+    | 'acne_scar_selector'
+    | 'rosacea_subtypes_selector';
   label: string;
   section?: string;
   required?: boolean;
