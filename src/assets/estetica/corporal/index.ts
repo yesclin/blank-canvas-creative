@@ -10,6 +10,8 @@ import diastaseAImg from './diastase_a.png';
 import diastaseBImg from './diastase_b.png';
 import diastaseCImg from './diastase_c.png';
 import diastaseDImg from './diastase_d.png';
+import diastaseNegativoImg from './diastase_negativo.png';
+import diastasePositivoImg from './diastase_positivo.png';
 
 export const CORPORAL_IMAGES: Record<string, string> = {
   'estetica/corporal/androide': androideImg,
