@@ -184,7 +184,7 @@ function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disable
     case 'visual_card_grid':
       return (
         <div className="space-y-2">
-          {!hideLabel && {!hideLabel && <Label className="text-sm">{field.label}</Label>}}
+          {!hideLabel && <Label className="text-sm">{field.label}</Label>}
           <VisualOptionCardGrid
             options={field.config?.options || []}
             value={(value as string | string[]) || null}

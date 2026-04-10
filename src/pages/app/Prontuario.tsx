@@ -1632,9 +1632,17 @@ export default function Prontuario() {
             />
           );
         }
-        // Clínica Geral - Hipóteses Diagnósticas (CID-10) - handled at bottom
-        break;
-
+        // Clínica Geral - Hipóteses Diagnósticas (CID-10)
+        return (
+          <DiagnosticosBlock
+            diagnosticos={diagnosticos}
+            loading={diagnosticosLoading}
+            saving={diagnosticosSaving}
+            canEdit={canEditCurrentTab}
+            onSave={saveDiagnostico}
+            onUpdate={updateDiagnostico}
+          />
+        );
       case 'conduta':
         // Render specialty-specific Conduta/Plano
         if (activeSpecialtyKey === 'psicologia') {
