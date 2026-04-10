@@ -32,6 +32,7 @@ import {
   BodyTypeCarouselSelector,
   createCarouselBodyTypeOptions,
   FitzpatrickScaleSelector,
+  AcneScarSelector,
 } from './anamnese-fields';
 import type { DynamicField, DynamicFormValues } from './anamnese-fields/types';
 
@@ -361,6 +362,18 @@ function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disable
           {!hideLabel && <Label className="text-sm">{field.label}</Label>}
           <FitzpatrickScaleSelector
             value={value as number | string | null | undefined}
+            onChange={(v) => onChange(v)}
+            disabled={disabled}
+          />
+        </div>
+      );
+
+    case 'acne_scar_selector':
+      return (
+        <div className="space-y-2">
+          {!hideLabel && <Label className="text-sm">{field.label}</Label>}
+          <AcneScarSelector
+            value={value as string | null | undefined}
             onChange={(v) => onChange(v)}
             disabled={disabled}
           />

@@ -45,7 +45,8 @@ export interface DynamicField {
     | 'image_upload'
     | 'body_type_selector'
     | 'body_type_carousel'
-    | 'fitzpatrick_scale';
+    | 'fitzpatrick_scale'
+    | 'acne_scar_selector';
   label: string;
   section?: string;
   required?: boolean;
