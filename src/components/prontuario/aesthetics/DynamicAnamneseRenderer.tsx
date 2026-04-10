@@ -92,12 +92,13 @@ interface FieldRendererProps {
 }
 
 function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disabled }: FieldRendererProps) {
+  const hideLabel = !!(field.section && field.label === field.section);
   switch (field.type) {
     case 'rich_text':
     case 'textarea':
       return (
         <div className="space-y-1.5">
-          <Label className="text-sm">{field.label}</Label>
+          {!hideLabel && <Label className="text-sm">{field.label}</Label>}
           <Textarea
             value={(value as string) || ''}
             onChange={(e) => onChange(e.target.value)}
@@ -112,7 +113,7 @@ function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disable
     case 'text':
       return (
         <div className="space-y-1.5">
-          <Label className="text-sm">{field.label}</Label>
+          {!hideLabel && <Label className="text-sm">{field.label}</Label>}
           <Input
             value={(value as string) || ''}
             onChange={(e) => onChange(e.target.value)}
@@ -125,7 +126,7 @@ function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disable
     case 'number':
       return (
         <div className="space-y-1.5">
-          <Label className="text-sm">{field.label}</Label>
+          {!hideLabel && <Label className="text-sm">{field.label}</Label>}
           <Input
             type="number"
             step="0.1"
@@ -140,7 +141,7 @@ function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disable
     case 'radio':
       return (
         <div className="space-y-2">
-          <Label className="text-sm">{field.label}</Label>
+          {!hideLabel && <Label className="text-sm">{field.label}</Label>}
           <RadioGroup
             value={(value as string) || ''}
             onValueChange={onChange}
@@ -162,7 +163,7 @@ function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disable
     case 'select':
       return (
         <div className="space-y-1.5">
-          <Label className="text-sm">{field.label}</Label>
+          {!hideLabel && <Label className="text-sm">{field.label}</Label>}
           <Select
             value={(value as string) || ''}
             onValueChange={onChange}
@@ -183,7 +184,7 @@ function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disable
     case 'visual_card_grid':
       return (
         <div className="space-y-2">
-          <Label className="text-sm">{field.label}</Label>
+          {!hideLabel && {!hideLabel && <Label className="text-sm">{field.label}</Label>}}
           <VisualOptionCardGrid
             options={field.config?.options || []}
             value={(value as string | string[]) || null}
@@ -198,7 +199,7 @@ function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disable
     case 'clinical_table_choice':
       return (
         <div className="space-y-2">
-          <Label className="text-sm">{field.label}</Label>
+          {!hideLabel && <Label className="text-sm">{field.label}</Label>}
           <ClinicalTableSingleChoice
             rows={field.config?.rows || []}
             value={(value as string) || null}
@@ -211,7 +212,7 @@ function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disable
     case 'select_row':
       return (
         <div className="space-y-2">
-          <Label className="text-sm">{field.label}</Label>
+          {!hideLabel && <Label className="text-sm">{field.label}</Label>}
           <SelectRowGroup
             selects={field.config?.selects || []}
             values={(value as Record<string, string>) || {}}
@@ -227,7 +228,7 @@ function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disable
     case 'accordion_measurements':
       return (
         <div className="space-y-2">
-          <Label className="text-sm">{field.label}</Label>
+          {!hideLabel && <Label className="text-sm">{field.label}</Label>}
           {field.config?.placeholder && (
             <p className="text-xs text-muted-foreground">{field.config.placeholder}</p>
           )}
@@ -253,7 +254,7 @@ function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disable
     case 'bmi_calculator':
       return (
         <div className="space-y-2">
-          <Label className="text-sm">{field.label}</Label>
+          {!hideLabel && <Label className="text-sm">{field.label}</Label>}
           <BMICalculator
             weight={((value as Record<string, number | null>) || {}).weight ?? null}
             height={((value as Record<string, number | null>) || {}).height ?? null}
@@ -273,7 +274,7 @@ function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disable
     case 'image_carousel':
       return (
         <div className="space-y-2">
-          <Label className="text-sm">{field.label}</Label>
+          {!hideLabel && <Label className="text-sm">{field.label}</Label>}
           <ImageCarouselSelector
             options={field.config?.options || []}
             value={(value as string) || null}
@@ -286,7 +287,7 @@ function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disable
     case 'image_upload':
       return (
         <div className="space-y-2">
-          <Label className="text-sm">{field.label}</Label>
+          {!hideLabel && <Label className="text-sm">{field.label}</Label>}
           <ImageUploadPlaceholder
             value={(value as string) || null}
             onChange={onChange}
@@ -300,7 +301,7 @@ function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disable
     default:
       return (
         <div className="space-y-1.5">
-          <Label className="text-sm">{field.label}</Label>
+          {!hideLabel && <Label className="text-sm">{field.label}</Label>}
           <Input
             value={(value as string) || ''}
             onChange={(e) => onChange(e.target.value)}
