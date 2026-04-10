@@ -26,4 +26,6 @@ export const CORPORAL_IMAGES: Record<string, string> = {
   'estetica/corporal/diastase_b': diastaseBImg,
   'estetica/corporal/diastase_c': diastaseCImg,
   'estetica/corporal/diastase_d': diastaseDImg,
+  'estetica/corporal/diastase_negativo': diastaseNegativoImg,
+  'estetica/corporal/diastase_positivo': diastasePositivoImg,
 };
