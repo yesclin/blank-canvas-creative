@@ -1,5 +1,5 @@
 import androideImg from './androide.png';
-import ginoideImg from './ginoide.svg';
+import ginoideImg from './ginoide.png';
 import celulite1Img from './celulite_1.jpg';
 import celulite2Img from './celulite_2.jpg';
 import celulite3Img from './celulite_3.jpg';
