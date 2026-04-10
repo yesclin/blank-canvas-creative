@@ -32,6 +32,7 @@ import {
   BodyTypeCarouselSelector,
   createCarouselBodyTypeOptions,
   FitzpatrickScaleSelector,
+  AcneScarSelector,
 } from './anamnese-fields';
 import type { DynamicField, DynamicFormValues } from './anamnese-fields/types';
 
