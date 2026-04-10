@@ -44,7 +44,8 @@ export interface DynamicField {
     | 'image_carousel'
     | 'image_upload'
     | 'body_type_selector'
-    | 'body_type_carousel';
+    | 'body_type_carousel'
+    | 'fitzpatrick_scale';
   label: string;
   section?: string;
   required?: boolean;

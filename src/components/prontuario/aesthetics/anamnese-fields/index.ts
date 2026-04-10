@@ -11,3 +11,4 @@ export { BodyTypeSelector, createBodyTypeOptions } from './BodyTypeSelector';
 export type { BodyTypeOption } from './BodyTypeSelector';
 export { BodyTypeCarouselSelector, createCarouselBodyTypeOptions } from './BodyTypeCarouselSelector';
 export type { CarouselBodyTypeOption } from './BodyTypeCarouselSelector';
+export { FitzpatrickScaleSelector } from './FitzpatrickScaleSelector';
