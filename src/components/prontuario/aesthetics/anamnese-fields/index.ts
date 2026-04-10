@@ -7,3 +7,5 @@ export { BMICalculator } from './BMICalculator';
 export { ImageCarouselSelector } from './ImageCarouselSelector';
 export { ImageUploadPlaceholder } from './ImageUploadPlaceholder';
 export { PerimetryFields } from './PerimetryFields';
+export { BodyTypeSelector, createBodyTypeOptions } from './BodyTypeSelector';
+export type { BodyTypeOption } from './BodyTypeSelector';

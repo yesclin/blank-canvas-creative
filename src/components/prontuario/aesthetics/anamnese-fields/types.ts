@@ -42,7 +42,8 @@ export interface DynamicField {
     | 'accordion_measurements'
     | 'bmi_calculator'
     | 'image_carousel'
-    | 'image_upload';
+    | 'image_upload'
+    | 'body_type_selector';
   label: string;
   section?: string;
   required?: boolean;
