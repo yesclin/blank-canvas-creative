@@ -244,6 +244,7 @@ export type Database = {
           specialty: string | null
           specialty_id: string | null
           system_locked: boolean
+          template_key: string | null
           template_type: string | null
           updated_at: string
           usage_count: number
@@ -268,6 +269,7 @@ export type Database = {
           specialty?: string | null
           specialty_id?: string | null
           system_locked?: boolean
+          template_key?: string | null
           template_type?: string | null
           updated_at?: string
           usage_count?: number
@@ -292,6 +294,7 @@ export type Database = {
           specialty?: string | null
           specialty_id?: string | null
           system_locked?: boolean
+          template_key?: string | null
           template_type?: string | null
           updated_at?: string
           usage_count?: number
@@ -9632,6 +9635,10 @@ export type Database = {
       }
       provision_specialty: {
         Args: { _clinic_id: string; _specialty_slug: string }
+        Returns: undefined
+      }
+      reset_anamnesis_templates: {
+        Args: { p_clinic_id: string; p_user_id: string }
         Returns: undefined
       }
       seed_default_payment_methods: {
