@@ -1,0 +1,453 @@
+import { jsPDF } from 'jspdf';
+import { toast } from 'sonner';
+
+/**
+ * Generates a professional PDF from the consolidated attendance snapshot_json.
+ * This never touches live prontuário fields — only the immutable snapshot.
+ */
+
+// ─── Constants ───────────────────────────────────────────
+const A4_W = 210;
+const A4_H = 297;
+const M = 15; // margin
+const CW = A4_W - M * 2; // content width
+const LINE_H = 5;
+const SECTION_GAP = 6;
+const FONT_BODY = 9;
+const FONT_SMALL = 7.5;
+const FONT_HEADING = 11;
+const FONT_TITLE = 14;
+const PRIMARY_COLOR: [number, number, number] = [30, 64, 120];
+const MUTED_COLOR: [number, number, number] = [120, 120, 130];
+const TEXT_COLOR: [number, number, number] = [30, 30, 35];
+const BORDER_COLOR: [number, number, number] = [210, 215, 220];
+
+interface SnapshotData {
+  version?: number;
+  generated_at?: string;
+  clinic?: any;
+  appointment?: any;
+  patient?: any;
+  professional?: any;
+  specialty?: any;
+  procedure?: any;
+  anamnesis?: any[];
+  evolutions?: any[];
+  documents?: any[];
+  alerts?: any[];
+  media?: any[];
+  session_notes?: string | null;
+  financial?: any;
+}
+
+// ─── Helpers ─────────────────────────────────────────────
+function fmtDateBR(d: string | null | undefined) {
+  if (!d) return '—';
+  try {
+    const dt = new Date(d);
+    return dt.toLocaleDateString('pt-BR');
+  } catch { return d; }
+}
+function fmtTimeBR(d: string | null | undefined) {
+  if (!d) return '—';
+  try {
+    return new Date(d).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  } catch { return String(d).slice(0, 5); }
+}
+function fmtDuration(s: number) {
+  if (!s || s <= 0) return '0min';
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  return h > 0 ? `${h}h ${m}min` : `${m}min`;
+}
+function fmtCurrency(v: number) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+}
+
+// ─── PDF Builder ─────────────────────────────────────────
+export async function generateAttendancePDF(
+  snapshot: SnapshotData,
+  options?: { download?: boolean; print?: boolean }
+): Promise<Blob> {
+  const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
+  let y = M;
+
+  const shouldDownload = options?.download ?? true;
+  const shouldPrint = options?.print ?? false;
+
+  // ── Utility functions ──
+  function checkPage(needed: number) {
+    if (y + needed > A4_H - M - 10) {
+      addFooter(pdf, snapshot);
+      pdf.addPage();
+      y = M;
+      return true;
+    }
+    return false;
+  }
+
+  function drawLine(yPos: number) {
+    pdf.setDrawColor(...BORDER_COLOR);
+    pdf.setLineWidth(0.3);
+    pdf.line(M, yPos, M + CW, yPos);
+  }
+
+  function addSectionTitle(title: string) {
+    checkPage(12);
+    y += SECTION_GAP;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(FONT_HEADING);
+    pdf.setTextColor(...PRIMARY_COLOR);
+    pdf.text(title.toUpperCase(), M, y);
+    y += 2;
+    drawLine(y);
+    y += 4;
+    pdf.setTextColor(...TEXT_COLOR);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(FONT_BODY);
+  }
+
+  function addKeyValue(key: string, value: string, indent = 0) {
+    checkPage(LINE_H + 1);
+    const x = M + indent;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(FONT_SMALL);
+    pdf.setTextColor(...MUTED_COLOR);
+    pdf.text(`${key}:`, x, y);
+    const keyW = pdf.getTextWidth(`${key}: `);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(FONT_BODY);
+    pdf.setTextColor(...TEXT_COLOR);
+    const remaining = CW - indent - keyW;
+    const lines = pdf.splitTextToSize(value || '—', remaining);
+    pdf.text(lines, x + keyW, y);
+    y += lines.length * LINE_H;
+  }
+
+  function addText(text: string, indent = 0) {
+    const lines = pdf.splitTextToSize(text, CW - indent);
+    for (const line of lines) {
+      checkPage(LINE_H);
+      pdf.text(line, M + indent, y);
+      y += LINE_H;
+    }
+  }
+
+  // ── 1. Institutional Header ──
+  const clinic = snapshot.clinic || {};
+  pdf.setFontSize(FONT_TITLE);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(...PRIMARY_COLOR);
+  pdf.text(clinic.name || 'Clínica', M, y);
+  y += 5;
+
+  pdf.setFontSize(FONT_SMALL);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(...MUTED_COLOR);
+  const clinicInfo = [
+    clinic.cnpj ? `CNPJ: ${clinic.cnpj}` : '',
+    clinic.phone ? `Tel: ${clinic.phone}` : '',
+    clinic.email || '',
+  ].filter(Boolean).join('  •  ');
+  if (clinicInfo) { pdf.text(clinicInfo, M, y); y += 4; }
+  if (clinic.address) { pdf.text(clinic.address, M, y); y += 4; }
+
+  y += 2;
+  drawLine(y);
+  y += 3;
+
+  // Document title
+  pdf.setFontSize(12);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(...TEXT_COLOR);
+  pdf.text('DOCUMENTO CONSOLIDADO DE ATENDIMENTO', M, y);
+  y += 6;
+
+  // ── 2. Appointment Context ──
+  const apt = snapshot.appointment || {};
+  const patient = snapshot.patient || {};
+  const prof = snapshot.professional || {};
+  const spec = snapshot.specialty || {};
+  const proc = snapshot.procedure || {};
+
+  pdf.setFontSize(FONT_BODY);
+  // Two-column layout for context
+  const col2X = M + CW / 2;
+  const contextPairs = [
+    [['Paciente', patient.full_name || '—'], ['Profissional', prof.full_name || '—']],
+    [['Especialidade', spec.name || '—'], ['Procedimento', proc.name || '—']],
+    [['Data', fmtDateBR(apt.scheduled_date)], ['Modo', apt.care_mode === 'teleconsulta' ? 'Teleconsulta' : 'Presencial']],
+    [['Início', fmtTimeBR(apt.started_at)], ['Término', fmtTimeBR(apt.finished_at)]],
+    [['Duração efetiva', fmtDuration(apt.effective_seconds || 0)], ['Pausado', fmtDuration(apt.paused_seconds || 0)]],
+  ];
+
+  for (const [left, right] of contextPairs) {
+    checkPage(LINE_H + 1);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(FONT_SMALL);
+    pdf.setTextColor(...MUTED_COLOR);
+    pdf.text(`${left[0]}:`, M, y);
+    pdf.text(`${right[0]}:`, col2X, y);
+
+    const lkW = pdf.getTextWidth(`${left[0]}: `);
+    const rkW = pdf.getTextWidth(`${right[0]}: `);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(FONT_BODY);
+    pdf.setTextColor(...TEXT_COLOR);
+    pdf.text(left[1], M + lkW, y);
+    pdf.text(right[1], col2X + rkW, y);
+    y += LINE_H + 0.5;
+  }
+
+  y += 2;
+  drawLine(y);
+  y += 2;
+
+  // ── 3. Clinical Alerts ──
+  const alerts = snapshot.alerts || [];
+  if (alerts.length > 0) {
+    addSectionTitle('Alertas Clínicos');
+    for (const a of alerts) {
+      checkPage(LINE_H * 2);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(FONT_BODY);
+      const prefix = a.severity === 'critical' ? '⚠ CRÍTICO' : a.severity === 'warning' ? '⚠ Alerta' : 'ℹ Info';
+      pdf.text(`${prefix} — ${a.title}`, M + 2, y);
+      y += LINE_H;
+      if (a.description) {
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(FONT_SMALL);
+        addText(a.description, 2);
+      }
+    }
+  }
+
+  // ── 4. Anamnesis ──
+  const anamnesis = snapshot.anamnesis || [];
+  if (anamnesis.length > 0) {
+    addSectionTitle('Anamnese');
+    for (const rec of anamnesis) {
+      checkPage(LINE_H * 2);
+      if (rec.template_name) {
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(FONT_BODY);
+        pdf.text(`Modelo: ${rec.template_name}`, M + 2, y);
+        y += LINE_H;
+      }
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(FONT_BODY);
+      const data = rec.responses || {};
+      if (typeof data === 'object' && data !== null) {
+        const entries = Object.entries(data).filter(([_, v]) => v != null && v !== '');
+        for (const [key, value] of entries.slice(0, 30)) {
+          addKeyValue(key.replace(/_/g, ' '), typeof value === 'object' ? JSON.stringify(value) : String(value), 2);
+        }
+        if (entries.length > 30) {
+          pdf.setFontSize(FONT_SMALL);
+          pdf.setTextColor(...MUTED_COLOR);
+          addText(`+ ${entries.length - 30} campos adicionais`, 2);
+          pdf.setTextColor(...TEXT_COLOR);
+        }
+      }
+      y += 2;
+    }
+  }
+
+  // ── 5. Evolutions ──
+  const evolutions = snapshot.evolutions || [];
+  if (evolutions.length > 0) {
+    addSectionTitle('Evoluções Clínicas');
+    for (const ev of evolutions) {
+      checkPage(LINE_H * 2);
+      if (ev.evolution_type) {
+        pdf.setFont('helvetica', 'italic');
+        pdf.setFontSize(FONT_SMALL);
+        pdf.setTextColor(...MUTED_COLOR);
+        pdf.text(`Tipo: ${ev.evolution_type}`, M + 2, y);
+        y += LINE_H;
+      }
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(FONT_BODY);
+      pdf.setTextColor(...TEXT_COLOR);
+
+      if (ev.content && typeof ev.content === 'object') {
+        const entries = Object.entries(ev.content).filter(([_, v]) => v != null && v !== '');
+        for (const [key, value] of entries.slice(0, 20)) {
+          addKeyValue(key.replace(/_/g, ' '), typeof value === 'object' ? JSON.stringify(value) : String(value), 2);
+        }
+      }
+      if (ev.notes) {
+        addKeyValue('Notas', ev.notes, 2);
+      }
+      y += 2;
+    }
+  }
+
+  // ── 6. Clinical Documents ──
+  const docs = snapshot.documents || [];
+  if (docs.length > 0) {
+    addSectionTitle('Documentos Clínicos');
+    for (const doc of docs) {
+      checkPage(LINE_H);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(FONT_BODY);
+      pdf.text(`• ${doc.title} (${doc.document_type}) — ${doc.status}`, M + 2, y);
+      y += LINE_H;
+    }
+  }
+
+  // ── 7. Clinical Media ──
+  const media = snapshot.media || [];
+  if (media.length > 0) {
+    addSectionTitle('Imagens e Anexos');
+    for (const m of media) {
+      checkPage(LINE_H * 2);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(FONT_BODY);
+      const desc = [m.file_name, m.classification, m.description].filter(Boolean).join(' — ');
+      pdf.text(`• ${desc}`, M + 2, y);
+      y += LINE_H;
+
+      // Try to embed images
+      if (m.file_type?.startsWith('image') && m.file_url) {
+        try {
+          const img = await loadImage(m.file_url);
+          const maxW = CW - 20;
+          const maxH = 50;
+          const ratio = Math.min(maxW / img.width, maxH / img.height, 1);
+          const w = img.width * ratio;
+          const h = img.height * ratio;
+          checkPage(h + 4);
+          pdf.addImage(img, 'JPEG', M + 10, y, w, h);
+          y += h + 4;
+        } catch {
+          pdf.setFontSize(FONT_SMALL);
+          pdf.setTextColor(...MUTED_COLOR);
+          pdf.text('[Imagem não disponível]', M + 10, y);
+          y += LINE_H;
+          pdf.setTextColor(...TEXT_COLOR);
+        }
+      }
+    }
+  }
+
+  // ── 8. Financial ──
+  const fin = snapshot.financial;
+  if (fin && (fin.amount_expected > 0 || fin.amount_received > 0)) {
+    addSectionTitle('Financeiro');
+    addKeyValue('Valor previsto', fmtCurrency(fin.amount_expected || 0), 2);
+    addKeyValue('Valor recebido', fmtCurrency(fin.amount_received || 0), 2);
+    const pending = Math.max(0, (fin.amount_expected || 0) - (fin.amount_received || 0));
+    if (pending > 0) addKeyValue('Pendente', fmtCurrency(pending), 2);
+    addKeyValue('Status', fin.payment_status || '—', 2);
+  }
+
+  // ── 9. Session Notes ──
+  if (snapshot.session_notes) {
+    addSectionTitle('Observações da Sessão');
+    addText(snapshot.session_notes, 2);
+  }
+
+  if (apt.notes) {
+    addSectionTitle('Observações do Agendamento');
+    addText(apt.notes, 2);
+  }
+
+  // ── Footer on last page ──
+  addFooter(pdf, snapshot);
+
+  // ── Output ──
+  const blob = pdf.output('blob');
+  const patientName = (patient.full_name || 'paciente').replace(/\s+/g, '_');
+  const filename = `Atendimento_${patientName}_${fmtDateBR(apt.scheduled_date).replace(/\//g, '-')}.pdf`;
+
+  if (shouldDownload) {
+    pdf.save(filename);
+  }
+
+  if (shouldPrint) {
+    const url = URL.createObjectURL(blob);
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = url;
+    document.body.appendChild(iframe);
+    iframe.onload = () => {
+      iframe.contentWindow?.print();
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+        URL.revokeObjectURL(url);
+      }, 5000);
+    };
+  }
+
+  return blob;
+}
+
+function addFooter(pdf: jsPDF, snapshot: SnapshotData) {
+  const pageCount = pdf.getNumberOfPages();
+  const currentPage = pdf.getCurrentPageInfo().pageNumber;
+  
+  pdf.setFontSize(7);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(...MUTED_COLOR);
+  
+  // Footer line
+  pdf.setDrawColor(...BORDER_COLOR);
+  pdf.setLineWidth(0.2);
+  pdf.line(M, A4_H - 15, M + CW, A4_H - 15);
+  
+  // Left: clinic name
+  pdf.text(snapshot.clinic?.name || '', M, A4_H - 11);
+  
+  // Center: generation date
+  const genDate = snapshot.generated_at ? `Gerado em ${fmtDateBR(snapshot.generated_at)} às ${fmtTimeBR(snapshot.generated_at)}` : '';
+  if (genDate) {
+    const tw = pdf.getTextWidth(genDate);
+    pdf.text(genDate, M + (CW - tw) / 2, A4_H - 11);
+  }
+  
+  // Right: page number
+  const pageText = `Página ${currentPage} de ${pageCount}`;
+  const pw = pdf.getTextWidth(pageText);
+  pdf.text(pageText, M + CW - pw, A4_H - 11);
+  
+  // Integrity note
+  pdf.setFontSize(6);
+  pdf.text('Documento consolidado de atendimento — gerado automaticamente pelo sistema YesClin', M, A4_H - 7);
+}
+
+async function loadImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = url;
+    setTimeout(() => reject(new Error('Image load timeout')), 8000);
+  });
+}
+
+/**
+ * Wrapper hook-style function for use in components.
+ */
+export async function handleDownloadPDF(snapshotJson: any) {
+  try {
+    toast.loading('Gerando PDF...', { id: 'pdf-gen' });
+    await generateAttendancePDF(snapshotJson, { download: true });
+    toast.success('PDF gerado com sucesso!', { id: 'pdf-gen' });
+  } catch (err) {
+    console.error('PDF generation error:', err);
+    toast.error('Erro ao gerar PDF. Tente novamente.', { id: 'pdf-gen' });
+  }
+}
+
+export async function handlePrintAttendance(snapshotJson: any) {
+  try {
+    toast.loading('Preparando impressão...', { id: 'print-gen' });
+    await generateAttendancePDF(snapshotJson, { download: false, print: true });
+    toast.success('Documento enviado para impressão.', { id: 'print-gen' });
+  } catch (err) {
+    console.error('Print error:', err);
+    toast.error('Erro ao preparar impressão.', { id: 'print-gen' });
+  }
+}
