@@ -259,9 +259,8 @@ export default function Atendimento() {
 
   // Handlers
   const handleOpenSummary = useCallback((session: SessionRow) => {
-    setSelectedSession(session);
-    setSummaryModalOpen(true);
-  }, []);
+    navigate(`/app/atendimento/${session.id}`);
+  }, [navigate]);
 
   const handleAddNote = useCallback((session: SessionRow) => {
     toast.info("Funcionalidade de notas complementares em desenvolvimento.");
