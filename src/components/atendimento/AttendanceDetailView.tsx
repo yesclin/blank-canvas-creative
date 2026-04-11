@@ -101,8 +101,11 @@ export function AttendanceDetailView({ detail }: Props) {
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => navigate(`/app/prontuario/${detail.patient_id}?appointmentId=${detail.id}`)}>
             <FolderOpen className="h-3.5 w-3.5" /> Abrir prontuário
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={handleAddNote}>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={handleAddNote} disabled={!docId}>
             <StickyNote className="h-3.5 w-3.5" /> Nota
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={handleAddAddendum} disabled={!docId}>
+            <FileText className="h-3.5 w-3.5" /> Adendo
           </Button>
           <Button variant="outline" size="sm" className="gap-1.5" onClick={handlePrint} disabled={printLoading || !snapshotSource}>
             <Printer className="h-3.5 w-3.5" /> {printLoading ? "Preparando..." : "Imprimir"}
@@ -110,8 +113,8 @@ export function AttendanceDetailView({ detail }: Props) {
           <Button variant="outline" size="sm" className="gap-1.5" onClick={handlePDF} disabled={pdfLoading || !snapshotSource}>
             <Download className="h-3.5 w-3.5" /> {pdfLoading ? "Gerando..." : "PDF"}
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={handleSign}>
-            <PenTool className="h-3.5 w-3.5" /> Assinar
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={handleSign} disabled={!docId || isDocSigned}>
+            <PenTool className="h-3.5 w-3.5" /> {isDocSigned ? "Assinado" : "Assinar"}
           </Button>
           <Button variant="ghost" size="sm" className="gap-1.5" onClick={handleCompare}>
             <GitCompare className="h-3.5 w-3.5" />
