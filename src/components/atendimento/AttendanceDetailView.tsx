@@ -348,6 +348,32 @@ export function AttendanceDetailView({ detail }: Props) {
             </div>
           </CardContent>
         </Card>
+       )}
+
+      {/* ── Governance Dialogs ── */}
+      {docId && (
+        <>
+          <AddNoteDialog
+            open={noteDialogOpen}
+            onOpenChange={setNoteDialogOpen}
+            documentId={docId}
+            clinicId={clinicId}
+            mode={noteDialogMode}
+          />
+          <SignDocumentDialog
+            open={signDialogOpen}
+            onOpenChange={setSignDialogOpen}
+            documentId={docId}
+            clinicId={clinicId}
+            alreadySigned={isDocSigned}
+          />
+          <NotesHistoryPanel
+            open={historyPanelOpen}
+            onOpenChange={setHistoryPanelOpen}
+            documentId={docId}
+            clinicId={clinicId}
+          />
+        </>
       )}
     </div>
   );
