@@ -1679,6 +1679,51 @@ export type Database = {
           },
         ]
       }
+      clinical_attendance_document_history: {
+        Row: {
+          action_type: string
+          clinic_id: string
+          created_at: string
+          document_id: string
+          id: string
+          metadata: Json | null
+          performed_by: string | null
+        }
+        Insert: {
+          action_type: string
+          clinic_id: string
+          created_at?: string
+          document_id: string
+          id?: string
+          metadata?: Json | null
+          performed_by?: string | null
+        }
+        Update: {
+          action_type?: string
+          clinic_id?: string
+          created_at?: string
+          document_id?: string
+          id?: string
+          metadata?: Json | null
+          performed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_attendance_document_history_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_attendance_document_history_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_attendance_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinical_attendance_document_notes: {
         Row: {
           author_id: string
