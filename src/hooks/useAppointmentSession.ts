@@ -387,6 +387,15 @@ export function useFinalizeSession() {
         .update({ paused_at: null })
         .eq("id", appointmentId);
 
+      // Generate consolidated attendance document (idempotent)
+      try {
+        const { generateConsolidatedAttendanceDocument } = await import("@/utils/generateConsolidatedAttendanceDocument");
+        await generateConsolidatedAttendanceDocument(appointmentId);
+      } catch (docErr) {
+        console.error("Error generating consolidated document:", docErr);
+        // Non-blocking: session finalization succeeds even if doc generation fails
+      }
+
       return { appointmentId, summary };
     },
     onSuccess: (result) => {
