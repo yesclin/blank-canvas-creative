@@ -1649,6 +1649,172 @@ export type Database = {
           },
         ]
       }
+      clinical_attendance_document_notes: {
+        Row: {
+          author_id: string
+          clinic_id: string
+          content: string
+          created_at: string
+          document_id: string
+          id: string
+          note_type: string
+        }
+        Insert: {
+          author_id: string
+          clinic_id: string
+          content: string
+          created_at?: string
+          document_id: string
+          id?: string
+          note_type?: string
+        }
+        Update: {
+          author_id?: string
+          clinic_id?: string
+          content?: string
+          created_at?: string
+          document_id?: string
+          id?: string
+          note_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_attendance_document_notes_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_attendance_document_notes_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_attendance_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clinical_attendance_documents: {
+        Row: {
+          appointment_id: string
+          clinic_id: string
+          created_at: string
+          document_type: string
+          generated_at: string
+          generated_by: string | null
+          hash_sha256: string | null
+          id: string
+          is_locked: boolean
+          locked_at: string | null
+          patient_id: string
+          pdf_url: string | null
+          procedure_id: string | null
+          professional_id: string
+          render_version: number
+          signature_metadata: Json | null
+          signed_at: string | null
+          signed_by: string | null
+          snapshot_json: Json
+          specialty_id: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id: string
+          clinic_id: string
+          created_at?: string
+          document_type?: string
+          generated_at?: string
+          generated_by?: string | null
+          hash_sha256?: string | null
+          id?: string
+          is_locked?: boolean
+          locked_at?: string | null
+          patient_id: string
+          pdf_url?: string | null
+          procedure_id?: string | null
+          professional_id: string
+          render_version?: number
+          signature_metadata?: Json | null
+          signed_at?: string | null
+          signed_by?: string | null
+          snapshot_json?: Json
+          specialty_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string
+          clinic_id?: string
+          created_at?: string
+          document_type?: string
+          generated_at?: string
+          generated_by?: string | null
+          hash_sha256?: string | null
+          id?: string
+          is_locked?: boolean
+          locked_at?: string | null
+          patient_id?: string
+          pdf_url?: string | null
+          procedure_id?: string | null
+          professional_id?: string
+          render_version?: number
+          signature_metadata?: Json | null
+          signed_at?: string | null
+          signed_by?: string | null
+          snapshot_json?: Json
+          specialty_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_attendance_documents_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_attendance_documents_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_attendance_documents_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_attendance_documents_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_attendance_documents_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_attendance_documents_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinical_documents: {
         Row: {
           clinic_id: string
