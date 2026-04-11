@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { AttendanceDetail } from "@/hooks/useAttendanceDetail";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { handleDownloadPDF, handlePrintAttendance } from "@/utils/attendancePdfGenerator";
 import {
   ArrowLeft, FolderOpen, StickyNote, Printer, Download, PenTool,
   GitCompare, History, Clock, Calendar, User, Stethoscope,
@@ -51,10 +53,24 @@ export function AttendanceDetailView({ detail }: Props) {
   const pending = Math.max(0, detail.amount_expected - detail.amount_received);
   const hasConsolidated = !!detail.consolidated_document;
 
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [printLoading, setPrintLoading] = useState(false);
+
+  // Get snapshot source — prefer consolidated document's snapshot, fallback to live detail
+  const snapshotSource = detail.consolidated_document?.snapshot_json || null;
+
   // Toolbar actions
   const handleAddNote = () => toast.info("Notas complementares em desenvolvimento.");
-  const handlePrint = () => window.print();
-  const handleDownloadPDF = () => toast.info("Geração de PDF em desenvolvimento.");
+  const handlePrint = async () => {
+    if (!snapshotSource) { toast.error("Documento consolidado não disponível para impressão."); return; }
+    setPrintLoading(true);
+    try { await handlePrintAttendance(snapshotSource); } finally { setPrintLoading(false); }
+  };
+  const handlePDF = async () => {
+    if (!snapshotSource) { toast.error("Documento consolidado não disponível para PDF."); return; }
+    setPdfLoading(true);
+    try { await handleDownloadPDF(snapshotSource); } finally { setPdfLoading(false); }
+  };
   const handleSign = () => toast.info("Assinatura digital em desenvolvimento.");
   const handleCompare = () => toast.info("Comparação de atendimentos em desenvolvimento.");
   const handleHistory = () => toast.info("Histórico em desenvolvimento.");
@@ -73,11 +89,11 @@ export function AttendanceDetailView({ detail }: Props) {
           <Button variant="outline" size="sm" className="gap-1.5" onClick={handleAddNote}>
             <StickyNote className="h-3.5 w-3.5" /> Nota
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={handlePrint}>
-            <Printer className="h-3.5 w-3.5" /> Imprimir
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={handlePrint} disabled={printLoading || !snapshotSource}>
+            <Printer className="h-3.5 w-3.5" /> {printLoading ? "Preparando..." : "Imprimir"}
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={handleDownloadPDF}>
-            <Download className="h-3.5 w-3.5" /> PDF
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={handlePDF} disabled={pdfLoading || !snapshotSource}>
+            <Download className="h-3.5 w-3.5" /> {pdfLoading ? "Gerando..." : "PDF"}
           </Button>
           <Button variant="outline" size="sm" className="gap-1.5" onClick={handleSign}>
             <PenTool className="h-3.5 w-3.5" /> Assinar
