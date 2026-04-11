@@ -8,6 +8,8 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { handleDownloadPDF, handlePrintAttendance } from "@/utils/attendancePdfGenerator";
+import { logDocumentAction } from "@/hooks/useDocumentGovernance";
+import { AddNoteDialog, SignDocumentDialog, NotesHistoryPanel } from "@/components/atendimento/DocumentGovernanceDialogs";
 import {
   ArrowLeft, FolderOpen, StickyNote, Printer, Download, PenTool,
   GitCompare, History, Clock, Calendar, User, Stethoscope,
@@ -55,25 +57,38 @@ export function AttendanceDetailView({ detail }: Props) {
 
   const [pdfLoading, setPdfLoading] = useState(false);
   const [printLoading, setPrintLoading] = useState(false);
+  const [noteDialogOpen, setNoteDialogOpen] = useState(false);
+  const [noteDialogMode, setNoteDialogMode] = useState<"note" | "addendum">("note");
+  const [signDialogOpen, setSignDialogOpen] = useState(false);
+  const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
 
-  // Get snapshot source — prefer consolidated document's snapshot, fallback to live detail
   const snapshotSource = detail.consolidated_document?.snapshot_json || null;
+  const docId = detail.consolidated_document?.id || null;
+  const clinicId = (snapshotSource as any)?.clinic?.id || "";
+  const isDocSigned = !!detail.consolidated_document?.signed_at;
 
   // Toolbar actions
-  const handleAddNote = () => toast.info("Notas complementares em desenvolvimento.");
+  const handleAddNote = () => { setNoteDialogMode("note"); setNoteDialogOpen(true); };
+  const handleAddAddendum = () => { setNoteDialogMode("addendum"); setNoteDialogOpen(true); };
   const handlePrint = async () => {
     if (!snapshotSource) { toast.error("Documento consolidado não disponível para impressão."); return; }
     setPrintLoading(true);
-    try { await handlePrintAttendance(snapshotSource); } finally { setPrintLoading(false); }
+    try {
+      await handlePrintAttendance(snapshotSource);
+      if (docId) await logDocumentAction({ documentId: docId, clinicId, actionType: "printed" });
+    } finally { setPrintLoading(false); }
   };
   const handlePDF = async () => {
     if (!snapshotSource) { toast.error("Documento consolidado não disponível para PDF."); return; }
     setPdfLoading(true);
-    try { await handleDownloadPDF(snapshotSource); } finally { setPdfLoading(false); }
+    try {
+      await handleDownloadPDF(snapshotSource);
+      if (docId) await logDocumentAction({ documentId: docId, clinicId, actionType: "pdf_exported" });
+    } finally { setPdfLoading(false); }
   };
-  const handleSign = () => toast.info("Assinatura digital em desenvolvimento.");
+  const handleSign = () => setSignDialogOpen(true);
   const handleCompare = () => toast.info("Comparação de atendimentos em desenvolvimento.");
-  const handleHistory = () => toast.info("Histórico em desenvolvimento.");
+  const handleHistory = () => setHistoryPanelOpen(true);
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6 print:p-0 print:space-y-4">
