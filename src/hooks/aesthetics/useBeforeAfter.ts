@@ -121,10 +121,10 @@
        queryClient.invalidateQueries({ queryKey });
        toast.success('Registro criado com sucesso');
      },
-     onError: (error) => {
-       console.error('Error creating record:', error);
-       toast.error('Erro ao criar registro');
-     },
+      onError: (error: any) => {
+        console.error('Error creating before/after record:', error);
+        toast.error(`Erro ao criar registro: ${error?.message || 'erro desconhecido'}`);
+      },
    });
  
    // Update record (add after image)
