@@ -256,7 +256,7 @@ export function VisaoGeralEsteticaBlock({
                 {format(new Date(summary.ultimo_procedimento.data), "dd/MM/yyyy", { locale: ptBR })}
               </p>
               <p className="text-sm text-muted-foreground">
-                {summary.ultimo_procedimento.tipo} - {summary.ultimo_procedimento.produto}
+                {summary.ultimo_procedimento.tipo}{summary.ultimo_procedimento.produto ? ` - ${summary.ultimo_procedimento.produto}` : ''}
               </p>
               {diasDesdeUltimoProc !== null && (
                 <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
