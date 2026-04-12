@@ -71,7 +71,7 @@ const ownerAdminMainMenu: MenuItem[] = [
 ];
 
 const ownerAdminGestaoMenu: MenuItem[] = [
-  { title: "Controle de Estoque", url: "/app/gestao/estoque", icon: Package },
+  { title: "Itens e Estoque", url: "/app/gestao/estoque", icon: Package },
   { title: "Finanças", url: "/app/gestao/financas", icon: DollarSign },
   { title: "Convênios", url: "/app/gestao/convenios", icon: Building2 },
   { title: "Relatórios", url: "/app/gestao/relatorios", icon: BarChart3 },

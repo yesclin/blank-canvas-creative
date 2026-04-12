@@ -1,25 +1,22 @@
 import { useState, useCallback } from "react";
-import { Package, Plus, Search, AlertTriangle, ArrowUpCircle, ArrowDownCircle, Edit, ToggleLeft, ToggleRight, History, TrendingDown, Clock, ExternalLink, User, Syringe, Boxes, Calendar } from "lucide-react";
+import {
+  Package, Plus, Search, AlertTriangle, ArrowUpCircle, ArrowDownCircle,
+  Edit, ToggleLeft, ToggleRight, History, TrendingDown, Clock,
+  ExternalLink, User, Syringe, Boxes, Calendar, Link2, Settings,
+  Info
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useStockData } from "@/hooks/useStockData";
 import { stockMovementTypeLabels, type StockMovementType } from "@/types/inventory";
 import { format } from "date-fns";
@@ -32,6 +29,11 @@ import { NewProductDialog } from "@/components/estoque/NewProductDialog";
 import { NewMovementDialog } from "@/components/estoque/NewMovementDialog";
 import { useUpdateProduct } from "@/hooks/useProducts";
 import type { StockProduct } from "@/hooks/useStockData";
+
+// Cadastros Clínicos components - now integrated
+import { ProcedureMaterialsTab } from "@/components/cadastros-clinicos/ProcedureMaterialsTab";
+import { MaterialConsumptionSettings } from "@/components/cadastros-clinicos/MaterialConsumptionSettings";
+import { StockPredictionSettingsCard } from "@/components/config/StockPredictionSettingsCard";
 
 export default function Estoque() {
   const { categories, products, movements, lowStockProducts, outOfStockProducts, expiringProducts, stats, isLoading } = useStockData();
@@ -51,13 +53,11 @@ export default function Estoque() {
   const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
 
   const handleEditProduct = useCallback((product: StockProduct) => {
-    console.log("[Estoque] Edit clicked, product:", product.id, product.name);
     setEditingProduct(product);
     setIsEditDialogOpen(true);
   }, []);
 
   const handleToggleProduct = useCallback(async (product: StockProduct) => {
-    console.log("[Estoque] Toggle clicked, product:", product.id, "currently active:", product.is_active);
     try {
       await toggleMutation.mutateAsync({
         id: product.id,
@@ -104,9 +104,9 @@ export default function Estoque() {
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Package className="h-6 w-6 text-primary" />
-            Controle de Estoque
+            Itens e Estoque
           </h1>
-          <p className="text-muted-foreground mt-1">Carregando dados do estoque...</p>
+          <p className="text-muted-foreground mt-1">Carregando dados...</p>
         </div>
         <div className="grid gap-4 md:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
@@ -130,10 +130,10 @@ export default function Estoque() {
       <div>
         <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
           <Package className="h-6 w-6 text-primary" />
-          Controle de Estoque
+          Itens e Estoque
         </h1>
         <p className="text-muted-foreground mt-1">
-          Gerencie produtos, movimentações e alertas de estoque
+          Cadastre itens, controle estoque, configure uso clínico e acompanhe alertas — tudo em um só lugar
         </p>
       </div>
 
@@ -146,7 +146,7 @@ export default function Estoque() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalProducts}</div>
-            <p className="text-xs text-muted-foreground">produtos cadastrados</p>
+            <p className="text-xs text-muted-foreground">itens cadastrados</p>
           </CardContent>
         </Card>
         <Card className={stats.lowStock > 0 ? "border-yellow-300 bg-yellow-50/50" : ""}>
@@ -181,57 +181,50 @@ export default function Estoque() {
         </Card>
       </div>
 
-      {/* Stock Prediction Alerts */}
-      <StockPredictionAlerts />
-
-      {/* Traditional Alerts Section */}
-      {(lowStockProducts.length > 0 || outOfStockProducts.length > 0) && (
-        <Card className="border-yellow-200 bg-yellow-50/30">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-600" />
-              Alertas de Estoque Atual
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {outOfStockProducts.map(product => (
-              <div key={product.id} className="flex items-center justify-between p-2 bg-red-100 rounded-md">
-                <span className="text-sm font-medium text-red-800">{product.name}</span>
-                <Badge variant="destructive">Sem estoque</Badge>
-              </div>
-            ))}
-            {lowStockProducts.filter(p => p.current_quantity > 0).map(product => (
-              <div key={product.id} className="flex items-center justify-between p-2 bg-yellow-100 rounded-md">
-                <span className="text-sm font-medium text-yellow-800">{product.name}</span>
-                <span className="text-sm text-yellow-700">
-                  {product.current_quantity} / {product.min_quantity} {product.unit}
-                </span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Main Tabs */}
-      <Tabs defaultValue="products" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="products">Produtos</TabsTrigger>
-          <TabsTrigger value="kits" className="flex items-center gap-1">
-            <Boxes className="h-4 w-4" />
-            Kits
+      {/* Main Tabs — unified 6-tab structure */}
+      <Tabs defaultValue="items" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-6 max-w-4xl">
+          <TabsTrigger value="items" className="flex items-center gap-1.5">
+            <Package className="h-4 w-4" />
+            <span className="hidden sm:inline">Itens</span>
           </TabsTrigger>
-          <TabsTrigger value="movements">Movimentações</TabsTrigger>
-          <TabsTrigger value="categories">Categorias</TabsTrigger>
+          <TabsTrigger value="movements" className="flex items-center gap-1.5">
+            <History className="h-4 w-4" />
+            <span className="hidden sm:inline">Movimentações</span>
+          </TabsTrigger>
+          <TabsTrigger value="kits" className="flex items-center gap-1.5">
+            <Boxes className="h-4 w-4" />
+            <span className="hidden sm:inline">Kits</span>
+          </TabsTrigger>
+          <TabsTrigger value="links" className="flex items-center gap-1.5">
+            <Link2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Vínculos</span>
+          </TabsTrigger>
+          <TabsTrigger value="auto-consumption" className="flex items-center gap-1.5">
+            <Settings className="h-4 w-4" />
+            <span className="hidden sm:inline">Baixa Auto</span>
+          </TabsTrigger>
+          <TabsTrigger value="alerts" className="flex items-center gap-1.5">
+            <AlertTriangle className="h-4 w-4" />
+            <span className="hidden sm:inline">Alertas</span>
+          </TabsTrigger>
         </TabsList>
 
-        {/* Products Tab */}
-        <TabsContent value="products" className="space-y-4">
+        {/* ====== TAB 1: ITENS (cadastro-base único) ====== */}
+        <TabsContent value="items" className="space-y-4">
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              Cadastre cada item uma única vez aqui. Depois configure seu uso clínico na aba <strong>Vínculos</strong>.
+            </AlertDescription>
+          </Alert>
+
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-1">
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar produto..."
+                  placeholder="Buscar item por nome..."
                   className="pl-9"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -269,7 +262,7 @@ export default function Estoque() {
               </Button>
               <Button onClick={() => setIsProductDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Novo Produto
+                Novo Item
               </Button>
             </div>
           </div>
@@ -279,7 +272,7 @@ export default function Estoque() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Produto</TableHead>
+                    <TableHead>Item</TableHead>
                     <TableHead>Categoria</TableHead>
                     <TableHead className="text-right">Qtd. Atual</TableHead>
                     <TableHead className="text-right">Qtd. Mín.</TableHead>
@@ -293,7 +286,9 @@ export default function Estoque() {
                   {filteredProducts.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                        Nenhum produto encontrado
+                        {search || categoryFilter !== "all" || statusFilter !== "all"
+                          ? "Nenhum item encontrado com os filtros aplicados"
+                          : "Nenhum item cadastrado. Clique em \"Novo Item\" para começar."}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -321,7 +316,7 @@ export default function Estoque() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              title="Editar produto"
+                              title="Editar item"
                               onClick={() => handleEditProduct(product)}
                             >
                               <Edit className="h-4 w-4" />
@@ -350,26 +345,35 @@ export default function Estoque() {
           </Card>
         </TabsContent>
 
-        {/* Kits Tab */}
-        <TabsContent value="kits" className="space-y-4">
-          <ProductKitsTab />
-        </TabsContent>
-
-        {/* Movements Tab */}
+        {/* ====== TAB 2: MOVIMENTAÇÕES ====== */}
         <TabsContent value="movements" className="space-y-4">
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              Todas as entradas, saídas, ajustes e consumos automáticos aparecem aqui.
+            </AlertDescription>
+          </Alert>
           <Card>
             <CardHeader>
-              <CardTitle>Histórico de Movimentações</CardTitle>
-              <CardDescription>
-                Todas as entradas, saídas e ajustes de estoque
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Histórico de Movimentações</CardTitle>
+                  <CardDescription>
+                    Entradas, saídas, ajustes e consumo em procedimentos
+                  </CardDescription>
+                </div>
+                <Button variant="outline" onClick={() => setIsMovementDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nova Movimentação
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Data/Hora</TableHead>
-                    <TableHead>Produto</TableHead>
+                    <TableHead>Item</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead className="text-right">Quantidade</TableHead>
                     <TableHead>Motivo</TableHead>
@@ -377,112 +381,169 @@ export default function Estoque() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {movements.map((movement) => {
-                    const product = products.find(p => p.id === movement.product_id);
-                    const isSale = movement.reference_type === 'sale';
-                    const isProcedureUse = movement.reference_type === 'procedure_execution';
-                    const patientName = (movement as any).patient_name;
-                    
-                    const getReasonDisplay = () => {
-                      if (isProcedureUse) return 'Uso em Procedimento';
-                      return movement.notes || '-';
-                    };
-                    
-                    return (
-                      <TableRow key={movement.id}>
-                        <TableCell>
-                          {format(new Date(movement.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                        </TableCell>
-                        <TableCell className="font-medium">{product?.name || (movement as any).products?.name || "-"}</TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant={
-                              movement.movement_type === 'entrada' || movement.movement_type === 'devolucao' 
-                                ? 'default' 
-                                : movement.movement_type === 'saida' || movement.movement_type === 'venda' 
-                                  ? 'destructive' 
-                                  : 'secondary'
-                            }
-                          >
-                            {(movement.movement_type === 'entrada' || movement.movement_type === 'devolucao') && <ArrowDownCircle className="h-3 w-3 mr-1" />}
-                            {(movement.movement_type === 'saida' || movement.movement_type === 'venda') && <ArrowUpCircle className="h-3 w-3 mr-1" />}
-                            {stockMovementTypeLabels[movement.movement_type as StockMovementType] || movement.movement_type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {(movement.movement_type === 'saida' || movement.movement_type === 'venda') ? '-' : ''}{movement.quantity} {product?.unit || (movement as any).products?.unit}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-1.5">
-                              {isProcedureUse && <Syringe className="h-3.5 w-3.5 text-orange-600" />}
-                              <span className={isProcedureUse ? 'text-orange-700 font-medium' : ''}>{getReasonDisplay()}</span>
-                            </div>
-                            {isProcedureUse && patientName && (
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <User className="h-3 w-3" />
-                                <span>Paciente: {patientName}</span>
+                  {movements.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        Nenhuma movimentação registrada
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    movements.map((movement) => {
+                      const product = products.find(p => p.id === movement.product_id);
+                      const isSale = movement.reference_type === 'sale';
+                      const isProcedureUse = movement.reference_type === 'procedure_execution';
+                      const patientName = (movement as any).patient_name;
+                      
+                      const getReasonDisplay = () => {
+                        if (isProcedureUse) return 'Uso em Procedimento';
+                        return movement.notes || '-';
+                      };
+                      
+                      return (
+                        <TableRow key={movement.id}>
+                          <TableCell>
+                            {format(new Date(movement.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          </TableCell>
+                          <TableCell className="font-medium">{product?.name || (movement as any).products?.name || "-"}</TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant={
+                                movement.movement_type === 'entrada' || movement.movement_type === 'devolucao' 
+                                  ? 'default' 
+                                  : movement.movement_type === 'saida' || movement.movement_type === 'venda' 
+                                    ? 'destructive' 
+                                    : 'secondary'
+                              }
+                            >
+                              {(movement.movement_type === 'entrada' || movement.movement_type === 'devolucao') && <ArrowDownCircle className="h-3 w-3 mr-1" />}
+                              {(movement.movement_type === 'saida' || movement.movement_type === 'venda') && <ArrowUpCircle className="h-3 w-3 mr-1" />}
+                              {stockMovementTypeLabels[movement.movement_type as StockMovementType] || movement.movement_type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {(movement.movement_type === 'saida' || movement.movement_type === 'venda') ? '-' : ''}{movement.quantity} {product?.unit || (movement as any).products?.unit}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-1.5">
+                                {isProcedureUse && <Syringe className="h-3.5 w-3.5 text-orange-600" />}
+                                <span className={isProcedureUse ? 'text-orange-700 font-medium' : ''}>{getReasonDisplay()}</span>
                               </div>
-                            )}
-                            {isProcedureUse && movement.notes && (
-                              <span className="text-xs text-muted-foreground">{movement.notes}</span>
-                            )}
-                            {isSale && movement.notes && (
-                              <span className="text-xs text-muted-foreground">{movement.notes}</span>
-                            )}
-                            {isSale && movement.reference_id && (
-                              <button
-                                onClick={() => handleViewSale(movement.reference_id!)}
-                                className="text-xs text-primary hover:underline flex items-center gap-1 mt-0.5"
-                              >
-                                <ExternalLink className="h-3 w-3" />
-                                Ver venda
-                              </button>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {movement.unit_cost ? `R$ ${Number(movement.unit_cost).toFixed(2)}` : "-"}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                              {isProcedureUse && patientName && (
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <User className="h-3 w-3" />
+                                  <span>Paciente: {patientName}</span>
+                                </div>
+                              )}
+                              {isProcedureUse && movement.notes && (
+                                <span className="text-xs text-muted-foreground">{movement.notes}</span>
+                              )}
+                              {isSale && movement.notes && (
+                                <span className="text-xs text-muted-foreground">{movement.notes}</span>
+                              )}
+                              {isSale && movement.reference_id && (
+                                <button
+                                  onClick={() => handleViewSale(movement.reference_id!)}
+                                  className="text-xs text-primary hover:underline flex items-center gap-1 mt-0.5"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                  Ver venda
+                                </button>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {movement.unit_cost ? `R$ ${Number(movement.unit_cost).toFixed(2)}` : "-"}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Categories Tab */}
-        <TabsContent value="categories" className="space-y-4">
-          <Card>
-            <CardContent className="pt-6">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Produtos</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {categories.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={2} className="text-center text-muted-foreground py-8">
-                        Nenhuma categoria encontrada. As categorias são derivadas dos produtos cadastrados.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    categories.map((category) => (
-                      <TableRow key={category.id}>
-                        <TableCell className="font-medium">{category.name}</TableCell>
-                        <TableCell>{category.product_count} produtos</TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+        {/* ====== TAB 3: KITS ====== */}
+        <TabsContent value="kits" className="space-y-4">
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              Monte kits reutilizáveis com itens já cadastrados. Kits podem ser vinculados a procedimentos na aba <strong>Vínculos</strong>.
+            </AlertDescription>
+          </Alert>
+          <ProductKitsTab />
+        </TabsContent>
+
+        {/* ====== TAB 4: VÍNCULOS COM PROCEDIMENTOS ====== */}
+        <TabsContent value="links" className="space-y-4">
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              Configure quais itens são consumidos em cada procedimento e suas quantidades. 
+              Itens novos devem ser cadastrados na aba <strong>Itens</strong>.
+            </AlertDescription>
+          </Alert>
+          <ProcedureMaterialsTab />
+        </TabsContent>
+
+        {/* ====== TAB 5: BAIXA AUTOMÁTICA ====== */}
+        <TabsContent value="auto-consumption" className="space-y-4">
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              Configure a baixa automática de estoque ao finalizar atendimentos. 
+              Os itens consumidos são definidos na aba <strong>Vínculos</strong>.
+            </AlertDescription>
+          </Alert>
+          <MaterialConsumptionSettings />
+        </TabsContent>
+
+        {/* ====== TAB 6: ALERTAS E PREVISÃO ====== */}
+        <TabsContent value="alerts" className="space-y-4">
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              Acompanhe alertas de estoque baixo, itens zerados, vencimentos próximos e previsão de consumo.
+            </AlertDescription>
+          </Alert>
+
+          {/* Prediction Alerts */}
+          <StockPredictionAlerts />
+
+          {/* Traditional Alerts */}
+          {(lowStockProducts.length > 0 || outOfStockProducts.length > 0) && (
+            <Card className="border-yellow-200 bg-yellow-50/30">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                  Alertas de Estoque Atual
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {outOfStockProducts.map(product => (
+                  <div key={product.id} className="flex items-center justify-between p-2 bg-red-100 rounded-md">
+                    <span className="text-sm font-medium text-red-800">{product.name}</span>
+                    <Badge variant="destructive">Sem estoque</Badge>
+                  </div>
+                ))}
+                {lowStockProducts.filter(p => p.current_quantity > 0).map(product => (
+                  <div key={product.id} className="flex items-center justify-between p-2 bg-yellow-100 rounded-md">
+                    <span className="text-sm font-medium text-yellow-800">{product.name}</span>
+                    <span className="text-sm text-yellow-700">
+                      {product.current_quantity} / {product.min_quantity} {product.unit}
+                    </span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Prediction Settings */}
+          <div className="max-w-2xl">
+            <StockPredictionSettingsCard />
+          </div>
         </TabsContent>
       </Tabs>
       
