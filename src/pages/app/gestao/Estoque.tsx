@@ -12,16 +12,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -30,9 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { useStockData } from "@/hooks/useStockData";
-import { stockUnits, movementReasons, type MovementType } from "@/types/gestao";
 import { stockMovementTypeLabels, type StockMovementType } from "@/types/inventory";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -40,6 +28,8 @@ import { SaleDetailsDialog } from "@/components/gestao/SaleDetailsDialog";
 import { ProductKitsTab } from "@/components/estoque/ProductKitsTab";
 import { StockPredictionAlerts } from "@/components/estoque/StockPredictionAlerts";
 import { EditProductDialog } from "@/components/estoque/EditProductDialog";
+import { NewProductDialog } from "@/components/estoque/NewProductDialog";
+import { NewMovementDialog } from "@/components/estoque/NewMovementDialog";
 import { useUpdateProduct } from "@/hooks/useProducts";
 import type { StockProduct } from "@/hooks/useStockData";
 
@@ -48,14 +38,17 @@ export default function Estoque() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  // Dialog states
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [isMovementDialogOpen, setIsMovementDialogOpen] = useState(false);
-  const [movementType, setMovementType] = useState<MovementType>("entrada");
-  
-  // Edit product dialog state
   const [editingProduct, setEditingProduct] = useState<StockProduct | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const toggleMutation = useUpdateProduct();
+
+  // Sale details dialog state
+  const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
+  const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
 
   const handleEditProduct = useCallback((product: StockProduct) => {
     console.log("[Estoque] Edit clicked, product:", product.id, product.name);
@@ -75,15 +68,11 @@ export default function Estoque() {
     }
   }, [toggleMutation]);
 
-  // Sale details dialog state
-  const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
-  const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
-  
   const handleViewSale = (saleId: string) => {
     setSelectedSaleId(saleId);
     setIsSaleDialogOpen(true);
   };
-  
+
   const filteredProducts = products.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
@@ -109,7 +98,6 @@ export default function Estoque() {
     return category || "Sem categoria";
   };
 
-  // Loading state
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -118,9 +106,7 @@ export default function Estoque() {
             <Package className="h-6 w-6 text-primary" />
             Controle de Estoque
           </h1>
-          <p className="text-muted-foreground mt-1">
-            Carregando dados do estoque...
-          </p>
+          <p className="text-muted-foreground mt-1">Carregando dados do estoque...</p>
         </div>
         <div className="grid gap-4 md:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
@@ -195,7 +181,7 @@ export default function Estoque() {
         </Card>
       </div>
 
-      {/* Stock Prediction Alerts - Based on Future Agenda */}
+      {/* Stock Prediction Alerts */}
       <StockPredictionAlerts />
 
       {/* Traditional Alerts Section */}
@@ -277,194 +263,14 @@ export default function Estoque() {
             </div>
             
             <div className="flex gap-2">
-              <Dialog open={isMovementDialogOpen} onOpenChange={setIsMovementDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline">
-                    <History className="h-4 w-4 mr-2" />
-                    Nova Movimentação
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[500px]">
-                  <DialogHeader>
-                    <DialogTitle>Nova Movimentação</DialogTitle>
-                    <DialogDescription>
-                      Registre entrada, saída ou ajuste de estoque
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                      <Label>Tipo de Movimentação *</Label>
-                      <div className="flex gap-2">
-                        <Button 
-                          type="button"
-                          variant={movementType === 'entrada' ? 'default' : 'outline'}
-                          className="flex-1"
-                          onClick={() => setMovementType('entrada')}
-                        >
-                          <ArrowDownCircle className="h-4 w-4 mr-2" />
-                          Entrada
-                        </Button>
-                        <Button 
-                          type="button"
-                          variant={movementType === 'saida' ? 'default' : 'outline'}
-                          className="flex-1"
-                          onClick={() => setMovementType('saida')}
-                        >
-                          <ArrowUpCircle className="h-4 w-4 mr-2" />
-                          Saída
-                        </Button>
-                        <Button 
-                          type="button"
-                          variant={movementType === 'ajuste' ? 'default' : 'outline'}
-                          className="flex-1"
-                          onClick={() => setMovementType('ajuste')}
-                        >
-                          Ajuste
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="product">Produto *</Label>
-                      <Select>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o produto" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {products.filter(p => p.is_active).map((product) => (
-                            <SelectItem key={product.id} value={product.id}>
-                              {product.name} ({product.current_quantity} {product.unit})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="grid gap-2">
-                        <Label htmlFor="quantity">Quantidade *</Label>
-                        <Input id="quantity" type="number" min="0" step="0.01" />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="reason">Motivo *</Label>
-                        <Select>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {movementReasons[movementType].map((reason) => (
-                              <SelectItem key={reason} value={reason}>{reason}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    {movementType === 'entrada' && (
-                      <div className="grid gap-2">
-                        <Label htmlFor="unit_cost">Custo Unitário (R$)</Label>
-                        <Input id="unit_cost" type="number" min="0" step="0.01" />
-                      </div>
-                    )}
-                    <div className="grid gap-2">
-                      <Label htmlFor="notes">Observações</Label>
-                      <Textarea id="notes" placeholder="Observações adicionais..." />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsMovementDialogOpen(false)}>
-                      Cancelar
-                    </Button>
-                    <Button onClick={() => setIsMovementDialogOpen(false)}>
-                      Registrar
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-
-              <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Novo Produto
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[500px]">
-                  <DialogHeader>
-                    <DialogTitle>Novo Produto</DialogTitle>
-                    <DialogDescription>
-                      Cadastre um novo item no estoque
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="name">Nome do Produto *</Label>
-                      <Input id="name" placeholder="Ex: Seringa 10ml" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="grid gap-2">
-                        <Label htmlFor="category">Categoria</Label>
-                        <Select>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {categories.map((cat) => (
-                              <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="unit">Unidade *</Label>
-                        <Select>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {stockUnits.map((unit) => (
-                              <SelectItem key={unit.value} value={unit.value}>{unit.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="grid gap-2">
-                        <Label htmlFor="current_qty">Quantidade Atual</Label>
-                        <Input id="current_qty" type="number" min="0" step="0.01" defaultValue="0" />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="min_qty">Quantidade Mínima</Label>
-                        <Input id="min_qty" type="number" min="0" step="0.01" defaultValue="0" />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="grid gap-2">
-                        <Label htmlFor="avg_cost">Custo Médio (R$)</Label>
-                        <Input id="avg_cost" type="number" min="0" step="0.01" />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="expiration">Data de Validade</Label>
-                        <Input id="expiration" type="date" />
-                      </div>
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="supplier">Fornecedor</Label>
-                      <Input id="supplier" placeholder="Nome do fornecedor" />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="product_notes">Observações</Label>
-                      <Textarea id="product_notes" placeholder="Observações adicionais..." />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsProductDialogOpen(false)}>
-                      Cancelar
-                    </Button>
-                    <Button onClick={() => setIsProductDialogOpen(false)}>
-                      Salvar
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              <Button variant="outline" onClick={() => setIsMovementDialogOpen(true)}>
+                <History className="h-4 w-4 mr-2" />
+                Nova Movimentação
+              </Button>
+              <Button onClick={() => setIsProductDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Produto
+              </Button>
             </div>
           </div>
 
@@ -577,11 +383,8 @@ export default function Estoque() {
                     const isProcedureUse = movement.reference_type === 'procedure_execution';
                     const patientName = (movement as any).patient_name;
                     
-                    // Format the reason display
                     const getReasonDisplay = () => {
-                      if (isProcedureUse) {
-                        return 'Uso em Procedimento';
-                      }
+                      if (isProcedureUse) return 'Uso em Procedimento';
                       return movement.notes || '-';
                     };
                     
@@ -652,44 +455,30 @@ export default function Estoque() {
 
         {/* Categories Tab */}
         <TabsContent value="categories" className="space-y-4">
-          <div className="flex justify-end">
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Categoria
-            </Button>
-          </div>
           <Card>
             <CardContent className="pt-6">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nome</TableHead>
-                    <TableHead>Descrição</TableHead>
                     <TableHead>Produtos</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {categories.map((category) => {
-                    return (
+                  {categories.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={2} className="text-center text-muted-foreground py-8">
+                        Nenhuma categoria encontrada. As categorias são derivadas dos produtos cadastrados.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    categories.map((category) => (
                       <TableRow key={category.id}>
                         <TableCell className="font-medium">{category.name}</TableCell>
-                        <TableCell>-</TableCell>
                         <TableCell>{category.product_count} produtos</TableCell>
-                        <TableCell>
-                          <Badge variant="default">
-                            Ativa
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="icon">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
                       </TableRow>
-                    );
-                  })}
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -697,19 +486,27 @@ export default function Estoque() {
         </TabsContent>
       </Tabs>
       
-      {/* Sale Details Dialog */}
+      {/* Dialogs */}
       <SaleDetailsDialog
         saleId={selectedSaleId}
         open={isSaleDialogOpen}
         onOpenChange={setIsSaleDialogOpen}
       />
-
-      {/* Edit Product Dialog */}
       <EditProductDialog
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
         product={editingProduct}
         categories={categories}
+      />
+      <NewProductDialog
+        open={isProductDialogOpen}
+        onOpenChange={setIsProductDialogOpen}
+        categories={categories}
+      />
+      <NewMovementDialog
+        open={isMovementDialogOpen}
+        onOpenChange={setIsMovementDialogOpen}
+        products={products}
       />
     </div>
   );
