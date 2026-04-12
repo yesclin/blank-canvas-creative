@@ -147,7 +147,7 @@ export function useEvolucoesEsteticaData({ patientId, appointmentId }: UseEvoluc
           follow_up_date: content.follow_up_date as string || null,
           notes: ev.notes,
           photos_taken: content.photos_taken as boolean || false,
-          status: ev.status as 'draft' | 'signed',
+          status: ev.status === 'assinado' ? 'signed' : 'draft',
           signed_at: ev.signed_at,
           signed_by: ev.signed_by,
           created_at: ev.created_at,
@@ -201,21 +201,24 @@ export function useEvolucoesEsteticaData({ patientId, appointmentId }: UseEvoluc
           evolution_type: 'evolucao_estetica',
           content,
           notes: data.notes || null,
-          status: 'draft',
+          status: 'rascunho',
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase insert error details:', JSON.stringify(error));
+        throw new Error(error.message || 'Falha ao inserir evolução no banco');
+      }
       return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
       toast.success('Evolução salva como rascunho');
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error('Error creating evolution:', error);
-      toast.error('Erro ao salvar evolução');
+      toast.error(`Erro ao salvar evolução: ${error.message}`);
     },
   });
 
@@ -227,7 +230,7 @@ export function useEvolucoesEsteticaData({ patientId, appointmentId }: UseEvoluc
       const { error } = await supabase
         .from('clinical_evolutions')
         .update({
-          status: 'signed',
+          status: 'assinado',
           signed_at: new Date().toISOString(),
           signed_by: userData.user?.id,
         })
@@ -270,7 +273,7 @@ export function useEvolucoesEsteticaData({ patientId, appointmentId }: UseEvoluc
           notes: data.notes || null,
         })
         .eq('id', id)
-        .eq('status', 'draft'); // Only update drafts
+        .eq('status', 'rascunho'); // Only update drafts
 
       if (error) throw error;
     },
