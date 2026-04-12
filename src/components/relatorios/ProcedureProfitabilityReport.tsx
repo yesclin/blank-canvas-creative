@@ -190,7 +190,7 @@ export function ProcedureProfitabilityReport({
           <AlertTitle className="text-yellow-800 dark:text-yellow-400">Atenção</AlertTitle>
           <AlertDescription className="text-yellow-700 dark:text-yellow-300">
             {summary.proceduresWithoutCost} procedimento(s) não têm custo cadastrado. 
-            Cadastre materiais e kits em <strong>Configurações → Materiais</strong> para cálculos precisos.
+            Cadastre itens e kits em <strong>Gestão → Controle de Estoque</strong> para cálculos precisos.
           </AlertDescription>
         </Alert>
       )}

@@ -57,7 +57,6 @@ export function NewProductDialog({ open, onOpenChange, categories }: NewProductD
 
   const handleSave = async () => {
     if (!form.name.trim()) return;
-    console.log("[NewProductDialog] Creating product:", form);
     try {
       await createMutation.mutateAsync({
         name: form.name,
@@ -89,12 +88,12 @@ export function NewProductDialog({ open, onOpenChange, categories }: NewProductD
     <Dialog open={open} onOpenChange={(v) => !isLoading && (v ? onOpenChange(v) : handleClose())}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Novo Produto</DialogTitle>
-          <DialogDescription>Cadastre um novo item no estoque</DialogDescription>
+          <DialogTitle>Novo Item</DialogTitle>
+          <DialogDescription>Cadastre aqui o item-base operacional da clínica</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label>Nome do Produto *</Label>
+            <Label>Nome do Item *</Label>
             <Input
               placeholder="Ex: Seringa 10ml"
               value={form.name}
@@ -176,7 +175,7 @@ export function NewProductDialog({ open, onOpenChange, categories }: NewProductD
               />
             </div>
             <div className="grid gap-2">
-              <Label>Preço Venda (R$)</Label>
+              <Label>Preço de Venda (R$)</Label>
               <Input
                 type="number"
                 min={0}
@@ -208,7 +207,7 @@ export function NewProductDialog({ open, onOpenChange, categories }: NewProductD
                 Salvando...
               </>
             ) : (
-              "Salvar"
+              "Salvar Item"
             )}
           </Button>
         </DialogFooter>
