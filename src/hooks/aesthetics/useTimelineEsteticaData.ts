@@ -387,7 +387,7 @@ export function useTimelineEsteticaData(patientId: string | null) {
     return timelineEvents.filter((e) => e.appointmentId === appointmentId);
   };
 
-  const isLoading = loadingEvolutions || loadingMaps || loadingProducts || loadingConsents || loadingBeforeAfter || loadingAlerts;
+  const isLoading = loadingEvolutions || loadingMaps || loadingProducts || loadingConsents || loadingBeforeAfter || loadingAlerts || loadingProcedures;
 
   return {
     events: timelineEvents,
@@ -401,6 +401,7 @@ export function useTimelineEsteticaData(patientId: string | null) {
       anamnese: timelineEvents.filter((e) => e.type === 'anamnese').length,
       avaliacao: timelineEvents.filter((e) => e.type === 'avaliacao').length,
       evolucao: timelineEvents.filter((e) => e.type === 'evolucao').length,
+      procedimento: timelineEvents.filter((e) => e.type === 'procedimento').length,
       facial_map: timelineEvents.filter((e) => e.type === 'facial_map').length,
       produto: timelineEvents.filter((e) => e.type === 'produto').length,
       consentimento: timelineEvents.filter((e) => e.type === 'consentimento').length,
