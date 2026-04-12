@@ -344,7 +344,7 @@ export function useTimelineEsteticaData(patientId: string | null) {
 
     // Sort by date descending
     return events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [evolutions, facialMaps, products, consents, beforeAfter, alerts]);
+  }, [evolutions, facialMaps, products, consents, beforeAfter, alerts, procedures]);
 
   // Group events by date
   const groupedByDate = useMemo(() => {
