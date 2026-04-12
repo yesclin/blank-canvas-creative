@@ -703,6 +703,14 @@ export default function Estoque() {
         open={isSaleDialogOpen}
         onOpenChange={setIsSaleDialogOpen}
       />
+
+      {/* Edit Product Dialog */}
+      <EditProductDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        product={editingProduct}
+        categories={categories}
+      />
     </div>
   );
 }
