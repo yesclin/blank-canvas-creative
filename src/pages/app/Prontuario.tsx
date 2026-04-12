@@ -2168,17 +2168,8 @@ export default function Prontuario() {
         );
 
       case 'procedimentos_realizados':
-        // Estética / Odontologia - Procedimentos Realizados
-        // For now, redirect to evolutions or show placeholder
-        return (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground">
-                Os procedimentos realizados são registrados nas Evoluções.
-              </p>
-            </CardContent>
-          </Card>
-        );
+        // Procedimentos Realizados - delegated to Estética layout when active
+        return null;
 
       default:
         return (

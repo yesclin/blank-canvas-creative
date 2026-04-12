@@ -12,6 +12,7 @@ import { EvolucoesEsteticaBlock } from '../EvolucoesEsteticaBlock';
 import { ProdutosUtilizadosBlock } from '../ProdutosUtilizadosBlock';
 import { AlertasEsteticaBlock } from '../AlertasEsteticaBlock';
 import { TimelineEsteticaBlock } from '../TimelineEsteticaBlock';
+import { ProcedimentosRealizadosBlock } from '../ProcedimentosRealizadosBlock';
 import { FacialMapModule } from '../FacialMapModule';
 import { BeforeAfterModule } from '../BeforeAfterModule';
 import { ConsentModule } from '../ConsentModule';
@@ -153,13 +154,14 @@ export function EsteticaProntuarioLayout({
 
     case 'procedimentos_realizados':
       return (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">
-              Os procedimentos realizados são registrados nas Evoluções.
-            </p>
-          </CardContent>
-        </Card>
+        <ProcedimentosRealizadosBlock
+          patientId={patientId}
+          clinicId={clinicId}
+          appointmentId={appointmentId}
+          specialtyId={specialtyId}
+          professionalId={professionalId}
+          canEdit={canEdit}
+        />
       );
 
     default:

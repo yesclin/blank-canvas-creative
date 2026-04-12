@@ -12,6 +12,7 @@ export { AnamneseEsteticaBlock } from './AnamneseEsteticaBlock';
 export { AvaliacaoEsteticaBlock } from './AvaliacaoEsteticaBlock';
 export { useFacialMapPdf } from './useFacialMapPdf';
 export { ProdutosUtilizadosBlock } from './ProdutosUtilizadosBlock';
+export { ProcedimentosRealizadosBlock } from './ProcedimentosRealizadosBlock';
 export { EvolucoesEsteticaBlock } from './EvolucoesEsteticaBlock';
 export { AlertasEsteticaBlock } from './AlertasEsteticaBlock';
 export { TimelineEsteticaBlock } from './TimelineEsteticaBlock';
