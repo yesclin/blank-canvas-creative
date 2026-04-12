@@ -101,6 +101,7 @@ export function useCreatePerformedProcedure(patientId: string, appointmentId?: s
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKey(patientId, appointmentId) });
+      qc.invalidateQueries({ queryKey: ['estetica-summary'] });
       toast.success('Procedimento registrado com sucesso');
     },
     onError: () => {
@@ -121,6 +122,7 @@ export function useDeletePerformedProcedure(patientId: string, appointmentId?: s
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKey(patientId, appointmentId) });
+      qc.invalidateQueries({ queryKey: ['estetica-summary'] });
       toast.success('Procedimento removido');
     },
     onError: () => {
