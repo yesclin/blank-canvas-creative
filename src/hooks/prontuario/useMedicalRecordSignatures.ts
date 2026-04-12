@@ -147,9 +147,10 @@ export function useMedicalRecordSignatures() {
 
       toast.success('Registro assinado digitalmente com sucesso');
       return true;
-    } catch (err) {
-      console.error('Error signing record:', err);
-      toast.error('Erro ao assinar registro');
+    } catch (err: any) {
+      console.error('[SIGNATURE] Error signing record:', err);
+      const msg = err?.message || 'Erro ao assinar registro';
+      toast.error(msg);
       return false;
     } finally {
       setSigning(false);
