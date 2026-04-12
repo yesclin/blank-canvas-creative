@@ -20,6 +20,7 @@ export type TimelineEventType =
   | 'anamnese'
   | 'avaliacao'
   | 'evolucao'
+  | 'procedimento'
   | 'facial_map'
   | 'produto'
   | 'consentimento'
@@ -180,6 +181,25 @@ export function useTimelineEsteticaData(patientId: string | null) {
     enabled: !!patientId && !!clinic?.id,
   });
 
+  // Fetch performed procedures
+  const { data: procedures = [], isLoading: loadingProcedures } = useQuery({
+    queryKey: ['timeline-procedures', patientId],
+    queryFn: async () => {
+      if (!patientId || !clinic?.id) return [];
+
+      const { data, error } = await supabase
+        .from('clinical_performed_procedures')
+        .select('*, professionals:professional_id(full_name)')
+        .eq('clinic_id', clinic.id)
+        .eq('patient_id', patientId)
+        .order('performed_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!patientId && !!clinic?.id,
+  });
+
   // Transform and merge all data into timeline events
   const timelineEvents = useMemo((): TimelineEvent[] => {
     const events: TimelineEvent[] = [];
@@ -301,9 +321,30 @@ export function useTimelineEsteticaData(patientId: string | null) {
       });
     });
 
+    // Performed Procedures
+    procedures.forEach((proc: any) => {
+      const parts = [proc.region, proc.technique].filter(Boolean).join(' · ');
+      events.push({
+        id: proc.id,
+        type: 'procedimento',
+        title: 'Procedimento Realizado',
+        subtitle: proc.procedure_name,
+        description: parts || proc.notes || undefined,
+        date: proc.performed_at,
+        status: proc.status,
+        professionalName: proc.professionals?.full_name,
+        appointmentId: proc.appointment_id,
+        metadata: {
+          region: proc.region,
+          technique: proc.technique,
+          notes: proc.notes,
+        },
+      });
+    });
+
     // Sort by date descending
     return events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [evolutions, facialMaps, products, consents, beforeAfter, alerts]);
+  }, [evolutions, facialMaps, products, consents, beforeAfter, alerts, procedures]);
 
   // Group events by date
   const groupedByDate = useMemo(() => {
@@ -346,7 +387,7 @@ export function useTimelineEsteticaData(patientId: string | null) {
     return timelineEvents.filter((e) => e.appointmentId === appointmentId);
   };
 
-  const isLoading = loadingEvolutions || loadingMaps || loadingProducts || loadingConsents || loadingBeforeAfter || loadingAlerts;
+  const isLoading = loadingEvolutions || loadingMaps || loadingProducts || loadingConsents || loadingBeforeAfter || loadingAlerts || loadingProcedures;
 
   return {
     events: timelineEvents,
@@ -360,6 +401,7 @@ export function useTimelineEsteticaData(patientId: string | null) {
       anamnese: timelineEvents.filter((e) => e.type === 'anamnese').length,
       avaliacao: timelineEvents.filter((e) => e.type === 'avaliacao').length,
       evolucao: timelineEvents.filter((e) => e.type === 'evolucao').length,
+      procedimento: timelineEvents.filter((e) => e.type === 'procedimento').length,
       facial_map: timelineEvents.filter((e) => e.type === 'facial_map').length,
       produto: timelineEvents.filter((e) => e.type === 'produto').length,
       consentimento: timelineEvents.filter((e) => e.type === 'consentimento').length,

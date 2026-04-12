@@ -39,6 +39,7 @@ import {
   FileCheck,
   Camera,
   AlertTriangle,
+  Syringe,
   ChevronDown,
   ChevronUp,
   User,
@@ -82,6 +83,12 @@ const EVENT_TYPE_CONFIG: Record<TimelineEventType, {
     icon: <FileText className="h-4 w-4" />,
     color: 'text-green-600',
     bgColor: 'bg-green-100',
+  },
+  procedimento: {
+    label: 'Procedimento',
+    icon: <Syringe className="h-4 w-4" />,
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-100',
   },
   facial_map: {
     label: 'Mapa Facial',
