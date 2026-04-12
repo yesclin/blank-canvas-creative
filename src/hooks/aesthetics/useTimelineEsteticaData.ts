@@ -321,6 +321,27 @@ export function useTimelineEsteticaData(patientId: string | null) {
       });
     });
 
+    // Performed Procedures
+    procedures.forEach((proc: any) => {
+      const parts = [proc.region, proc.technique].filter(Boolean).join(' · ');
+      events.push({
+        id: proc.id,
+        type: 'procedimento',
+        title: 'Procedimento Realizado',
+        subtitle: proc.procedure_name,
+        description: parts || proc.notes || undefined,
+        date: proc.performed_at,
+        status: proc.status,
+        professionalName: proc.professionals?.full_name,
+        appointmentId: proc.appointment_id,
+        metadata: {
+          region: proc.region,
+          technique: proc.technique,
+          notes: proc.notes,
+        },
+      });
+    });
+
     // Sort by date descending
     return events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [evolutions, facialMaps, products, consents, beforeAfter, alerts]);
