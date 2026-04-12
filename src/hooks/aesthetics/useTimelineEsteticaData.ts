@@ -20,6 +20,7 @@ export type TimelineEventType =
   | 'anamnese'
   | 'avaliacao'
   | 'evolucao'
+  | 'procedimento'
   | 'facial_map'
   | 'produto'
   | 'consentimento'
