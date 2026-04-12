@@ -50,7 +50,6 @@ export function NewMovementDialog({ open, onOpenChange, products }: NewMovementD
 
   const handleSave = async () => {
     if (!productId || !quantity || parseFloat(quantity) <= 0) return;
-    console.log("[NewMovementDialog] Creating movement:", { movementType, productId, quantity, reason });
     try {
       await createMovement.mutateAsync({
         product_id: productId,
@@ -81,7 +80,7 @@ export function NewMovementDialog({ open, onOpenChange, products }: NewMovementD
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Nova Movimentação</DialogTitle>
-          <DialogDescription>Registre entrada, saída ou ajuste de estoque</DialogDescription>
+          <DialogDescription>Registre entrada, saída ou ajuste do item no estoque</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
@@ -119,10 +118,10 @@ export function NewMovementDialog({ open, onOpenChange, products }: NewMovementD
             </div>
           </div>
           <div className="grid gap-2">
-            <Label>Produto *</Label>
+            <Label>Item *</Label>
             <Select value={productId} onValueChange={setProductId} disabled={isLoading}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione o produto" />
+                <SelectValue placeholder="Selecione o item" />
               </SelectTrigger>
               <SelectContent>
                 {products

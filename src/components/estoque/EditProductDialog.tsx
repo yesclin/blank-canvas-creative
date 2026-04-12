@@ -89,12 +89,12 @@ export function EditProductDialog({ open, onOpenChange, product, categories }: E
     <Dialog open={open} onOpenChange={(v) => !isLoading && onOpenChange(v)}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Editar Produto</DialogTitle>
-          <DialogDescription>Atualize os dados do produto no estoque</DialogDescription>
+          <DialogTitle>Editar Item</DialogTitle>
+          <DialogDescription>Atualize os dados do item cadastrado no estoque</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label>Nome do Produto *</Label>
+            <Label>Nome do Item *</Label>
             <Input
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -175,7 +175,7 @@ export function EditProductDialog({ open, onOpenChange, product, categories }: E
               />
             </div>
             <div className="grid gap-2">
-              <Label>Preço Venda (R$)</Label>
+              <Label>Preço de Venda (R$)</Label>
               <Input
                 type="number"
                 min={0}
@@ -201,7 +201,7 @@ export function EditProductDialog({ open, onOpenChange, product, categories }: E
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               disabled={isLoading}
-              placeholder="Observações sobre o produto..."
+              placeholder="Observações sobre o item..."
             />
           </div>
         </div>
