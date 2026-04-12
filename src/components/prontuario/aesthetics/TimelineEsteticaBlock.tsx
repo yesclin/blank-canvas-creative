@@ -39,6 +39,7 @@ import {
   FileCheck,
   Camera,
   AlertTriangle,
+  Syringe,
   ChevronDown,
   ChevronUp,
   User,

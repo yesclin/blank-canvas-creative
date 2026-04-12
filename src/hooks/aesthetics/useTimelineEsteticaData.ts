@@ -181,6 +181,25 @@ export function useTimelineEsteticaData(patientId: string | null) {
     enabled: !!patientId && !!clinic?.id,
   });
 
+  // Fetch performed procedures
+  const { data: procedures = [], isLoading: loadingProcedures } = useQuery({
+    queryKey: ['timeline-procedures', patientId],
+    queryFn: async () => {
+      if (!patientId || !clinic?.id) return [];
+
+      const { data, error } = await supabase
+        .from('clinical_performed_procedures')
+        .select('*, professionals:professional_id(full_name)')
+        .eq('clinic_id', clinic.id)
+        .eq('patient_id', patientId)
+        .order('performed_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!patientId && !!clinic?.id,
+  });
+
   // Transform and merge all data into timeline events
   const timelineEvents = useMemo((): TimelineEvent[] => {
     const events: TimelineEvent[] = [];
