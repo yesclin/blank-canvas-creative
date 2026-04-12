@@ -112,14 +112,27 @@ export function useMedicalRecordSignatures() {
 
       if (sigError) throw sigError;
 
-      // Update the source record status to 'assinado'
+      // Update the source record status to 'assinado' with signed_at and signed_by
       const table = input.record_type === 'anamnesis' ? 'anamnesis_records' : 'clinical_evolutions';
+      const now = new Date().toISOString();
+      console.log(`[SIGNATURE] Updating ${table} id=${input.record_id} → status=assinado, signed_at=${now}, signed_by=${userId}`);
+      
       const { error: updateError } = await supabase
         .from(table)
-        .update({ status: 'assinado' })
+        .update({ 
+          status: 'assinado',
+          signed_at: now,
+          signed_by: userId,
+        })
         .eq('id', input.record_id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error(`[SIGNATURE] Update ${table} failed:`, JSON.stringify(updateError));
+        if (updateError.code === '42501') {
+          throw new Error('Permissão negada: você não é o profissional responsável por este registro ou ele já foi assinado.');
+        }
+        throw updateError;
+      }
 
       // Log the signature action
       await supabase.from('access_logs').insert({
