@@ -7,7 +7,6 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { PROCEDURE_TYPE_LABELS, type ProcedureType } from '@/components/prontuario/aesthetics/types';
 
 // Status do tratamento estético
 export const STATUS_TRATAMENTO_ESTETICA: Record<string, string> = {
