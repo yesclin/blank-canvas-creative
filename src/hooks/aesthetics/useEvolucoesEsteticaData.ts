@@ -275,26 +275,44 @@ export function useEvolucoesEsteticaData({ patientId, appointmentId }: UseEvoluc
   // Sign evolution
   const signMutation = useMutation({
     mutationFn: async (evolucaoId: string) => {
+      console.log(`${LOG_PREFIX.evolucao} Início da assinatura. evolution_id=${evolucaoId}`);
+      
       const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+      if (!userId) throw new Error('Usuário não autenticado');
 
+      console.log(`${LOG_PREFIX.evolucao} Atualizando clinical_evolutions → status=assinado, signed_by=${userId}`);
+      const now = new Date().toISOString();
+      
       const { error } = await supabase
         .from('clinical_evolutions')
         .update({
           status: 'assinado',
-          signed_at: new Date().toISOString(),
-          signed_by: userData.user?.id,
+          signed_at: now,
+          signed_by: userId,
         })
         .eq('id', evolucaoId);
 
-      if (error) throw error;
+      if (error) {
+        console.error(`[ESTETICA_ASSINATURA] Falha ao assinar evolução`);
+        console.error(`[ESTETICA_ASSINATURA] Código: ${error.code}, Msg: ${error.message}`);
+        console.error(`[ESTETICA_ASSINATURA] Detalhes: ${error.details}, Hint: ${error.hint}`);
+        
+        if (error.code === '42501') {
+          throw new Error('Permissão negada: verifique se você é o profissional responsável e se a evolução está em rascunho.');
+        }
+        throw error;
+      }
+      
+      console.log(`${LOG_PREFIX.evolucao} Evolução assinada com sucesso.`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
       toast.success('Evolução assinada com sucesso');
     },
-    onError: (error) => {
-      console.error('Error signing evolution:', error);
-      toast.error('Erro ao assinar evolução');
+    onError: (error: Error) => {
+      console.error('[ESTETICA_ASSINATURA] FALHA FINAL:', error);
+      toast.error(`Erro ao assinar evolução: ${error.message}`);
     },
   });
 
