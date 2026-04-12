@@ -34,7 +34,7 @@ export interface EsteticaAlert {
 }
 
 export interface ProcedimentoResumo {
-  tipo: ProcedureType;
+  tipo: string;
   label: string;
   quantidade: number;
   ultima_data: string | null;
