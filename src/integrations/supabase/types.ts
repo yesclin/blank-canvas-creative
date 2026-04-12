@@ -2118,6 +2118,7 @@ export type Database = {
           clinic_id: string
           content: Json
           created_at: string
+          evolution_type: string | null
           id: string
           notes: string | null
           patient_id: string
@@ -2133,6 +2134,7 @@ export type Database = {
           clinic_id: string
           content?: Json
           created_at?: string
+          evolution_type?: string | null
           id?: string
           notes?: string | null
           patient_id: string
@@ -2148,6 +2150,7 @@ export type Database = {
           clinic_id?: string
           content?: Json
           created_at?: string
+          evolution_type?: string | null
           id?: string
           notes?: string | null
           patient_id?: string
