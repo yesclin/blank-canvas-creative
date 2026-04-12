@@ -7,7 +7,6 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { PROCEDURE_TYPE_LABELS, type ProcedureType } from '@/components/prontuario/aesthetics/types';
 
 // Status do tratamento estético
 export const STATUS_TRATAMENTO_ESTETICA: Record<string, string> = {
@@ -35,7 +34,7 @@ export interface EsteticaAlert {
 }
 
 export interface ProcedimentoResumo {
-  tipo: ProcedureType;
+  tipo: string;
   label: string;
   quantidade: number;
   ultima_data: string | null;
@@ -101,37 +100,37 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
         return getEmptySummary();
       }
 
-      // Buscar pontos de aplicação (procedimentos)
-      const { data: aplicacoes } = await supabase
-        .from('facial_map_applications')
-        .select('id, procedure_type, product_name, created_at')
+      // Buscar procedimentos realizados (fonte de verdade: clinical_performed_procedures)
+      const { data: procedimentos } = await supabase
+        .from('clinical_performed_procedures')
+        .select('id, procedure_name, region, status, performed_at')
         .eq('patient_id', patientId)
         .eq('clinic_id', clinicId)
-        .order('created_at', { ascending: false });
+        .order('performed_at', { ascending: false });
 
-      // Agrupar por tipo de procedimento
+      // Agrupar por nome de procedimento
       const procedimentosPorTipo: Record<string, { quantidade: number; ultima_data: string | null }> = {};
       
-      (aplicacoes || []).forEach(app => {
-        const tipo = app.procedure_type as ProcedureType;
-        if (!procedimentosPorTipo[tipo]) {
-          procedimentosPorTipo[tipo] = { quantidade: 0, ultima_data: null };
+      (procedimentos || []).forEach(p => {
+        const nome = p.procedure_name || 'Outros';
+        if (!procedimentosPorTipo[nome]) {
+          procedimentosPorTipo[nome] = { quantidade: 0, ultima_data: null };
         }
-        procedimentosPorTipo[tipo].quantidade++;
-        if (!procedimentosPorTipo[tipo].ultima_data) {
-          procedimentosPorTipo[tipo].ultima_data = app.created_at;
+        procedimentosPorTipo[nome].quantidade++;
+        if (!procedimentosPorTipo[nome].ultima_data) {
+          procedimentosPorTipo[nome].ultima_data = p.performed_at;
         }
       });
 
-      const procedimentosResumo: ProcedimentoResumo[] = Object.entries(procedimentosPorTipo).map(([tipo, data]) => ({
-        tipo: tipo as ProcedureType,
-        label: PROCEDURE_TYPE_LABELS[tipo as ProcedureType] || tipo,
+      const procedimentosResumo: ProcedimentoResumo[] = Object.entries(procedimentosPorTipo).map(([nome, data]) => ({
+        tipo: nome,
+        label: nome,
         quantidade: data.quantidade,
         ultima_data: data.ultima_data,
       }));
 
       // Último procedimento
-      const ultimoProc = aplicacoes?.[0] || null;
+      const ultimoProc = procedimentos?.[0] || null;
 
       // Buscar evoluções/sessões de estética
       const { data: sessoes } = await supabase
@@ -176,12 +175,12 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
         .eq('is_active', true);
 
       // Determinar status do tratamento
-      const totalProcedimentos = aplicacoes?.length || 0;
+      const totalProcedimentos = procedimentos?.length || 0;
       let statusTratamento = 'aguardando';
       
       if (totalProcedimentos > 0) {
         const diasDesdeUltimoProc = ultimoProc
-          ? Math.ceil(Math.abs(new Date().getTime() - new Date(ultimoProc.created_at).getTime()) / (1000 * 60 * 60 * 24))
+          ? Math.ceil(Math.abs(new Date().getTime() - new Date(ultimoProc.performed_at).getTime()) / (1000 * 60 * 60 * 24))
           : null;
 
         if (diasDesdeUltimoProc !== null && diasDesdeUltimoProc <= 30) {
@@ -197,9 +196,9 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
         total_procedimentos: totalProcedimentos,
         procedimentos_por_tipo: procedimentosResumo,
         ultimo_procedimento: ultimoProc ? {
-          tipo: PROCEDURE_TYPE_LABELS[ultimoProc.procedure_type as ProcedureType] || ultimoProc.procedure_type,
-          produto: ultimoProc.product_name,
-          data: ultimoProc.created_at,
+          tipo: ultimoProc.procedure_name,
+          produto: ultimoProc.region || '',
+          data: ultimoProc.performed_at,
         } : null,
         total_sessoes: totalSessoes,
         ultima_sessao: ultimaSessao,
