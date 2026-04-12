@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Package, Plus, Search, AlertTriangle, ArrowUpCircle, ArrowDownCircle, Edit, ToggleLeft, ToggleRight, History, TrendingDown, Clock, ExternalLink, User, Syringe, Boxes, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +39,9 @@ import { ptBR } from "date-fns/locale";
 import { SaleDetailsDialog } from "@/components/gestao/SaleDetailsDialog";
 import { ProductKitsTab } from "@/components/estoque/ProductKitsTab";
 import { StockPredictionAlerts } from "@/components/estoque/StockPredictionAlerts";
+import { EditProductDialog } from "@/components/estoque/EditProductDialog";
+import { useUpdateProduct } from "@/hooks/useProducts";
+import type { StockProduct } from "@/hooks/useStockData";
 
 export default function Estoque() {
   const { categories, products, movements, lowStockProducts, outOfStockProducts, expiringProducts, stats, isLoading } = useStockData();
@@ -49,6 +52,29 @@ export default function Estoque() {
   const [isMovementDialogOpen, setIsMovementDialogOpen] = useState(false);
   const [movementType, setMovementType] = useState<MovementType>("entrada");
   
+  // Edit product dialog state
+  const [editingProduct, setEditingProduct] = useState<StockProduct | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const toggleMutation = useUpdateProduct();
+
+  const handleEditProduct = useCallback((product: StockProduct) => {
+    console.log("[Estoque] Edit clicked, product:", product.id, product.name);
+    setEditingProduct(product);
+    setIsEditDialogOpen(true);
+  }, []);
+
+  const handleToggleProduct = useCallback(async (product: StockProduct) => {
+    console.log("[Estoque] Toggle clicked, product:", product.id, "currently active:", product.is_active);
+    try {
+      await toggleMutation.mutateAsync({
+        id: product.id,
+        data: { is_active: !product.is_active },
+      });
+    } catch (error) {
+      console.error("[Estoque] Toggle error:", error);
+    }
+  }, [toggleMutation]);
+
   // Sale details dialog state
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
   const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
@@ -486,10 +512,21 @@ export default function Estoque() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <Button variant="ghost" size="icon">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Editar produto"
+                              onClick={() => handleEditProduct(product)}
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title={product.is_active ? "Desativar" : "Ativar"}
+                              onClick={() => handleToggleProduct(product)}
+                              disabled={toggleMutation.isPending}
+                            >
                               {product.is_active ? (
                                 <ToggleRight className="h-4 w-4 text-primary" />
                               ) : (
@@ -665,6 +702,14 @@ export default function Estoque() {
         saleId={selectedSaleId}
         open={isSaleDialogOpen}
         onOpenChange={setIsSaleDialogOpen}
+      />
+
+      {/* Edit Product Dialog */}
+      <EditProductDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        product={editingProduct}
+        categories={categories}
       />
     </div>
   );
