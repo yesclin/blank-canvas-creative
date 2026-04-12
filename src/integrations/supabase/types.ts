@@ -2220,6 +2220,126 @@ export type Database = {
         }
         Relationships: []
       }
+      clinical_performed_procedures: {
+        Row: {
+          appointment_id: string | null
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          evolution_id: string | null
+          facial_map_id: string | null
+          id: string
+          notes: string | null
+          patient_id: string
+          performed_at: string
+          procedure_id: string | null
+          procedure_name: string
+          professional_id: string | null
+          region: string | null
+          specialty_id: string | null
+          status: string
+          technique: string | null
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          evolution_id?: string | null
+          facial_map_id?: string | null
+          id?: string
+          notes?: string | null
+          patient_id: string
+          performed_at?: string
+          procedure_id?: string | null
+          procedure_name: string
+          professional_id?: string | null
+          region?: string | null
+          specialty_id?: string | null
+          status?: string
+          technique?: string | null
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          evolution_id?: string | null
+          facial_map_id?: string | null
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          performed_at?: string
+          procedure_id?: string | null
+          procedure_name?: string
+          professional_id?: string | null
+          region?: string | null
+          specialty_id?: string | null
+          status?: string
+          technique?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_performed_procedures_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_performed_procedures_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_performed_procedures_evolution_id_fkey"
+            columns: ["evolution_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_evolutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_performed_procedures_facial_map_id_fkey"
+            columns: ["facial_map_id"]
+            isOneToOne: false
+            referencedRelation: "facial_maps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_performed_procedures_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_performed_procedures_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_performed_procedures_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_performed_procedures_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinical_scales: {
         Row: {
           clinic_id: string | null
