@@ -10,6 +10,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useClinicData } from '@/hooks/useClinicData';
 import { toast } from 'sonner';
 
+const LOG_PREFIX = {
+  evolucao: '[ESTETICA_EVOLUCAO]',
+  context: '[ESTETICA_CONTEXT]',
+  payload: '[ESTETICA_PAYLOAD]',
+  dbError: '[ESTETICA_DB_ERROR]',
+} as const;
+
 // Níveis de satisfação
 export const SATISFACTION_LEVELS = [
   { value: 'muito_satisfeito', label: 'Muito Satisfeito', color: 'text-green-600' },
@@ -120,11 +127,10 @@ export function useEvolucoesEsteticaData({ patientId, appointmentId }: UseEvoluc
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching aesthetic evolutions:', error);
+        console.error(`${LOG_PREFIX.dbError} Fetch evolutions failed:`, error);
         throw error;
       }
 
-      // Transform to typed format
       return data.map((ev): EvolucaoEstetica => {
         const content = ev.content as Record<string, unknown> || {};
         return {
@@ -161,21 +167,44 @@ export function useEvolucoesEsteticaData({ patientId, appointmentId }: UseEvoluc
   // Create evolution
   const createMutation = useMutation({
     mutationFn: async (data: EvolucaoEsteticaFormData) => {
-      if (!patientId || !clinic?.id) throw new Error('Missing required data');
+      console.log(`${LOG_PREFIX.evolucao} Início do save da evolução estética`);
 
+      // ── Step 1: Validate context ──
+      const contextErrors: string[] = [];
+      if (!patientId) contextErrors.push('patient_id ausente');
+      if (!clinic?.id) contextErrors.push('clinic_id ausente');
+
+      if (contextErrors.length > 0) {
+        const msg = `Contexto incompleto: ${contextErrors.join(', ')}`;
+        console.error(`${LOG_PREFIX.context} ${msg}`);
+        throw new Error(msg);
+      }
+
+      console.log(`${LOG_PREFIX.context} clinic_id=${clinic!.id}, patient_id=${patientId}, appointment_id=${appointmentId || 'NENHUM'}`);
+
+      // ── Step 2: Resolve professional ──
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData.user?.id;
+      if (!userId) {
+        console.error(`${LOG_PREFIX.context} Usuário não autenticado`);
+        throw new Error('Usuário não autenticado');
+      }
 
-      // Get professional ID
-      const { data: professional } = await supabase
+      console.log(`${LOG_PREFIX.context} Resolving professional for user_id=${userId}`);
+      const { data: professional, error: profError } = await supabase
         .from('professionals')
         .select('id')
         .eq('user_id', userId)
-        .eq('clinic_id', clinic.id)
+        .eq('clinic_id', clinic!.id)
         .single();
 
-      if (!professional) throw new Error('Professional not found');
+      if (profError || !professional) {
+        console.error(`${LOG_PREFIX.dbError} Professional lookup failed:`, profError);
+        throw new Error(`Profissional não encontrado para este usuário (user_id=${userId})`);
+      }
+      console.log(`${LOG_PREFIX.context} professional_id=${professional.id}`);
 
+      // ── Step 3: Build content payload ──
       const content = {
         evolution_date: data.evolution_date,
         procedure_performed: data.procedure_performed,
@@ -191,25 +220,46 @@ export function useEvolucoesEsteticaData({ patientId, appointmentId }: UseEvoluc
         photos_taken: data.photos_taken || false,
       };
 
+      const insertPayload = {
+        clinic_id: clinic!.id,
+        patient_id: patientId,
+        appointment_id: appointmentId || null,
+        professional_id: professional.id,
+        evolution_type: 'evolucao_estetica',
+        content,
+        notes: data.notes || null,
+        status: 'rascunho',
+      };
+
+      console.log(`${LOG_PREFIX.payload} Insert payload:`, JSON.stringify(insertPayload, null, 2));
+
+      // ── Step 4: Insert ──
+      console.log(`${LOG_PREFIX.evolucao} Inserindo em clinical_evolutions...`);
       const { data: result, error } = await supabase
         .from('clinical_evolutions')
-        .insert({
-          clinic_id: clinic.id,
-          patient_id: patientId,
-          appointment_id: appointmentId || null,
-          professional_id: professional.id,
-          evolution_type: 'evolucao_estetica',
-          content,
-          notes: data.notes || null,
-          status: 'rascunho',
-        })
+        .insert(insertPayload)
         .select()
         .single();
 
       if (error) {
-        console.error('Supabase insert error details:', JSON.stringify(error));
-        throw new Error(error.message || 'Falha ao inserir evolução no banco');
+        console.error(`${LOG_PREFIX.dbError} Insert falhou na tabela clinical_evolutions`);
+        console.error(`${LOG_PREFIX.dbError} Código: ${error.code}`);
+        console.error(`${LOG_PREFIX.dbError} Mensagem: ${error.message}`);
+        console.error(`${LOG_PREFIX.dbError} Detalhes: ${error.details}`);
+        console.error(`${LOG_PREFIX.dbError} Hint: ${error.hint}`);
+        console.error(`${LOG_PREFIX.dbError} Erro completo:`, JSON.stringify(error));
+
+        let userMsg = 'Falha ao salvar evolução';
+        if (error.code === '23503') userMsg = `Chave estrangeira inválida: ${error.details}`;
+        else if (error.code === '23505') userMsg = 'Registro duplicado';
+        else if (error.code === '42703') userMsg = `Coluna inexistente: ${error.message}`;
+        else if (error.code === '42501') userMsg = 'Permissão negada (RLS)';
+        else if (error.message) userMsg = error.message;
+
+        throw new Error(userMsg);
       }
+
+      console.log(`${LOG_PREFIX.evolucao} Evolução salva com sucesso. id=${result.id}`);
       return result;
     },
     onSuccess: () => {
@@ -217,7 +267,7 @@ export function useEvolucoesEsteticaData({ patientId, appointmentId }: UseEvoluc
       toast.success('Evolução salva como rascunho');
     },
     onError: (error: Error) => {
-      console.error('Error creating evolution:', error);
+      console.error(`${LOG_PREFIX.evolucao} FALHA FINAL:`, error);
       toast.error(`Erro ao salvar evolução: ${error.message}`);
     },
   });
@@ -273,7 +323,7 @@ export function useEvolucoesEsteticaData({ patientId, appointmentId }: UseEvoluc
           notes: data.notes || null,
         })
         .eq('id', id)
-        .eq('status', 'rascunho'); // Only update drafts
+        .eq('status', 'rascunho');
 
       if (error) throw error;
     },
@@ -287,7 +337,6 @@ export function useEvolucoesEsteticaData({ patientId, appointmentId }: UseEvoluc
     },
   });
 
-  // Filter by current appointment
   const currentAppointmentEvolucoes = appointmentId
     ? evolucoes.filter(e => e.appointment_id === appointmentId)
     : [];
