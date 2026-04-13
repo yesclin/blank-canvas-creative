@@ -406,7 +406,7 @@ export function ProcedureProductsDialog({
                       ) : (
                         availableKits.map((kit) => (
                           <SelectItem key={kit.id} value={kit.id}>
-                            {kit.name} ({kit.items_count} itens) - {formatCurrency(kit.total_cost || 0)}
+                            {kit.name}
                           </SelectItem>
                         ))
                       )}
