@@ -26,8 +26,6 @@ import { AlertsTab } from "@/components/estoque/tabs/AlertsTab";
 import { ExpiryTab } from "@/components/estoque/tabs/ExpiryTab";
 import { InventoryKitsTab } from "@/components/catalogo-clinico/InventoryKitsTab";
 import { StockPredictionAlerts } from "@/components/estoque/StockPredictionAlerts";
-import { AlertsTab } from "@/components/estoque/tabs/AlertsTab";
-import { ExpiryTab } from "@/components/estoque/tabs/ExpiryTab";
 import { useInventoryItems, useToggleInventoryItem } from "@/hooks/useInventoryItems";
 import { useExpiringBatches, useExpiredBatches } from "@/hooks/useInventoryBatches";
 import type { InventoryItem } from "@/types/inventory-items";
