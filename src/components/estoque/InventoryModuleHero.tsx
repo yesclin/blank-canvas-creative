@@ -24,6 +24,9 @@ export function InventoryModuleHero({
   expiringCount,
   expiredBatchCount,
   onCreateItem,
+  onEntry,
+  onExit,
+  onAdjust,
 }: InventoryModuleHeroProps) {
   const metrics = [
     { label: "Total de Itens", value: totalItems },
@@ -56,6 +59,18 @@ export function InventoryModuleHero({
             <Button onClick={onCreateItem}>
               <Package className="mr-2 h-4 w-4" />
               Novo Item
+            </Button>
+            <Button variant="outline" onClick={onEntry}>
+              <ArrowDownCircle className="mr-2 h-4 w-4" />
+              Entrada
+            </Button>
+            <Button variant="outline" onClick={onExit}>
+              <ArrowUpCircle className="mr-2 h-4 w-4" />
+              Saída
+            </Button>
+            <Button variant="outline" onClick={onAdjust}>
+              <Settings2 className="mr-2 h-4 w-4" />
+              Ajuste
             </Button>
           </div>
 
