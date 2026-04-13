@@ -13,8 +13,14 @@ export default function ConfigMateriais() {
   }, [navigate]);
 
   return (
-    <div className="flex items-center justify-center py-12">
+    <div className="flex flex-col items-center justify-center gap-4 py-12">
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      <div className="space-y-1 text-center">
+        <p className="font-medium text-foreground">Redirecionando para Itens e Estoque</p>
+        <p className="text-sm text-muted-foreground">
+          O cadastro-base agora acontece em um único macro-módulo operacional.
+        </p>
+      </div>
     </div>
   );
 }
