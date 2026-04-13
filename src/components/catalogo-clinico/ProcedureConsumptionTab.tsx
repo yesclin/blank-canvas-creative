@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, Trash2, Edit, Package, Calculator, AlertCircle } from "lucide-react";
+import { Plus, Search, Trash2, Edit, Package, Calculator, AlertCircle, Boxes } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,27 +24,40 @@ import {
   useCreateConsumptionTemplate,
   useUpdateConsumptionTemplate,
   useDeleteConsumptionTemplate,
+  useInventoryKits,
   type ProcedureConsumptionTemplate,
   type ConsumptionTemplateFormData,
 } from "@/hooks/useProcedureConsumption";
+import {
+  useProcedureConsumptionKits,
+  useCreateProcedureConsumptionKit,
+  useDeleteProcedureConsumptionKit,
+} from "@/hooks/useProcedureConsumptionKits";
 
 export function ProcedureConsumptionTab() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [kitDialogOpen, setKitDialogOpen] = useState(false);
   const [editItem, setEditItem] = useState<ProcedureConsumptionTemplate | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteKitLinkId, setDeleteKitLinkId] = useState<string | null>(null);
 
   const { data: procedures = [], isLoading: loadingProc } = useProceduresList();
   const { data: items = [] } = useInventoryItems({ isConsumable: true });
   const { data: templates = [], isLoading: loadingTemplates } = useProcedureConsumptionTemplates();
+  const { data: kits = [] } = useInventoryKits();
+  const { data: kitLinks = [] } = useProcedureConsumptionKits();
   const createMut = useCreateConsumptionTemplate();
   const updateMut = useUpdateConsumptionTemplate();
   const deleteMut = useDeleteConsumptionTemplate();
+  const createKitLink = useCreateProcedureConsumptionKit();
+  const deleteKitLink = useDeleteProcedureConsumptionKit();
 
   const [form, setForm] = useState<ConsumptionTemplateFormData>({
     procedure_id: '', item_id: '', default_quantity: 1, unit: 'un',
     batch_required: false, allow_quantity_edit_on_finish: true, is_required: true,
   });
+  const [kitForm, setKitForm] = useState({ procedure_id: '', kit_id: '', quantity: 1, is_required: false });
 
   const updateForm = (key: keyof ConsumptionTemplateFormData, value: any) =>
     setForm(prev => ({ ...prev, [key]: value }));
@@ -61,6 +74,7 @@ export function ProcedureConsumptionTab() {
   );
 
   const getTemplatesForProc = (procId: string) => templates.filter(t => t.procedure_id === procId);
+  const getKitLinksForProc = (procId: string) => kitLinks.filter(k => k.procedure_id === procId);
 
   const getCostForProc = (procId: string) =>
     getTemplatesForProc(procId).reduce((sum, t) => sum + (t.inventory_items?.default_cost_price || 0) * t.default_quantity, 0);
@@ -70,6 +84,11 @@ export function ProcedureConsumptionTab() {
     updateForm("procedure_id", procedureId);
     setEditItem(null);
     setDialogOpen(true);
+  };
+
+  const handleAddKit = (procedureId: string) => {
+    setKitForm({ procedure_id: procedureId, kit_id: '', quantity: 1, is_required: false });
+    setKitDialogOpen(true);
   };
 
   const handleEdit = (t: ProcedureConsumptionTemplate) => {
@@ -99,16 +118,33 @@ export function ProcedureConsumptionTab() {
     setEditItem(null);
   };
 
+  const handleSaveKitLink = async () => {
+    if (!kitForm.procedure_id || !kitForm.kit_id) return;
+    await createKitLink.mutateAsync(kitForm);
+    setKitDialogOpen(false);
+  };
+
   const handleDelete = async () => {
     if (!deleteId) return;
     await deleteMut.mutateAsync(deleteId);
     setDeleteId(null);
   };
 
+  const handleDeleteKitLink = async () => {
+    if (!deleteKitLinkId) return;
+    await deleteKitLink.mutateAsync(deleteKitLinkId);
+    setDeleteKitLinkId(null);
+  };
+
   const isLoading = loadingProc || loadingTemplates;
   const isSaving = createMut.isPending || updateMut.isPending;
 
   const selectedItem = items.find(i => i.id === form.item_id);
+
+  const getAvailableKits = (procId: string) => {
+    const linkedKitIds = getKitLinksForProc(procId).map(k => k.kit_id);
+    return kits.filter(k => k.is_active && !linkedKitIds.includes(k.id));
+  };
 
   return (
     <div className="space-y-4">
@@ -159,14 +195,15 @@ export function ProcedureConsumptionTab() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {filteredProcedures.map(proc => {
             const procTemplates = getTemplatesForProc(proc.id);
+            const procKitLinks = getKitLinksForProc(proc.id);
             const cost = getCostForProc(proc.id);
             return (
-              <Card key={proc.id} className={procTemplates.length === 0 ? "border-dashed" : ""}>
+              <Card key={proc.id} className={procTemplates.length === 0 && procKitLinks.length === 0 ? "border-dashed" : ""}>
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between">
                     <div>
                       <CardTitle className="text-lg">{proc.name}</CardTitle>
-                      <CardDescription>{procTemplates.length} itens vinculados</CardDescription>
+                      <CardDescription>{procTemplates.length} itens • {procKitLinks.length} kits</CardDescription>
                     </div>
                     <div className="text-right">
                       <span className="font-bold text-primary">{formatCurrency(cost)}</span>
@@ -175,14 +212,19 @@ export function ProcedureConsumptionTab() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {procTemplates.length === 0 && (
+                  {procTemplates.length === 0 && procKitLinks.length === 0 && (
                     <div className="flex items-center gap-2 text-sm text-destructive mb-3 p-2 bg-destructive/10 rounded-md">
                       <AlertCircle className="h-4 w-4" /><span>Sem consumo vinculado</span>
                     </div>
                   )}
-                  <Button variant="outline" size="sm" onClick={() => handleAdd(proc.id)} className="mb-3">
-                    <Plus className="h-4 w-4 mr-1" />Vincular Item
-                  </Button>
+                  <div className="flex gap-2 mb-3">
+                    <Button variant="outline" size="sm" onClick={() => handleAdd(proc.id)}>
+                      <Plus className="h-4 w-4 mr-1" />Item
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleAddKit(proc.id)} disabled={getAvailableKits(proc.id).length === 0}>
+                      <Boxes className="h-4 w-4 mr-1" />Kit
+                    </Button>
+                  </div>
                   {procTemplates.map(t => (
                     <div key={t.id} className="flex items-center justify-between text-sm py-1">
                       <span className="text-muted-foreground">
@@ -203,6 +245,19 @@ export function ProcedureConsumptionTab() {
                       </div>
                     </div>
                   ))}
+                  {procKitLinks.map(kl => (
+                    <div key={kl.id} className="flex items-center justify-between text-sm py-1">
+                      <span className="text-muted-foreground">
+                        <Boxes className="h-3 w-3 inline mr-1" />
+                        {kl.inventory_kits?.name} × {kl.quantity}
+                        {kl.is_required && <Badge variant="outline" className="text-xs ml-1">Obrigatório</Badge>}
+                        <Badge variant="secondary" className="text-xs ml-1">Kit</Badge>
+                      </span>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setDeleteKitLinkId(kl.id)}>
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             );
@@ -210,7 +265,7 @@ export function ProcedureConsumptionTab() {
         </div>
       )}
 
-      {/* Add/Edit Dialog */}
+      {/* Add/Edit Item Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -268,7 +323,46 @@ export function ProcedureConsumptionTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete confirm */}
+      {/* Add Kit to Procedure Dialog */}
+      <Dialog open={kitDialogOpen} onOpenChange={setKitDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Vincular Kit ao Procedimento</DialogTitle>
+            <DialogDescription>Selecione um kit clínico para uso neste procedimento</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Kit *</Label>
+              <Select value={kitForm.kit_id} onValueChange={v => setKitForm(prev => ({ ...prev, kit_id: v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  {getAvailableKits(kitForm.procedure_id).map(k => (
+                    <SelectItem key={k.id} value={k.id}>{k.name} ({k.kit_type === 'clinical' ? 'Clínico' : 'Comercial'})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Quantidade</Label>
+                <Input type="number" min="1" step="1" value={kitForm.quantity} onChange={e => setKitForm(prev => ({ ...prev, quantity: parseFloat(e.target.value) || 1 }))} />
+              </div>
+              <div className="flex items-center gap-2 pt-6">
+                <Switch checked={kitForm.is_required} onCheckedChange={v => setKitForm(prev => ({ ...prev, is_required: v }))} />
+                <Label>Obrigatório</Label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setKitDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSaveKitLink} disabled={!kitForm.kit_id || createKitLink.isPending}>
+              {createKitLink.isPending ? "Vinculando..." : "Vincular Kit"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete item confirm */}
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -278,6 +372,20 @@ export function ProcedureConsumptionTab() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete}>Remover</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete kit link confirm */}
+      <AlertDialog open={!!deleteKitLinkId} onOpenChange={() => setDeleteKitLinkId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Desvincular kit?</AlertDialogTitle>
+            <AlertDialogDescription>O kit será desvinculado deste procedimento.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteKitLink}>Remover</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
