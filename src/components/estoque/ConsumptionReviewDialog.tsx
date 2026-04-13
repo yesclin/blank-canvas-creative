@@ -97,6 +97,10 @@ export function ConsumptionReviewDialog({
           unit_cost: line.unitCost,
           reason: `Consumo em procedimento`,
           source_module: 'appointment',
+          source_id: appointmentId || undefined,
+          patient_id: patientId || undefined,
+          professional_id: professionalId || undefined,
+          appointment_id: appointmentId || undefined,
           notes: appointmentId ? `Atendimento: ${appointmentId}` : undefined,
         });
       }
