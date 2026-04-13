@@ -76,7 +76,10 @@ export function useCreateInventoryMovement() {
           unit_sale_price: data.unit_sale_price || null,
           reason: data.reason || null,
           source_module: data.source_module || 'manual',
-          source_id: null,
+          source_id: data.source_id || null,
+          patient_id: data.patient_id || null,
+          professional_id: data.professional_id || null,
+          appointment_id: data.appointment_id || null,
           notes: data.notes || null,
           created_by: userId,
         })

@@ -80,6 +80,9 @@ export interface InventoryMovementFormData {
   reason?: string;
   source_module?: string;
   source_id?: string;
+  patient_id?: string;
+  professional_id?: string;
+  appointment_id?: string;
   notes?: string;
 }
 
