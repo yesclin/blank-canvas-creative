@@ -330,7 +330,7 @@ export default function Estoque() {
       <InventoryItemFormDialog
         open={isItemDialogOpen}
         onOpenChange={setIsItemDialogOpen}
-        editingItem={editingItem}
+        editItem={editingItem}
       />
       <EntryFormDialog open={isEntryOpen} onOpenChange={setIsEntryOpen} items={items} />
       <ExitFormDialog open={isExitOpen} onOpenChange={setIsExitOpen} items={items} />
