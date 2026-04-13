@@ -114,20 +114,10 @@ export default function Estoque() {
         expiringCount={expiringCount}
         expiredBatchCount={expiredBatchCount}
         onCreateItem={() => { setEditingItem(undefined); setIsItemDialogOpen(true); }}
+        onEntry={() => setIsEntryOpen(true)}
+        onExit={() => setIsExitOpen(true)}
+        onAdjust={() => setIsAdjustOpen(true)}
       />
-
-      {/* Action Buttons */}
-      <div className="flex flex-wrap gap-2">
-        <Button onClick={() => setIsEntryOpen(true)}>
-          <ArrowDownCircle className="h-4 w-4 mr-2" />Entrada
-        </Button>
-        <Button variant="outline" onClick={() => setIsExitOpen(true)}>
-          <ArrowUpCircle className="h-4 w-4 mr-2" />Saída
-        </Button>
-        <Button variant="outline" onClick={() => setIsAdjustOpen(true)}>
-          <Settings2 className="h-4 w-4 mr-2" />Ajuste
-        </Button>
-      </div>
 
       {/* Main Tabs */}
       <Tabs defaultValue="items" className="space-y-5">
