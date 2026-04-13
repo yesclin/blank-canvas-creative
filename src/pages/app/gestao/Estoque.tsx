@@ -1,12 +1,11 @@
 import { useState, useCallback } from "react";
 import {
-  Package, Plus, Search, AlertTriangle, ArrowUpCircle, ArrowDownCircle,
-  Edit, ToggleLeft, ToggleRight, History, TrendingDown, Clock,
-  ExternalLink, User, Syringe, Info,
+  Package, Plus, Search, AlertTriangle, TrendingDown, Clock,
+  Edit, ToggleLeft, ToggleRight, ArrowDownCircle, ArrowUpCircle, Settings2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -15,82 +14,69 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useStockData } from "@/hooks/useStockData";
-import { stockMovementTypeLabels, type StockMovementType } from "@/types/inventory";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { SaleDetailsDialog } from "@/components/gestao/SaleDetailsDialog";
-import { StockPredictionAlerts } from "@/components/estoque/StockPredictionAlerts";
-import { EditProductDialog } from "@/components/estoque/EditProductDialog";
-import { NewProductDialog } from "@/components/estoque/NewProductDialog";
-import { NewMovementDialog } from "@/components/estoque/NewMovementDialog";
 import { InventoryModuleHero } from "@/components/estoque/InventoryModuleHero";
 import { InventorySectionTabs } from "@/components/estoque/InventorySectionTabs";
-import { useUpdateProduct } from "@/hooks/useProducts";
-import type { StockProduct } from "@/hooks/useStockData";
-import { StockPredictionSettingsCard } from "@/components/config/StockPredictionSettingsCard";
+import { InventoryItemFormDialog } from "@/components/inventory/InventoryItemFormDialog";
+import { EntryFormDialog } from "@/components/estoque/EntryFormDialog";
+import { ExitFormDialog } from "@/components/estoque/ExitFormDialog";
+import { AdjustmentFormDialog } from "@/components/estoque/AdjustmentFormDialog";
+import { BatchesTab } from "@/components/estoque/tabs/BatchesTab";
+import { MovementsListTab } from "@/components/estoque/tabs/MovementsListTab";
+import { AlertsTab } from "@/components/estoque/tabs/AlertsTab";
+import { ExpiryTab } from "@/components/estoque/tabs/ExpiryTab";
+import { useInventoryItems, useToggleInventoryItem } from "@/hooks/useInventoryItems";
+import { useExpiringBatches, useExpiredBatches } from "@/hooks/useInventoryBatches";
+import type { InventoryItem } from "@/types/inventory-items";
+import { inventoryItemTypeLabels, inventoryItemTypeColors } from "@/types/inventory-items";
+import { entryMovementTypes, exitMovementTypes } from "@/types/inventory-batches";
 
 export default function Estoque() {
-  const { categories, products, movements, lowStockProducts, outOfStockProducts, expiringProducts, stats, isLoading } = useStockData();
+  const { data: items = [], isLoading } = useInventoryItems({ includeInactive: true });
+  const toggleItem = useToggleInventoryItem();
+  const { data: expiringBatches = [] } = useExpiringBatches(30);
+  const { data: expiredBatches = [] } = useExpiredBatches();
+
   const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
 
-  const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
-  const [isMovementDialogOpen, setIsMovementDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<StockProduct | null>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const toggleMutation = useUpdateProduct();
+  const [isItemDialogOpen, setIsItemDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<InventoryItem | undefined>();
+  const [isEntryOpen, setIsEntryOpen] = useState(false);
+  const [isExitOpen, setIsExitOpen] = useState(false);
+  const [isAdjustOpen, setIsAdjustOpen] = useState(false);
 
-  const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
-  const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
+  const activeItems = items.filter(i => i.is_active);
+  const stockItems = activeItems.filter(i => i.controls_stock);
+  // We don't have a current_stock on inventory_items yet, so stats are approximate
+  const totalItems = stockItems.length;
+  const expiringCount = expiringBatches.length + expiredBatches.length;
 
-  const handleEditProduct = useCallback((product: StockProduct) => {
-    setEditingProduct(product);
-    setIsEditDialogOpen(true);
-  }, []);
+  const categories = [...new Set(items.map(i => i.category).filter(Boolean))];
 
-  const handleToggleProduct = useCallback(async (product: StockProduct) => {
-    try {
-      await toggleMutation.mutateAsync({
-        id: product.id,
-        data: { is_active: !product.is_active },
-      });
-    } catch (error) {
-      console.error("[Estoque] Toggle error:", error);
-    }
-  }, [toggleMutation]);
-
-  const handleViewSale = (saleId: string) => {
-    setSelectedSaleId(saleId);
-    setIsSaleDialogOpen(true);
-  };
-
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
+  const filteredItems = items.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) ||
+      item.commercial_name?.toLowerCase().includes(search.toLowerCase()) ||
+      item.sku?.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = categoryFilter === "all" || item.category === categoryFilter;
     const matchesStatus = statusFilter === "all" ||
-      (statusFilter === "active" && product.is_active) ||
-      (statusFilter === "inactive" && !product.is_active) ||
-      (statusFilter === "low" && product.current_quantity <= product.min_quantity && product.current_quantity > 0) ||
-      (statusFilter === "out" && product.current_quantity === 0);
+      (statusFilter === "active" && item.is_active) ||
+      (statusFilter === "inactive" && !item.is_active) ||
+      (statusFilter === "stock" && item.controls_stock) ||
+      (statusFilter === "sellable" && item.is_sellable);
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  const getStockBadge = (product: typeof products[0]) => {
-    if (product.current_quantity === 0) {
-      return <Badge variant="destructive">Zerado</Badge>;
-    }
-    if (product.current_quantity <= product.min_quantity) {
-      return <Badge variant="outline" className="border-yellow-500 text-yellow-600">Baixo</Badge>;
-    }
-    return <Badge variant="outline" className="border-green-500 text-green-600">OK</Badge>;
-  };
+  const handleEditItem = useCallback((item: InventoryItem) => {
+    setEditingItem(item);
+    setIsItemDialogOpen(true);
+  }, []);
 
-  const getCategoryName = (category?: string | null) => {
-    return category || "Sem categoria";
-  };
+  const handleToggleItem = useCallback(async (item: InventoryItem) => {
+    try {
+      await toggleItem.mutateAsync({ id: item.id, isActive: !item.is_active });
+    } catch (e) { console.error(e); }
+  }, [toggleItem]);
 
   if (isLoading) {
     return (
@@ -103,14 +89,12 @@ export default function Estoque() {
           <p className="text-muted-foreground mt-1">Carregando dados...</p>
         </div>
         <div className="grid gap-4 md:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
+          {[1, 2, 3, 4].map(i => (
             <Card key={i}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <div className="h-4 w-24 bg-muted animate-pulse rounded" />
               </CardHeader>
-              <CardContent>
-                <div className="h-8 w-16 bg-muted animate-pulse rounded" />
-              </CardContent>
+              <CardContent><div className="h-8 w-16 bg-muted animate-pulse rounded" /></CardContent>
             </Card>
           ))}
         </div>
@@ -121,12 +105,12 @@ export default function Estoque() {
   return (
     <div className="space-y-6">
       <InventoryModuleHero
-        totalItems={stats.totalProducts}
-        lowStockCount={stats.lowStock}
-        outOfStockCount={stats.outOfStock}
-        expiringCount={stats.expiringSoon}
-        onCreateItem={() => setIsProductDialogOpen(true)}
-        onOpenMovement={() => setIsMovementDialogOpen(true)}
+        totalItems={totalItems}
+        lowStockCount={0}
+        outOfStockCount={0}
+        expiringCount={expiringCount}
+        onCreateItem={() => { setEditingItem(undefined); setIsItemDialogOpen(true); }}
+        onOpenMovement={() => setIsEntryOpen(true)}
       />
 
       {/* Stats Cards */}
@@ -137,96 +121,86 @@ export default function Estoque() {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalProducts}</div>
-            <p className="text-xs text-muted-foreground">itens cadastrados</p>
+            <div className="text-2xl font-bold">{totalItems}</div>
+            <p className="text-xs text-muted-foreground">itens com controle de estoque</p>
           </CardContent>
         </Card>
-        <Card className={stats.lowStock > 0 ? "border-yellow-300 bg-yellow-50/50" : ""}>
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Estoque Baixo</CardTitle>
-            <TrendingDown className="h-4 w-4 text-yellow-600" />
+            <CardTitle className="text-sm font-medium">Vendáveis</CardTitle>
+            <TrendingDown className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.lowStock}</div>
-            <p className="text-xs text-muted-foreground">itens abaixo do mínimo</p>
+            <div className="text-2xl font-bold">{activeItems.filter(i => i.is_sellable).length}</div>
+            <p className="text-xs text-muted-foreground">itens para venda</p>
           </CardContent>
         </Card>
-        <Card className={stats.outOfStock > 0 ? "border-red-300 bg-red-50/50" : ""}>
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Zerados</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <CardTitle className="text-sm font-medium">Lotes Vencidos</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.outOfStock}</div>
-            <p className="text-xs text-muted-foreground">itens sem estoque</p>
+            <div className="text-2xl font-bold text-destructive">{expiredBatches.length}</div>
+            <p className="text-xs text-muted-foreground">lotes expirados</p>
           </CardContent>
         </Card>
-        <Card className={stats.expiringSoon > 0 ? "border-orange-300 bg-orange-50/50" : ""}>
+        <Card className={expiringBatches.length > 0 ? "border-orange-300" : ""}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Próx. Vencimento</CardTitle>
+            <CardTitle className="text-sm font-medium">Vencendo</CardTitle>
             <Clock className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{stats.expiringSoon}</div>
-            <p className="text-xs text-muted-foreground">vencem em 30 dias</p>
+            <div className="text-2xl font-bold text-orange-600">{expiringBatches.length}</div>
+            <p className="text-xs text-muted-foreground">lotes vencem em 30 dias</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Tabs — 3 operational tabs */}
+      {/* Action Buttons */}
+      <div className="flex flex-wrap gap-2">
+        <Button onClick={() => setIsEntryOpen(true)}>
+          <ArrowDownCircle className="h-4 w-4 mr-2" />Entrada
+        </Button>
+        <Button variant="outline" onClick={() => setIsExitOpen(true)}>
+          <ArrowUpCircle className="h-4 w-4 mr-2" />Saída
+        </Button>
+        <Button variant="outline" onClick={() => setIsAdjustOpen(true)}>
+          <Settings2 className="h-4 w-4 mr-2" />Ajuste
+        </Button>
+        <Button variant="outline" onClick={() => { setEditingItem(undefined); setIsItemDialogOpen(true); }}>
+          <Plus className="h-4 w-4 mr-2" />Novo Item
+        </Button>
+      </div>
+
+      {/* Main Tabs */}
       <Tabs defaultValue="items" className="space-y-5">
         <InventorySectionTabs />
 
-        {/* ====== TAB 1: ITENS ====== */}
+        {/* TAB: ITENS */}
         <TabsContent value="items" className="space-y-4">
-          <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-1">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar item por nome..."
-                    className="pl-9"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                </div>
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas categorias</SelectItem>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="active">Ativos</SelectItem>
-                    <SelectItem value="inactive">Inativos</SelectItem>
-                    <SelectItem value="low">Estoque baixo</SelectItem>
-                    <SelectItem value="out">Zerados</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setIsMovementDialogOpen(true)}>
-                  <History className="h-4 w-4 mr-2" />
-                  Nova Movimentação
-                </Button>
-                <Button onClick={() => setIsProductDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Item
-                </Button>
-              </div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 rounded-xl border border-border bg-card p-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Buscar item..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
             </div>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[180px]"><SelectValue placeholder="Categoria" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas categorias</SelectItem>
+                {categories.map(c => <SelectItem key={c!} value={c!}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px]"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="active">Ativos</SelectItem>
+                <SelectItem value="inactive">Inativos</SelectItem>
+                <SelectItem value="stock">Controla estoque</SelectItem>
+                <SelectItem value="sellable">Vendáveis</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <Card>
@@ -235,236 +209,132 @@ export default function Estoque() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Item</TableHead>
+                    <TableHead>Tipo</TableHead>
                     <TableHead>Categoria</TableHead>
-                    <TableHead className="text-right">Qtd. Atual</TableHead>
-                    <TableHead className="text-right">Qtd. Mín.</TableHead>
-                    <TableHead className="text-right">Custo Méd.</TableHead>
-                    <TableHead>Estoque</TableHead>
+                    <TableHead>Unidade</TableHead>
+                    <TableHead className="text-right">Custo Padrão</TableHead>
+                    <TableHead className="text-right">Preço Venda</TableHead>
+                    <TableHead>Flags</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredProducts.length === 0 ? (
+                  {filteredItems.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                         {search || categoryFilter !== "all" || statusFilter !== "all"
                           ? "Nenhum item encontrado com os filtros aplicados"
                           : "Nenhum item cadastrado. Clique em \"Novo Item\" para começar."}
                       </TableCell>
                     </TableRow>
-                  ) : (
-                    filteredProducts.map((product) => (
-                      <TableRow key={product.id}>
-                        <TableCell className="font-medium">{product.name}</TableCell>
-                        <TableCell>{getCategoryName(product.category)}</TableCell>
-                        <TableCell className="text-right">
-                          {product.current_quantity} {product.unit}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {product.min_quantity} {product.unit}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {product.avg_cost ? `R$ ${product.avg_cost.toFixed(2)}` : "-"}
-                        </TableCell>
-                        <TableCell>{getStockBadge(product)}</TableCell>
-                        <TableCell>
-                          <Badge variant={product.is_active ? "default" : "secondary"}>
-                            {product.is_active ? "Ativo" : "Inativo"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button variant="ghost" size="icon" title="Editar item" onClick={() => handleEditProduct(product)}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost" size="icon"
-                              title={product.is_active ? "Desativar" : "Ativar"}
-                              onClick={() => handleToggleProduct(product)}
-                              disabled={toggleMutation.isPending}
-                            >
-                              {product.is_active ? <ToggleRight className="h-4 w-4 text-primary" /> : <ToggleLeft className="h-4 w-4" />}
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ====== TAB 2: MOVIMENTAÇÕES ====== */}
-        <TabsContent value="movements" className="space-y-4">
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              Todas as entradas, saídas, ajustes e consumos automáticos aparecem aqui.
-            </AlertDescription>
-          </Alert>
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Histórico de Movimentações</CardTitle>
-                  <CardDescription>Entradas, saídas, ajustes e consumo em procedimentos</CardDescription>
-                </div>
-                <Button variant="outline" onClick={() => setIsMovementDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova Movimentação
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Data/Hora</TableHead>
-                    <TableHead>Item</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead className="text-right">Quantidade</TableHead>
-                    <TableHead>Motivo</TableHead>
-                    <TableHead className="text-right">Custo Unit.</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {movements.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        Nenhuma movimentação registrada
+                  ) : filteredItems.map(item => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.name}</TableCell>
+                      <TableCell>
+                        <Badge className={inventoryItemTypeColors[item.item_type]}>
+                          {inventoryItemTypeLabels[item.item_type]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{item.category || '-'}</TableCell>
+                      <TableCell>{item.unit_of_measure}</TableCell>
+                      <TableCell className="text-right">
+                        {item.default_cost_price ? `R$ ${item.default_cost_price.toFixed(2)}` : '-'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {item.default_sale_price ? `R$ ${item.default_sale_price.toFixed(2)}` : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1 flex-wrap">
+                          {item.controls_stock && <Badge variant="outline" className="text-xs">Estoque</Badge>}
+                          {item.controls_batch && <Badge variant="outline" className="text-xs">Lote</Badge>}
+                          {item.is_sellable && <Badge variant="outline" className="text-xs">Venda</Badge>}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={item.is_active ? "default" : "secondary"}>
+                          {item.is_active ? "Ativo" : "Inativo"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="icon" title="Editar" onClick={() => handleEditItem(item)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" title={item.is_active ? "Desativar" : "Ativar"}
+                            onClick={() => handleToggleItem(item)} disabled={toggleItem.isPending}>
+                            {item.is_active ? <ToggleRight className="h-4 w-4 text-primary" /> : <ToggleLeft className="h-4 w-4" />}
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
-                  ) : (
-                    movements.map((movement) => {
-                      const product = products.find(p => p.id === movement.product_id);
-                      const isSale = movement.reference_type === 'sale';
-                      const isProcedureUse = movement.reference_type === 'procedure_execution';
-                      const patientName = (movement as any).patient_name;
-
-                      const getReasonDisplay = () => {
-                        if (isProcedureUse) return 'Uso em Procedimento';
-                        if (isSale) return 'Venda';
-                        return movement.notes || '-';
-                      };
-
-                      return (
-                        <TableRow key={movement.id}>
-                          <TableCell>
-                            {format(new Date(movement.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                          </TableCell>
-                          <TableCell className="font-medium">{product?.name || (movement as any).products?.name || "-"}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                movement.movement_type === 'entrada' || movement.movement_type === 'devolucao'
-                                  ? 'default'
-                                  : movement.movement_type === 'saida' || movement.movement_type === 'venda'
-                                    ? 'destructive'
-                                    : 'secondary'
-                              }
-                            >
-                              {(movement.movement_type === 'entrada' || movement.movement_type === 'devolucao') && <ArrowDownCircle className="h-3 w-3 mr-1" />}
-                              {(movement.movement_type === 'saida' || movement.movement_type === 'venda') && <ArrowUpCircle className="h-3 w-3 mr-1" />}
-                              {stockMovementTypeLabels[movement.movement_type as StockMovementType] || movement.movement_type}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {(movement.movement_type === 'saida' || movement.movement_type === 'venda') ? '-' : ''}{movement.quantity} {product?.unit || (movement as any).products?.unit}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-col gap-1">
-                              <div className="flex items-center gap-1.5">
-                                {isProcedureUse && <Syringe className="h-3.5 w-3.5 text-orange-600" />}
-                                <span className={isProcedureUse ? 'text-orange-700 font-medium' : ''}>{getReasonDisplay()}</span>
-                              </div>
-                              {isProcedureUse && patientName && (
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                  <User className="h-3 w-3" />
-                                  <span>Paciente: {patientName}</span>
-                                </div>
-                              )}
-                              {isProcedureUse && movement.notes && (
-                                <span className="text-xs text-muted-foreground">{movement.notes}</span>
-                              )}
-                              {isSale && movement.notes && (
-                                <span className="text-xs text-muted-foreground">{movement.notes}</span>
-                              )}
-                              {isSale && movement.reference_id && (
-                                <button
-                                  onClick={() => handleViewSale(movement.reference_id!)}
-                                  className="text-xs text-primary hover:underline flex items-center gap-1 mt-0.5"
-                                >
-                                  <ExternalLink className="h-3 w-3" />
-                                  Ver venda
-                                </button>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {movement.unit_cost ? `R$ ${Number(movement.unit_cost).toFixed(2)}` : "-"}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
+                  ))}
                 </TableBody>
               </Table>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* ====== TAB 3: ALERTAS E PREVISÃO ====== */}
-        <TabsContent value="alerts" className="space-y-4">
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              Acompanhe alertas de estoque baixo, itens zerados, vencimentos próximos e previsão de consumo.
-            </AlertDescription>
-          </Alert>
+        {/* TAB: LOTES */}
+        <TabsContent value="batches"><BatchesTab /></TabsContent>
 
-          <StockPredictionAlerts />
+        {/* TAB: ENTRADAS */}
+        <TabsContent value="entries">
+          <MovementsListTab
+            filterTypes={entryMovementTypes}
+            title="Entradas"
+            description="Todas as entradas de estoque por compra, manual e devolução"
+            onNewClick={() => setIsEntryOpen(true)}
+            newButtonLabel="Nova Entrada"
+          />
+        </TabsContent>
 
-          {(lowStockProducts.length > 0 || outOfStockProducts.length > 0) && (
-            <Card className="border-yellow-200 bg-yellow-50/30">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                  Alertas de Estoque Atual
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {outOfStockProducts.map(product => (
-                  <div key={product.id} className="flex items-center justify-between p-2 bg-red-100 rounded-md">
-                    <span className="text-sm font-medium text-red-800">{product.name}</span>
-                    <Badge variant="destructive">Sem estoque</Badge>
-                  </div>
-                ))}
-                {lowStockProducts.filter(p => p.current_quantity > 0).map(product => (
-                  <div key={product.id} className="flex items-center justify-between p-2 bg-yellow-100 rounded-md">
-                    <span className="text-sm font-medium text-yellow-800">{product.name}</span>
-                    <span className="text-sm text-yellow-700">
-                      {product.current_quantity} / {product.min_quantity} {product.unit}
-                    </span>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
+        {/* TAB: SAÍDAS */}
+        <TabsContent value="exits">
+          <MovementsListTab
+            filterTypes={exitMovementTypes}
+            title="Saídas"
+            description="Consumo em procedimentos, vendas, perdas e transferências"
+            onNewClick={() => setIsExitOpen(true)}
+            newButtonLabel="Nova Saída"
+          />
+        </TabsContent>
 
-          <div className="max-w-2xl">
-            <StockPredictionSettingsCard />
-          </div>
+        {/* TAB: AJUSTES */}
+        <TabsContent value="adjustments">
+          <MovementsListTab
+            filterTypes={['adjustment']}
+            title="Ajustes"
+            description="Ajustes de inventário e correções"
+            onNewClick={() => setIsAdjustOpen(true)}
+            newButtonLabel="Novo Ajuste"
+          />
+        </TabsContent>
+
+        {/* TAB: ALERTAS */}
+        <TabsContent value="alerts"><AlertsTab /></TabsContent>
+
+        {/* TAB: VALIDADE */}
+        <TabsContent value="expiry"><ExpiryTab /></TabsContent>
+
+        {/* TAB: HISTÓRICO */}
+        <TabsContent value="history">
+          <MovementsListTab
+            title="Histórico Completo"
+            description="Todas as movimentações de estoque"
+          />
         </TabsContent>
       </Tabs>
 
       {/* Dialogs */}
-      <SaleDetailsDialog saleId={selectedSaleId} open={isSaleDialogOpen} onOpenChange={setIsSaleDialogOpen} />
-      <EditProductDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} product={editingProduct} categories={categories} />
-      <NewProductDialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen} categories={categories} />
-      <NewMovementDialog open={isMovementDialogOpen} onOpenChange={setIsMovementDialogOpen} products={products} />
+      <InventoryItemFormDialog
+        open={isItemDialogOpen}
+        onOpenChange={setIsItemDialogOpen}
+        editingItem={editingItem}
+      />
+      <EntryFormDialog open={isEntryOpen} onOpenChange={setIsEntryOpen} items={items} />
+      <ExitFormDialog open={isExitOpen} onOpenChange={setIsExitOpen} items={items} />
+      <AdjustmentFormDialog open={isAdjustOpen} onOpenChange={setIsAdjustOpen} items={items} />
     </div>
   );
 }
