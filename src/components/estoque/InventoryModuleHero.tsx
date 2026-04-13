@@ -38,8 +38,7 @@ export function InventoryModuleHero({
                 Estoque
               </h1>
               <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
-                Cadastre itens, controle saldo operacional, registre entradas, saídas e ajustes, e monitore alertas.
-                O vínculo clínico e o consumo por procedimento são configurados em{" "}
+                Controle de saldo, movimentações e alertas. O vínculo clínico e o consumo por procedimento ficam em{" "}
                 <strong>Configurações → Catálogo Clínico</strong>.
               </p>
             </div>
