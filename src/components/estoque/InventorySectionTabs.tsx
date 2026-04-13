@@ -2,11 +2,13 @@ import {
   AlertTriangle,
   ArrowDownCircle,
   ArrowUpCircle,
+  Boxes,
   Calendar,
   History,
   Layers,
   Package,
   Settings2,
+  TrendingUp,
   type LucideIcon,
 } from "lucide-react";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
