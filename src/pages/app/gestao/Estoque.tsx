@@ -311,11 +311,21 @@ export default function Estoque() {
           />
         </TabsContent>
 
+        {/* TAB: KITS */}
+        <TabsContent value="kits">
+          <InventoryKitsTab />
+        </TabsContent>
+
         {/* TAB: ALERTAS */}
         <TabsContent value="alerts"><AlertsTab /></TabsContent>
 
         {/* TAB: VALIDADE */}
         <TabsContent value="expiry"><ExpiryTab /></TabsContent>
+
+        {/* TAB: PREVISÃO */}
+        <TabsContent value="prediction">
+          <StockPredictionAlerts compact={false} maxItems={50} showHeader={true} />
+        </TabsContent>
 
         {/* TAB: HISTÓRICO */}
         <TabsContent value="history">
