@@ -12,6 +12,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 
 interface InventorySection {
   value: string;
@@ -32,19 +33,31 @@ const inventorySections: InventorySection[] = [
   { value: "history", title: "Histórico", icon: History },
 ];
 
-export function InventorySectionTabs() {
+interface InventorySectionTabsProps {
+  onCreateItem?: () => void;
+}
+
+export function InventorySectionTabs({ onCreateItem }: InventorySectionTabsProps) {
   return (
-    <TabsList className="flex h-auto w-full gap-1.5 flex-wrap bg-transparent p-0">
-      {inventorySections.map((section) => (
-        <TabsTrigger
-          key={section.value}
-          value={section.value}
-          className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground shadow-none data-[state=active]:border-primary data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
-        >
-          <section.icon className="h-4 w-4" />
-          <span className="font-medium">{section.title}</span>
-        </TabsTrigger>
-      ))}
-    </TabsList>
+    <div className="flex flex-wrap items-center gap-1.5">
+      {onCreateItem && (
+        <Button onClick={onCreateItem} className="mr-2">
+          <Package className="mr-2 h-4 w-4" />
+          Novo Item
+        </Button>
+      )}
+      <TabsList className="flex h-auto w-auto gap-1.5 flex-wrap bg-transparent p-0">
+        {inventorySections.map((section) => (
+          <TabsTrigger
+            key={section.value}
+            value={section.value}
+            className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground shadow-none data-[state=active]:border-primary data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+          >
+            <section.icon className="h-4 w-4" />
+            <span className="font-medium">{section.title}</span>
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </div>
   );
 }

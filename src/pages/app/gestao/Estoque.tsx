@@ -113,15 +113,11 @@ export default function Estoque() {
         outOfStockCount={0}
         expiringCount={expiringCount}
         expiredBatchCount={expiredBatchCount}
-        onCreateItem={() => { setEditingItem(undefined); setIsItemDialogOpen(true); }}
-        onEntry={() => setIsEntryOpen(true)}
-        onExit={() => setIsExitOpen(true)}
-        onAdjust={() => setIsAdjustOpen(true)}
       />
 
       {/* Main Tabs */}
       <Tabs defaultValue="items" className="space-y-5">
-        <InventorySectionTabs />
+        <InventorySectionTabs onCreateItem={() => { setEditingItem(undefined); setIsItemDialogOpen(true); }} />
 
         {/* TAB: ITENS */}
         <TabsContent value="items" className="space-y-4">
