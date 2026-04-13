@@ -1,4 +1,4 @@
-import { Package } from "lucide-react";
+import { Package, ArrowDownCircle, ArrowUpCircle, Settings2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,6 +11,9 @@ interface InventoryModuleHeroProps {
   expiringCount: number;
   expiredBatchCount: number;
   onCreateItem: () => void;
+  onEntry: () => void;
+  onExit: () => void;
+  onAdjust: () => void;
 }
 
 export function InventoryModuleHero({
