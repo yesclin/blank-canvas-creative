@@ -11,10 +11,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { useProducts } from "@/hooks/useProducts";
-import { useProductKitsList } from "@/hooks/useProductKitsCRUD";
+import { useProductsUnified } from "@/hooks/useProductsCompat";
+import { useInventoryKits, type InventoryKit } from "@/hooks/useProcedureConsumption";
 import type { Product } from "@/types/inventory";
-import type { ProductKit } from "@/types/product-kits";
 
 // Type for unified items (product or kit)
 export type ItemType = "product" | "kit";
@@ -47,8 +46,8 @@ export function ProcedureProductsSection({
   onChange,
   disabled = false,
 }: ProcedureProductsSectionProps) {
-  const { data: products = [], isLoading: productsLoading } = useProducts();
-  const { data: kits = [], isLoading: kitsLoading } = useProductKitsList(false); // Only active kits
+  const { data: products = [], isLoading: productsLoading } = useProductsUnified();
+  const { data: kits = [], isLoading: kitsLoading } = useInventoryKits(false);
   
   const [selectedItemKey, setSelectedItemKey] = useState<string>(""); // format: "product:id" or "kit:id"
   const [quantity, setQuantity] = useState<string>("1");
@@ -63,12 +62,12 @@ export function ProcedureProductsSection({
       name: p.name,
       unit: p.unit,
     })),
-    ...kits.map((k: ProductKit) => ({
+    ...kits.map((k: InventoryKit) => ({
       id: k.id,
       type: "kit" as ItemType,
       name: k.name,
       unit: "kit",
-      hasItems: (k.items_count || 0) > 0,
+      hasItems: true,
     })),
   ];
 
