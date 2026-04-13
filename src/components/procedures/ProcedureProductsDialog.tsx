@@ -29,7 +29,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useProducts } from "@/hooks/useProducts";
+import { useProductsUnified } from "@/hooks/useProductsCompat";
 import {
   useProcedureProductsByProcedure,
   useCreateProcedureProduct,
@@ -38,8 +38,8 @@ import {
   type ProcedureProduct,
 } from "@/hooks/useProcedureProductsCRUD";
 import {
-  useProductKitsList,
-} from "@/hooks/useProductKitsCRUD";
+  useInventoryKits,
+} from "@/hooks/useProcedureConsumption";
 import {
   useProcedureProductKitsByProcedure,
   useCreateProcedureProductKit,
