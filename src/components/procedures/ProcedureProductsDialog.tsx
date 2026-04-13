@@ -71,13 +71,13 @@ export function ProcedureProductsDialog({
   const [editingKitId, setEditingKitId] = useState<string | null>(null);
   const [editKitQuantity, setEditKitQuantity] = useState(1);
 
-  const { data: products, isLoading: productsLoading } = useProducts();
+  const { data: products, isLoading: productsLoading } = useProductsUnified();
   const { data: procedureProducts, isLoading: linkLoading } = useProcedureProductsByProcedure(
     procedure?.id ?? null
   );
   
   // Kits data
-  const { data: kits = [] } = useProductKitsList();
+  const { data: kits = [] } = useInventoryKits();
   const { data: procedureKits = [], isLoading: kitsLinkLoading } = useProcedureProductKitsByProcedure(
     procedure?.id ?? null
   );
