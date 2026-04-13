@@ -97,6 +97,10 @@ export function ConsumptionReviewDialog({
           unit_cost: line.unitCost,
           reason: `Consumo em procedimento`,
           source_module: 'appointment',
+          source_id: appointmentId || undefined,
+          patient_id: patientId || undefined,
+          professional_id: professionalId || undefined,
+          appointment_id: appointmentId || undefined,
           notes: appointmentId ? `Atendimento: ${appointmentId}` : undefined,
         });
       }
@@ -186,10 +190,26 @@ function ConsumptionLineRow({ line, onUpdate }: {
 
   const formatCurrency = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
+  const today = new Date().toISOString().split("T")[0];
+
+  // Filter out expired batches and sort FEFO (first expired, first out)
+  const availableBatches = batches
+    .filter(b => b.quantity_available > 0)
+    .filter(b => !b.expiry_date || b.expiry_date >= today) // block expired
+    .sort((a, b) => {
+      // FEFO: batches expiring sooner come first
+      if (a.expiry_date && b.expiry_date) return a.expiry_date.localeCompare(b.expiry_date);
+      if (a.expiry_date) return -1;
+      if (b.expiry_date) return 1;
+      return 0;
+    });
+
   const hasError = (line.isRequired && line.quantity <= 0) || (line.batchRequired && !line.batchId);
+  const selectedBatch = batches.find(b => b.id === line.batchId);
+  const batchStockInsufficient = selectedBatch && line.quantity > selectedBatch.quantity_available;
 
   return (
-    <TableRow className={hasError ? 'bg-destructive/5' : ''}>
+    <TableRow className={hasError || batchStockInsufficient ? 'bg-destructive/5' : ''}>
       <TableCell>
         <div>
           <span className="font-medium">{line.itemName}</span>
@@ -212,18 +232,24 @@ function ConsumptionLineRow({ line, onUpdate }: {
       </TableCell>
       <TableCell>
         {line.controlsBatch ? (
-          <Select value={line.batchId} onValueChange={v => onUpdate("batchId", v)}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Selecionar" />
-            </SelectTrigger>
-            <SelectContent>
-              {batches.filter(b => b.quantity_available > 0).map(b => (
-                <SelectItem key={b.id} value={b.id}>
-                  {b.batch_number} (Disp: {b.quantity_available})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div>
+            <Select value={line.batchId} onValueChange={v => onUpdate("batchId", v)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Selecionar" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableBatches.map(b => (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.batch_number} (Disp: {b.quantity_available})
+                    {b.expiry_date ? ` Val: ${b.expiry_date}` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {batchStockInsufficient && (
+              <span className="text-xs text-destructive">Saldo insuficiente no lote</span>
+            )}
+          </div>
         ) : (
           <span className="text-muted-foreground">-</span>
         )}
@@ -231,7 +257,7 @@ function ConsumptionLineRow({ line, onUpdate }: {
       <TableCell className="text-right">{formatCurrency(line.unitCost)}</TableCell>
       <TableCell className="text-right font-medium">{formatCurrency(line.unitCost * line.quantity)}</TableCell>
       <TableCell>
-        {hasError ? (
+        {hasError || batchStockInsufficient ? (
           <AlertTriangle className="h-4 w-4 text-destructive" />
         ) : (
           <CheckCircle2 className="h-4 w-4 text-green-600" />
