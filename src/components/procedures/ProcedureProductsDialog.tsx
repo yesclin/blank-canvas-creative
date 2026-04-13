@@ -29,7 +29,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useProducts } from "@/hooks/useProducts";
+import { useProductsUnified } from "@/hooks/useProductsCompat";
 import {
   useProcedureProductsByProcedure,
   useCreateProcedureProduct,
@@ -38,8 +38,8 @@ import {
   type ProcedureProduct,
 } from "@/hooks/useProcedureProductsCRUD";
 import {
-  useProductKitsList,
-} from "@/hooks/useProductKitsCRUD";
+  useInventoryKits,
+} from "@/hooks/useProcedureConsumption";
 import {
   useProcedureProductKitsByProcedure,
   useCreateProcedureProductKit,
@@ -71,13 +71,13 @@ export function ProcedureProductsDialog({
   const [editingKitId, setEditingKitId] = useState<string | null>(null);
   const [editKitQuantity, setEditKitQuantity] = useState(1);
 
-  const { data: products, isLoading: productsLoading } = useProducts();
+  const { data: products, isLoading: productsLoading } = useProductsUnified();
   const { data: procedureProducts, isLoading: linkLoading } = useProcedureProductsByProcedure(
     procedure?.id ?? null
   );
   
   // Kits data
-  const { data: kits = [] } = useProductKitsList();
+  const { data: kits = [] } = useInventoryKits();
   const { data: procedureKits = [], isLoading: kitsLinkLoading } = useProcedureProductKitsByProcedure(
     procedure?.id ?? null
   );
@@ -406,7 +406,7 @@ export function ProcedureProductsDialog({
                       ) : (
                         availableKits.map((kit) => (
                           <SelectItem key={kit.id} value={kit.id}>
-                            {kit.name} ({kit.items_count} itens) - {formatCurrency(kit.total_cost || 0)}
+                            {kit.name}
                           </SelectItem>
                         ))
                       )}
