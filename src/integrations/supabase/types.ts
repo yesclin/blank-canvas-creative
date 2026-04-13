@@ -4588,6 +4588,81 @@ export type Database = {
           },
         ]
       }
+      inventory_batches: {
+        Row: {
+          batch_number: string
+          clinic_id: string
+          created_at: string
+          expiry_date: string | null
+          id: string
+          invoice_number: string | null
+          item_id: string
+          manufacturing_date: string | null
+          notes: string | null
+          quantity_available: number
+          quantity_received: number
+          status: string
+          storage_location: string | null
+          supplier_id: string | null
+          unit_cost: number
+          unit_sale_price: number | null
+          updated_at: string
+        }
+        Insert: {
+          batch_number: string
+          clinic_id: string
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          invoice_number?: string | null
+          item_id: string
+          manufacturing_date?: string | null
+          notes?: string | null
+          quantity_available?: number
+          quantity_received?: number
+          status?: string
+          storage_location?: string | null
+          supplier_id?: string | null
+          unit_cost?: number
+          unit_sale_price?: number | null
+          updated_at?: string
+        }
+        Update: {
+          batch_number?: string
+          clinic_id?: string
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          invoice_number?: string | null
+          item_id?: string
+          manufacturing_date?: string | null
+          notes?: string | null
+          quantity_available?: number
+          quantity_received?: number
+          status?: string
+          storage_location?: string | null
+          supplier_id?: string | null
+          unit_cost?: number
+          unit_sale_price?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_batches_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_batches_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_items: {
         Row: {
           alert_days_before_expiry: number
@@ -4703,6 +4778,91 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_movements: {
+        Row: {
+          appointment_id: string | null
+          batch_id: string | null
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          item_id: string
+          movement_type: string
+          notes: string | null
+          patient_id: string | null
+          professional_id: string | null
+          quantity: number
+          reason: string | null
+          source_id: string | null
+          source_module: string | null
+          total_cost: number | null
+          unit_cost: number | null
+          unit_sale_price: number | null
+        }
+        Insert: {
+          appointment_id?: string | null
+          batch_id?: string | null
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          item_id: string
+          movement_type: string
+          notes?: string | null
+          patient_id?: string | null
+          professional_id?: string | null
+          quantity: number
+          reason?: string | null
+          source_id?: string | null
+          source_module?: string | null
+          total_cost?: number | null
+          unit_cost?: number | null
+          unit_sale_price?: number | null
+        }
+        Update: {
+          appointment_id?: string | null
+          batch_id?: string | null
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          item_id?: string
+          movement_type?: string
+          notes?: string | null
+          patient_id?: string | null
+          professional_id?: string | null
+          quantity?: number
+          reason?: string | null
+          source_id?: string | null
+          source_module?: string | null
+          total_cost?: number | null
+          unit_cost?: number | null
+          unit_sale_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_movements_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
             referencedColumns: ["id"]
           },
         ]
