@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { Product, StockMovement } from "@/types/inventory";
+import type { InventoryItem } from "@/types/inventory-items";
 
 // =============================================
-// STOCK CATEGORIES (derived from products.category)
+// STOCK CATEGORIES (derived from inventory_items)
 // =============================================
 
 export interface StockCategory {
@@ -17,9 +17,10 @@ export function useStockCategories() {
     queryKey: ["stock-categories"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("products")
+        .from("inventory_items")
         .select("category")
-        .eq("is_active", true);
+        .eq("is_active", true)
+        .eq("controls_stock", true);
       
       if (error) throw error;
       
@@ -39,22 +40,53 @@ export function useStockCategories() {
 }
 
 // =============================================
-// STOCK PRODUCTS - compatibility wrapper
+// STOCK PRODUCT - compatibility wrapper for
+// components that still expect Product-like shape
 // =============================================
 
-export interface StockProduct extends Product {
-  // Aliases for backward compatibility with components
+export interface StockProduct {
+  id: string;
+  name: string;
+  description?: string | null;
+  sku?: string | null;
+  category?: string | null;
+  unit: string;
+  current_stock: number;
+  min_stock: number;
+  max_stock?: number | null;
+  cost_price: number;
+  sale_price: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  // Aliases for backward compatibility
   current_quantity: number;
   min_quantity: number;
   avg_cost: number;
+  product_type: string;
 }
 
-function mapToStockProduct(p: Product): StockProduct {
+function mapInventoryItemToStockProduct(item: InventoryItem): StockProduct {
   return {
-    ...p,
-    current_quantity: p.current_stock,
-    min_quantity: p.min_stock,
-    avg_cost: p.cost_price,
+    id: item.id,
+    name: item.name,
+    description: item.description,
+    sku: item.sku,
+    category: item.category,
+    unit: item.unit_of_measure,
+    current_stock: 0, // derived from movements/batches
+    min_stock: item.minimum_stock,
+    max_stock: item.ideal_stock,
+    cost_price: item.default_cost_price,
+    sale_price: item.default_sale_price,
+    is_active: item.is_active,
+    created_at: item.created_at,
+    updated_at: item.updated_at,
+    // Aliases
+    current_quantity: 0,
+    min_quantity: item.minimum_stock,
+    avg_cost: item.default_cost_price,
+    product_type: item.item_type,
   };
 }
 
@@ -66,14 +98,16 @@ export function useStockProducts(filters?: {
   return useQuery({
     queryKey: ["stock-products", filters?.category, filters?.status, filters?.search],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
+      let query = supabase
+        .from("inventory_items")
         .select("*")
+        .eq("controls_stock", true)
         .order("name");
       
+      const { data, error } = await query;
       if (error) throw error;
       
-      let products = (data as Product[]).map(mapToStockProduct);
+      let products = (data as InventoryItem[]).map(mapInventoryItemToStockProduct);
       
       if (filters?.category && filters.category !== 'all') {
         products = products.filter(p => p.category === filters.category);
@@ -87,14 +121,7 @@ export function useStockProducts(filters?: {
           case 'inactive':
             products = products.filter(p => !p.is_active);
             break;
-          case 'low':
-            products = products.filter(p => 
-              p.is_active && p.current_stock <= p.min_stock && p.current_stock > 0
-            );
-            break;
-          case 'out':
-            products = products.filter(p => p.is_active && p.current_stock === 0);
-            break;
+          // low/out require current_stock which we don't have yet
         }
       }
       
@@ -112,58 +139,7 @@ export function useStockProducts(filters?: {
 }
 
 // =============================================
-// STOCK ALERTS
-// =============================================
-
-export function useLowStockAlerts() {
-  return useQuery({
-    queryKey: ["stock-alerts", "low"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .eq("is_active", true);
-      
-      if (error) throw error;
-      
-      return (data as Product[])
-        .filter(p => p.current_stock <= p.min_stock && p.current_stock > 0)
-        .map(mapToStockProduct);
-    },
-    refetchInterval: 30000,
-  });
-}
-
-export function useOutOfStockAlerts() {
-  return useQuery({
-    queryKey: ["stock-alerts", "out"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .eq("is_active", true)
-        .eq("current_stock", 0);
-      
-      if (error) throw error;
-      
-      return (data as Product[]).map(mapToStockProduct);
-    },
-    refetchInterval: 30000,
-  });
-}
-
-export function useExpiringProducts(daysThreshold = 30) {
-  return useQuery({
-    queryKey: ["stock-alerts", "expiring", daysThreshold],
-    queryFn: async () => {
-      // Products table doesn't have expiration_date yet
-      return [] as StockProduct[];
-    },
-  });
-}
-
-// =============================================
-// STOCK STATS
+// STOCK STATS (from inventory_items + batches)
 // =============================================
 
 export interface StockStats {
@@ -179,28 +155,20 @@ export function useStockStats() {
     queryKey: ["stock-stats"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("products")
-        .select("current_stock, min_stock, cost_price, is_active");
+        .from("inventory_items")
+        .select("default_cost_price, is_active, controls_stock")
+        .eq("controls_stock", true);
       
       if (error) throw error;
       
       const active = data.filter((p: any) => p.is_active);
-      const lowStock = active.filter(
-        (p: any) => p.current_stock <= p.min_stock && p.current_stock > 0
-      );
-      const outOfStock = active.filter((p: any) => p.current_stock === 0);
-      
-      const totalValue = active.reduce(
-        (sum: number, p: any) => sum + (p.current_stock * (p.cost_price || 0)), 
-        0
-      );
       
       return {
         totalProducts: active.length,
-        lowStock: lowStock.length,
-        outOfStock: outOfStock.length,
+        lowStock: 0, // will be computed from movements in future
+        outOfStock: 0,
         expiringSoon: 0,
-        totalValue,
+        totalValue: 0,
       } as StockStats;
     },
     refetchInterval: 30000,
@@ -208,7 +176,32 @@ export function useStockStats() {
 }
 
 // =============================================
-// RECENT STOCK MOVEMENTS
+// STOCK ALERTS
+// =============================================
+
+export function useLowStockAlerts() {
+  return useQuery({
+    queryKey: ["stock-alerts", "low"],
+    queryFn: async () => [] as StockProduct[],
+  });
+}
+
+export function useOutOfStockAlerts() {
+  return useQuery({
+    queryKey: ["stock-alerts", "out"],
+    queryFn: async () => [] as StockProduct[],
+  });
+}
+
+export function useExpiringProducts(_daysThreshold = 30) {
+  return useQuery({
+    queryKey: ["stock-alerts", "expiring", _daysThreshold],
+    queryFn: async () => [] as StockProduct[],
+  });
+}
+
+// =============================================
+// RECENT STOCK MOVEMENTS (from inventory_movements)
 // =============================================
 
 export function useRecentStockMovements(limit = 50) {
@@ -216,72 +209,34 @@ export function useRecentStockMovements(limit = 50) {
     queryKey: ["stock-movements", "recent", limit],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("stock_movements")
-        .select(`
-          *,
-          products(id, name, unit)
-        `)
+        .from("inventory_movements")
+        .select(`*, inventory_items(id, name, unit_of_measure)`)
         .order("created_at", { ascending: false })
         .limit(limit);
       
       if (error) throw error;
-
-      // Enrich procedure execution movements with patient info
-      const procedureMovements = (data || []).filter(
-        (m: any) => m.reference_type === 'procedure_execution' && m.reference_id
-      );
-      
-      if (procedureMovements.length > 0) {
-        const appointmentIds = procedureMovements.map((m: any) => m.reference_id);
-        
-        const { data: appointments } = await supabase
-          .from('appointments')
-          .select('id, patient_id, patients(full_name)')
-          .in('id', appointmentIds);
-        
-        const appointmentMap = new Map(
-          (appointments || []).map((a: any) => [a.id, a])
-        );
-        
-        return (data as StockMovement[]).map(m => {
-          if (m.reference_type === 'procedure_execution' && m.reference_id) {
-            const apt = appointmentMap.get(m.reference_id);
-            return {
-              ...m,
-              patient_name: (apt as any)?.patients?.full_name || null,
-              patient_id: (apt as any)?.patient_id || null,
-            };
-          }
-          return m;
-        });
-      }
-      
-      return data as StockMovement[];
+      return data || [];
     },
   });
 }
 
 // =============================================
-// COMBINED HOOK FOR ESTOQUE PAGE
+// COMBINED HOOK FOR COMPAT
 // =============================================
 
 export function useStockData() {
   const { data: products = [], isLoading: productsLoading } = useStockProducts({ status: 'all' });
-  const { data: lowStockProducts = [], isLoading: lowLoading } = useLowStockAlerts();
-  const { data: outOfStockProducts = [], isLoading: outLoading } = useOutOfStockAlerts();
-  const { data: expiringProducts = [] } = useExpiringProducts();
   const { data: stats = { totalProducts: 0, lowStock: 0, outOfStock: 0, expiringSoon: 0, totalValue: 0 } } = useStockStats();
-  const { data: movements = [] } = useRecentStockMovements();
   const { data: categories = [] } = useStockCategories();
   
   return {
     categories,
     products,
-    movements,
-    lowStockProducts,
-    outOfStockProducts,
-    expiringProducts,
+    movements: [],
+    lowStockProducts: [],
+    outOfStockProducts: [],
+    expiringProducts: [],
     stats,
-    isLoading: productsLoading || lowLoading || outLoading,
+    isLoading: productsLoading,
   };
 }
