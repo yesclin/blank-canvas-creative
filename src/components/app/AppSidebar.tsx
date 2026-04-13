@@ -21,6 +21,7 @@ import {
   Briefcase,
   CreditCard,
   Activity,
+  Stethoscope,
   type LucideIcon,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
