@@ -81,7 +81,7 @@ const ownerAdminGestaoMenu: MenuItem[] = [
 
 const ownerAdminConfigMenu: MenuItem[] = [
   { title: "Procedimentos", url: "/app/config/procedimentos", icon: ListChecks },
-  { title: "Catálogo Clínico", url: "/app/config/catalogo-clinico", icon: ListChecks },
+  { title: "Catálogo Clínico", url: "/app/config/catalogo-clinico", icon: Stethoscope },
   { title: "Clínica", url: "/app/config/clinica", icon: Building },
   { title: "Usuários & Permissões", url: "/app/config/usuarios", icon: UserCog },
   { title: "Regras de Agenda", url: "/app/config/agenda", icon: CalendarCog },
