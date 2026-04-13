@@ -2,8 +2,7 @@ import { useState, useCallback } from "react";
 import {
   Package, Plus, Search, AlertTriangle, ArrowUpCircle, ArrowDownCircle,
   Edit, ToggleLeft, ToggleRight, History, TrendingDown, Clock,
-  ExternalLink, User, Syringe,
-  Info
+  ExternalLink, User, Syringe, Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +21,6 @@ import { stockMovementTypeLabels, type StockMovementType } from "@/types/invento
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { SaleDetailsDialog } from "@/components/gestao/SaleDetailsDialog";
-import { ProductKitsTab } from "@/components/estoque/ProductKitsTab";
 import { StockPredictionAlerts } from "@/components/estoque/StockPredictionAlerts";
 import { EditProductDialog } from "@/components/estoque/EditProductDialog";
 import { NewProductDialog } from "@/components/estoque/NewProductDialog";
@@ -31,10 +29,6 @@ import { InventoryModuleHero } from "@/components/estoque/InventoryModuleHero";
 import { InventorySectionTabs } from "@/components/estoque/InventorySectionTabs";
 import { useUpdateProduct } from "@/hooks/useProducts";
 import type { StockProduct } from "@/hooks/useStockData";
-
-// Cadastros Clínicos components - now integrated
-import { ProcedureMaterialsTab } from "@/components/cadastros-clinicos/ProcedureMaterialsTab";
-import { MaterialConsumptionSettings } from "@/components/cadastros-clinicos/MaterialConsumptionSettings";
 import { StockPredictionSettingsCard } from "@/components/config/StockPredictionSettingsCard";
 
 export default function Estoque() {
@@ -43,14 +37,12 @@ export default function Estoque() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  // Dialog states
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [isMovementDialogOpen, setIsMovementDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<StockProduct | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const toggleMutation = useUpdateProduct();
 
-  // Sale details dialog state
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
   const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
 
@@ -78,7 +70,7 @@ export default function Estoque() {
   const filteredProducts = products.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
-    const matchesStatus = statusFilter === "all" || 
+    const matchesStatus = statusFilter === "all" ||
       (statusFilter === "active" && product.is_active) ||
       (statusFilter === "inactive" && !product.is_active) ||
       (statusFilter === "low" && product.current_quantity <= product.min_quantity && product.current_quantity > 0) ||
@@ -106,7 +98,7 @@ export default function Estoque() {
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Package className="h-6 w-6 text-primary" />
-            Itens e Estoque
+            Estoque
           </h1>
           <p className="text-muted-foreground mt-1">Carregando dados...</p>
         </div>
@@ -181,63 +173,49 @@ export default function Estoque() {
         </Card>
       </div>
 
-      {/* Main Tabs — unified 6-tab structure */}
+      {/* Main Tabs — 3 operational tabs */}
       <Tabs defaultValue="items" className="space-y-5">
         <InventorySectionTabs />
 
-        {/* ====== TAB 1: ITENS (cadastro-base único) ====== */}
+        {/* ====== TAB 1: ITENS ====== */}
         <TabsContent value="items" className="space-y-4">
-          <div className="grid gap-4 rounded-xl border border-border bg-muted/30 p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-            <div className="space-y-1">
-              <h2 className="text-lg font-semibold text-foreground">Cadastro-base dos itens</h2>
-              <p className="text-sm text-muted-foreground">
-                Todo item operacional nasce aqui. O uso clínico é configurado depois, na seção <strong>Uso clínico</strong>.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">Estoque real</Badge>
-              <Badge variant="outline">Custo e preço</Badge>
-              <Badge variant="outline">Status operacional</Badge>
-            </div>
-          </div>
-
           <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-1">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar item por nome..."
-                  className="pl-9"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar item por nome..."
+                    className="pl-9"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas categorias</SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="active">Ativos</SelectItem>
+                    <SelectItem value="inactive">Inativos</SelectItem>
+                    <SelectItem value="low">Estoque baixo</SelectItem>
+                    <SelectItem value="out">Zerados</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas categorias</SelectItem>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="active">Ativos</SelectItem>
-                  <SelectItem value="inactive">Inativos</SelectItem>
-                  <SelectItem value="low">Estoque baixo</SelectItem>
-                  <SelectItem value="out">Zerados</SelectItem>
-                </SelectContent>
-              </Select>
-              </div>
-            
+
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setIsMovementDialogOpen(true)}>
                   <History className="h-4 w-4 mr-2" />
@@ -297,26 +275,16 @@ export default function Estoque() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              title="Editar item"
-                              onClick={() => handleEditProduct(product)}
-                            >
+                            <Button variant="ghost" size="icon" title="Editar item" onClick={() => handleEditProduct(product)}>
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button
-                              variant="ghost"
-                              size="icon"
+                              variant="ghost" size="icon"
                               title={product.is_active ? "Desativar" : "Ativar"}
                               onClick={() => handleToggleProduct(product)}
                               disabled={toggleMutation.isPending}
                             >
-                              {product.is_active ? (
-                                <ToggleRight className="h-4 w-4 text-primary" />
-                              ) : (
-                                <ToggleLeft className="h-4 w-4" />
-                              )}
+                              {product.is_active ? <ToggleRight className="h-4 w-4 text-primary" /> : <ToggleLeft className="h-4 w-4" />}
                             </Button>
                           </div>
                         </TableCell>
@@ -342,9 +310,7 @@ export default function Estoque() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Histórico de Movimentações</CardTitle>
-                  <CardDescription>
-                    Entradas, saídas, ajustes e consumo em procedimentos
-                  </CardDescription>
+                  <CardDescription>Entradas, saídas, ajustes e consumo em procedimentos</CardDescription>
                 </div>
                 <Button variant="outline" onClick={() => setIsMovementDialogOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -377,12 +343,13 @@ export default function Estoque() {
                       const isSale = movement.reference_type === 'sale';
                       const isProcedureUse = movement.reference_type === 'procedure_execution';
                       const patientName = (movement as any).patient_name;
-                      
+
                       const getReasonDisplay = () => {
                         if (isProcedureUse) return 'Uso em Procedimento';
+                        if (isSale) return 'Venda';
                         return movement.notes || '-';
                       };
-                      
+
                       return (
                         <TableRow key={movement.id}>
                           <TableCell>
@@ -390,12 +357,12 @@ export default function Estoque() {
                           </TableCell>
                           <TableCell className="font-medium">{product?.name || (movement as any).products?.name || "-"}</TableCell>
                           <TableCell>
-                            <Badge 
+                            <Badge
                               variant={
-                                movement.movement_type === 'entrada' || movement.movement_type === 'devolucao' 
-                                  ? 'default' 
-                                  : movement.movement_type === 'saida' || movement.movement_type === 'venda' 
-                                    ? 'destructive' 
+                                movement.movement_type === 'entrada' || movement.movement_type === 'devolucao'
+                                  ? 'default'
+                                  : movement.movement_type === 'saida' || movement.movement_type === 'venda'
+                                    ? 'destructive'
                                     : 'secondary'
                               }
                             >
@@ -449,42 +416,7 @@ export default function Estoque() {
           </Card>
         </TabsContent>
 
-        {/* ====== TAB 3: KITS ====== */}
-        <TabsContent value="kits" className="space-y-4">
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              Monte kits reutilizáveis com itens já cadastrados. Kits podem ser vinculados a procedimentos na aba <strong>Vínculos</strong>.
-            </AlertDescription>
-          </Alert>
-          <ProductKitsTab />
-        </TabsContent>
-
-        {/* ====== TAB 4: VÍNCULOS COM PROCEDIMENTOS ====== */}
-        <TabsContent value="links" className="space-y-4">
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              Configure quais itens são consumidos em cada procedimento e suas quantidades. 
-              Itens novos devem ser cadastrados na aba <strong>Itens</strong>.
-            </AlertDescription>
-          </Alert>
-          <ProcedureMaterialsTab />
-        </TabsContent>
-
-        {/* ====== TAB 5: BAIXA AUTOMÁTICA ====== */}
-        <TabsContent value="auto-consumption" className="space-y-4">
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              Configure a baixa automática de estoque ao finalizar atendimentos. 
-              Os itens consumidos são definidos na aba <strong>Vínculos</strong>.
-            </AlertDescription>
-          </Alert>
-          <MaterialConsumptionSettings />
-        </TabsContent>
-
-        {/* ====== TAB 6: ALERTAS E PREVISÃO ====== */}
+        {/* ====== TAB 3: ALERTAS E PREVISÃO ====== */}
         <TabsContent value="alerts" className="space-y-4">
           <Alert>
             <Info className="h-4 w-4" />
@@ -493,10 +425,8 @@ export default function Estoque() {
             </AlertDescription>
           </Alert>
 
-          {/* Prediction Alerts */}
           <StockPredictionAlerts />
 
-          {/* Traditional Alerts */}
           {(lowStockProducts.length > 0 || outOfStockProducts.length > 0) && (
             <Card className="border-yellow-200 bg-yellow-50/30">
               <CardHeader className="pb-3">
@@ -524,35 +454,17 @@ export default function Estoque() {
             </Card>
           )}
 
-          {/* Prediction Settings */}
           <div className="max-w-2xl">
             <StockPredictionSettingsCard />
           </div>
         </TabsContent>
       </Tabs>
-      
+
       {/* Dialogs */}
-      <SaleDetailsDialog
-        saleId={selectedSaleId}
-        open={isSaleDialogOpen}
-        onOpenChange={setIsSaleDialogOpen}
-      />
-      <EditProductDialog
-        open={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
-        product={editingProduct}
-        categories={categories}
-      />
-      <NewProductDialog
-        open={isProductDialogOpen}
-        onOpenChange={setIsProductDialogOpen}
-        categories={categories}
-      />
-      <NewMovementDialog
-        open={isMovementDialogOpen}
-        onOpenChange={setIsMovementDialogOpen}
-        products={products}
-      />
+      <SaleDetailsDialog saleId={selectedSaleId} open={isSaleDialogOpen} onOpenChange={setIsSaleDialogOpen} />
+      <EditProductDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} product={editingProduct} categories={categories} />
+      <NewProductDialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen} categories={categories} />
+      <NewMovementDialog open={isMovementDialogOpen} onOpenChange={setIsMovementDialogOpen} products={products} />
     </div>
   );
 }

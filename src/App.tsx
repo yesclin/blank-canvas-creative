@@ -63,6 +63,7 @@ import ConfigProcedimentos from "./pages/app/config/Procedimentos";
 import ConfigClinica from "./pages/app/config/Clinica";
 import ConfigUsuarios from "./pages/app/config/Usuarios";
 import ConfigMateriais from "./pages/app/config/Materiais";
+import CatalogoClinico from "./pages/app/config/CatalogoClinico";
 import ConfigAgenda from "./pages/app/config/Agenda";
 
 import ConfigProntuario from "./pages/app/config/Prontuario";
@@ -152,6 +153,7 @@ const App = () => (
             <Route path="config/clinica" element={<ProtectedRoute module="configuracoes"><ConfigClinica /></ProtectedRoute>} />
             <Route path="config/usuarios" element={<ProtectedRoute module="configuracoes"><ConfigUsuarios /></ProtectedRoute>} />
             <Route path="config/materiais" element={<ProtectedRoute module="configuracoes"><ConfigMateriais /></ProtectedRoute>} />
+            <Route path="config/catalogo-clinico" element={<ProtectedRoute module="configuracoes"><CatalogoClinico /></ProtectedRoute>} />
             <Route path="config/agenda" element={<ProtectedRoute module="configuracoes"><ConfigAgenda /></ProtectedRoute>} />
             
             <Route path="config/prontuario" element={<ProtectedRoute module="configuracoes"><ConfigProntuario /></ProtectedRoute>} />
