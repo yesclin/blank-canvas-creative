@@ -2,14 +2,13 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 /**
- * Redirect: Cadastros Clínicos agora faz parte do módulo unificado "Itens e Estoque".
- * Redireciona automaticamente para /app/gestao/estoque.
+ * Redirect: rota legada redireciona para Catálogo Clínico.
  */
 export default function ConfigMateriais() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    navigate("/app/gestao/estoque", { replace: true });
+    navigate("/app/config/catalogo-clinico", { replace: true });
   }, [navigate]);
 
   return (
