@@ -4670,6 +4670,7 @@ export type Database = {
           barcode: string | null
           brand: string | null
           category: string | null
+          category_id: string | null
           clinic_id: string
           commercial_name: string | null
           composition: string | null
@@ -4706,6 +4707,7 @@ export type Database = {
           barcode?: string | null
           brand?: string | null
           category?: string | null
+          category_id?: string | null
           clinic_id: string
           commercial_name?: string | null
           composition?: string | null
@@ -4742,6 +4744,7 @@ export type Database = {
           barcode?: string | null
           brand?: string | null
           category?: string | null
+          category_id?: string | null
           clinic_id?: string
           commercial_name?: string | null
           composition?: string | null
@@ -7699,6 +7702,58 @@ export type Database = {
           },
         ]
       }
+      procedure_consumption_kits: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          id: string
+          is_required: boolean
+          kit_id: string
+          procedure_id: string
+          quantity: number
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          kit_id: string
+          procedure_id: string
+          quantity?: number
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          kit_id?: string
+          procedure_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procedure_consumption_kits_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procedure_consumption_kits_kit_id_fkey"
+            columns: ["kit_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_kits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procedure_consumption_kits_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       procedure_consumption_templates: {
         Row: {
           allow_quantity_edit_on_finish: boolean
@@ -8774,11 +8829,15 @@ export type Database = {
       }
       sale_items: {
         Row: {
+          batch_id: string | null
           cost_price: number | null
+          cost_price_snapshot: number
           created_at: string
           discount_amount: number | null
           id: string
+          item_id: string | null
           item_type: string
+          margin_amount: number
           margin_percent: number | null
           notes: string | null
           procedure_id: string | null
@@ -8792,11 +8851,15 @@ export type Database = {
           unit_price: number
         }
         Insert: {
+          batch_id?: string | null
           cost_price?: number | null
+          cost_price_snapshot?: number
           created_at?: string
           discount_amount?: number | null
           id?: string
+          item_id?: string | null
           item_type?: string
+          margin_amount?: number
           margin_percent?: number | null
           notes?: string | null
           procedure_id?: string | null
@@ -8810,11 +8873,15 @@ export type Database = {
           unit_price: number
         }
         Update: {
+          batch_id?: string | null
           cost_price?: number | null
+          cost_price_snapshot?: number
           created_at?: string
           discount_amount?: number | null
           id?: string
+          item_id?: string | null
           item_type?: string
+          margin_amount?: number
           margin_percent?: number | null
           notes?: string | null
           procedure_id?: string | null
@@ -8828,6 +8895,20 @@ export type Database = {
           unit_price?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_sale_items_batch"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_sale_items_inventory_item"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "sale_items_procedure_id_fkey"
             columns: ["procedure_id"]
@@ -8853,6 +8934,7 @@ export type Database = {
       }
       sales: {
         Row: {
+          appointment_id: string | null
           canceled_at: string | null
           canceled_by: string | null
           clinic_id: string
@@ -8869,6 +8951,7 @@ export type Database = {
           professional_id: string | null
           sale_date: string | null
           sale_number: string | null
+          sale_origin: string
           sold_by: string | null
           status: string
           subtotal: number | null
@@ -8877,6 +8960,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          appointment_id?: string | null
           canceled_at?: string | null
           canceled_by?: string | null
           clinic_id: string
@@ -8893,6 +8977,7 @@ export type Database = {
           professional_id?: string | null
           sale_date?: string | null
           sale_number?: string | null
+          sale_origin?: string
           sold_by?: string | null
           status?: string
           subtotal?: number | null
@@ -8901,6 +8986,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          appointment_id?: string | null
           canceled_at?: string | null
           canceled_by?: string | null
           clinic_id?: string
@@ -8917,6 +9003,7 @@ export type Database = {
           professional_id?: string | null
           sale_date?: string | null
           sale_number?: string | null
+          sale_origin?: string
           sold_by?: string | null
           status?: string
           subtotal?: number | null
@@ -8925,6 +9012,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_sales_appointment"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "sales_clinic_id_fkey"
             columns: ["clinic_id"]
@@ -10717,6 +10811,7 @@ export type Database = {
           start_time: string
         }[]
       }
+      get_my_clinic_id: { Args: never; Returns: string }
       get_next_document_number: {
         Args: { p_clinic_id: string }
         Returns: number
