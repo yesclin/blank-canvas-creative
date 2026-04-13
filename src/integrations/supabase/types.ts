@@ -4782,6 +4782,86 @@ export type Database = {
           },
         ]
       }
+      inventory_kit_items: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          kit_id: string
+          quantity: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          kit_id: string
+          quantity?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          kit_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_kit_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_kit_items_kit_id_fkey"
+            columns: ["kit_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_kits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_kits: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          kit_type: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          kit_type?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          kit_type?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_kits_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_movements: {
         Row: {
           appointment_id: string | null
@@ -7615,6 +7695,73 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      procedure_consumption_templates: {
+        Row: {
+          allow_quantity_edit_on_finish: boolean
+          batch_required: boolean
+          clinic_id: string
+          created_at: string
+          default_quantity: number
+          id: string
+          is_required: boolean
+          item_id: string
+          notes: string | null
+          procedure_id: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          allow_quantity_edit_on_finish?: boolean
+          batch_required?: boolean
+          clinic_id: string
+          created_at?: string
+          default_quantity?: number
+          id?: string
+          is_required?: boolean
+          item_id: string
+          notes?: string | null
+          procedure_id: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          allow_quantity_edit_on_finish?: boolean
+          batch_required?: boolean
+          clinic_id?: string
+          created_at?: string
+          default_quantity?: number
+          id?: string
+          is_required?: boolean
+          item_id?: string
+          notes?: string | null
+          procedure_id?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procedure_consumption_templates_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procedure_consumption_templates_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procedure_consumption_templates_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
             referencedColumns: ["id"]
           },
         ]
