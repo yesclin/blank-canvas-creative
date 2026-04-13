@@ -1,11 +1,11 @@
 import { useState, useCallback } from "react";
 import {
-  Package, Plus, Search, AlertTriangle, TrendingDown, Clock,
-  Edit, ToggleLeft, ToggleRight, ArrowDownCircle, ArrowUpCircle, Settings2,
+  Package, Search, Edit, ToggleLeft, ToggleRight,
+  ArrowDownCircle, ArrowUpCircle, Settings2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -50,9 +50,10 @@ export default function Estoque() {
 
   const activeItems = items.filter(i => i.is_active);
   const stockItems = activeItems.filter(i => i.controls_stock);
-  // We don't have a current_stock on inventory_items yet, so stats are approximate
   const totalItems = stockItems.length;
-  const expiringCount = expiringBatches.length + expiredBatches.length;
+  const sellableCount = activeItems.filter(i => i.is_sellable).length;
+  const expiringCount = expiringBatches.length;
+  const expiredBatchCount = expiredBatches.length;
 
   const categories = [...new Set(items.map(i => i.category).filter(Boolean))];
 
@@ -93,10 +94,9 @@ export default function Estoque() {
         <div className="grid gap-4 md:grid-cols-4">
           {[1, 2, 3, 4].map(i => (
             <Card key={i}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div className="h-4 w-24 bg-muted animate-pulse rounded" />
-              </CardHeader>
-              <CardContent><div className="h-8 w-16 bg-muted animate-pulse rounded" /></CardContent>
+              <CardContent className="pt-6">
+                <div className="h-8 w-16 bg-muted animate-pulse rounded" />
+              </CardContent>
             </Card>
           ))}
         </div>
@@ -108,56 +108,13 @@ export default function Estoque() {
     <div className="space-y-6">
       <InventoryModuleHero
         totalItems={totalItems}
+        sellableCount={sellableCount}
         lowStockCount={0}
         outOfStockCount={0}
         expiringCount={expiringCount}
+        expiredBatchCount={expiredBatchCount}
         onCreateItem={() => { setEditingItem(undefined); setIsItemDialogOpen(true); }}
-        onOpenMovement={() => setIsEntryOpen(true)}
       />
-
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Itens</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalItems}</div>
-            <p className="text-xs text-muted-foreground">itens com controle de estoque</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Vendáveis</CardTitle>
-            <TrendingDown className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{activeItems.filter(i => i.is_sellable).length}</div>
-            <p className="text-xs text-muted-foreground">itens para venda</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Lotes Vencidos</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-destructive" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">{expiredBatches.length}</div>
-            <p className="text-xs text-muted-foreground">lotes expirados</p>
-          </CardContent>
-        </Card>
-        <Card className={expiringBatches.length > 0 ? "border-orange-300" : ""}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Vencendo</CardTitle>
-            <Clock className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{expiringBatches.length}</div>
-            <p className="text-xs text-muted-foreground">lotes vencem em 30 dias</p>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-2">
@@ -169,9 +126,6 @@ export default function Estoque() {
         </Button>
         <Button variant="outline" onClick={() => setIsAdjustOpen(true)}>
           <Settings2 className="h-4 w-4 mr-2" />Ajuste
-        </Button>
-        <Button variant="outline" onClick={() => { setEditingItem(undefined); setIsItemDialogOpen(true); }}>
-          <Plus className="h-4 w-4 mr-2" />Novo Item
         </Button>
       </div>
 
@@ -277,10 +231,8 @@ export default function Estoque() {
           </Card>
         </TabsContent>
 
-        {/* TAB: LOTES */}
         <TabsContent value="batches"><BatchesTab /></TabsContent>
 
-        {/* TAB: ENTRADAS */}
         <TabsContent value="entries">
           <MovementsListTab
             filterTypes={entryMovementTypes}
@@ -291,7 +243,6 @@ export default function Estoque() {
           />
         </TabsContent>
 
-        {/* TAB: SAÍDAS */}
         <TabsContent value="exits">
           <MovementsListTab
             filterTypes={exitMovementTypes}
@@ -302,7 +253,6 @@ export default function Estoque() {
           />
         </TabsContent>
 
-        {/* TAB: AJUSTES */}
         <TabsContent value="adjustments">
           <MovementsListTab
             filterTypes={['adjustment']}
@@ -313,23 +263,17 @@ export default function Estoque() {
           />
         </TabsContent>
 
-        {/* TAB: KITS */}
         <TabsContent value="kits">
           <InventoryKitsTab />
         </TabsContent>
 
-        {/* TAB: ALERTAS */}
         <TabsContent value="alerts"><AlertsTab /></TabsContent>
-
-        {/* TAB: VALIDADE */}
         <TabsContent value="expiry"><ExpiryTab /></TabsContent>
 
-        {/* TAB: PREVISÃO */}
         <TabsContent value="prediction">
           <StockPredictionAlerts compact={false} maxItems={50} showHeader={true} />
         </TabsContent>
 
-        {/* TAB: HISTÓRICO */}
         <TabsContent value="history">
           <MovementsListTab
             title="Histórico Completo"
