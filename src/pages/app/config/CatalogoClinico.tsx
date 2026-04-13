@@ -2,18 +2,17 @@ import { useState } from "react";
 import { Stethoscope, Package, Boxes, Link2, Settings, Calculator } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ProcedureMaterialsTab } from "@/components/cadastros-clinicos/ProcedureMaterialsTab";
+import { ProcedureConsumptionTab } from "@/components/catalogo-clinico/ProcedureConsumptionTab";
+import { InventoryKitsTab } from "@/components/catalogo-clinico/InventoryKitsTab";
 import { MaterialConsumptionSettings } from "@/components/cadastros-clinicos/MaterialConsumptionSettings";
-import { ProductKitsTab } from "@/components/estoque/ProductKitsTab";
 import { CatalogoClincioCostTab } from "@/components/catalogo-clinico/CostTab";
 import { CatalogoClinicoItemsTab } from "@/components/catalogo-clinico/ItemsTab";
 
 const tabs = [
   { value: "items", label: "Itens Assistenciais", icon: Package, description: "Itens cadastrados com perfil assistencial/clínico" },
   { value: "kits", label: "Kits Clínicos", icon: Boxes, description: "Kits montados com itens para uso em procedimentos" },
-  { value: "consumo", label: "Consumo por Procedimento", icon: Link2, description: "Vincule itens e kits aos procedimentos" },
+  { value: "consumo", label: "Consumo por Procedimento", icon: Link2, description: "Vincule itens ao consumo de cada procedimento" },
   { value: "baixa", label: "Regras de Baixa", icon: Settings, description: "Configure baixa automática de estoque" },
   { value: "custo", label: "Custo de Procedimentos", icon: Calculator, description: "Visualize o custo operacional por procedimento" },
 ];
@@ -23,7 +22,6 @@ export default function CatalogoClinico() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <div className="flex items-center gap-3">
           <div className="rounded-lg border border-border bg-primary/10 p-2">
@@ -50,7 +48,6 @@ export default function CatalogoClinico() {
         </AlertDescription>
       </Alert>
 
-      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5">
         <TabsList className="grid h-auto w-full gap-2 bg-transparent p-0 sm:grid-cols-2 lg:grid-cols-5">
           {tabs.map((tab) => (
@@ -63,57 +60,50 @@ export default function CatalogoClinico() {
                 <tab.icon className="h-4 w-4 shrink-0" />
                 <span className="text-sm font-medium">{tab.label}</span>
               </div>
-              <span className="text-xs text-muted-foreground leading-relaxed">
-                {tab.description}
-              </span>
+              <span className="text-xs text-muted-foreground leading-relaxed">{tab.description}</span>
             </TabsTrigger>
           ))}
         </TabsList>
 
-        {/* Itens Assistenciais */}
         <TabsContent value="items" className="space-y-4">
           <CatalogoClinicoItemsTab />
         </TabsContent>
 
-        {/* Kits Clínicos */}
         <TabsContent value="kits" className="space-y-4">
           <Alert>
             <Boxes className="h-4 w-4" />
             <AlertDescription>
-              Monte kits clínicos reutilizáveis com itens já cadastrados no estoque. Kits podem ser vinculados a procedimentos na aba <strong>Consumo por Procedimento</strong>.
+              Monte kits clínicos ou comerciais com itens do cadastro mestre. Kits podem ser vinculados a procedimentos.
             </AlertDescription>
           </Alert>
-          <ProductKitsTab />
+          <InventoryKitsTab />
         </TabsContent>
 
-        {/* Consumo por Procedimento */}
         <TabsContent value="consumo" className="space-y-4">
           <Alert>
             <Link2 className="h-4 w-4" />
             <AlertDescription>
-              Configure quais itens são consumidos em cada procedimento e suas quantidades. Itens novos devem ser cadastrados em <strong>Gestão → Estoque</strong>.
+              Configure quais itens são consumidos em cada procedimento, com quantidades, exigência de lote e permissão de edição na finalização.
             </AlertDescription>
           </Alert>
-          <ProcedureMaterialsTab />
+          <ProcedureConsumptionTab />
         </TabsContent>
 
-        {/* Regras de Baixa */}
         <TabsContent value="baixa" className="space-y-4">
           <Alert>
             <Settings className="h-4 w-4" />
             <AlertDescription>
-              Configure a baixa automática de estoque ao finalizar atendimentos. Os itens consumidos são definidos na aba <strong>Consumo por Procedimento</strong>.
+              Configure a baixa automática de estoque ao finalizar atendimentos.
             </AlertDescription>
           </Alert>
           <MaterialConsumptionSettings />
         </TabsContent>
 
-        {/* Custo de Procedimentos */}
         <TabsContent value="custo" className="space-y-4">
           <Alert>
             <Calculator className="h-4 w-4" />
             <AlertDescription>
-              Visualize o custo operacional de cada procedimento com base nos itens e kits vinculados.
+              Visualize o custo operacional de cada procedimento com base nos itens vinculados.
             </AlertDescription>
           </Alert>
           <CatalogoClincioCostTab />
