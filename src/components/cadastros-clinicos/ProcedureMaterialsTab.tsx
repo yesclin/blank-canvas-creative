@@ -195,7 +195,7 @@ export function ProcedureMaterialsTab() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{proceduresWithCosts.filter(p => p.has_items).length}</p>
-                <p className="text-sm text-muted-foreground">Procedimentos com insumos</p>
+                <p className="text-sm text-muted-foreground">Procedimentos com itens</p>
               </div>
             </div>
           </CardContent>
@@ -221,11 +221,25 @@ export function ProcedureMaterialsTab() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{proceduresWithCosts.filter(p => !p.has_items).length}</p>
-                <p className="text-sm text-muted-foreground">Procedimentos sem insumos</p>
+                <p className="text-sm text-muted-foreground">Procedimentos sem itens</p>
               </div>
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="grid gap-4 rounded-xl border border-border bg-muted/30 p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+        <div className="space-y-1">
+          <h3 className="text-lg font-semibold text-foreground">Uso clínico dos itens</h3>
+          <p className="text-sm text-muted-foreground">
+            Aqui você apenas vincula itens já cadastrados no estoque aos procedimentos e define a quantidade consumida.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="outline">Sem criar item novo</Badge>
+          <Badge variant="outline">Consumo por procedimento</Badge>
+          <Badge variant="outline">Impacto em custo</Badge>
+        </div>
       </div>
 
       {/* Busca e ações */}
@@ -274,7 +288,7 @@ export function ProcedureMaterialsTab() {
                     <CardDescription className="flex items-center gap-3 mt-1">
                       <span className="flex items-center gap-1">
                         <Package className="h-3.5 w-3.5" />
-                        {proc.material_count} materiais
+                        {proc.material_count} itens
                       </span>
                       <span className="flex items-center gap-1">
                         <Layers className="h-3.5 w-3.5" />
@@ -297,7 +311,7 @@ export function ProcedureMaterialsTab() {
                 {!proc.has_items && (
                   <div className="flex items-center gap-2 text-sm text-destructive mb-3 p-2 bg-destructive/10 rounded-md">
                     <AlertCircle className="h-4 w-4" />
-                    <span>Procedimento sem insumos vinculados</span>
+                    <span>Procedimento sem itens vinculados</span>
                   </div>
                 )}
                 
@@ -310,7 +324,7 @@ export function ProcedureMaterialsTab() {
                       onClick={() => handleAddMaterial(proc.id)}
                     >
                       <Package className="h-4 w-4 mr-1" />
-                      + Material
+                      Vincular Item
                     </Button>
                     <Button 
                       variant="outline" 
@@ -358,7 +372,7 @@ export function ProcedureMaterialsTab() {
                     ))}
                     {(getProcedureMaterialsById(proc.id).length > 3) && (
                       <p className="text-xs text-muted-foreground">
-                        +{getProcedureMaterialsById(proc.id).length - 3} outros materiais
+                        +{getProcedureMaterialsById(proc.id).length - 3} outros itens
                       </p>
                     )}
                   </div>
@@ -384,10 +398,10 @@ export function ProcedureMaterialsTab() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editMaterial ? "Editar Vínculo" : "Vincular Material ao Procedimento"}
+                {editMaterial ? "Editar Vínculo" : "Vincular Item ao Procedimento"}
             </DialogTitle>
             <DialogDescription>
-              Defina qual material é utilizado no procedimento e sua quantidade
+                Selecione um item já existente no estoque e defina como ele será consumido no procedimento
             </DialogDescription>
           </DialogHeader>
 
@@ -413,14 +427,14 @@ export function ProcedureMaterialsTab() {
             </div>
 
             <div className="grid gap-2">
-              <Label>Material *</Label>
+              <Label>Item do estoque *</Label>
               <Select
                 value={materialForm.material_id}
                 onValueChange={(value) => updateMaterialField("material_id", value)}
                 disabled={!!editMaterial}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione o material" />
+                  <SelectValue placeholder="Selecione o item" />
                 </SelectTrigger>
                 <SelectContent>
                   {materials.filter((m) => m.is_active).map((mat) => (
@@ -466,7 +480,7 @@ export function ProcedureMaterialsTab() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label>Material Obrigatório</Label>
+                  <Label>Item obrigatório</Label>
                   <p className="text-sm text-muted-foreground">
                     Obrigatório para realizar o procedimento
                   </p>
@@ -509,7 +523,7 @@ export function ProcedureMaterialsTab() {
           <DialogHeader>
             <DialogTitle>Vincular Kit ao Procedimento</DialogTitle>
             <DialogDescription>
-              Selecione um kit de materiais para vincular ao procedimento
+                Selecione um kit montado com itens existentes para vincular ao procedimento
             </DialogDescription>
           </DialogHeader>
 
@@ -535,7 +549,7 @@ export function ProcedureMaterialsTab() {
             </div>
 
             <div className="grid gap-2">
-              <Label>Kit de Materiais *</Label>
+              <Label>Kit de Itens *</Label>
               <Select
                 value={kitForm.kit_id}
                 onValueChange={(value) => updateKitField("kit_id", value)}
@@ -594,7 +608,7 @@ export function ProcedureMaterialsTab() {
           <AlertDialogHeader>
             <AlertDialogTitle>Remover Vínculo</AlertDialogTitle>
             <AlertDialogDescription>
-              Deseja remover "{deleteMaterial?.material_name}" do procedimento? Esta ação não pode ser desfeita.
+              Deseja remover o item "{deleteMaterial?.material_name}" do procedimento? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

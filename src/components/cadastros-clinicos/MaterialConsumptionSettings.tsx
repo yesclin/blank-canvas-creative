@@ -73,15 +73,29 @@ export function MaterialConsumptionSettings() {
 
   return (
     <div className="space-y-6">
+      <div className="grid gap-4 rounded-xl border border-border bg-muted/30 p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+        <div className="space-y-1">
+          <h3 className="text-lg font-semibold text-foreground">Automação do consumo</h3>
+          <p className="text-sm text-muted-foreground">
+            A baixa automática usa apenas itens já vinculados em <strong>Uso clínico</strong>. Nenhum cadastro-base nasce aqui.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="outline">Consumo por atendimento</Badge>
+          <Badge variant="outline">Alertas de estoque</Badge>
+          <Badge variant="outline">Histórico recente</Badge>
+        </div>
+      </div>
+
       {/* Configuração Principal */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
-            Baixa Automática de Materiais
+            Baixa Automática de Itens
           </CardTitle>
           <CardDescription>
-            Configure o comportamento de consumo de materiais nos atendimentos
+            Configure o comportamento de consumo dos itens vinculados aos atendimentos
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -98,15 +112,15 @@ export function MaterialConsumptionSettings() {
                         <Info className="h-4 w-4 text-muted-foreground" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
-                        <p>Quando ativado, ao finalizar um atendimento o sistema registrará automaticamente o consumo dos materiais vinculados ao procedimento.</p>
+                        <p>Quando ativado, ao finalizar um atendimento o sistema registrará automaticamente o consumo dos itens vinculados ao procedimento.</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {autoConsumptionEnabled 
-                    ? "Os materiais serão baixados automaticamente ao finalizar atendimentos"
-                    : "Os materiais serão apenas exibidos para referência, sem baixa automática"
+                    ? "Os itens serão baixados automaticamente ao finalizar atendimentos"
+                    : "Os itens serão apenas exibidos para referência, sem baixa automática"
                   }
                 </p>
               </div>
@@ -122,8 +136,8 @@ export function MaterialConsumptionSettings() {
             <Info className="h-4 w-4" />
             <AlertTitle>Como funciona</AlertTitle>
             <AlertDescription className="space-y-2">
-              <p>• O sistema identifica os materiais e kits vinculados ao procedimento realizado</p>
-              <p>• Antes de finalizar, você pode ajustar quantidades ou adicionar materiais extras</p>
+              <p>• O sistema identifica os itens e kits vinculados ao procedimento realizado</p>
+              <p>• Antes de finalizar, você pode ajustar quantidades ou adicionar itens extras</p>
               <p>• Após finalização, o consumo é registrado e o estoque é atualizado</p>
               <p>• Alertas são gerados quando o estoque fica baixo ou zerado</p>
             </AlertDescription>
@@ -142,7 +156,7 @@ export function MaterialConsumptionSettings() {
             )}
           </CardTitle>
           <CardDescription>
-            Materiais que precisam de atenção
+            Itens que precisam de atenção
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -161,7 +175,7 @@ export function MaterialConsumptionSettings() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Material</TableHead>
+                    <TableHead>Item</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Qtd. Atual</TableHead>
                   <TableHead>Qtd. Mínima</TableHead>
@@ -212,7 +226,7 @@ export function MaterialConsumptionSettings() {
             Consumo Recente
           </CardTitle>
           <CardDescription>
-            Últimos materiais consumidos nos atendimentos
+            Últimos itens consumidos nos atendimentos
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -231,7 +245,7 @@ export function MaterialConsumptionSettings() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Material</TableHead>
+                  <TableHead>Item</TableHead>
                   <TableHead>Procedimento</TableHead>
                   <TableHead>Quantidade</TableHead>
                   <TableHead>Custo</TableHead>

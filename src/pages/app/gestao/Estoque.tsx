@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import {
   Package, Plus, Search, AlertTriangle, ArrowUpCircle, ArrowDownCircle,
   Edit, ToggleLeft, ToggleRight, History, TrendingDown, Clock,
-  ExternalLink, User, Syringe, Boxes, Calendar, Link2, Settings,
+  ExternalLink, User, Syringe,
   Info
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useStockData } from "@/hooks/useStockData";
 import { stockMovementTypeLabels, type StockMovementType } from "@/types/inventory";
@@ -27,6 +27,8 @@ import { StockPredictionAlerts } from "@/components/estoque/StockPredictionAlert
 import { EditProductDialog } from "@/components/estoque/EditProductDialog";
 import { NewProductDialog } from "@/components/estoque/NewProductDialog";
 import { NewMovementDialog } from "@/components/estoque/NewMovementDialog";
+import { InventoryModuleHero } from "@/components/estoque/InventoryModuleHero";
+import { InventorySectionTabs } from "@/components/estoque/InventorySectionTabs";
 import { useUpdateProduct } from "@/hooks/useProducts";
 import type { StockProduct } from "@/hooks/useStockData";
 
@@ -126,16 +128,14 @@ export default function Estoque() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <Package className="h-6 w-6 text-primary" />
-          Itens e Estoque
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Cadastre itens, controle estoque, configure uso clínico e acompanhe alertas — tudo em um só lugar
-        </p>
-      </div>
+      <InventoryModuleHero
+        totalItems={stats.totalProducts}
+        lowStockCount={stats.lowStock}
+        outOfStockCount={stats.outOfStock}
+        expiringCount={stats.expiringSoon}
+        onCreateItem={() => setIsProductDialogOpen(true)}
+        onOpenMovement={() => setIsMovementDialogOpen(true)}
+      />
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -182,45 +182,28 @@ export default function Estoque() {
       </div>
 
       {/* Main Tabs — unified 6-tab structure */}
-      <Tabs defaultValue="items" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6 max-w-4xl">
-          <TabsTrigger value="items" className="flex items-center gap-1.5">
-            <Package className="h-4 w-4" />
-            <span className="hidden sm:inline">Itens</span>
-          </TabsTrigger>
-          <TabsTrigger value="movements" className="flex items-center gap-1.5">
-            <History className="h-4 w-4" />
-            <span className="hidden sm:inline">Movimentações</span>
-          </TabsTrigger>
-          <TabsTrigger value="kits" className="flex items-center gap-1.5">
-            <Boxes className="h-4 w-4" />
-            <span className="hidden sm:inline">Kits</span>
-          </TabsTrigger>
-          <TabsTrigger value="links" className="flex items-center gap-1.5">
-            <Link2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Vínculos</span>
-          </TabsTrigger>
-          <TabsTrigger value="auto-consumption" className="flex items-center gap-1.5">
-            <Settings className="h-4 w-4" />
-            <span className="hidden sm:inline">Baixa Auto</span>
-          </TabsTrigger>
-          <TabsTrigger value="alerts" className="flex items-center gap-1.5">
-            <AlertTriangle className="h-4 w-4" />
-            <span className="hidden sm:inline">Alertas</span>
-          </TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="items" className="space-y-5">
+        <InventorySectionTabs />
 
         {/* ====== TAB 1: ITENS (cadastro-base único) ====== */}
         <TabsContent value="items" className="space-y-4">
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              Cadastre cada item uma única vez aqui. Depois configure seu uso clínico na aba <strong>Vínculos</strong>.
-            </AlertDescription>
-          </Alert>
+          <div className="grid gap-4 rounded-xl border border-border bg-muted/30 p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold text-foreground">Cadastro-base dos itens</h2>
+              <p className="text-sm text-muted-foreground">
+                Todo item operacional nasce aqui. O uso clínico é configurado depois, na seção <strong>Uso clínico</strong>.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="outline">Estoque real</Badge>
+              <Badge variant="outline">Custo e preço</Badge>
+              <Badge variant="outline">Status operacional</Badge>
+            </div>
+          </div>
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-1">
+          <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-1">
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -253,17 +236,18 @@ export default function Estoque() {
                   <SelectItem value="out">Zerados</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+              </div>
             
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setIsMovementDialogOpen(true)}>
-                <History className="h-4 w-4 mr-2" />
-                Nova Movimentação
-              </Button>
-              <Button onClick={() => setIsProductDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Item
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setIsMovementDialogOpen(true)}>
+                  <History className="h-4 w-4 mr-2" />
+                  Nova Movimentação
+                </Button>
+                <Button onClick={() => setIsProductDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Item
+                </Button>
+              </div>
             </div>
           </div>
 
