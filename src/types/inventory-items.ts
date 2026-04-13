@@ -44,6 +44,7 @@ export interface InventoryItem {
   leaflet_text_or_url?: string | null;
   supplier_id?: string | null;
   notes?: string | null;
+  legacy_product_id?: string | null;
   created_at: string;
   updated_at: string;
 }

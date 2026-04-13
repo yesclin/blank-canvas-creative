@@ -4689,6 +4689,7 @@ export type Database = {
           is_sellable: boolean
           item_type: string
           leaflet_text_or_url: string | null
+          legacy_product_id: string | null
           manufacturer: string | null
           minimum_stock: number
           name: string
@@ -4726,6 +4727,7 @@ export type Database = {
           is_sellable?: boolean
           item_type?: string
           leaflet_text_or_url?: string | null
+          legacy_product_id?: string | null
           manufacturer?: string | null
           minimum_stock?: number
           name: string
@@ -4763,6 +4765,7 @@ export type Database = {
           is_sellable?: boolean
           item_type?: string
           leaflet_text_or_url?: string | null
+          legacy_product_id?: string | null
           manufacturer?: string | null
           minimum_stock?: number
           name?: string
