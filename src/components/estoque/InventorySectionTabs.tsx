@@ -23,8 +23,10 @@ const inventorySections: InventorySection[] = [
   { value: "entries", title: "Entradas", icon: ArrowDownCircle },
   { value: "exits", title: "Saídas", icon: ArrowUpCircle },
   { value: "adjustments", title: "Ajustes", icon: Settings2 },
+  { value: "kits", title: "Kits", icon: Boxes },
   { value: "alerts", title: "Alertas", icon: AlertTriangle },
   { value: "expiry", title: "Validade", icon: Calendar },
+  { value: "prediction", title: "Previsão", icon: TrendingUp },
   { value: "history", title: "Histórico", icon: History },
 ];
 
