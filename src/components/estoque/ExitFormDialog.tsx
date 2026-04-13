@@ -33,19 +33,37 @@ export function ExitFormDialog({ open, onOpenChange, items }: Props) {
   const selectedItem = items.find(i => i.id === itemId);
   const { data: batches = [] } = useInventoryBatches({ itemId: itemId || undefined, status: 'active' });
 
+  const today = new Date().toISOString().split("T")[0];
+
+  // Filter expired batches, sort FEFO
+  const availableBatches = batches
+    .filter(b => b.quantity_available > 0)
+    .filter(b => !b.expiry_date || b.expiry_date >= today)
+    .sort((a, b) => {
+      if (a.expiry_date && b.expiry_date) return a.expiry_date.localeCompare(b.expiry_date);
+      if (a.expiry_date) return -1;
+      if (b.expiry_date) return 1;
+      return 0;
+    });
+
+  const selectedBatch = batches.find(b => b.id === batchId);
+  const maxQuantity = selectedBatch ? selectedBatch.quantity_available : undefined;
+
   const isLoading = createMovement.isPending;
-  const isValid = itemId && quantity && parseFloat(quantity) > 0 && reason;
+  const qty = parseFloat(quantity) || 0;
+  const isValid = itemId && qty > 0 && reason;
+  const exceedsStock = selectedBatch && qty > selectedBatch.quantity_available;
 
   const reset = () => { setItemId(""); setBatchId(""); setQuantity(""); setReason(""); setMovType('loss'); setNotes(""); };
 
   const handleSave = async () => {
-    if (!isValid) return;
+    if (!isValid || exceedsStock) return;
     try {
       await createMovement.mutateAsync({
         item_id: itemId,
         batch_id: batchId || undefined,
         movement_type: movType,
-        quantity: parseFloat(quantity),
+        quantity: qty,
         reason,
         notes: notes || undefined,
       });
@@ -73,19 +91,23 @@ export function ExitFormDialog({ open, onOpenChange, items }: Props) {
               </SelectContent>
             </Select>
           </div>
-          {selectedItem?.controls_batch && batches.length > 0 && (
+          {selectedItem?.controls_batch && availableBatches.length > 0 && (
             <div className="grid gap-2">
-              <Label>Lote</Label>
+              <Label>Lote (FEFO)</Label>
               <Select value={batchId} onValueChange={setBatchId} disabled={isLoading}>
                 <SelectTrigger><SelectValue placeholder="Selecione o lote" /></SelectTrigger>
                 <SelectContent>
-                  {batches.map(b => (
+                  {availableBatches.map(b => (
                     <SelectItem key={b.id} value={b.id}>
                       {b.batch_number} (Disp: {b.quantity_available})
+                      {b.expiry_date ? ` Val: ${b.expiry_date}` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {exceedsStock && (
+                <p className="text-xs text-destructive">Quantidade excede o saldo disponível no lote ({selectedBatch?.quantity_available})</p>
+              )}
             </div>
           )}
           <div className="grid grid-cols-2 gap-4">
@@ -120,7 +142,7 @@ export function ExitFormDialog({ open, onOpenChange, items }: Props) {
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => { reset(); onOpenChange(false); }} disabled={isLoading}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={!isValid || isLoading}>
+          <Button onClick={handleSave} disabled={!isValid || isLoading || !!exceedsStock}>
             {isLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Registrando...</> : "Registrar Saída"}
           </Button>
         </DialogFooter>
