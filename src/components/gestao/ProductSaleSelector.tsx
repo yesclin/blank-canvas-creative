@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useProducts } from "@/hooks/useProducts";
+import { useProductsUnified } from "@/hooks/useProductsCompat";
 import { ProductSearchCombobox } from "./ProductSearchCombobox";
 import { SelectedProductsList } from "./SelectedProductsList";
 import type { Product } from "@/types/inventory";
@@ -40,7 +40,7 @@ export function ProductSaleSelector({
   onValidationChange,
   disabled = false,
 }: ProductSaleSelectorProps) {
-  const { data: products = [], isLoading } = useProducts(false);
+  const { data: products = [], isLoading } = useProductsUnified(false);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(1);
 

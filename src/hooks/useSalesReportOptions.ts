@@ -6,20 +6,23 @@ import { supabase } from "@/integrations/supabase/client";
  * (produtos, pacientes e usuários)
  */
 export function useSalesReportOptions() {
-  // Query produtos
+  // Query produtos (unified: products + sellable inventory_items)
   const productsQuery = useQuery({
-    queryKey: ["sales-report-products"],
+    queryKey: ["sales-report-products-unified"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("id, name")
-        .eq("is_active", true)
-        .order("name");
+      const [productsRes, inventoryRes] = await Promise.all([
+        supabase.from("products").select("id, name").eq("is_active", true).order("name"),
+        supabase.from("inventory_items").select("id, name").eq("is_sellable", true).eq("is_active", true).order("name"),
+      ]);
 
-      if (error) throw error;
-      return data || [];
+      if (productsRes.error) throw productsRes.error;
+      const products = productsRes.data || [];
+      const inventoryItems = inventoryRes.data || [];
+      const existingNames = new Set(products.map((p: any) => p.name.toLowerCase()));
+      const additional = inventoryItems.filter((i: any) => !existingNames.has(i.name.toLowerCase()));
+      return [...products, ...additional];
     },
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    staleTime: 1000 * 60 * 5,
   });
 
   // Query pacientes
