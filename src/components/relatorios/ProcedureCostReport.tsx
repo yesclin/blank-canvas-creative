@@ -180,7 +180,7 @@ export function ProcedureCostReport({
                 <li>O atendimento foi finalizado antes da configuração</li>
               </ul>
               <p className="mt-2 font-medium">
-                Configure em <strong>Gestão → Controle de Estoque</strong> na aba de vínculos para rastrear custos futuros.
+                Configure em <strong>Gestão → Itens e Estoque</strong> na aba <strong>Uso clínico</strong> para rastrear custos futuros.
               </p>
             </AlertDescription>
           </Alert>
