@@ -1,30 +1,34 @@
-import { History, Package } from "lucide-react";
+import { Package } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface InventoryModuleHeroProps {
   totalItems: number;
+  sellableCount: number;
   lowStockCount: number;
   outOfStockCount: number;
   expiringCount: number;
+  expiredBatchCount: number;
   onCreateItem: () => void;
-  onOpenMovement: () => void;
 }
 
 export function InventoryModuleHero({
   totalItems,
+  sellableCount,
   lowStockCount,
   outOfStockCount,
   expiringCount,
+  expiredBatchCount,
   onCreateItem,
-  onOpenMovement,
 }: InventoryModuleHeroProps) {
   const metrics = [
-    { label: "Itens cadastrados", value: totalItems },
+    { label: "Total de Itens", value: totalItems },
+    { label: "Vendáveis", value: sellableCount },
     { label: "Estoque baixo", value: lowStockCount },
     { label: "Sem estoque", value: outOfStockCount },
     { label: "Próx. vencimento", value: expiringCount },
+    { label: "Lotes vencidos", value: expiredBatchCount },
   ];
 
   return (
@@ -38,8 +42,8 @@ export function InventoryModuleHero({
                 Estoque
               </h1>
               <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
-                Cadastre itens, controle saldo operacional, registre movimentações e monitore alertas.
-                O uso clínico e vínculo com procedimentos é configurado em{" "}
+                Cadastre itens, controle saldo operacional, registre entradas, saídas e ajustes, e monitore alertas.
+                O vínculo clínico e o consumo por procedimento são configurados em{" "}
                 <strong>Configurações → Catálogo Clínico</strong>.
               </p>
             </div>
@@ -50,13 +54,9 @@ export function InventoryModuleHero({
               <Package className="mr-2 h-4 w-4" />
               Novo Item
             </Button>
-            <Button variant="outline" onClick={onOpenMovement}>
-              <History className="mr-2 h-4 w-4" />
-              Registrar Movimentação
-            </Button>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
             {metrics.map((metric) => (
               <div key={metric.label} className="rounded-xl border border-border bg-muted/40 p-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
