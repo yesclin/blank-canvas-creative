@@ -71,7 +71,7 @@ const ownerAdminMainMenu: MenuItem[] = [
 ];
 
 const ownerAdminGestaoMenu: MenuItem[] = [
-  { title: "Itens e Estoque", url: "/app/gestao/estoque", icon: Package },
+  { title: "Estoque", url: "/app/gestao/estoque", icon: Package },
   { title: "Finanças", url: "/app/gestao/financas", icon: DollarSign },
   { title: "Convênios", url: "/app/gestao/convenios", icon: Building2 },
   { title: "Relatórios", url: "/app/gestao/relatorios", icon: BarChart3 },
@@ -80,11 +80,10 @@ const ownerAdminGestaoMenu: MenuItem[] = [
 
 const ownerAdminConfigMenu: MenuItem[] = [
   { title: "Procedimentos", url: "/app/config/procedimentos", icon: ListChecks },
+  { title: "Catálogo Clínico", url: "/app/config/catalogo-clinico", icon: ListChecks },
   { title: "Clínica", url: "/app/config/clinica", icon: Building },
   { title: "Usuários & Permissões", url: "/app/config/usuarios", icon: UserCog },
-  
   { title: "Regras de Agenda", url: "/app/config/agenda", icon: CalendarCog },
-  
   { title: "Modelos de Prontuário", url: "/app/config/prontuario", icon: FileText },
   { title: "LGPD & Segurança", url: "/app/config/seguranca", icon: Shield },
   { title: "Integrações", url: "/app/config/integracoes", icon: Plug },
