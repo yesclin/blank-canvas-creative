@@ -4588,6 +4588,125 @@ export type Database = {
           },
         ]
       }
+      inventory_items: {
+        Row: {
+          alert_days_before_expiry: number
+          anvisa_registration: string | null
+          barcode: string | null
+          brand: string | null
+          category: string | null
+          clinic_id: string
+          commercial_name: string | null
+          composition: string | null
+          controls_batch: boolean
+          controls_expiry: boolean
+          controls_stock: boolean
+          created_at: string
+          default_cost_price: number
+          default_sale_price: number
+          description: string | null
+          id: string
+          ideal_stock: number
+          internal_code: string | null
+          is_active: boolean
+          is_consumable_in_procedures: boolean
+          is_sellable: boolean
+          item_type: string
+          leaflet_text_or_url: string | null
+          manufacturer: string | null
+          minimum_stock: number
+          name: string
+          notes: string | null
+          requires_cold_chain: boolean
+          requires_traceability: boolean
+          sku: string | null
+          storage_notes: string | null
+          supplier_id: string | null
+          unit_of_measure: string
+          updated_at: string
+        }
+        Insert: {
+          alert_days_before_expiry?: number
+          anvisa_registration?: string | null
+          barcode?: string | null
+          brand?: string | null
+          category?: string | null
+          clinic_id: string
+          commercial_name?: string | null
+          composition?: string | null
+          controls_batch?: boolean
+          controls_expiry?: boolean
+          controls_stock?: boolean
+          created_at?: string
+          default_cost_price?: number
+          default_sale_price?: number
+          description?: string | null
+          id?: string
+          ideal_stock?: number
+          internal_code?: string | null
+          is_active?: boolean
+          is_consumable_in_procedures?: boolean
+          is_sellable?: boolean
+          item_type?: string
+          leaflet_text_or_url?: string | null
+          manufacturer?: string | null
+          minimum_stock?: number
+          name: string
+          notes?: string | null
+          requires_cold_chain?: boolean
+          requires_traceability?: boolean
+          sku?: string | null
+          storage_notes?: string | null
+          supplier_id?: string | null
+          unit_of_measure?: string
+          updated_at?: string
+        }
+        Update: {
+          alert_days_before_expiry?: number
+          anvisa_registration?: string | null
+          barcode?: string | null
+          brand?: string | null
+          category?: string | null
+          clinic_id?: string
+          commercial_name?: string | null
+          composition?: string | null
+          controls_batch?: boolean
+          controls_expiry?: boolean
+          controls_stock?: boolean
+          created_at?: string
+          default_cost_price?: number
+          default_sale_price?: number
+          description?: string | null
+          id?: string
+          ideal_stock?: number
+          internal_code?: string | null
+          is_active?: boolean
+          is_consumable_in_procedures?: boolean
+          is_sellable?: boolean
+          item_type?: string
+          leaflet_text_or_url?: string | null
+          manufacturer?: string | null
+          minimum_stock?: number
+          name?: string
+          notes?: string | null
+          requires_cold_chain?: boolean
+          requires_traceability?: boolean
+          sku?: string | null
+          storage_notes?: string | null
+          supplier_id?: string | null
+          unit_of_measure?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_items_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       material_consumption: {
         Row: {
           appointment_id: string | null
