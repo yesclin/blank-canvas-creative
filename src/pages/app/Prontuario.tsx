@@ -537,15 +537,20 @@ export default function Prontuario() {
     grantConsent,
   } = useLgpdEnforcement(patientId);
 
-  // Digital Signatures
+  // Digital Signatures (legacy - kept for read queries)
   const {
     signatures,
     fetchSignaturesForPatient,
     getSignatureForRecord,
     isRecordSigned,
-    signRecord,
-    signing,
+    signing: legacySigning,
   } = useMedicalRecordSignatures();
+
+  // Advanced Signature
+  const {
+    signing,
+    signRecord: advancedSignRecord,
+  } = useAdvancedSignature();
 
   // Granular Permissions (only used if tab permissions are enabled)
   const {
