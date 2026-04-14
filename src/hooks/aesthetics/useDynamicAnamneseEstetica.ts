@@ -1,6 +1,7 @@
 /**
  * Hook for managing dynamic aesthetics anamnesis records.
  * Uses anamnesis_records table with template_id/responses pattern.
+ * NO autosave — only manual save via explicit user action.
  */
 
 import { useState, useCallback, useEffect } from 'react';
@@ -19,6 +20,10 @@ export interface DynamicAnamneseRecord {
   structure_snapshot: DynamicField[] | null;
   status: string;
   signed_at: string | null;
+  signed_by: string | null;
+  saved_at: string | null;
+  edit_window_until: string | null;
+  locked_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -76,6 +81,10 @@ export function useDynamicAnamneseEstetica({
           structure_snapshot: data.structure_snapshot as DynamicField[] | null,
           status: data.status,
           signed_at: data.signed_at,
+          signed_by: data.signed_by,
+          saved_at: data.saved_at,
+          edit_window_until: data.edit_window_until,
+          locked_at: data.locked_at,
           created_at: data.created_at,
           updated_at: data.updated_at,
         });
@@ -109,25 +118,34 @@ export function useDynamicAnamneseEstetica({
 
       const professionalId = professional?.id || userData.user.id;
 
+      const { getEditWindowFields } = await import('@/hooks/prontuario/anamnesisEditWindowUtils');
+      const editWindowFields = getEditWindowFields();
+
       if (record && !record.signed_at) {
-        // Update existing draft
+        // Update existing draft — also refresh edit window on each manual save
         const { error } = await supabase
           .from('anamnesis_records')
           .update({
             responses: responses as unknown as Json,
+            data: responses as unknown as Json,
             updated_at: new Date().toISOString(),
+            ...editWindowFields,
           })
           .eq('id', record.id);
 
         if (error) throw error;
 
-        setRecord((prev) => prev ? { ...prev, responses, updated_at: new Date().toISOString() } : prev);
+        setRecord((prev) => prev ? {
+          ...prev,
+          responses,
+          updated_at: new Date().toISOString(),
+          saved_at: editWindowFields.saved_at,
+          edit_window_until: editWindowFields.edit_window_until,
+        } : prev);
         toast.success('Anamnese salva');
       } else {
         // Create new record
         const structureSnapshot = fields as unknown as Json;
-        const { getEditWindowFields } = await import('@/hooks/prontuario/anamnesisEditWindowUtils');
-        const editWindowFields = getEditWindowFields();
         const { data, error } = await supabase
           .from('anamnesis_records')
           .insert({
@@ -158,6 +176,10 @@ export function useDynamicAnamneseEstetica({
           structure_snapshot: data.structure_snapshot as DynamicField[] | null,
           status: data.status,
           signed_at: data.signed_at,
+          signed_by: data.signed_by,
+          saved_at: data.saved_at,
+          edit_window_until: data.edit_window_until,
+          locked_at: data.locked_at,
           created_at: data.created_at,
           updated_at: data.updated_at,
         });
