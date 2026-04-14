@@ -392,11 +392,11 @@ export function EvolucoesEsteticaBlock({
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleSign(ev.id)}
-                      disabled={isSigning}
+                      onClick={() => handleSign(ev)}
+                      disabled={isSigning || advancedSigning}
                     >
                       <FileSignature className="h-4 w-4 mr-1.5" />
-                      Assinar Evolução
+                      Assinatura Avançada YesClin
                     </Button>
                   </div>
                 )}
