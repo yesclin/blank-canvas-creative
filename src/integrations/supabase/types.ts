@@ -5239,36 +5239,72 @@ export type Database = {
       medical_record_signatures: {
         Row: {
           clinic_id: string
+          device_fingerprint: string | null
+          document_pdf_url: string | null
+          document_snapshot_json: Json | null
           id: string
           ip_address: string | null
+          is_revoked: boolean
+          patient_id: string | null
           record_id: string
           record_type: string
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          sign_method: string
           signature_hash: string | null
           signed_at: string
           signed_by: string
+          signed_by_name: string
+          signed_by_professional_id: string | null
           user_agent: string | null
+          verification_token: string | null
         }
         Insert: {
           clinic_id: string
+          device_fingerprint?: string | null
+          document_pdf_url?: string | null
+          document_snapshot_json?: Json | null
           id?: string
           ip_address?: string | null
+          is_revoked?: boolean
+          patient_id?: string | null
           record_id: string
           record_type: string
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          sign_method?: string
           signature_hash?: string | null
           signed_at?: string
           signed_by: string
+          signed_by_name?: string
+          signed_by_professional_id?: string | null
           user_agent?: string | null
+          verification_token?: string | null
         }
         Update: {
           clinic_id?: string
+          device_fingerprint?: string | null
+          document_pdf_url?: string | null
+          document_snapshot_json?: Json | null
           id?: string
           ip_address?: string | null
+          is_revoked?: boolean
+          patient_id?: string | null
           record_id?: string
           record_type?: string
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          sign_method?: string
           signature_hash?: string | null
           signed_at?: string
           signed_by?: string
+          signed_by_name?: string
+          signed_by_professional_id?: string | null
           user_agent?: string | null
+          verification_token?: string | null
         }
         Relationships: [
           {
@@ -5276,6 +5312,20 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_record_signatures_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_record_signatures_signed_by_professional_id_fkey"
+            columns: ["signed_by_professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
         ]
@@ -5562,6 +5612,51 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: true
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medical_signature_events: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          event_type: string
+          id: string
+          metadata: Json
+          signature_id: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json
+          signature_id: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json
+          signature_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medical_signature_events_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_signature_events_signature_id_fkey"
+            columns: ["signature_id"]
+            isOneToOne: false
+            referencedRelation: "medical_record_signatures"
             referencedColumns: ["id"]
           },
         ]

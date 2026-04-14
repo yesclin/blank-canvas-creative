@@ -113,7 +113,8 @@ import { useFinalizeSession } from "@/hooks/useAppointmentSession";
 import { useGlobalActiveAppointment } from "@/contexts/GlobalActiveAppointmentContext";
 import type { Appointment } from "@/types/agenda";
 import { ConsentCollectionDialog } from "@/components/prontuario/ConsentCollectionDialog";
-import { SignatureDialog } from "@/components/prontuario/SignatureDialog";
+import { AdvancedSignatureDialog } from "@/components/prontuario/AdvancedSignatureDialog";
+import { useAdvancedSignature } from "@/hooks/prontuario/useAdvancedSignature";
 import { SignedRecordBadge } from "@/components/prontuario/SignedRecordBadge";
 import { PatientSelector } from "@/components/prontuario/PatientSelector";
 import { ClinicalTimeline } from "@/components/prontuario/ClinicalTimeline";
@@ -536,15 +537,20 @@ export default function Prontuario() {
     grantConsent,
   } = useLgpdEnforcement(patientId);
 
-  // Digital Signatures
+  // Digital Signatures (legacy - kept for read queries)
   const {
     signatures,
     fetchSignaturesForPatient,
     getSignatureForRecord,
     isRecordSigned,
-    signRecord,
-    signing,
+    signing: legacySigning,
   } = useMedicalRecordSignatures();
+
+  // Advanced Signature
+  const {
+    signing,
+    signRecord: advancedSignRecord,
+  } = useAdvancedSignature();
 
   // Granular Permissions (only used if tab permissions are enabled)
   const {
@@ -2264,19 +2270,23 @@ export default function Prontuario() {
     setSignatureDialogOpen(true);
   };
 
-  const handleSignRecord = async (_signedName: string, _signedDocument?: string): Promise<boolean> => {
+  const handleSignRecord = async (password: string): Promise<boolean> => {
     if (!selectedEntryForSignature || !patientId) return false;
     
-    const success = await signRecord({
+    const result = await advancedSignRecord({
       record_id: selectedEntryForSignature.id,
       record_type: selectedEntryForSignature.entry_type as 'evolution' | 'anamnesis',
+      patient_id: patientId,
       content: selectedEntryForSignature.content,
-    });
+      professional_name: currentProfessionalName || 'Profissional',
+    }, password);
 
-    if (success) {
+    if (result.success) {
       setSelectedEntryForSignature(null);
+      // Refresh signatures
+      fetchSignaturesForPatient(patientId);
     }
-    return success;
+    return result.success;
   };
 
 
@@ -2306,13 +2316,13 @@ export default function Prontuario() {
         />
       )}
 
-      {/* Digital Signature Dialog */}
+      {/* Advanced Digital Signature Dialog */}
       {patient && (
-        <SignatureDialog
+        <AdvancedSignatureDialog
           open={signatureDialogOpen}
           onOpenChange={setSignatureDialogOpen}
           entry={selectedEntryForSignature}
-          professionalName="Profissional"
+          professionalName={currentProfessionalName || 'Profissional'}
           patientName={patient.full_name}
           hasValidConsent={hasValidConsent}
           onSign={handleSignRecord}
