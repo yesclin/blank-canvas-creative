@@ -2270,19 +2270,23 @@ export default function Prontuario() {
     setSignatureDialogOpen(true);
   };
 
-  const handleSignRecord = async (_signedName: string, _signedDocument?: string): Promise<boolean> => {
+  const handleSignRecord = async (password: string): Promise<boolean> => {
     if (!selectedEntryForSignature || !patientId) return false;
     
-    const success = await signRecord({
+    const result = await advancedSignRecord({
       record_id: selectedEntryForSignature.id,
       record_type: selectedEntryForSignature.entry_type as 'evolution' | 'anamnesis',
+      patient_id: patientId,
       content: selectedEntryForSignature.content,
-    });
+      professional_name: professionalName || 'Profissional',
+    }, password);
 
-    if (success) {
+    if (result.success) {
       setSelectedEntryForSignature(null);
+      // Refresh signatures
+      fetchSignaturesForPatient(patientId);
     }
-    return success;
+    return result.success;
   };
 
 
