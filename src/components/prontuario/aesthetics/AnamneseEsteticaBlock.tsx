@@ -651,6 +651,13 @@ export function AnamneseEsteticaBlock({
             Assinado
           </Badge>
         );
+      case 'discarded':
+        return (
+          <Badge variant="destructive">
+            <Ban className="h-3 w-3 mr-1" />
+            Descartado
+          </Badge>
+        );
     }
   };
 
@@ -714,6 +721,15 @@ export function AnamneseEsteticaBlock({
           </Button>
         );
       }
+      // Discard document button (saved, not signed)
+      if (anamnesisEditability.canDiscard) {
+        actions.push(
+          <Button key="discard-doc" variant="outline" size="sm" className="text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => setShowDiscardConfirm(true)}>
+            <Trash2 className="h-4 w-4 mr-1.5" />
+            Descartar documento
+          </Button>
+        );
+      }
     }
 
     if (uiStatus === 'locked') {
@@ -726,9 +742,18 @@ export function AnamneseEsteticaBlock({
           </Button>
         );
       }
+      // Discard document button (locked but not signed)
+      if (anamnesisEditability.canDiscard) {
+        actions.push(
+          <Button key="discard-doc" variant="outline" size="sm" className="text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => setShowDiscardConfirm(true)}>
+            <Trash2 className="h-4 w-4 mr-1.5" />
+            Descartar documento
+          </Button>
+        );
+      }
     }
 
-    // Signed: no edit actions, just view + addendum is handled below
+    // Discarded: no actions except view
 
     return actions;
   };
