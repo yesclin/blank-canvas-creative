@@ -412,7 +412,7 @@ export function AnamneseEsteticaBlock({
       created_at: currentRecord.created_at,
       professional_id: currentRecord.professional_id,
       professional_name: professionalName || 'Profissional',
-    } as MedicalRecordEntry);
+    } as unknown as MedicalRecordEntry);
     setShowAdvancedSignDialog(true);
   }, [currentRecord, isAdvanced, dynamicHasChanges, standardHasChanges, dynamicValues, standardValues, professionalName]);
 
