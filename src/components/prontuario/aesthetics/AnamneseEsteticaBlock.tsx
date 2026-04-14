@@ -65,7 +65,9 @@ import type { AnamnesisTemplateV2 } from '@/hooks/useAnamnesisTemplatesV2';
 import { useAnamnesisEditability } from '@/hooks/prontuario/useAnamnesisEditability';
 import { RecordEditLockBanner } from '@/components/prontuario/RecordEditLockBanner';
 import { AddendumSection } from '@/components/prontuario/AddendumSection';
-import { useMedicalRecordSignatures } from '@/hooks/prontuario/useMedicalRecordSignatures';
+import { useAdvancedSignature } from '@/hooks/prontuario/useAdvancedSignature';
+import { AdvancedSignatureDialog } from '@/components/prontuario/AdvancedSignatureDialog';
+import type { MedicalRecordEntry } from '@/hooks/prontuario/useMedicalRecordEntries';
 import { cn } from '@/lib/utils';
 
 // ─── Template classification using catalog ─────────────────────────
