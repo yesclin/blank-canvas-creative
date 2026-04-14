@@ -948,24 +948,17 @@ export function AnamneseEsteticaBlock({
         />
       )}
 
-      {/* Signature confirmation dialog */}
-      <AlertDialog open={showSignConfirm} onOpenChange={setShowSignConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Assinar documento</AlertDialogTitle>
-            <AlertDialogDescription>
-              Ao assinar, este documento se tornará <strong>imutável</strong>. Nenhuma alteração será permitida após a assinatura.
-              Complementos futuros serão feitos apenas via adendos.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmSign} disabled={signingSig}>
-              {signingSig ? 'Assinando...' : 'Confirmar assinatura'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Advanced Signature Dialog */}
+      <AdvancedSignatureDialog
+        open={showAdvancedSignDialog}
+        onOpenChange={setShowAdvancedSignDialog}
+        entry={signatureEntry}
+        professionalName={professionalName || 'Profissional'}
+        patientName={patientName || 'Paciente'}
+        hasValidConsent={true}
+        onSign={handleAdvancedSign}
+        signing={signingSig}
+      />
 
       {/* Unsaved changes confirmation dialog */}
       <AlertDialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
