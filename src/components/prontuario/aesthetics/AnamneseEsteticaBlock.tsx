@@ -3,6 +3,7 @@
  *
  * Manual save only — NO autosave.
  * Full lifecycle: draft → saved (editable window) → locked → signed → addendum
+ * Advanced YesClin signature only — no legacy simple signature.
  */
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
