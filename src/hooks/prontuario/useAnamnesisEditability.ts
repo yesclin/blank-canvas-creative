@@ -65,7 +65,7 @@ export function useAnamnesisEditability(
 
   const markAsSaved = useCallback(async (recordId: string) => {
     const now = new Date();
-    const editWindowUntil = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour
+    const editWindowUntil = new Date(now.getTime() + 15 * 60 * 1000); // 15 minutes
 
     await supabase
       .from("anamnesis_records")
