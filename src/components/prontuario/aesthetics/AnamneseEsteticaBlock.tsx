@@ -390,6 +390,8 @@ export function AnamneseEsteticaBlock({
   // Signature flow
   const { signRecord, signing: signingSig } = useMedicalRecordSignatures();
   const [showSignConfirm, setShowSignConfirm] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const [discardReason, setDiscardReason] = useState('');
 
   const handleSign = useCallback(async () => {
     if (!currentRecord) return;
