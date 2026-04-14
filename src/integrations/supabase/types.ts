@@ -242,6 +242,9 @@ export type Database = {
           created_at: string
           created_by: string | null
           data: Json
+          discard_reason: string | null
+          discarded_at: string | null
+          discarded_by: string | null
           edit_window_until: string | null
           id: string
           locked_at: string | null
@@ -265,6 +268,9 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           data?: Json
+          discard_reason?: string | null
+          discarded_at?: string | null
+          discarded_by?: string | null
           edit_window_until?: string | null
           id?: string
           locked_at?: string | null
@@ -288,6 +294,9 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           data?: Json
+          discard_reason?: string | null
+          discarded_at?: string | null
+          discarded_by?: string | null
           edit_window_until?: string | null
           id?: string
           locked_at?: string | null
