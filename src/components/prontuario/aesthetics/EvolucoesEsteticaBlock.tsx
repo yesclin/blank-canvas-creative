@@ -618,6 +618,18 @@ export function EvolucoesEsteticaBlock({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Advanced Signature Dialog */}
+      <AdvancedSignatureDialog
+        open={signDialogOpen}
+        onOpenChange={setSignDialogOpen}
+        entry={signEntry}
+        professionalName="Profissional"
+        patientName="Paciente"
+        hasValidConsent={true}
+        onSign={handleAdvancedSign}
+        signing={advancedSigning}
+      />
     </div>
   );
 }
