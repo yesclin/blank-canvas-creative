@@ -389,9 +389,10 @@ export function AnamneseEsteticaBlock({
   const anamnesisEditability = useAnamnesisEditability(editabilityRecord);
   const uiStatus = resolveUiStatus(currentRecord, anamnesisEditability);
 
-  // Signature flow
-  const { signRecord, signing: signingSig } = useMedicalRecordSignatures();
-  const [showSignConfirm, setShowSignConfirm] = useState(false);
+  // Signature flow — Advanced YesClin
+  const { signRecord: advancedSignRecord, signing: signingSig } = useAdvancedSignature();
+  const [showAdvancedSignDialog, setShowAdvancedSignDialog] = useState(false);
+  const [signatureEntry, setSignatureEntry] = useState<MedicalRecordEntry | null>(null);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [discardReason, setDiscardReason] = useState('');
 
@@ -403,28 +404,37 @@ export function AnamneseEsteticaBlock({
       toast.error('Salve as alterações antes de assinar.');
       return;
     }
-    setShowSignConfirm(true);
-  }, [currentRecord, isAdvanced, dynamicHasChanges, standardHasChanges]);
+    // Build a MedicalRecordEntry-like object for the dialog
+    setSignatureEntry({
+      id: currentRecord.id,
+      entry_type: 'anamnesis',
+      content: (isAdvanced ? dynamicValues : standardValues) as Record<string, unknown>,
+      created_at: currentRecord.created_at,
+      professional_id: currentRecord.professional_id,
+      professional_name: professionalName || 'Profissional',
+    } as MedicalRecordEntry);
+    setShowAdvancedSignDialog(true);
+  }, [currentRecord, isAdvanced, dynamicHasChanges, standardHasChanges, dynamicValues, standardValues, professionalName]);
 
-  const confirmSign = useCallback(async () => {
-    if (!currentRecord) return;
-    setShowSignConfirm(false);
+  const handleAdvancedSign = useCallback(async (password: string): Promise<boolean> => {
+    if (!currentRecord || !patientId) return false;
     const content = isAdvanced ? dynamicValues : standardValues;
-    const success = await signRecord({
+    const result = await advancedSignRecord({
       record_id: currentRecord.id,
       record_type: 'anamnesis',
+      patient_id: patientId,
       content: content as Record<string, unknown>,
-    });
-    if (success) {
-      // Refetch to get signed state
+      professional_name: professionalName || 'Profissional',
+    }, password);
+    if (result.success) {
       if (isAdvanced) {
         refetchDynamic();
       } else {
-        // Reload standard record
         setStandardRecord((prev: any) => prev ? { ...prev, signed_at: new Date().toISOString() } : prev);
       }
     }
-  }, [currentRecord, isAdvanced, dynamicValues, standardValues, signRecord, refetchDynamic]);
+    return result.success;
+  }, [currentRecord, patientId, isAdvanced, dynamicValues, standardValues, advancedSignRecord, professionalName, refetchDynamic]);
 
   // ─── Unsaved changes guard ───────────────────────────────────────
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
