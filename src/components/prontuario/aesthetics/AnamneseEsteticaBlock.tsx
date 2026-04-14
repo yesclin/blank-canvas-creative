@@ -977,6 +977,34 @@ export function AnamneseEsteticaBlock({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Discard document confirmation dialog */}
+      <AlertDialog open={showDiscardConfirm} onOpenChange={(open) => { setShowDiscardConfirm(open); if (!open) setDiscardReason(''); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Descartar documento</AlertDialogTitle>
+            <AlertDialogDescription>
+              Este documento será descartado e <strong>não poderá mais ser editado nem assinado</strong>. O histórico será preservado para auditoria.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-2">
+            <label className="text-sm font-medium mb-1.5 block">Motivo do descarte <span className="text-destructive">*</span></label>
+            <textarea
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px] focus:outline-none focus:ring-2 focus:ring-ring"
+              placeholder="Informe o motivo do descarte..."
+              value={discardReason}
+              onChange={(e) => setDiscardReason(e.target.value)}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <Button variant="destructive" onClick={handleDiscard2} disabled={!discardReason.trim()}>
+              <Trash2 className="h-4 w-4 mr-1.5" />
+              Confirmar descarte
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
