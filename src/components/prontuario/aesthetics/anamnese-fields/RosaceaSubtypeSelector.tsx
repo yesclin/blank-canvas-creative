@@ -184,9 +184,15 @@ export function RosaceaSubtypeSelector({
               </div>
 
               {/* Severity Select — only enabled when subtype is selected */}
-              <div className="px-3 pb-3 pt-1">
+              {/* stopPropagation prevents card toggle when interacting with select */}
+              <div
+                className="px-3 pb-3 pt-1"
+                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
                 <Select
-                  value={isSelected && severity ? severity : ''}
+                  key={`${st.key}-${isSelected ? 'on' : 'off'}`}
+                  value={isSelected && severity ? severity : undefined}
                   onValueChange={(v) => handleSeverityChange(st.key, v)}
                   disabled={isDisabled || !isSelected}
                 >

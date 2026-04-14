@@ -301,8 +301,12 @@ export function AnamneseEsteticaBlock({
   const [dynamicHasChanges, setDynamicHasChanges] = useState(false);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Only hydrate from DB when record ID changes (new record loaded),
+  // NOT on every save round-trip — prevents overwriting in-flight edits.
+  const hydratedRecordIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (dynamicRecord?.responses) {
+    if (dynamicRecord?.responses && dynamicRecord.id !== hydratedRecordIdRef.current) {
+      hydratedRecordIdRef.current = dynamicRecord.id;
       setDynamicValues(dynamicRecord.responses);
       setDynamicHasChanges(false);
     }
