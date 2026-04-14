@@ -2278,7 +2278,7 @@ export default function Prontuario() {
       record_type: selectedEntryForSignature.entry_type as 'evolution' | 'anamnesis',
       patient_id: patientId,
       content: selectedEntryForSignature.content,
-      professional_name: professionalName || 'Profissional',
+      professional_name: currentProfessionalName || 'Profissional',
     }, password);
 
     if (result.success) {
@@ -2316,13 +2316,13 @@ export default function Prontuario() {
         />
       )}
 
-      {/* Digital Signature Dialog */}
+      {/* Advanced Digital Signature Dialog */}
       {patient && (
-        <SignatureDialog
+        <AdvancedSignatureDialog
           open={signatureDialogOpen}
           onOpenChange={setSignatureDialogOpen}
           entry={selectedEntryForSignature}
-          professionalName="Profissional"
+          professionalName={currentProfessionalName || 'Profissional'}
           patientName={patient.full_name}
           hasValidConsent={hasValidConsent}
           onSign={handleSignRecord}
