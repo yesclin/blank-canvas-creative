@@ -34,11 +34,6 @@ export default function CatalogoClinico() {
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2 mt-3">
-          <Badge variant="outline">Configuração técnica</Badge>
-          <Badge variant="outline">Vínculos assistenciais</Badge>
-          <Badge variant="outline">Sem duplicar cadastro</Badge>
-        </div>
       </div>
 
       <Alert>
