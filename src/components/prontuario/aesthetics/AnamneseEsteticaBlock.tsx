@@ -433,7 +433,24 @@ export function AnamneseEsteticaBlock({
   const currentSigned = uiStatus === 'signed';
   const currentLoading = isAdvanced ? dynamicLoading : standardLoading;
   const hasAnyRecord = !!currentRecord || v2Records.length > 0;
-  const isFormReadonly = uiStatus === 'locked' || uiStatus === 'signed';
+  const isFormReadonly = uiStatus === 'locked' || uiStatus === 'signed' || uiStatus === 'discarded';
+  const isDiscarded = uiStatus === 'discarded';
+
+  // Discard handler
+  const handleDiscard2 = useCallback(async () => {
+    if (!currentRecord || !discardReason.trim()) return;
+    await anamnesisEditability.discardRecord(currentRecord.id, discardReason.trim());
+    setShowDiscardConfirm(false);
+    setDiscardReason('');
+    // Refetch
+    if (isAdvanced) {
+      refetchDynamic();
+    } else {
+      setStandardRecord((prev: any) => prev ? { ...prev, discarded_at: new Date().toISOString(), discard_reason: discardReason.trim() } : prev);
+    }
+    const { toast } = await import('sonner');
+    toast.success('Documento descartado.');
+  }, [currentRecord, discardReason, anamnesisEditability, isAdvanced, refetchDynamic]);
 
   // Browser beforeunload guard
   useEffect(() => {
