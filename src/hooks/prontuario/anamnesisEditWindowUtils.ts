@@ -3,7 +3,7 @@
  * Used by all save/insert flows to set saved_at + edit_window_until consistently.
  */
 
-const EDIT_WINDOW_MINUTES = 60;
+const EDIT_WINDOW_MINUTES = 15;
 
 export function getEditWindowFields() {
   const now = new Date();
