@@ -6,21 +6,17 @@ import { useMemo, useCallback } from "react";
 import { useRecordEditability, type RecordEditability } from "./useRecordEditability";
 import { supabase } from "@/integrations/supabase/client";
 
-export type AnamnesisStatus = "draft" | "saved_editable" | "locked" | "signed" | "addendum_only";
+export type AnamnesisStatus = "draft" | "saved_editable" | "locked" | "signed" | "addendum_only" | "discarded";
 
 export interface AnamnesisEditabilityResult {
-  /** Full editability info from the base hook */
   editability: RecordEditability;
-  /** Resolved anamnesis status */
   status: AnamnesisStatus;
-  /** Whether the record content fields should be readonly */
   isReadonly: boolean;
-  /** Whether addendums can be added */
   canAddAddendum: boolean;
-  /** Sets saved_at + edit_window_until on first save */
+  canDiscard: boolean;
   markAsSaved: (recordId: string) => Promise<void>;
-  /** Sets locked_at when time expires */
   markAsLocked: (recordId: string) => Promise<void>;
+  discardRecord: (recordId: string, reason: string) => Promise<void>;
 }
 
 interface AnamnesisRecordInfo {
@@ -31,6 +27,7 @@ interface AnamnesisRecordInfo {
   edit_window_until?: string | null;
   locked_at?: string | null;
   status?: string | null;
+  discarded_at?: string | null;
 }
 
 /**
@@ -53,6 +50,7 @@ export function useAnamnesisEditability(
 
   const status = useMemo((): AnamnesisStatus => {
     if (!record) return "draft";
+    if (record.discarded_at) return "discarded";
     if (record.signed_at || editability.isSigned) return "signed";
     if (record.locked_at || editability.lockReason === "locked_time") return "locked";
     if (record.saved_at && editability.canEdit) return "saved_editable";
@@ -60,8 +58,9 @@ export function useAnamnesisEditability(
     return "locked";
   }, [record, editability]);
 
-  const isReadonly = status === "locked" || status === "signed" || status === "addendum_only";
-  const canAddAddendum = isReadonly && !editability.isLoading;
+  const isReadonly = status === "locked" || status === "signed" || status === "addendum_only" || status === "discarded";
+  const canAddAddendum = (status === "locked" || status === "signed" || status === "addendum_only") && !editability.isLoading;
+  const canDiscard = !!record && !record.signed_at && !record.discarded_at && !!record.saved_at;
 
   const markAsSaved = useCallback(async (recordId: string) => {
     const now = new Date();
@@ -86,12 +85,29 @@ export function useAnamnesisEditability(
       .eq("id", recordId);
   }, []);
 
+  const discardRecord = useCallback(async (recordId: string, reason: string) => {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id || null;
+
+    await supabase
+      .from("anamnesis_records")
+      .update({
+        discarded_at: new Date().toISOString(),
+        discarded_by: userId,
+        discard_reason: reason,
+        status: "descartado",
+      } as any)
+      .eq("id", recordId);
+  }, []);
+
   return {
     editability,
     status,
     isReadonly,
     canAddAddendum,
+    canDiscard,
     markAsSaved,
     markAsLocked,
+    discardRecord,
   };
 }

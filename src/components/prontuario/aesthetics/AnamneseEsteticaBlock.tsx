@@ -40,6 +40,8 @@ import {
   ShieldCheck,
   PenLine,
   FilePlus,
+  Trash2,
+  Ban,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -103,10 +105,11 @@ function kindBadgeClass(kind: TemplateKind): string {
 }
 
 // ─── Editability status helpers ────────────────────────────────────
-type AnamneseUiStatus = 'draft_local' | 'saved_editable' | 'locked' | 'signed';
+type AnamneseUiStatus = 'draft_local' | 'saved_editable' | 'locked' | 'signed' | 'discarded';
 
 function resolveUiStatus(record: any | null, editability: ReturnType<typeof useAnamnesisEditability>): AnamneseUiStatus {
   if (!record) return 'draft_local';
+  if (record.discarded_at || editability.status === 'discarded') return 'discarded';
   if (record.signed_at) return 'signed';
   if (editability.status === 'locked' || editability.status === 'addendum_only') return 'locked';
   if (editability.status === 'signed') return 'signed';
@@ -377,6 +380,7 @@ export function AnamneseEsteticaBlock({
       edit_window_until: currentRecord.edit_window_until,
       locked_at: currentRecord.locked_at,
       status: currentRecord.status,
+      discarded_at: currentRecord.discarded_at,
     };
   }, [currentRecord]);
 
@@ -386,6 +390,8 @@ export function AnamneseEsteticaBlock({
   // Signature flow
   const { signRecord, signing: signingSig } = useMedicalRecordSignatures();
   const [showSignConfirm, setShowSignConfirm] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const [discardReason, setDiscardReason] = useState('');
 
   const handleSign = useCallback(async () => {
     if (!currentRecord) return;
@@ -427,7 +433,24 @@ export function AnamneseEsteticaBlock({
   const currentSigned = uiStatus === 'signed';
   const currentLoading = isAdvanced ? dynamicLoading : standardLoading;
   const hasAnyRecord = !!currentRecord || v2Records.length > 0;
-  const isFormReadonly = uiStatus === 'locked' || uiStatus === 'signed';
+  const isFormReadonly = uiStatus === 'locked' || uiStatus === 'signed' || uiStatus === 'discarded';
+  const isDiscarded = uiStatus === 'discarded';
+
+  // Discard handler
+  const handleDiscard2 = useCallback(async () => {
+    if (!currentRecord || !discardReason.trim()) return;
+    await anamnesisEditability.discardRecord(currentRecord.id, discardReason.trim());
+    setShowDiscardConfirm(false);
+    setDiscardReason('');
+    // Refetch
+    if (isAdvanced) {
+      refetchDynamic();
+    } else {
+      setStandardRecord((prev: any) => prev ? { ...prev, discarded_at: new Date().toISOString(), discard_reason: discardReason.trim() } : prev);
+    }
+    const { toast } = await import('sonner');
+    toast.success('Documento descartado.');
+  }, [currentRecord, discardReason, anamnesisEditability, isAdvanced, refetchDynamic]);
 
   // Browser beforeunload guard
   useEffect(() => {
@@ -628,6 +651,13 @@ export function AnamneseEsteticaBlock({
             Assinado
           </Badge>
         );
+      case 'discarded':
+        return (
+          <Badge variant="destructive">
+            <Ban className="h-3 w-3 mr-1" />
+            Descartado
+          </Badge>
+        );
     }
   };
 
@@ -691,6 +721,15 @@ export function AnamneseEsteticaBlock({
           </Button>
         );
       }
+      // Discard document button (saved, not signed)
+      if (anamnesisEditability.canDiscard) {
+        actions.push(
+          <Button key="discard-doc" variant="outline" size="sm" className="text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => setShowDiscardConfirm(true)}>
+            <Trash2 className="h-4 w-4 mr-1.5" />
+            Descartar documento
+          </Button>
+        );
+      }
     }
 
     if (uiStatus === 'locked') {
@@ -703,9 +742,18 @@ export function AnamneseEsteticaBlock({
           </Button>
         );
       }
+      // Discard document button (locked but not signed)
+      if (anamnesisEditability.canDiscard) {
+        actions.push(
+          <Button key="discard-doc" variant="outline" size="sm" className="text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => setShowDiscardConfirm(true)}>
+            <Trash2 className="h-4 w-4 mr-1.5" />
+            Descartar documento
+          </Button>
+        );
+      }
     }
 
-    // Signed: no edit actions, just view + addendum is handled below
+    // Discarded: no actions except view
 
     return actions;
   };
@@ -783,8 +831,26 @@ export function AnamneseEsteticaBlock({
         </div>
       </div>
 
+      {/* Discarded banner */}
+      {isDiscarded && currentRecord && (
+        <div className="flex items-center gap-2 px-4 py-3 rounded-md bg-destructive/10 border border-destructive/30 text-sm text-destructive dark:bg-destructive/20">
+          <Ban className="h-4 w-4 flex-shrink-0" />
+          <div>
+            <span className="font-semibold">Documento descartado</span>
+            {currentRecord.discard_reason && (
+              <span className="ml-1">— Motivo: {currentRecord.discard_reason}</span>
+            )}
+            {currentRecord.discarded_at && (
+              <span className="ml-1 text-xs opacity-75">
+                em {format(parseISO(currentRecord.discarded_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Edit lock banner */}
-      {currentRecord && (
+      {currentRecord && !isDiscarded && (
         <RecordEditLockBanner editability={anamnesisEditability.editability} />
       )}
 
@@ -908,6 +974,34 @@ export function AnamneseEsteticaBlock({
             <AlertDialogAction onClick={handleUnsavedSaveAndLeave}>
               Salvar e sair
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Discard document confirmation dialog */}
+      <AlertDialog open={showDiscardConfirm} onOpenChange={(open) => { setShowDiscardConfirm(open); if (!open) setDiscardReason(''); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Descartar documento</AlertDialogTitle>
+            <AlertDialogDescription>
+              Este documento será descartado e <strong>não poderá mais ser editado nem assinado</strong>. O histórico será preservado para auditoria.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-2">
+            <label className="text-sm font-medium mb-1.5 block">Motivo do descarte <span className="text-destructive">*</span></label>
+            <textarea
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px] focus:outline-none focus:ring-2 focus:ring-ring"
+              placeholder="Informe o motivo do descarte..."
+              value={discardReason}
+              onChange={(e) => setDiscardReason(e.target.value)}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <Button variant="destructive" onClick={handleDiscard2} disabled={!discardReason.trim()}>
+              <Trash2 className="h-4 w-4 mr-1.5" />
+              Confirmar descarte
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
