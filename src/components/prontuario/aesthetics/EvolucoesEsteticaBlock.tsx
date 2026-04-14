@@ -47,6 +47,8 @@ import {
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useAdvancedSignature } from '@/hooks/prontuario/useAdvancedSignature';
+import { AdvancedSignatureDialog } from '@/components/prontuario/AdvancedSignatureDialog';
 import {
   useEvolucoesEsteticaData,
   SATISFACTION_LEVELS,
