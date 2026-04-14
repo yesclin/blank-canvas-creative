@@ -831,8 +831,26 @@ export function AnamneseEsteticaBlock({
         </div>
       </div>
 
+      {/* Discarded banner */}
+      {isDiscarded && currentRecord && (
+        <div className="flex items-center gap-2 px-4 py-3 rounded-md bg-destructive/10 border border-destructive/30 text-sm text-destructive dark:bg-destructive/20">
+          <Ban className="h-4 w-4 flex-shrink-0" />
+          <div>
+            <span className="font-semibold">Documento descartado</span>
+            {currentRecord.discard_reason && (
+              <span className="ml-1">— Motivo: {currentRecord.discard_reason}</span>
+            )}
+            {currentRecord.discarded_at && (
+              <span className="ml-1 text-xs opacity-75">
+                em {format(parseISO(currentRecord.discarded_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Edit lock banner */}
-      {currentRecord && (
+      {currentRecord && !isDiscarded && (
         <RecordEditLockBanner editability={anamnesisEditability.editability} />
       )}
 
