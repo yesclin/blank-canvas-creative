@@ -729,7 +729,7 @@ export function AnamneseEsteticaBlock({
         actions.push(
           <Button key="sign" variant="outline" size="sm" onClick={handleSign} disabled={signingSig}>
             <ShieldCheck className="h-4 w-4 mr-1.5" />
-            Assinar documento
+            Assinatura Avançada YesClin
           </Button>
         );
       }
@@ -750,7 +750,7 @@ export function AnamneseEsteticaBlock({
         actions.push(
           <Button key="sign" variant="outline" size="sm" onClick={handleSign} disabled={signingSig}>
             <ShieldCheck className="h-4 w-4 mr-1.5" />
-            Assinar documento
+            Assinatura Avançada YesClin
           </Button>
         );
       }
