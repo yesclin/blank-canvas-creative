@@ -40,6 +40,8 @@ import {
   ShieldCheck,
   PenLine,
   FilePlus,
+  Trash2,
+  Ban,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -103,10 +105,11 @@ function kindBadgeClass(kind: TemplateKind): string {
 }
 
 // ─── Editability status helpers ────────────────────────────────────
-type AnamneseUiStatus = 'draft_local' | 'saved_editable' | 'locked' | 'signed';
+type AnamneseUiStatus = 'draft_local' | 'saved_editable' | 'locked' | 'signed' | 'discarded';
 
 function resolveUiStatus(record: any | null, editability: ReturnType<typeof useAnamnesisEditability>): AnamneseUiStatus {
   if (!record) return 'draft_local';
+  if (record.discarded_at || editability.status === 'discarded') return 'discarded';
   if (record.signed_at) return 'signed';
   if (editability.status === 'locked' || editability.status === 'addendum_only') return 'locked';
   if (editability.status === 'signed') return 'signed';
@@ -377,6 +380,7 @@ export function AnamneseEsteticaBlock({
       edit_window_until: currentRecord.edit_window_until,
       locked_at: currentRecord.locked_at,
       status: currentRecord.status,
+      discarded_at: currentRecord.discarded_at,
     };
   }, [currentRecord]);
 
