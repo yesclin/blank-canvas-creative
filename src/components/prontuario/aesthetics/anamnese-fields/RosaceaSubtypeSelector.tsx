@@ -86,7 +86,22 @@ export function RosaceaSubtypeSelector({
   const isDisabled = disabled || readOnly;
   const current: RosaceaValues = value ?? {};
 
+  const handleCardToggle = (subtypeKey: string) => {
+    if (isDisabled) return;
+    const isSelected = current[subtypeKey] != null;
+    if (isSelected) {
+      // Deselect: remove the key entirely
+      const next = { ...current };
+      delete next[subtypeKey];
+      onChange(next);
+    } else {
+      // Select with no severity yet — set empty string as placeholder
+      onChange({ ...current, [subtypeKey]: '' });
+    }
+  };
+
   const handleSeverityChange = (subtypeKey: string, severity: string) => {
+    if (isDisabled) return;
     onChange({ ...current, [subtypeKey]: severity || null });
   };
 
@@ -100,21 +115,28 @@ export function RosaceaSubtypeSelector({
       >
         {SUBTYPES.map((st) => {
           const severity = current[st.key] ?? null;
-          const hasSeverity = !!severity;
+          const isSelected = st.key in current && current[st.key] !== undefined;
 
           return (
             <div
               key={st.key}
               className={cn(
                 'group relative flex flex-col rounded-lg border bg-card shadow-sm transition-all overflow-hidden',
-                hasSeverity
+                isSelected
                   ? 'border-primary/50 ring-1 ring-primary/20'
                   : 'border-border hover:border-primary/30',
                 isDisabled && 'opacity-60 pointer-events-none',
               )}
             >
-              {/* Image */}
-              <div className="relative aspect-square w-full overflow-hidden bg-muted">
+              {/* Clickable Image for toggle */}
+              <button
+                type="button"
+                className="relative aspect-square w-full overflow-hidden bg-muted cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onClick={() => handleCardToggle(st.key)}
+                disabled={isDisabled}
+                aria-pressed={isSelected}
+                aria-label={`${isSelected ? 'Desselecionar' : 'Selecionar'} ${st.label}`}
+              >
                 <img
                   src={st.image}
                   alt={`${st.label} - ${st.description}`}
@@ -135,12 +157,12 @@ export function RosaceaSubtypeSelector({
                 >
                   {st.label}
                 </div>
-                {hasSeverity && (
+                {isSelected && (
                   <div className="absolute top-2 right-2 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
                     <Check className="h-3 w-3 text-primary-foreground" />
                   </div>
                 )}
-              </div>
+              </button>
 
               {/* Label + Tooltip */}
               <div className="flex items-center justify-center gap-1.5 px-3 pt-3 pb-1">
@@ -161,15 +183,15 @@ export function RosaceaSubtypeSelector({
                 </Tooltip>
               </div>
 
-              {/* Severity Select */}
+              {/* Severity Select — only enabled when subtype is selected */}
               <div className="px-3 pb-3 pt-1">
                 <Select
-                  value={severity ?? ''}
+                  value={isSelected && severity ? severity : ''}
                   onValueChange={(v) => handleSeverityChange(st.key, v)}
-                  disabled={isDisabled}
+                  disabled={isDisabled || !isSelected}
                 >
                   <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder="Selecione" />
+                    <SelectValue placeholder={isSelected ? 'Selecione grau' : '—'} />
                   </SelectTrigger>
                   <SelectContent>
                     {SEVERITY_OPTIONS.map((opt) => (
