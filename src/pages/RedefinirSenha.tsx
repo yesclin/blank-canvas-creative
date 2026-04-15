@@ -148,6 +148,25 @@ const RedefinirSenha = () => {
     </div>
   );
 
+  // Show loading while checking session
+  if (isCheckingSession && !hasSession && !success) {
+    return (
+      <div className="min-h-screen hero-gradient flex items-center justify-center p-8">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="w-full max-w-md text-center"
+        >
+          <Link to="/" className="flex items-center justify-center mb-8">
+            <img src={logoFull} alt="Yesclin" className="h-10 object-contain" />
+          </Link>
+          <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+          <p className="text-muted-foreground">Verificando link de recuperação...</p>
+        </motion.div>
+      </div>
+    );
+  }
+
   if (!hasSession && !success) {
     return (
       <div className="min-h-screen hero-gradient flex items-center justify-center p-8">
