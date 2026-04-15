@@ -104,7 +104,7 @@ export function AdvancedSignatureDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[60vh] pr-4">
+        <div className="overflow-y-auto max-h-[65vh] pr-2">
           <div className="space-y-6">
             {/* Steps indicator */}
             <div className="flex items-center gap-4 text-sm">
@@ -292,7 +292,7 @@ export function AdvancedSignatureDialog({
               </>
             )}
           </div>
-        </ScrollArea>
+        </div>
 
         <div className="flex justify-end gap-3 pt-4 border-t">
           {step === 'review' ? (
