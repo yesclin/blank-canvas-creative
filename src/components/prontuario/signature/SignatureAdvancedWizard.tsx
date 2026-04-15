@@ -209,10 +209,12 @@ export function SignatureAdvancedWizard({
       // Upload evidence files
       const sigId = sigData.id;
 
+      // Upload evidence files — storage RLS requires auth.uid() as first folder
       if (selfieDataUrl) {
         const blob = await (await fetch(selfieDataUrl)).blob();
-        const path = `${clinic.id}/${sigId}/selfie.jpg`;
-        await supabase.storage.from('signature-evidence').upload(path, blob, { contentType: 'image/jpeg' });
+        const path = `${userId}/${sigId}/selfie.jpg`;
+        const { error: uploadErr } = await supabase.storage.from('signature-evidence').upload(path, blob, { contentType: 'image/jpeg' });
+        if (uploadErr) console.error('[WIZARD] Selfie upload error:', uploadErr);
         await supabase.from('signature_evidence').insert({
           signature_id: sigId, clinic_id: clinic.id, evidence_type: 'selfie', file_path: path,
         });
@@ -221,8 +223,9 @@ export function SignatureAdvancedWizard({
 
       if (signatureDataUrl) {
         const blob = await (await fetch(signatureDataUrl)).blob();
-        const path = `${clinic.id}/${sigId}/handwritten.png`;
-        await supabase.storage.from('signature-evidence').upload(path, blob, { contentType: 'image/png' });
+        const path = `${userId}/${sigId}/handwritten.png`;
+        const { error: uploadErr } = await supabase.storage.from('signature-evidence').upload(path, blob, { contentType: 'image/png' });
+        if (uploadErr) console.error('[WIZARD] Handwritten upload error:', uploadErr);
         await supabase.from('signature_evidence').insert({
           signature_id: sigId, clinic_id: clinic.id, evidence_type: 'handwritten_signature', file_path: path,
         });
