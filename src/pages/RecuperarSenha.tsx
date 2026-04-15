@@ -36,10 +36,15 @@ const RecuperarSenha = () => {
 
     try {
       // Use native auth password reset - sends email directly
+      const appUrl = getAppUrl();
+      const redirectTo = `${appUrl}/redefinir-senha`;
+      console.log("[RecuperarSenha] appUrl:", appUrl);
+      console.log("[RecuperarSenha] redirectTo:", redirectTo);
+
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(
         email.trim().toLowerCase(),
         {
-          redirectTo: `${window.location.origin}/redefinir-senha`,
+          redirectTo,
         }
       );
 
