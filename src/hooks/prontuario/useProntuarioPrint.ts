@@ -29,46 +29,88 @@ export function useProntuarioPrint() {
       const element = document.getElementById('print-area');
       if (!element) {
         toast.error('Área de impressão não encontrada');
+        console.error('PDF Export: #print-area element not found');
         return;
       }
 
       const html2canvas = (await import('html2canvas')).default;
       const { jsPDF } = await import('jspdf');
 
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-      });
+      // Save original styles that block html2canvas from capturing full content
+      const originalOverflow = element.style.overflow;
+      const originalMaxHeight = element.style.maxHeight;
+      const originalMinHeight = element.style.minHeight;
+      const originalHeight = element.style.height;
+      const originalFlex = element.style.flex;
 
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
+      // Temporarily remove layout constraints so html2canvas captures everything
+      element.style.overflow = 'visible';
+      element.style.maxHeight = 'none';
+      element.style.minHeight = 'auto';
+      element.style.height = 'auto';
+      element.style.flex = 'none';
 
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pdfWidth;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-      let position = 0;
-      let heightLeft = imgHeight;
-
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pdfHeight;
-
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight;
+      // Also handle the scrollable child (main > div)
+      const scrollableChild = element.querySelector('main');
+      let childOriginalOverflow = '';
+      let childOriginalHeight = '';
+      if (scrollableChild) {
+        childOriginalOverflow = scrollableChild.style.overflow;
+        childOriginalHeight = scrollableChild.style.height;
+        scrollableChild.style.overflow = 'visible';
+        scrollableChild.style.height = 'auto';
       }
 
-      const safeName = (patientName || 'paciente').replace(/[^a-zA-Z0-9]/g, '_');
-      const dateStr = format(new Date(), 'yyyy-MM-dd');
-      const fileName = `prontuario_${safeName}_${dateStr}.pdf`;
+      try {
+        const canvas = await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          windowHeight: element.scrollHeight,
+          height: element.scrollHeight,
+        });
 
-      pdf.save(fileName);
-      toast.success('PDF exportado com sucesso!');
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const imgWidth = pdfWidth;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        let position = 0;
+        let heightLeft = imgHeight;
+
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
+
+        while (heightLeft > 0) {
+          position = heightLeft - imgHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+          heightLeft -= pdfHeight;
+        }
+
+        const safeName = (patientName || 'paciente').replace(/[^a-zA-Z0-9]/g, '_');
+        const dateStr = format(new Date(), 'yyyy-MM-dd');
+        const fileName = `prontuario_${safeName}_${dateStr}.pdf`;
+
+        pdf.save(fileName);
+        toast.success('PDF exportado com sucesso!');
+      } finally {
+        // Restore original styles
+        element.style.overflow = originalOverflow;
+        element.style.maxHeight = originalMaxHeight;
+        element.style.minHeight = originalMinHeight;
+        element.style.height = originalHeight;
+        element.style.flex = originalFlex;
+
+        if (scrollableChild) {
+          scrollableChild.style.overflow = childOriginalOverflow;
+          scrollableChild.style.height = childOriginalHeight;
+        }
+      }
     } catch (error) {
       console.error('Export error:', error);
       toast.error('Erro ao exportar prontuário. Tente novamente.');
