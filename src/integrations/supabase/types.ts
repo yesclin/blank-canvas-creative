@@ -1614,6 +1614,56 @@ export type Database = {
           },
         ]
       }
+      clinic_signature_settings: {
+        Row: {
+          allow_camera_fallback: boolean
+          allow_geolocation: boolean
+          allow_typed_name: boolean
+          clinic_id: string
+          created_at: string
+          document_type: string
+          id: string
+          require_otp: boolean
+          require_selfie: boolean
+          signature_level: string
+          updated_at: string
+        }
+        Insert: {
+          allow_camera_fallback?: boolean
+          allow_geolocation?: boolean
+          allow_typed_name?: boolean
+          clinic_id: string
+          created_at?: string
+          document_type?: string
+          id?: string
+          require_otp?: boolean
+          require_selfie?: boolean
+          signature_level?: string
+          updated_at?: string
+        }
+        Update: {
+          allow_camera_fallback?: boolean
+          allow_geolocation?: boolean
+          allow_typed_name?: boolean
+          clinic_id?: string
+          created_at?: string
+          document_type?: string
+          id?: string
+          require_otp?: boolean
+          require_selfie?: boolean
+          signature_level?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_signature_settings_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinic_specialty_modules: {
         Row: {
           clinic_id: string
@@ -5406,10 +5456,14 @@ export type Database = {
       }
       medical_record_signatures: {
         Row: {
+          auth_method: string | null
           clinic_id: string
           device_fingerprint: string | null
           document_pdf_url: string | null
           document_snapshot_json: Json | null
+          evidence_snapshot: Json | null
+          geolocation: Json | null
+          handwritten_path: string | null
           id: string
           ip_address: string | null
           is_revoked: boolean
@@ -5419,8 +5473,10 @@ export type Database = {
           revoke_reason: string | null
           revoked_at: string | null
           revoked_by: string | null
+          selfie_path: string | null
           sign_method: string
           signature_hash: string | null
+          signature_level: string | null
           signed_at: string
           signed_by: string
           signed_by_name: string
@@ -5429,10 +5485,14 @@ export type Database = {
           verification_token: string | null
         }
         Insert: {
+          auth_method?: string | null
           clinic_id: string
           device_fingerprint?: string | null
           document_pdf_url?: string | null
           document_snapshot_json?: Json | null
+          evidence_snapshot?: Json | null
+          geolocation?: Json | null
+          handwritten_path?: string | null
           id?: string
           ip_address?: string | null
           is_revoked?: boolean
@@ -5442,8 +5502,10 @@ export type Database = {
           revoke_reason?: string | null
           revoked_at?: string | null
           revoked_by?: string | null
+          selfie_path?: string | null
           sign_method?: string
           signature_hash?: string | null
+          signature_level?: string | null
           signed_at?: string
           signed_by: string
           signed_by_name?: string
@@ -5452,10 +5514,14 @@ export type Database = {
           verification_token?: string | null
         }
         Update: {
+          auth_method?: string | null
           clinic_id?: string
           device_fingerprint?: string | null
           document_pdf_url?: string | null
           document_snapshot_json?: Json | null
+          evidence_snapshot?: Json | null
+          geolocation?: Json | null
+          handwritten_path?: string | null
           id?: string
           ip_address?: string | null
           is_revoked?: boolean
@@ -5465,8 +5531,10 @@ export type Database = {
           revoke_reason?: string | null
           revoked_at?: string | null
           revoked_by?: string | null
+          selfie_path?: string | null
           sign_method?: string
           signature_hash?: string | null
+          signature_level?: string | null
           signed_at?: string
           signed_by?: string
           signed_by_name?: string
@@ -9624,6 +9692,54 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      signature_evidence: {
+        Row: {
+          clinic_id: string
+          collected_at: string
+          created_at: string
+          evidence_data: Json | null
+          evidence_type: string
+          file_path: string | null
+          id: string
+          signature_id: string
+        }
+        Insert: {
+          clinic_id: string
+          collected_at?: string
+          created_at?: string
+          evidence_data?: Json | null
+          evidence_type: string
+          file_path?: string | null
+          id?: string
+          signature_id: string
+        }
+        Update: {
+          clinic_id?: string
+          collected_at?: string
+          created_at?: string
+          evidence_data?: Json | null
+          evidence_type?: string
+          file_path?: string | null
+          id?: string
+          signature_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signature_evidence_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signature_evidence_signature_id_fkey"
+            columns: ["signature_id"]
+            isOneToOne: false
+            referencedRelation: "medical_record_signatures"
             referencedColumns: ["id"]
           },
         ]
