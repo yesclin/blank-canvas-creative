@@ -48,7 +48,7 @@ import {
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAdvancedSignature } from '@/hooks/prontuario/useAdvancedSignature';
-import { AdvancedSignatureDialog } from '@/components/prontuario/AdvancedSignatureDialog';
+import { SignatureAdvancedWizard } from '@/components/prontuario/signature/SignatureAdvancedWizard';
 import {
   useEvolucoesEsteticaData,
   SATISFACTION_LEVELS,
@@ -619,17 +619,19 @@ export function EvolucoesEsteticaBlock({
         </DialogContent>
       </Dialog>
 
-      {/* Advanced Signature Dialog */}
-      <AdvancedSignatureDialog
-        open={signDialogOpen}
-        onOpenChange={setSignDialogOpen}
-        entry={signEntry}
-        professionalName="Profissional"
-        patientName="Paciente"
-        hasValidConsent={true}
-        onSign={handleAdvancedSign}
-        signing={advancedSigning}
-      />
+      {/* Advanced Signature Wizard */}
+      {patientId && (
+        <SignatureAdvancedWizard
+          open={signDialogOpen}
+          onOpenChange={setSignDialogOpen}
+          entry={signEntry}
+          professionalName="Profissional"
+          patientName="Paciente"
+          patientId={patientId}
+          hasValidConsent={true}
+          onComplete={() => {}}
+        />
+      )}
     </div>
   );
 }

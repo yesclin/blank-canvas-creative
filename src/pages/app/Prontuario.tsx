@@ -113,7 +113,7 @@ import { useFinalizeSession } from "@/hooks/useAppointmentSession";
 import { useGlobalActiveAppointment } from "@/contexts/GlobalActiveAppointmentContext";
 import type { Appointment } from "@/types/agenda";
 import { ConsentCollectionDialog } from "@/components/prontuario/ConsentCollectionDialog";
-import { AdvancedSignatureDialog } from "@/components/prontuario/AdvancedSignatureDialog";
+import { SignatureAdvancedWizard } from "@/components/prontuario/signature/SignatureAdvancedWizard";
 import { useAdvancedSignature } from "@/hooks/prontuario/useAdvancedSignature";
 import { SignedRecordBadge } from "@/components/prontuario/SignedRecordBadge";
 import { PatientSelector } from "@/components/prontuario/PatientSelector";
@@ -2316,17 +2316,20 @@ export default function Prontuario() {
         />
       )}
 
-      {/* Advanced Digital Signature Dialog */}
-      {patient && (
-        <AdvancedSignatureDialog
+      {/* Advanced Digital Signature Wizard */}
+      {patient && patientId && (
+        <SignatureAdvancedWizard
           open={signatureDialogOpen}
           onOpenChange={setSignatureDialogOpen}
           entry={selectedEntryForSignature}
           professionalName={currentProfessionalName || 'Profissional'}
           patientName={patient.full_name}
+          patientId={patientId}
           hasValidConsent={hasValidConsent}
-          onSign={handleSignRecord}
-          signing={signing}
+          onComplete={() => {
+            setSelectedEntryForSignature(null);
+            fetchSignaturesForPatient(patientId);
+          }}
         />
       )}
 

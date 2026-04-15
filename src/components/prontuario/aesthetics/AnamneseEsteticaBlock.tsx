@@ -67,7 +67,7 @@ import { useAnamnesisEditability } from '@/hooks/prontuario/useAnamnesisEditabil
 import { RecordEditLockBanner } from '@/components/prontuario/RecordEditLockBanner';
 import { AddendumSection } from '@/components/prontuario/AddendumSection';
 import { useAdvancedSignature } from '@/hooks/prontuario/useAdvancedSignature';
-import { AdvancedSignatureDialog } from '@/components/prontuario/AdvancedSignatureDialog';
+import { SignatureAdvancedWizard } from '@/components/prontuario/signature/SignatureAdvancedWizard';
 import type { MedicalRecordEntry } from '@/hooks/prontuario/useMedicalRecordEntries';
 import { cn } from '@/lib/utils';
 
@@ -949,17 +949,19 @@ export function AnamneseEsteticaBlock({
         />
       )}
 
-      {/* Advanced Signature Dialog */}
-      <AdvancedSignatureDialog
-        open={showAdvancedSignDialog}
-        onOpenChange={setShowAdvancedSignDialog}
-        entry={signatureEntry}
-        professionalName={professionalName || 'Profissional'}
-        patientName={patientName || 'Paciente'}
-        hasValidConsent={true}
-        onSign={handleAdvancedSign}
-        signing={signingSig}
-      />
+      {/* Advanced Signature Wizard */}
+      {patientId && (
+        <SignatureAdvancedWizard
+          open={showAdvancedSignDialog}
+          onOpenChange={setShowAdvancedSignDialog}
+          entry={signatureEntry}
+          professionalName={professionalName || 'Profissional'}
+          patientName={patientName || 'Paciente'}
+          patientId={patientId}
+          hasValidConsent={true}
+          onComplete={() => {}}
+        />
+      )}
 
       {/* Unsaved changes confirmation dialog */}
       <AlertDialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
