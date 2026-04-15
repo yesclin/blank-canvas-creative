@@ -25,33 +25,55 @@ const RedefinirSenha = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSession, setHasSession] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    // Listen for PASSWORD_RECOVERY event (fires when Supabase processes the hash fragment)
+    let settled = false;
+    const settle = () => {
+      if (!settled) {
+        settled = true;
+        setIsCheckingSession(false);
+      }
+    };
+
+    // Listen for PASSWORD_RECOVERY event
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY" && session) {
         setHasSession(true);
+        settle();
+      }
+      // On any auth event, check session after a small delay
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") {
+        setTimeout(() => {
+          supabase.auth.getSession().then(({ data: { session: s } }) => {
+            if (s) setHasSession(true);
+            settle();
+          });
+        }, 500);
       }
     });
 
-    // Also check if there's already a valid session (handles race condition
-    // where the event fired before this component mounted)
+    // Check existing session immediately
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setHasSession(true);
       }
     });
 
-    // Check URL hash for recovery tokens that Supabase hasn't processed yet
-    const hash = window.location.hash;
-    if (hash && (hash.includes("type=recovery") || hash.includes("type=magiclink"))) {
-      // Supabase client will auto-process this, just wait for the event
-      setHasSession(false); // Will be set to true by the listener above
-    }
+    // Fallback timeout: stop waiting after 4 seconds
+    const timeout = setTimeout(() => {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) setHasSession(true);
+        settle();
+      });
+    }, 4000);
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   const passwordValidation = {
