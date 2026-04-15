@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, MessageSquare, Send, Filter,
-  History, Settings, Zap, Loader2,
+  History, Settings, Zap, Loader2, Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -15,11 +15,13 @@ const MarketingAutomacoes = lazy(() => import("./MarketingAutomacoes"));
 const MarketingSegmentacoes = lazy(() => import("./MarketingSegmentacoes"));
 const MarketingHistorico = lazy(() => import("./MarketingHistorico"));
 const MarketingIntegracoes = lazy(() => import("./MarketingIntegracoes"));
+const MarketingModelos = lazy(() => import("./MarketingModelos"));
 
 const TABS = [
   { value: "painel", label: "Painel", icon: LayoutDashboard },
   { value: "central", label: "Central de Mensagens", icon: Send },
   { value: "templates", label: "Templates", icon: MessageSquare },
+  { value: "modelos", label: "Modelos", icon: Sparkles },
   { value: "automacoes", label: "Automações", icon: Zap },
   { value: "segmentacoes", label: "Segmentações", icon: Filter },
   { value: "historico", label: "Histórico", icon: History },
@@ -32,6 +34,7 @@ const TAB_COMPONENTS: Record<TabValue, React.LazyExoticComponent<() => JSX.Eleme
   painel: MarketingPainel,
   central: MarketingCentral,
   templates: MarketingTemplates,
+  modelos: MarketingModelos,
   automacoes: MarketingAutomacoes,
   segmentacoes: MarketingSegmentacoes,
   historico: MarketingHistorico,
