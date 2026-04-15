@@ -9,6 +9,7 @@ import { ArrowLeft, Mail, AlertCircle } from "lucide-react";
 import logoFull from "@/assets/logo-full.png";
 import { motion } from "framer-motion";
 import { z } from "zod";
+import { getAppUrl } from "@/utils/appUrl";
 
 // Email validation schema
 const emailSchema = z.string().email("Formato de email inválido").min(1, "Email é obrigatório");
