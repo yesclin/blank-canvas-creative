@@ -117,11 +117,19 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     // Generate password reset link using Supabase Auth
+    const requestOrigin = req.headers.get("origin") || "";
+    // Determine the correct redirect URL - never use localhost in production
+    const safeOrigin = (requestOrigin && !requestOrigin.includes("localhost"))
+      ? requestOrigin
+      : ALLOWED_ORIGINS.find(o => !o.includes("localhost")) || "https://yesclin.com";
+    
+    console.log("[send-password-reset] Using redirect origin:", safeOrigin);
+
     const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'recovery',
       email: sanitizedEmail,
       options: {
-        redirectTo: `${req.headers.get("origin") || "https://yesclin.com"}/`,
+        redirectTo: `${safeOrigin}/redefinir-senha`,
       }
     });
 
