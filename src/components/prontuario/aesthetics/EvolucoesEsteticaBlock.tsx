@@ -619,17 +619,19 @@ export function EvolucoesEsteticaBlock({
         </DialogContent>
       </Dialog>
 
-      {/* Advanced Signature Dialog */}
-      <AdvancedSignatureDialog
-        open={signDialogOpen}
-        onOpenChange={setSignDialogOpen}
-        entry={signEntry}
-        professionalName="Profissional"
-        patientName="Paciente"
-        hasValidConsent={true}
-        onSign={handleAdvancedSign}
-        signing={advancedSigning}
-      />
+      {/* Advanced Signature Wizard */}
+      {patientId && (
+        <SignatureAdvancedWizard
+          open={signDialogOpen}
+          onOpenChange={setSignDialogOpen}
+          entry={signEntry}
+          professionalName="Profissional"
+          patientName="Paciente"
+          patientId={patientId}
+          hasValidConsent={true}
+          onComplete={() => {}}
+        />
+      )}
     </div>
   );
 }
