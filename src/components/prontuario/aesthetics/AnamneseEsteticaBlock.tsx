@@ -949,17 +949,19 @@ export function AnamneseEsteticaBlock({
         />
       )}
 
-      {/* Advanced Signature Dialog */}
-      <AdvancedSignatureDialog
-        open={showAdvancedSignDialog}
-        onOpenChange={setShowAdvancedSignDialog}
-        entry={signatureEntry}
-        professionalName={professionalName || 'Profissional'}
-        patientName={patientName || 'Paciente'}
-        hasValidConsent={true}
-        onSign={handleAdvancedSign}
-        signing={signingSig}
-      />
+      {/* Advanced Signature Wizard */}
+      {patientId && (
+        <SignatureAdvancedWizard
+          open={showAdvancedSignDialog}
+          onOpenChange={setShowAdvancedSignDialog}
+          entry={signatureEntry}
+          professionalName={professionalName || 'Profissional'}
+          patientName={patientName || 'Paciente'}
+          patientId={patientId}
+          hasValidConsent={true}
+          onComplete={() => {}}
+        />
+      )}
 
       {/* Unsaved changes confirmation dialog */}
       <AlertDialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
