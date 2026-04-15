@@ -4962,6 +4962,174 @@ export type Database = {
           },
         ]
       }
+      marketing_model_clicks: {
+        Row: {
+          clicked_at: string
+          clinic_id: string
+          id: string
+          source_context: string | null
+          specialty_id: string | null
+          template_id: string
+          user_id: string
+        }
+        Insert: {
+          clicked_at?: string
+          clinic_id: string
+          id?: string
+          source_context?: string | null
+          specialty_id?: string | null
+          template_id: string
+          user_id: string
+        }
+        Update: {
+          clicked_at?: string
+          clinic_id?: string
+          id?: string
+          source_context?: string | null
+          specialty_id?: string | null
+          template_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_model_clicks_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_model_clicks_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_model_clicks_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_model_library"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_model_favorites: {
+        Row: {
+          created_at: string
+          id: string
+          template_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          template_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          template_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_model_favorites_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_model_library"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_model_library: {
+        Row: {
+          category: string
+          channel: string
+          clinic_id: string | null
+          created_at: string
+          created_by: string | null
+          cta_label: string | null
+          description: string | null
+          external_provider: string
+          external_url: string
+          id: string
+          is_active: boolean
+          is_featured: boolean
+          is_system: boolean
+          occasion: string | null
+          preview_url: string | null
+          slug: string
+          sort_order: number
+          specialty_id: string | null
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          channel?: string
+          clinic_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          cta_label?: string | null
+          description?: string | null
+          external_provider?: string
+          external_url: string
+          id?: string
+          is_active?: boolean
+          is_featured?: boolean
+          is_system?: boolean
+          occasion?: string | null
+          preview_url?: string | null
+          slug: string
+          sort_order?: number
+          specialty_id?: string | null
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          channel?: string
+          clinic_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          cta_label?: string | null
+          description?: string | null
+          external_provider?: string
+          external_url?: string
+          id?: string
+          is_active?: boolean
+          is_featured?: boolean
+          is_system?: boolean
+          occasion?: string | null
+          preview_url?: string | null
+          slug?: string
+          sort_order?: number
+          specialty_id?: string | null
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_model_library_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_model_library_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       material_consumption: {
         Row: {
           appointment_id: string | null
