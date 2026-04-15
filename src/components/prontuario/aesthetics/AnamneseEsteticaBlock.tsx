@@ -67,7 +67,7 @@ import { useAnamnesisEditability } from '@/hooks/prontuario/useAnamnesisEditabil
 import { RecordEditLockBanner } from '@/components/prontuario/RecordEditLockBanner';
 import { AddendumSection } from '@/components/prontuario/AddendumSection';
 import { useAdvancedSignature } from '@/hooks/prontuario/useAdvancedSignature';
-import { AdvancedSignatureDialog } from '@/components/prontuario/AdvancedSignatureDialog';
+import { SignatureAdvancedWizard } from '@/components/prontuario/signature/SignatureAdvancedWizard';
 import type { MedicalRecordEntry } from '@/hooks/prontuario/useMedicalRecordEntries';
 import { cn } from '@/lib/utils';
 
