@@ -2316,17 +2316,20 @@ export default function Prontuario() {
         />
       )}
 
-      {/* Advanced Digital Signature Dialog */}
-      {patient && (
-        <AdvancedSignatureDialog
+      {/* Advanced Digital Signature Wizard */}
+      {patient && patientId && (
+        <SignatureAdvancedWizard
           open={signatureDialogOpen}
           onOpenChange={setSignatureDialogOpen}
           entry={selectedEntryForSignature}
           professionalName={currentProfessionalName || 'Profissional'}
           patientName={patient.full_name}
+          patientId={patientId}
           hasValidConsent={hasValidConsent}
-          onSign={handleSignRecord}
-          signing={signing}
+          onComplete={() => {
+            setSelectedEntryForSignature(null);
+            fetchSignaturesForPatient(patientId);
+          }}
         />
       )}
 
