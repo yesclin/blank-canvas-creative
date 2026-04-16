@@ -621,7 +621,7 @@ export function useConsolidatedFillerPdf() {
               return row.appointment_id === resolvedAppointmentId || row.appointment_id == null;
             })
             .filter((row) => {
-              if (!row.facial_map_id) return true;
+              if (!row.facial_map_id || !selectedMap) return true;
               return row.facial_map_id === selectedMap.id;
             })
             .filter((row) => (row.procedure_type || 'filler') === 'filler')
