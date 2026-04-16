@@ -99,6 +99,8 @@ export default function Atendimento() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [summaryModalOpen, setSummaryModalOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<SessionRow | null>(null);
+  const [signWizardOpen, setSignWizardOpen] = useState(false);
+  const [signContext, setSignContext] = useState<SignableDocumentContext | null>(null);
 
   // Fetch appointments that have been started
   const { data: sessions, isLoading, error } = useQuery({
@@ -282,9 +284,60 @@ export default function Atendimento() {
     toast.info("Geração de PDF em desenvolvimento.");
   }, []);
 
-  const handleSign = useCallback((session: SessionRow) => {
-    toast.info("Assinatura de documento em desenvolvimento.");
-  }, []);
+  const handleSign = useCallback(async (session: SessionRow) => {
+    if (!clinicId) return;
+
+    // Find the latest unsigned clinical record linked to this appointment
+    // Try evolutions first, then anamnesis
+    const [{ data: evolutions }, { data: anamneses }] = await Promise.all([
+      supabase
+        .from("clinical_evolutions")
+        .select("id, created_at, content, status, signed_at")
+        .eq("appointment_id", session.id)
+        .eq("clinic_id", clinicId)
+        .is("signed_at", null)
+        .order("created_at", { ascending: false })
+        .limit(1),
+      supabase
+        .from("anamnesis_records")
+        .select("id, created_at, data, status, signed_at")
+        .eq("appointment_id", session.id)
+        .eq("clinic_id", clinicId)
+        .is("signed_at", null)
+        .order("created_at", { ascending: false })
+        .limit(1),
+    ]);
+
+    const evolution = evolutions?.[0];
+    const anamnesis = anamneses?.[0];
+
+    // Prefer evolution, then anamnesis
+    const record = evolution || anamnesis;
+
+    if (!record) {
+      toast.info("Nenhum registro clínico pendente de assinatura neste atendimento.");
+      return;
+    }
+
+    const isEvolution = !!evolution;
+    const content = isEvolution
+      ? (record as any).content || {}
+      : (record as any).data || {};
+
+    setSignContext({
+      record_id: record.id,
+      document_type: isEvolution ? "evolution" : "anamnesis",
+      source_module: "atendimento",
+      specialty_slug: session.specialty_slug || undefined,
+      patient_id: session.patient_id,
+      appointment_id: session.id,
+      content: content as Record<string, unknown>,
+      patient_name: session.patient_name,
+      professional_name: session.professional_name,
+      has_valid_consent: true,
+    });
+    setSignWizardOpen(true);
+  }, [clinicId]);
 
   if (permLoading) {
     return (
