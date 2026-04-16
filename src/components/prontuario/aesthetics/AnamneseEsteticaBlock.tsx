@@ -713,7 +713,7 @@ export function AnamneseEsteticaBlock({
       // Sign button (only after save)
       if (currentRecord && !currentHasChanges) {
         actions.push(
-          <Button key="sign" variant="outline" size="sm" onClick={handleSign} disabled={signingSig}>
+          <Button key="sign" variant="outline" size="sm" onClick={handleSign}>
             <ShieldCheck className="h-4 w-4 mr-1.5" />
             Assinatura Avançada YesClin
           </Button>
@@ -734,7 +734,7 @@ export function AnamneseEsteticaBlock({
       // Can still sign if not yet signed
       if (currentRecord) {
         actions.push(
-          <Button key="sign" variant="outline" size="sm" onClick={handleSign} disabled={signingSig}>
+          <Button key="sign" variant="outline" size="sm" onClick={handleSign}>
             <ShieldCheck className="h-4 w-4 mr-1.5" />
             Assinatura Avançada YesClin
           </Button>
