@@ -623,6 +623,17 @@ export default function Atendimento() {
           patientId={selectedSession.patient_id}
         />
       )}
+
+      {/* Unified Signature Wizard */}
+      <UnifiedSignatureWizard
+        open={signWizardOpen}
+        onOpenChange={setSignWizardOpen}
+        context={signContext}
+        onComplete={() => {
+          setSignContext(null);
+          toast.success("Documento assinado com sucesso!");
+        }}
+      />
     </div>
   );
 }
