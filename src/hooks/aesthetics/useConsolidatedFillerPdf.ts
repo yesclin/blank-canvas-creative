@@ -669,6 +669,7 @@ export function useConsolidatedFillerPdf() {
           const { data: sigData } = await supabase
             .from('professional_signatures')
             .select('signature_file_url, signature_width, signature_scale, signature_alignment')
+            .eq('clinic_id', clinic.id)
             .eq('professional_id', professionalId)
             .eq('is_active', true)
             .maybeSingle();
