@@ -3,6 +3,44 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+/**
+ * Convert external images (e.g. signed Supabase URLs) inside an element to
+ * inline base64 data URIs so html2canvas can capture them without CORS errors.
+ */
+async function inlineExternalImages(container: HTMLElement): Promise<() => void> {
+  const images = container.querySelectorAll('img[crossorigin], img[crossOrigin]');
+  const originals: { img: HTMLImageElement; src: string }[] = [];
+
+  await Promise.all(
+    Array.from(images).map(async (imgEl) => {
+      const img = imgEl as HTMLImageElement;
+      const src = img.src;
+      if (!src || src.startsWith('data:')) return;
+
+      try {
+        const response = await fetch(src);
+        const blob = await response.blob();
+        const dataUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+        originals.push({ img, src });
+        img.src = dataUrl;
+      } catch {
+        // If fetch fails, leave original — html2canvas may still capture it
+      }
+    })
+  );
+
+  // Return a restore function
+  return () => {
+    originals.forEach(({ img, src }) => {
+      img.src = src;
+    });
+  };
+}
+
 export function useProntuarioPrint() {
   const [printing, setPrinting] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -35,6 +73,9 @@ export function useProntuarioPrint() {
 
       const html2canvas = (await import('html2canvas')).default;
       const { jsPDF } = await import('jspdf');
+
+      // Pre-convert external images to base64 to avoid CORS issues
+      const restoreImages = await inlineExternalImages(element);
 
       // Save original styles that block html2canvas from capturing full content
       const originalOverflow = element.style.overflow;
@@ -110,6 +151,9 @@ export function useProntuarioPrint() {
           scrollableChild.style.overflow = childOriginalOverflow;
           scrollableChild.style.height = childOriginalHeight;
         }
+
+        // Restore original image sources
+        restoreImages();
       }
     } catch (error) {
       console.error('Export error:', error);

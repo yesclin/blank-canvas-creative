@@ -133,6 +133,7 @@ interface AnamneseEsteticaBlockProps {
   patientCpf?: string | null;
   professionalName?: string | null;
   professionalRegistration?: string | null;
+  professionalId?: string | null;
   canExport?: boolean;
 }
 
@@ -149,6 +150,7 @@ export function AnamneseEsteticaBlock({
   patientCpf,
   professionalName,
   professionalRegistration,
+  professionalId,
   canExport = true,
 }: AnamneseEsteticaBlockProps) {
   // ─── Template resolution ──────────────────────────────────────────
@@ -495,10 +497,11 @@ export function AnamneseEsteticaBlock({
       },
       professionalName,
       professionalRegistration,
+      professionalId,
       recordResponses: responses,
       recordData: responses,
     });
-  }, [patientId, appointmentId, isAdvanced, dynamicRecord, standardValues, patientName, patientBirthDate, patientPhone, patientCpf, professionalName, professionalRegistration, generateConsolidatedPdf]);
+  }, [patientId, appointmentId, isAdvanced, dynamicRecord, standardValues, patientName, patientBirthDate, patientPhone, patientCpf, professionalName, professionalRegistration, professionalId, generateConsolidatedPdf]);
 
   // Template change with unsaved guard
   const handleTemplateChange = useCallback((templateId: string) => {

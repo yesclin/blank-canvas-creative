@@ -39,6 +39,7 @@ interface ConsolidatedPdfParams {
   patient: PatientForPdf;
   professionalName?: string | null;
   professionalRegistration?: string | null;
+  professionalId?: string | null;
   recordId?: string | null;
   recordTemplateId?: string | null;
   recordTemplateVersionId?: string | null;
@@ -421,6 +422,7 @@ export function useConsolidatedFillerPdf() {
     patient,
     professionalName,
     professionalRegistration,
+    professionalId,
     recordId,
     recordTemplateId,
     recordTemplateVersionId,
@@ -658,6 +660,47 @@ export function useConsolidatedFillerPdf() {
 
       const uniqueObservations = Array.from(new Set(finalObservations));
 
+      // 6b. Fetch professional's saved signature image
+      let signatureImageBase64 = '';
+      let signatureWidth = 200;
+      let signatureAlignment = 'center';
+      if (professionalId) {
+        try {
+          const { data: sigData } = await supabase
+            .from('professional_signatures')
+            .select('signature_file_url, signature_width, signature_scale, signature_alignment')
+            .eq('professional_id', professionalId)
+            .eq('is_active', true)
+            .maybeSingle();
+
+          if (sigData?.signature_file_url) {
+            const scale = sigData.signature_scale ?? 1;
+            signatureWidth = Math.round((sigData.signature_width ?? 200) * scale);
+            signatureAlignment = sigData.signature_alignment || 'center';
+
+            const { data: urlData } = await supabase.storage
+              .from('professional-signatures')
+              .createSignedUrl(sigData.signature_file_url, 300);
+
+            if (urlData?.signedUrl) {
+              try {
+                const response = await fetch(urlData.signedUrl);
+                const blob = await response.blob();
+                signatureImageBase64 = await new Promise<string>((resolve) => {
+                  const reader = new FileReader();
+                  reader.onloadend = () => resolve(reader.result as string);
+                  reader.readAsDataURL(blob);
+                });
+              } catch (fetchErr) {
+                console.warn('[ConsolidatedPDF] Could not fetch signature image:', fetchErr);
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('[ConsolidatedPDF] Error fetching professional signature:', err);
+        }
+      }
+
       const dateStr = format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
       const clinicName = docSettings?.clinic_name || clinic?.name || '';
       const primaryColor = docSettings?.primary_color || '#2563eb';
@@ -717,7 +760,8 @@ export function useConsolidatedFillerPdf() {
 
     .footer { margin-top: 28px; padding-top: 12px; border-top: 1px solid #e2e8f0; }
     .signatures { display: flex; justify-content: space-between; margin-top: 40px; }
-    .sig-block { width: 200px; text-align: center; }
+    .sig-block { width: 220px; text-align: center; }
+    .sig-img { max-width: 200px; max-height: 80px; object-fit: contain; margin-bottom: 6px; }
     .sig-line { border-top: 1px solid #1a1a1a; padding-top: 4px; font-size: 10px; color: #475569; }
     .footer-text { text-align: center; font-size: 9px; color: #94a3b8; margin-top: 16px; }
     .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 60px; color: rgba(0,0,0,0.03); font-weight: 700; pointer-events: none; z-index: -1; }
@@ -877,7 +921,8 @@ export function useConsolidatedFillerPdf() {
   <!-- SIGNATURES & FOOTER -->
   <div class="footer">
     <div class="signatures">
-      <div class="sig-block">
+      <div class="sig-block" style="text-align: ${signatureAlignment};">
+        ${signatureImageBase64 ? `<img src="${signatureImageBase64}" class="sig-img" style="max-width: ${signatureWidth}px;" alt="Assinatura do profissional" />` : ''}
         <div class="sig-line">Profissional Responsável${profName ? `<br/>${escapeHtml(profName)}` : ''}${profReg ? `<br/>${escapeHtml(profReg)}` : ''}</div>
       </div>
       <div class="sig-block">
