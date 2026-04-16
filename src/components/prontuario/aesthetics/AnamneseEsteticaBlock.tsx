@@ -133,6 +133,7 @@ interface AnamneseEsteticaBlockProps {
   patientCpf?: string | null;
   professionalName?: string | null;
   professionalRegistration?: string | null;
+  professionalId?: string | null;
   canExport?: boolean;
 }
 
@@ -149,6 +150,7 @@ export function AnamneseEsteticaBlock({
   patientCpf,
   professionalName,
   professionalRegistration,
+  professionalId,
   canExport = true,
 }: AnamneseEsteticaBlockProps) {
   // ─── Template resolution ──────────────────────────────────────────
