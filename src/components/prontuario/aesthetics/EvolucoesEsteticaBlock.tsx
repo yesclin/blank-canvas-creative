@@ -47,8 +47,8 @@ import {
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useAdvancedSignature } from '@/hooks/prontuario/useAdvancedSignature';
-import { SignatureAdvancedWizard } from '@/components/prontuario/signature/SignatureAdvancedWizard';
+import { UnifiedSignatureWizard } from '@/components/signature/UnifiedSignatureWizard';
+import type { SignableDocumentContext } from '@/types/documentSigning';
 import {
   useEvolucoesEsteticaData,
   SATISFACTION_LEVELS,
@@ -79,10 +79,9 @@ export function EvolucoesEsteticaBlock({
     isSigning,
   } = useEvolucoesEsteticaData({ patientId, appointmentId });
 
-  // Advanced signature
-  const { signRecord: advancedSignRecord, signing: advancedSigning } = useAdvancedSignature();
+  // Unified signature
   const [signDialogOpen, setSignDialogOpen] = useState(false);
-  const [signEntry, setSignEntry] = useState<any>(null);
+  const [signCtx, setSignCtx] = useState<SignableDocumentContext | null>(null);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState<EvolucaoEsteticaFormData>({
@@ -132,42 +131,44 @@ export function EvolucoesEsteticaBlock({
 
     const result = await create(formData);
     if (result && andSign) {
-      // Open advanced sign dialog instead of direct sign
-      setSignEntry({
-        id: result.id,
-        entry_type: 'evolution',
-        content: formData as unknown as Record<string, unknown>,
-        created_at: result.created_at || new Date().toISOString(),
-        professional_name: 'Profissional',
-      });
-      setSignDialogOpen(true);
+      // Open unified sign dialog
+      if (patientId) {
+        setSignCtx({
+          record_id: result.id,
+          document_type: 'evolution',
+          source_module: 'prontuario',
+          specialty_slug: 'estetica',
+          patient_id: patientId,
+          appointment_id: appointmentId || undefined,
+          content: formData as unknown as Record<string, unknown>,
+          patient_name: 'Paciente',
+          professional_name: 'Profissional',
+          has_valid_consent: true,
+        });
+        setSignDialogOpen(true);
+      }
     }
     setDialogOpen(false);
     resetForm();
   };
 
   const handleSign = (ev: EvolucaoEstetica) => {
-    setSignEntry({
-      id: ev.id,
-      entry_type: 'evolution',
+    if (!patientId) return;
+    setSignCtx({
+      record_id: ev.id,
+      document_type: 'evolution',
+      source_module: 'prontuario',
+      specialty_slug: 'estetica',
+      patient_id: patientId,
+      appointment_id: appointmentId || undefined,
       content: ev as unknown as Record<string, unknown>,
-      created_at: ev.created_at,
+      patient_name: 'Paciente',
       professional_name: 'Profissional',
+      has_valid_consent: true,
     });
     setSignDialogOpen(true);
   };
 
-  const handleAdvancedSign = async (password: string): Promise<boolean> => {
-    if (!signEntry || !patientId) return false;
-    const result = await advancedSignRecord({
-      record_id: signEntry.id,
-      record_type: 'evolution',
-      patient_id: patientId,
-      content: signEntry.content,
-      professional_name: signEntry.professional_name || 'Profissional',
-    }, password);
-    return result.success;
-  };
 
   const toggleComplication = (complication: string) => {
     const current = formData.complications || [];
@@ -619,19 +620,13 @@ export function EvolucoesEsteticaBlock({
         </DialogContent>
       </Dialog>
 
-      {/* Advanced Signature Wizard */}
-      {patientId && (
-        <SignatureAdvancedWizard
-          open={signDialogOpen}
-          onOpenChange={setSignDialogOpen}
-          entry={signEntry}
-          professionalName="Profissional"
-          patientName="Paciente"
-          patientId={patientId}
-          hasValidConsent={true}
-          onComplete={() => {}}
-        />
-      )}
+      {/* Unified Signature Wizard */}
+      <UnifiedSignatureWizard
+        open={signDialogOpen}
+        onOpenChange={setSignDialogOpen}
+        context={signCtx}
+        onComplete={() => {}}
+      />
     </div>
   );
 }
