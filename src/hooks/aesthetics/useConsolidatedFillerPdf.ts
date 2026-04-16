@@ -759,6 +759,7 @@ export function useConsolidatedFillerPdf() {
   </div>
 
   <!-- FACIAL MAP -->
+  ${selectedMap ? `
   <div class="section">
     <div class="section-title">Mapa Facial</div>
     <div class="map-container" style="display: inline-block; position: relative;">
@@ -771,6 +772,7 @@ export function useConsolidatedFillerPdf() {
     </div>
     ${fillerApps.length > 0 ? `<p style="font-size:10px; color:#64748b; text-align:center; margin-top:4px;">Os números correspondem às aplicações listadas abaixo.</p>` : '<p style="font-size:10px; color:#94a3b8; text-align:center;">Nenhuma marcação registrada.</p>'}
   </div>
+  ` : ''}
 
   <!-- APPLICATIONS SUMMARY -->
   ${fillerApps.length > 0 ? `
