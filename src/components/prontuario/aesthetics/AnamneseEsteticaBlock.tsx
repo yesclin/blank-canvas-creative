@@ -497,10 +497,11 @@ export function AnamneseEsteticaBlock({
       },
       professionalName,
       professionalRegistration,
+      professionalId,
       recordResponses: responses,
       recordData: responses,
     });
-  }, [patientId, appointmentId, isAdvanced, dynamicRecord, standardValues, patientName, patientBirthDate, patientPhone, patientCpf, professionalName, professionalRegistration, generateConsolidatedPdf]);
+  }, [patientId, appointmentId, isAdvanced, dynamicRecord, standardValues, patientName, patientBirthDate, patientPhone, patientCpf, professionalName, professionalRegistration, professionalId, generateConsolidatedPdf]);
 
   // Template change with unsaved guard
   const handleTemplateChange = useCallback((templateId: string) => {
