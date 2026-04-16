@@ -66,8 +66,8 @@ import type { AnamnesisTemplateV2 } from '@/hooks/useAnamnesisTemplatesV2';
 import { useAnamnesisEditability } from '@/hooks/prontuario/useAnamnesisEditability';
 import { RecordEditLockBanner } from '@/components/prontuario/RecordEditLockBanner';
 import { AddendumSection } from '@/components/prontuario/AddendumSection';
-import { useAdvancedSignature } from '@/hooks/prontuario/useAdvancedSignature';
-import { SignatureAdvancedWizard } from '@/components/prontuario/signature/SignatureAdvancedWizard';
+import { UnifiedSignatureWizard } from '@/components/signature/UnifiedSignatureWizard';
+import type { SignableDocumentContext } from '@/types/documentSigning';
 import type { MedicalRecordEntry } from '@/hooks/prontuario/useMedicalRecordEntries';
 import { cn } from '@/lib/utils';
 
@@ -392,12 +392,23 @@ export function AnamneseEsteticaBlock({
   const anamnesisEditability = useAnamnesisEditability(editabilityRecord);
   const uiStatus = resolveUiStatus(currentRecord, anamnesisEditability);
 
-  // Signature flow — Advanced YesClin
-  const { signRecord: advancedSignRecord, signing: signingSig } = useAdvancedSignature();
+  // Signature flow — Unified YesClin
   const [showAdvancedSignDialog, setShowAdvancedSignDialog] = useState(false);
-  const [signatureEntry, setSignatureEntry] = useState<MedicalRecordEntry | null>(null);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [discardReason, setDiscardReason] = useState('');
+
+  const unifiedSignCtx: SignableDocumentContext | null = currentRecord && patientId ? {
+    record_id: currentRecord.id,
+    document_type: 'anamnesis',
+    source_module: 'prontuario',
+    specialty_slug: 'estetica',
+    patient_id: patientId,
+    appointment_id: appointmentId || undefined,
+    content: (isAdvanced ? dynamicValues : standardValues) as Record<string, unknown>,
+    patient_name: patientName || 'Paciente',
+    professional_name: professionalName || 'Profissional',
+    has_valid_consent: true,
+  } : null;
 
   const handleSign = useCallback(async () => {
     if (!currentRecord) return;
@@ -407,37 +418,8 @@ export function AnamneseEsteticaBlock({
       toast.error('Salve as alterações antes de assinar.');
       return;
     }
-    // Build a MedicalRecordEntry-like object for the dialog
-    setSignatureEntry({
-      id: currentRecord.id,
-      entry_type: 'anamnesis',
-      content: (isAdvanced ? dynamicValues : standardValues) as Record<string, unknown>,
-      created_at: currentRecord.created_at,
-      professional_id: currentRecord.professional_id,
-      professional_name: professionalName || 'Profissional',
-    } as unknown as MedicalRecordEntry);
     setShowAdvancedSignDialog(true);
-  }, [currentRecord, isAdvanced, dynamicHasChanges, standardHasChanges, dynamicValues, standardValues, professionalName]);
-
-  const handleAdvancedSign = useCallback(async (password: string): Promise<boolean> => {
-    if (!currentRecord || !patientId) return false;
-    const content = isAdvanced ? dynamicValues : standardValues;
-    const result = await advancedSignRecord({
-      record_id: currentRecord.id,
-      record_type: 'anamnesis',
-      patient_id: patientId,
-      content: content as Record<string, unknown>,
-      professional_name: professionalName || 'Profissional',
-    }, password);
-    if (result.success) {
-      if (isAdvanced) {
-        refetchDynamic();
-      } else {
-        setStandardRecord((prev: any) => prev ? { ...prev, signed_at: new Date().toISOString() } : prev);
-      }
-    }
-    return result.success;
-  }, [currentRecord, patientId, isAdvanced, dynamicValues, standardValues, advancedSignRecord, professionalName, refetchDynamic]);
+  }, [currentRecord, isAdvanced, dynamicHasChanges, standardHasChanges]);
 
   // ─── Unsaved changes guard ───────────────────────────────────────
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
@@ -952,19 +934,19 @@ export function AnamneseEsteticaBlock({
         />
       )}
 
-      {/* Advanced Signature Wizard */}
-      {patientId && (
-        <SignatureAdvancedWizard
-          open={showAdvancedSignDialog}
-          onOpenChange={setShowAdvancedSignDialog}
-          entry={signatureEntry}
-          professionalName={professionalName || 'Profissional'}
-          patientName={patientName || 'Paciente'}
-          patientId={patientId}
-          hasValidConsent={true}
-          onComplete={() => {}}
-        />
-      )}
+      {/* Unified Signature Wizard */}
+      <UnifiedSignatureWizard
+        open={showAdvancedSignDialog}
+        onOpenChange={setShowAdvancedSignDialog}
+        context={unifiedSignCtx}
+        onComplete={() => {
+          if (isAdvanced) {
+            refetchDynamic();
+          } else {
+            setStandardRecord((prev: any) => prev ? { ...prev, signed_at: new Date().toISOString() } : prev);
+          }
+        }}
+      />
 
       {/* Unsaved changes confirmation dialog */}
       <AlertDialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
