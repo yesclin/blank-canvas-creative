@@ -97,6 +97,9 @@ export function SignatureAdvancedWizard({
 
   // Step 4 state
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
+  const [useSavedSignature, setUseSavedSignature] = useState(false);
+  const [savedSignatureUrl, setSavedSignatureUrl] = useState<string | null>(null);
+  const [showManualFallback, setShowManualFallback] = useState(false);
 
   // Step 5 state
   const [finalizing, setFinalizing] = useState(false);
