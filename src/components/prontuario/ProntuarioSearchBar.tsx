@@ -433,11 +433,24 @@ export function ProntuarioSearchBar({
       }
     }
 
+    // Merge remote DB hits (clinical_documents/media/addendums/alerts)
+    const seen = new Set(results.map((r) => `${r.type}-${r.id}`));
+    for (const h of remoteHits) {
+      if (activeFilter !== 'all' && activeFilter !== h.type) continue;
+      if (!isInDateRange(h.date)) continue;
+      const key = `${h.type}-${h.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      results.push({ ...h, highlight: [debouncedQuery] });
+    }
+
+    console.log(`[ProntuarioSearch] term="${debouncedQuery}" filter="${activeFilter}" total results: ${results.length} (local entries:${entries.length}, files:${files.length}, alerts:${alerts.length}, remote:${remoteHits.length})`);
+
     // Sort by date (newest first)
     return results.sort((a, b) => 
       new Date(b.date).getTime() - new Date(a.date).getTime()
-    ).slice(0, 25);
-  }, [debouncedQuery, activeFilter, entries, files, alerts, isInDateRange]);
+    ).slice(0, 50);
+  }, [debouncedQuery, activeFilter, entries, files, alerts, remoteHits, isInDateRange]);
 
   const handleResultClick = (result: SearchResult) => {
     onResultClick(result);
