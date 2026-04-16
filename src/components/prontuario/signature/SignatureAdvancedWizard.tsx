@@ -11,12 +11,13 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Shield, AlertTriangle, FileCheck, Lock, Clock, User, FileText,
   CheckCircle2, KeyRound, Eye, EyeOff, Loader2, Camera, PenTool,
-  ChevronRight, ChevronLeft, Hash,
+  ChevronRight, ChevronLeft, Hash, Upload, Image,
 } from 'lucide-react';
 import type { MedicalRecordEntry } from '@/hooks/prontuario/useMedicalRecordEntries';
 import { SignatureCanvas } from './SignatureCanvas';
 import { SelfieCapture } from './SelfieCapture';
 import { useClinicSignatureSettings } from '@/hooks/prontuario/useClinicSignatureSettings';
+import { useProfessionalSignature } from '@/hooks/useProfessionalSignature';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useClinicData } from '@/hooks/useClinicData';
