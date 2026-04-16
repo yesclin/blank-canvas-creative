@@ -65,6 +65,7 @@ export function SignatureAdvancedWizard({
   const { professionalId } = usePermissions();
   const docType = entry?.entry_type === 'anamnesis' ? 'anamnesis' : 'evolution';
   const { settings } = useClinicSignatureSettings(docType);
+  const { signature: savedSignature, getSignedUrl } = useProfessionalSignature();
 
   // Compute steps based on settings
   const steps: WizardStep[] = (() => {
