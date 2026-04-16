@@ -266,7 +266,7 @@ export function SignatureAdvancedWizard({
       // Log events
       await supabase.from('medical_signature_events').insert({
         signature_id: sigId, clinic_id: clinic.id, event_type: 'document_signed',
-        metadata: { hash: documentHash, sign_method: 'password_reauth', level: settings.signature_level } as any,
+        metadata: { hash: documentHash, sign_method: useSavedSignature ? 'saved_signature' : 'manual_canvas', level: settings.signature_level } as any,
         created_by: userId,
       });
 
@@ -518,8 +518,8 @@ export function SignatureAdvancedWizard({
                       )}
                       {steps.includes('sign') && (
                         <div className="flex items-center gap-2">
-                          {signatureDataUrl ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <AlertTriangle className="h-4 w-4 text-yellow-600" />}
-                          Assinatura manual {signatureDataUrl ? 'capturada' : 'pendente'}
+                          {(useSavedSignature || signatureDataUrl) ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <AlertTriangle className="h-4 w-4 text-yellow-600" />}
+                          {useSavedSignature ? 'Assinatura salva utilizada' : signatureDataUrl ? 'Assinatura manual capturada' : 'Assinatura pendente'}
                         </div>
                       )}
                     </div>
