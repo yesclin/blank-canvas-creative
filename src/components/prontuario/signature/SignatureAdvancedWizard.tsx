@@ -206,7 +206,7 @@ export function SignatureAdvancedWizard({
           signed_by: userId,
           signed_by_professional_id: professionalId,
           signed_by_name: professionalName,
-          sign_method: 'password_reauth',
+          sign_method: useSavedSignature ? 'saved_signature' : 'password_reauth',
           signature_level: settings.signature_level,
           ip_address: ipAddress,
           user_agent: userAgent,
@@ -215,6 +215,8 @@ export function SignatureAdvancedWizard({
           evidence_snapshot: {
             has_selfie: !!selfieDataUrl,
             has_handwritten: !!signatureDataUrl,
+            has_saved_signature: useSavedSignature,
+            saved_signature_id: useSavedSignature ? savedSignature?.id : null,
             signature_level: settings.signature_level,
           } as any,
         })
