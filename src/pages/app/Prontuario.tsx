@@ -2212,7 +2212,7 @@ export default function Prontuario() {
     } else {
       handlePrint();
     }
-  }, [handlePrint, patientId, patient, activeAppointment, isEsteticaSpecialty, generateConsolidatedPdf, currentProfessionalName, docClinicoProfReg]);
+  }, [handlePrint, patientId, patient, activeAppointment, isEsteticaSpecialty, generateConsolidatedPdf, currentProfessionalName, docClinicoProfReg, currentProfessionalId]);
 
   // Export handler - consolidated PDF for Estética/filler, default for others
   // Export handler - consolidated PDF for Estética/filler, default for others
@@ -2235,7 +2235,7 @@ export default function Prontuario() {
     } else {
       handleExport(patientId, activeAppointment?.id, patient.full_name);
     }
-  }, [patientId, patient, activeAppointment, handleExport, isEsteticaSpecialty, generateConsolidatedPdf, currentProfessionalName, docClinicoProfReg]);
+  }, [patientId, patient, activeAppointment, handleExport, isEsteticaSpecialty, generateConsolidatedPdf, currentProfessionalName, docClinicoProfReg, currentProfessionalId]);
 
   // No patient selected - show patient selector (only after auto-redirect check completes)
   if (!patientId) {
