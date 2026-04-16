@@ -8779,8 +8779,13 @@ export type Database = {
           id: string
           is_active: boolean
           professional_id: string
+          signature_alignment: string | null
           signature_file_url: string
+          signature_offset_x: number | null
+          signature_offset_y: number | null
+          signature_scale: number | null
           signature_type: string
+          signature_width: number | null
           updated_at: string
         }
         Insert: {
@@ -8789,8 +8794,13 @@ export type Database = {
           id?: string
           is_active?: boolean
           professional_id: string
+          signature_alignment?: string | null
           signature_file_url: string
+          signature_offset_x?: number | null
+          signature_offset_y?: number | null
+          signature_scale?: number | null
           signature_type?: string
+          signature_width?: number | null
           updated_at?: string
         }
         Update: {
@@ -8799,8 +8809,13 @@ export type Database = {
           id?: string
           is_active?: boolean
           professional_id?: string
+          signature_alignment?: string | null
           signature_file_url?: string
+          signature_offset_x?: number | null
+          signature_offset_y?: number | null
+          signature_scale?: number | null
           signature_type?: string
+          signature_width?: number | null
           updated_at?: string
         }
         Relationships: [
