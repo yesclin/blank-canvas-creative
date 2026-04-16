@@ -18,6 +18,8 @@ import { ptBR } from "date-fns/locale";
 import { AppointmentSummaryModal } from "@/components/agenda/AppointmentSummaryModal";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { UnifiedSignatureWizard } from "@/components/signature/UnifiedSignatureWizard";
+import type { SignableDocumentContext } from "@/types/documentSigning";
 import {
   Select,
   SelectContent,
@@ -66,8 +68,10 @@ interface SessionRow {
   status: string;
   patient_name: string;
   patient_id: string;
+  professional_id: string;
   professional_name: string;
   specialty_name: string | null;
+  specialty_slug: string | null;
   procedure_name: string | null;
   is_paused: boolean;
   total_paused_seconds: number;
@@ -95,6 +99,8 @@ export default function Atendimento() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [summaryModalOpen, setSummaryModalOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<SessionRow | null>(null);
+  const [signWizardOpen, setSignWizardOpen] = useState(false);
+  const [signContext, setSignContext] = useState<SignableDocumentContext | null>(null);
 
   // Fetch appointments that have been started
   const { data: sessions, isLoading, error } = useQuery({
@@ -121,7 +127,7 @@ export default function Atendimento() {
           payment_status,
           patients(full_name),
           professionals(full_name),
-          specialties(name),
+          specialties(name, slug),
           procedures(name),
           appointment_sessions(
             id,
@@ -199,8 +205,10 @@ export default function Atendimento() {
           status: apt.status,
           patient_name: apt.patients?.full_name || "Paciente",
           patient_id: apt.patient_id,
+          professional_id: apt.professional_id,
           professional_name: apt.professionals?.full_name || "Profissional",
           specialty_name: apt.specialties?.name || null,
+          specialty_slug: apt.specialties?.slug || null,
           procedure_name: apt.procedures?.name || null,
           is_paused: session?.is_paused || false,
           total_paused_seconds: pausedSeconds,
@@ -276,9 +284,60 @@ export default function Atendimento() {
     toast.info("Geração de PDF em desenvolvimento.");
   }, []);
 
-  const handleSign = useCallback((session: SessionRow) => {
-    toast.info("Assinatura de documento em desenvolvimento.");
-  }, []);
+  const handleSign = useCallback(async (session: SessionRow) => {
+    if (!clinicId) return;
+
+    // Find the latest unsigned clinical record linked to this appointment
+    // Try evolutions first, then anamnesis
+    const [{ data: evolutions }, { data: anamneses }] = await Promise.all([
+      supabase
+        .from("clinical_evolutions")
+        .select("id, created_at, content, status, signed_at")
+        .eq("appointment_id", session.id)
+        .eq("clinic_id", clinicId)
+        .is("signed_at", null)
+        .order("created_at", { ascending: false })
+        .limit(1),
+      supabase
+        .from("anamnesis_records")
+        .select("id, created_at, data, status, signed_at")
+        .eq("appointment_id", session.id)
+        .eq("clinic_id", clinicId)
+        .is("signed_at", null)
+        .order("created_at", { ascending: false })
+        .limit(1),
+    ]);
+
+    const evolution = evolutions?.[0];
+    const anamnesis = anamneses?.[0];
+
+    // Prefer evolution, then anamnesis
+    const record = evolution || anamnesis;
+
+    if (!record) {
+      toast.info("Nenhum registro clínico pendente de assinatura neste atendimento.");
+      return;
+    }
+
+    const isEvolution = !!evolution;
+    const content = isEvolution
+      ? (record as any).content || {}
+      : (record as any).data || {};
+
+    setSignContext({
+      record_id: record.id,
+      document_type: isEvolution ? "evolution" : "anamnesis",
+      source_module: "atendimento",
+      specialty_slug: session.specialty_slug || undefined,
+      patient_id: session.patient_id,
+      appointment_id: session.id,
+      content: content as Record<string, unknown>,
+      patient_name: session.patient_name,
+      professional_name: session.professional_name,
+      has_valid_consent: true,
+    });
+    setSignWizardOpen(true);
+  }, [clinicId]);
 
   if (permLoading) {
     return (
@@ -564,6 +623,17 @@ export default function Atendimento() {
           patientId={selectedSession.patient_id}
         />
       )}
+
+      {/* Unified Signature Wizard */}
+      <UnifiedSignatureWizard
+        open={signWizardOpen}
+        onOpenChange={setSignWizardOpen}
+        context={signContext}
+        onComplete={() => {
+          setSignContext(null);
+          toast.success("Documento assinado com sucesso!");
+        }}
+      />
     </div>
   );
 }
