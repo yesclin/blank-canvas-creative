@@ -2393,6 +2393,9 @@ export default function Prontuario() {
             entries={entries}
             files={files}
             alerts={activeAlerts}
+            patientId={patientId}
+            clinicId={clinic?.id}
+            specialtyId={resolvedSpecialtyId}
             onResultClick={handleSearchResultClick}
             onNavigateToTab={handleNavigateToTab}
             className="max-w-2xl"
