@@ -394,7 +394,7 @@ export function EvolucoesEsteticaBlock({
                       size="sm"
                       variant="outline"
                       onClick={() => handleSign(ev)}
-                      disabled={isSigning || advancedSigning}
+                      disabled={isSigning}
                     >
                       <FileSignature className="h-4 w-4 mr-1.5" />
                       Assinatura Avançada YesClin
