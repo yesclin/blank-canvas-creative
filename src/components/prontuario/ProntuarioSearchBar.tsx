@@ -173,6 +173,135 @@ export function ProntuarioSearchBar({
     }
   }, [query]);
 
+  // Remote DB search: clinical_documents, clinical_media, clinical_addendums, clinical_alerts
+  useEffect(() => {
+    if (!debouncedQuery || debouncedQuery.length < 2 || !patientId || !clinicId) {
+      setRemoteHits([]);
+      return;
+    }
+    let cancelled = false;
+    const term = debouncedQuery.trim();
+    const like = `%${term}%`;
+
+    (async () => {
+      try {
+        const [docsRes, mediaRes, addRes, alertsRes] = await Promise.all([
+          supabase
+            .from('clinical_documents')
+            .select('id, title, document_type, content, created_at, signed_at')
+            .eq('clinic_id', clinicId)
+            .eq('patient_id', patientId)
+            .or(`title.ilike.${like},document_type.ilike.${like}`)
+            .order('created_at', { ascending: false })
+            .limit(15),
+          supabase
+            .from('clinical_media')
+            .select('id, file_name, description, category, created_at')
+            .eq('clinic_id', clinicId)
+            .eq('patient_id', patientId)
+            .or(`file_name.ilike.${like},description.ilike.${like},category.ilike.${like}`)
+            .order('created_at', { ascending: false })
+            .limit(15),
+          supabase
+            .from('clinical_addendums')
+            .select('id, content, reason, record_type, record_id, created_at')
+            .eq('clinic_id', clinicId)
+            .eq('patient_id', patientId)
+            .or(`content.ilike.${like},reason.ilike.${like}`)
+            .order('created_at', { ascending: false })
+            .limit(15),
+          supabase
+            .from('clinical_alerts')
+            .select('id, title, description, alert_type, severity, created_at, is_active')
+            .eq('clinic_id', clinicId)
+            .eq('patient_id', patientId)
+            .or(`title.ilike.${like},description.ilike.${like},alert_type.ilike.${like}`)
+            .order('created_at', { ascending: false })
+            .limit(15),
+        ]);
+
+        if (cancelled) return;
+
+        const hits: RemoteHit[] = [];
+
+        if (docsRes.error) console.error('[ProntuarioSearch] clinical_documents error:', docsRes.error);
+        else {
+          (docsRes.data || []).forEach((d: any) => {
+            const contentStr = typeof d.content === 'string' ? d.content : JSON.stringify(d.content || '');
+            hits.push({
+              id: d.id,
+              type: 'file',
+              category: 'document',
+              title: d.title || d.document_type || 'Documento clínico',
+              snippet: contentStr.slice(0, 160) || `Documento: ${d.document_type || ''}`,
+              date: d.created_at,
+              tabKey: 'documentos',
+            });
+          });
+        }
+
+        if (mediaRes.error) console.error('[ProntuarioSearch] clinical_media error:', mediaRes.error);
+        else {
+          (mediaRes.data || []).forEach((m: any) => {
+            hits.push({
+              id: m.id,
+              type: 'file',
+              category: m.category || 'image',
+              title: m.file_name || 'Mídia clínica',
+              snippet: m.description || `Mídia ${m.category || ''}`,
+              date: m.created_at,
+              tabKey: m.category === 'image' ? 'imagens' : 'documentos',
+            });
+          });
+        }
+
+        if (addRes.error) console.error('[ProntuarioSearch] clinical_addendums error:', addRes.error);
+        else {
+          (addRes.data || []).forEach((a: any) => {
+            hits.push({
+              id: a.id,
+              type: 'entry',
+              category: 'addendum',
+              title: `Adendo (${a.record_type})`,
+              snippet: a.content?.slice(0, 200) || a.reason || 'Adendo clínico',
+              date: a.created_at,
+              tabKey: 'evolucao',
+            });
+          });
+        }
+
+        if (alertsRes.error) console.error('[ProntuarioSearch] clinical_alerts error:', alertsRes.error);
+        else {
+          (alertsRes.data || []).forEach((al: any) => {
+            hits.push({
+              id: al.id,
+              type: 'alert',
+              category: al.severity || 'info',
+              title: al.title,
+              snippet: al.description || `Alerta ${al.severity}`,
+              date: al.created_at,
+              tabKey: 'alertas',
+            });
+          });
+        }
+
+        console.log(`[ProntuarioSearch] term="${term}" remote hits:`, {
+          documents: docsRes.data?.length || 0,
+          media: mediaRes.data?.length || 0,
+          addendums: addRes.data?.length || 0,
+          alerts: alertsRes.data?.length || 0,
+        });
+
+        setRemoteHits(hits);
+      } catch (err) {
+        console.error('[ProntuarioSearch] remote search failed:', err);
+        if (!cancelled) setRemoteHits([]);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [debouncedQuery, patientId, clinicId, specialtyId]);
+
   // Check if date is within range
   const isInDateRange = useCallback((dateStr: string) => {
     if (dateRange === 'all') return true;
