@@ -161,7 +161,7 @@ export function SignatureAdvancedWizard({
       case 'review': return confirmAccuracy && confirmIrreversible && scrolledToEnd;
       case 'authenticate': return authPassed;
       case 'selfie': return !!selfieDataUrl || (cameraUnavailable && settings.allow_camera_fallback);
-      case 'sign': return !!signatureDataUrl;
+      case 'sign': return useSavedSignature || !!signatureDataUrl;
       case 'finalize': return finalized;
       default: return false;
     }
@@ -425,13 +425,75 @@ export function SignatureAdvancedWizard({
           {/* STEP: SIGN */}
           {currentStep === 'sign' && (
             <div className="space-y-4">
-              <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
-                <h4 className="font-medium flex items-center gap-2"><PenTool className="h-4 w-4" /> Assinatura Manual</h4>
-                <p className="text-sm text-muted-foreground">Assine no campo abaixo usando mouse ou toque.</p>
-              </div>
-              <SignatureCanvas onSignatureChange={setSignatureDataUrl} />
-              {signatureDataUrl && (
-                <div className="flex items-center gap-2 text-sm text-green-600"><CheckCircle2 className="h-4 w-4" /> Assinatura capturada</div>
+              {/* Saved signature as primary */}
+              {savedSignature && savedSignatureUrl && !showManualFallback ? (
+                <div className="space-y-4">
+                  <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                    <h4 className="font-medium flex items-center gap-2"><Image className="h-4 w-4" /> Assinatura Salva</h4>
+                    <p className="text-sm text-muted-foreground">Sua assinatura cadastrada será usada neste documento.</p>
+                  </div>
+                  <div className="rounded-lg border bg-white p-6 flex items-center justify-center min-h-[120px]">
+                    <img
+                      src={savedSignatureUrl}
+                      alt="Assinatura do profissional"
+                      className="max-h-[100px] max-w-full object-contain"
+                    />
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      id="useSaved"
+                      checked={useSavedSignature}
+                      onCheckedChange={c => setUseSavedSignature(c === true)}
+                    />
+                    <label htmlFor="useSaved" className="text-sm leading-relaxed cursor-pointer">
+                      Confirmo o uso da minha assinatura salva neste documento
+                    </label>
+                  </div>
+                  {useSavedSignature && (
+                    <div className="flex items-center gap-2 text-sm text-green-600">
+                      <CheckCircle2 className="h-4 w-4" /> Assinatura confirmada
+                    </div>
+                  )}
+                  <Separator />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-muted-foreground"
+                    onClick={() => setShowManualFallback(true)}
+                  >
+                    <PenTool className="h-3 w-3 mr-1" />
+                    Prefiro assinar manualmente
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {!savedSignature && (
+                    <Alert>
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        Você não possui assinatura cadastrada. Cadastre em <strong>Configurações → Usuários → Minha Assinatura</strong> para agilizar futuras assinaturas.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                    <h4 className="font-medium flex items-center gap-2"><PenTool className="h-4 w-4" /> Assinatura Manual</h4>
+                    <p className="text-sm text-muted-foreground">Assine no campo abaixo usando mouse ou toque.</p>
+                  </div>
+                  <SignatureCanvas onSignatureChange={setSignatureDataUrl} />
+                  {signatureDataUrl && (
+                    <div className="flex items-center gap-2 text-sm text-green-600"><CheckCircle2 className="h-4 w-4" /> Assinatura capturada</div>
+                  )}
+                  {savedSignature && showManualFallback && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-muted-foreground"
+                      onClick={() => { setShowManualFallback(false); setSignatureDataUrl(null); }}
+                    >
+                      ← Voltar para assinatura salva
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
           )}
