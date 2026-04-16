@@ -39,6 +39,7 @@ interface ConsolidatedPdfParams {
   patient: PatientForPdf;
   professionalName?: string | null;
   professionalRegistration?: string | null;
+  professionalId?: string | null;
   recordId?: string | null;
   recordTemplateId?: string | null;
   recordTemplateVersionId?: string | null;
@@ -421,6 +422,7 @@ export function useConsolidatedFillerPdf() {
     patient,
     professionalName,
     professionalRegistration,
+    professionalId,
     recordId,
     recordTemplateId,
     recordTemplateVersionId,
