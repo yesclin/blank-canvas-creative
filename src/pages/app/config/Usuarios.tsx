@@ -26,6 +26,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PermissionsManager } from "@/components/permissions/PermissionsManager";
 import { UserAuditLog } from "@/components/config/UserAuditLog";
+import { ProfessionalSignatureManager } from "@/components/config/ProfessionalSignatureManager";
 import { useClinicUsers, ClinicUser } from "@/hooks/useClinicUsers";
 import { useUserInvitations } from "@/hooks/useUserInvitations";
 import { useSpecialties } from "@/hooks/useSpecialties";
