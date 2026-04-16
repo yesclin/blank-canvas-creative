@@ -2207,6 +2207,7 @@ export default function Prontuario() {
         },
         professionalName: currentProfessionalName,
         professionalRegistration: docClinicoProfReg,
+        professionalId: currentProfessionalId,
       });
     } else {
       handlePrint();
@@ -2229,6 +2230,7 @@ export default function Prontuario() {
         },
         professionalName: currentProfessionalName,
         professionalRegistration: docClinicoProfReg,
+        professionalId: currentProfessionalId,
       });
     } else {
       handleExport(patientId, activeAppointment?.id, patient.full_name);
