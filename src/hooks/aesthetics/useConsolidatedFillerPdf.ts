@@ -660,6 +660,47 @@ export function useConsolidatedFillerPdf() {
 
       const uniqueObservations = Array.from(new Set(finalObservations));
 
+      // 6b. Fetch professional's saved signature image
+      let signatureImageBase64 = '';
+      let signatureWidth = 200;
+      let signatureAlignment = 'center';
+      if (professionalId) {
+        try {
+          const { data: sigData } = await supabase
+            .from('professional_signatures')
+            .select('signature_file_url, signature_width, signature_scale, signature_alignment')
+            .eq('professional_id', professionalId)
+            .eq('is_active', true)
+            .maybeSingle();
+
+          if (sigData?.signature_file_url) {
+            const scale = sigData.signature_scale ?? 1;
+            signatureWidth = Math.round((sigData.signature_width ?? 200) * scale);
+            signatureAlignment = sigData.signature_alignment || 'center';
+
+            const { data: urlData } = await supabase.storage
+              .from('professional-signatures')
+              .createSignedUrl(sigData.signature_file_url, 300);
+
+            if (urlData?.signedUrl) {
+              try {
+                const response = await fetch(urlData.signedUrl);
+                const blob = await response.blob();
+                signatureImageBase64 = await new Promise<string>((resolve) => {
+                  const reader = new FileReader();
+                  reader.onloadend = () => resolve(reader.result as string);
+                  reader.readAsDataURL(blob);
+                });
+              } catch (fetchErr) {
+                console.warn('[ConsolidatedPDF] Could not fetch signature image:', fetchErr);
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('[ConsolidatedPDF] Error fetching professional signature:', err);
+        }
+      }
+
       const dateStr = format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
       const clinicName = docSettings?.clinic_name || clinic?.name || '';
       const primaryColor = docSettings?.primary_color || '#2563eb';
