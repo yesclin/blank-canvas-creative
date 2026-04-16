@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,6 +10,7 @@ import {
 import { Shield, Lock, Clock, FileCheck, User, ExternalLink, History } from 'lucide-react';
 import type { MedicalRecordSignature } from '@/hooks/prontuario/useMedicalRecordSignatures';
 import { SignatureAuditTrail } from './SignatureAuditTrail';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SignedRecordBadgeProps {
   signature: MedicalRecordSignature | null;
