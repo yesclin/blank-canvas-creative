@@ -117,6 +117,12 @@ export function SignedRecordBadge({ signature, compact = false, clinicId }: Sign
           <span>{formatDate(signature.signed_at)}</span>
         </div>
 
+        {signatureImageUrl && (
+          <div className="bg-white rounded border border-green-200 p-3 flex items-center justify-center">
+            <img src={signatureImageUrl} alt="Assinatura" className="max-h-[60px] max-w-full object-contain" crossOrigin="anonymous" />
+          </div>
+        )}
+
         {signature.signature_hash && (
           <div className="flex items-center gap-2 text-xs text-green-600 font-mono bg-green-100 rounded px-2 py-1">
             <FileCheck className="h-3 w-3 flex-shrink-0" />
