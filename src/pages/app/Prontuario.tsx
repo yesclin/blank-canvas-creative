@@ -113,8 +113,8 @@ import { useFinalizeSession } from "@/hooks/useAppointmentSession";
 import { useGlobalActiveAppointment } from "@/contexts/GlobalActiveAppointmentContext";
 import type { Appointment } from "@/types/agenda";
 import { ConsentCollectionDialog } from "@/components/prontuario/ConsentCollectionDialog";
-import { SignatureAdvancedWizard } from "@/components/prontuario/signature/SignatureAdvancedWizard";
-import { useAdvancedSignature } from "@/hooks/prontuario/useAdvancedSignature";
+import { UnifiedSignatureWizard } from "@/components/signature/UnifiedSignatureWizard";
+import type { SignableDocumentContext } from "@/types/documentSigning";
 import { SignedRecordBadge } from "@/components/prontuario/SignedRecordBadge";
 import { PatientSelector } from "@/components/prontuario/PatientSelector";
 import { ClinicalTimeline } from "@/components/prontuario/ClinicalTimeline";
@@ -546,11 +546,7 @@ export default function Prontuario() {
     signing: legacySigning,
   } = useMedicalRecordSignatures();
 
-  // Advanced Signature
-  const {
-    signing,
-    signRecord: advancedSignRecord,
-  } = useAdvancedSignature();
+  // Advanced Signature — now unified
 
   // Granular Permissions (only used if tab permissions are enabled)
   const {
@@ -2266,30 +2262,24 @@ export default function Prontuario() {
     return await grantConsent();
   };
 
-  // Handler for digital signature
+  // Handler for digital signature — unified flow
   const handleOpenSignature = (entry: MedicalRecordEntry) => {
     setSelectedEntryForSignature(entry);
     setSignatureDialogOpen(true);
   };
 
-  const handleSignRecord = async (password: string): Promise<boolean> => {
-    if (!selectedEntryForSignature || !patientId) return false;
-    
-    const result = await advancedSignRecord({
-      record_id: selectedEntryForSignature.id,
-      record_type: selectedEntryForSignature.entry_type as 'evolution' | 'anamnesis',
-      patient_id: patientId,
-      content: selectedEntryForSignature.content,
-      professional_name: currentProfessionalName || 'Profissional',
-    }, password);
-
-    if (result.success) {
-      setSelectedEntryForSignature(null);
-      // Refresh signatures
-      fetchSignaturesForPatient(patientId);
-    }
-    return result.success;
-  };
+  const unifiedSignatureContext: SignableDocumentContext | null = selectedEntryForSignature && patientId ? {
+    record_id: selectedEntryForSignature.id,
+    document_type: selectedEntryForSignature.entry_type as 'evolution' | 'anamnesis',
+    source_module: 'prontuario',
+    specialty_slug: activeSpecialtySlug || undefined,
+    patient_id: patientId,
+    appointment_id: activeAppointment?.id,
+    content: selectedEntryForSignature.content,
+    patient_name: patient?.full_name || '',
+    professional_name: currentProfessionalName || 'Profissional',
+    has_valid_consent: hasValidConsent,
+  } : null;
 
 
   return (
@@ -2318,22 +2308,16 @@ export default function Prontuario() {
         />
       )}
 
-      {/* Advanced Digital Signature Wizard */}
-      {patient && patientId && (
-        <SignatureAdvancedWizard
-          open={signatureDialogOpen}
-          onOpenChange={setSignatureDialogOpen}
-          entry={selectedEntryForSignature}
-          professionalName={currentProfessionalName || 'Profissional'}
-          patientName={patient.full_name}
-          patientId={patientId}
-          hasValidConsent={hasValidConsent}
-          onComplete={() => {
-            setSelectedEntryForSignature(null);
-            fetchSignaturesForPatient(patientId);
-          }}
-        />
-      )}
+      {/* Unified Digital Signature Wizard */}
+      <UnifiedSignatureWizard
+        open={signatureDialogOpen}
+        onOpenChange={setSignatureDialogOpen}
+        context={unifiedSignatureContext}
+        onComplete={() => {
+          setSelectedEntryForSignature(null);
+          if (patientId) fetchSignaturesForPatient(patientId);
+        }}
+      />
 
       {shouldHoldProntuarioRendering && (
         <div className="flex-1 space-y-4 p-4 md:p-6">
