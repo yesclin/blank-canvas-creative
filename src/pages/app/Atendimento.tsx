@@ -18,6 +18,8 @@ import { ptBR } from "date-fns/locale";
 import { AppointmentSummaryModal } from "@/components/agenda/AppointmentSummaryModal";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { UnifiedSignatureWizard } from "@/components/signature/UnifiedSignatureWizard";
+import type { SignableDocumentContext } from "@/types/documentSigning";
 import {
   Select,
   SelectContent,
