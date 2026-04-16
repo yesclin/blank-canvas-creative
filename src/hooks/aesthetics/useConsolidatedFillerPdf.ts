@@ -675,7 +675,7 @@ export function useConsolidatedFillerPdf() {
 
           if (sigData?.signature_file_url) {
             const scale = sigData.signature_scale ?? 1;
-            signatureWidth = Math.round((sigData.signature_width ?? 200) * scale);
+            signatureWidthPx = Math.round((sigData.signature_width ?? 200) * scale);
             signatureAlignment = sigData.signature_alignment || 'center';
 
             const { data: urlData } = await supabase.storage
@@ -761,7 +761,7 @@ export function useConsolidatedFillerPdf() {
     .footer { margin-top: 28px; padding-top: 12px; border-top: 1px solid #e2e8f0; }
     .signatures { display: flex; justify-content: space-between; margin-top: 40px; }
     .sig-block { width: 220px; text-align: center; }
-    .sig-img { max-width: 200px; max-height: 80px; object-fit: contain; margin-bottom: 6px; }
+    .sig-img { max-width: ${signatureWidthPx}px; max-height: 120px; object-fit: contain; margin-bottom: 6px; }
     .sig-line { border-top: 1px solid #1a1a1a; padding-top: 4px; font-size: 10px; color: #475569; }
     .footer-text { text-align: center; font-size: 9px; color: #94a3b8; margin-top: 16px; }
     .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 60px; color: rgba(0,0,0,0.03); font-weight: 700; pointer-events: none; z-index: -1; }
@@ -922,7 +922,7 @@ export function useConsolidatedFillerPdf() {
   <div class="footer">
     <div class="signatures">
       <div class="sig-block" style="text-align: ${signatureAlignment};">
-        ${signatureImageBase64 ? `<img src="${signatureImageBase64}" class="sig-img" style="max-width: ${signatureWidth}px;" alt="Assinatura do profissional" />` : ''}
+        ${signatureImageBase64 ? `<img src="${signatureImageBase64}" class="sig-img" style="width: ${signatureWidthPx}px;" alt="Assinatura do profissional" />` : ''}
         <div class="sig-line">Profissional Responsável${profName ? `<br/>${escapeHtml(profName)}` : ''}${profReg ? `<br/>${escapeHtml(profReg)}` : ''}</div>
       </div>
       <div class="sig-block">
