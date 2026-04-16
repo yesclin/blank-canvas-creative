@@ -534,51 +534,62 @@ export function useConsolidatedFillerPdf() {
 
       const planFieldsHtml = buildPlanFields(anamnesisData, templateStructure);
 
-      // 4. Resolve linked facial map + applications + map image
-      const { data: mapRows, error: mapError } = await supabase
-        .from('facial_maps')
-        .select('*')
-        .eq('clinic_id', clinic.id)
-        .eq('patient_id', patientId)
-        .order('created_at', { ascending: false })
-        .limit(50);
+      // 4. Resolve linked facial map + applications + map image (OPTIONAL — não aborta se não houver mapa)
+      let selectedMap: any = null;
+      try {
+        const { data: mapRows, error: mapError } = await supabase
+          .from('facial_maps')
+          .select('*')
+          .eq('clinic_id', clinic.id)
+          .eq('patient_id', patientId)
+          .order('created_at', { ascending: false })
+          .limit(50);
 
-      if (mapError) throw mapError;
-
-      const selectedMap = selectBestFacialMap(mapRows || [], {
-        appointmentId: resolvedAppointmentId,
-        recordId: recordId || resolvedRecord?.id || null,
-        templateId: resolvedTemplateId,
-        templateVersionId: resolvedTemplateVersionId,
-        recordCreatedAt: resolvedRecord?.created_at || null,
-      });
-
-      if (!selectedMap) {
-        toast.error('Não foi encontrado mapa facial vinculado ao registro selecionado.');
-        return;
+        if (mapError) {
+          console.warn('[ConsolidatedPDF] Erro ao buscar mapas faciais (continuando sem mapa):', mapError);
+        } else {
+          selectedMap = selectBestFacialMap(mapRows || [], {
+            appointmentId: resolvedAppointmentId,
+            recordId: recordId || resolvedRecord?.id || null,
+            templateId: resolvedTemplateId,
+            templateVersionId: resolvedTemplateVersionId,
+            recordCreatedAt: resolvedRecord?.created_at || null,
+          });
+        }
+      } catch (err) {
+        console.warn('[ConsolidatedPDF] Falha ao resolver mapa facial:', err);
       }
 
-      const [applicationsResult, mapImagesResult] = await Promise.all([
-        supabase
-          .from('facial_map_applications')
-          .select('*')
-          .eq('facial_map_id', selectedMap.id)
-          .order('created_at', { ascending: true }),
-        supabase
-          .from('facial_map_images')
-          .select('image_url')
-          .eq('facial_map_id', selectedMap.id)
-          .order('created_at', { ascending: false })
-          .limit(1),
-      ]);
+      let fillerApps: ReturnType<typeof parseApplicationRow>[] = [];
+      let mapImageUrl = fillerFrontalImg;
+      let mapNotes = '';
 
-      if (applicationsResult.error) throw applicationsResult.error;
-      if (mapImagesResult.error) throw mapImagesResult.error;
+      if (selectedMap) {
+        const [applicationsResult, mapImagesResult] = await Promise.all([
+          supabase
+            .from('facial_map_applications')
+            .select('*')
+            .eq('facial_map_id', selectedMap.id)
+            .order('created_at', { ascending: true }),
+          supabase
+            .from('facial_map_images')
+            .select('image_url')
+            .eq('facial_map_id', selectedMap.id)
+            .order('created_at', { ascending: false })
+            .limit(1),
+        ]);
 
-      const applications = (applicationsResult.data || []).map(parseApplicationRow);
-      const fillerApps = applications.filter((application) => (application.procedure_type || 'filler') === 'filler');
-      const mapImageUrl = mapImagesResult.data?.[0]?.image_url || fillerFrontalImg;
-      const mapNotes = selectedMap?.notes || '';
+        if (!applicationsResult.error) {
+          const applications = (applicationsResult.data || []).map(parseApplicationRow);
+          fillerApps = applications.filter((application) => (application.procedure_type || 'filler') === 'filler');
+        } else {
+          console.warn('[ConsolidatedPDF] Erro ao buscar aplicações:', applicationsResult.error);
+        }
+        if (!mapImagesResult.error && mapImagesResult.data?.[0]?.image_url) {
+          mapImageUrl = mapImagesResult.data[0].image_url;
+        }
+        mapNotes = selectedMap?.notes || '';
+      }
 
       // 5. Fetch products used (and fallback to map applications if table is unavailable)
       let products: ConsolidatedProduct[] = [];
@@ -610,7 +621,7 @@ export function useConsolidatedFillerPdf() {
               return row.appointment_id === resolvedAppointmentId || row.appointment_id == null;
             })
             .filter((row) => {
-              if (!row.facial_map_id) return true;
+              if (!row.facial_map_id || !selectedMap) return true;
               return row.facial_map_id === selectedMap.id;
             })
             .filter((row) => (row.procedure_type || 'filler') === 'filler')
@@ -748,6 +759,7 @@ export function useConsolidatedFillerPdf() {
   </div>
 
   <!-- FACIAL MAP -->
+  ${selectedMap ? `
   <div class="section">
     <div class="section-title">Mapa Facial</div>
     <div class="map-container" style="display: inline-block; position: relative;">
@@ -760,6 +772,7 @@ export function useConsolidatedFillerPdf() {
     </div>
     ${fillerApps.length > 0 ? `<p style="font-size:10px; color:#64748b; text-align:center; margin-top:4px;">Os números correspondem às aplicações listadas abaixo.</p>` : '<p style="font-size:10px; color:#94a3b8; text-align:center;">Nenhuma marcação registrada.</p>'}
   </div>
+  ` : ''}
 
   <!-- APPLICATIONS SUMMARY -->
   ${fillerApps.length > 0 ? `
