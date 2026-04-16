@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -65,9 +66,22 @@ interface ProntuarioSearchBarProps {
   entries: MedicalRecordEntry[];
   files: MedicalRecordFile[];
   alerts: ClinicalAlert[];
+  patientId?: string | null;
+  clinicId?: string | null;
+  specialtyId?: string | null;
   onResultClick: (result: SearchResult) => void;
   onNavigateToTab: (tabKey: string) => void;
   className?: string;
+}
+
+interface RemoteHit {
+  id: string;
+  type: SearchResultType;
+  category: string;
+  title: string;
+  snippet: string;
+  date: string;
+  tabKey: string;
 }
 
 const filterOptions: { id: SearchResultType | 'all'; label: string; icon: React.ReactNode }[] = [
@@ -115,12 +129,16 @@ export function ProntuarioSearchBar({
   entries, 
   files, 
   alerts,
+  patientId,
+  clinicId,
+  specialtyId,
   onResultClick,
   onNavigateToTab,
   className
 }: ProntuarioSearchBarProps) {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [remoteHits, setRemoteHits] = useState<RemoteHit[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [activeFilter, setActiveFilter] = useState<SearchResultType | 'all'>('all');
