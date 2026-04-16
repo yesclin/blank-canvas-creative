@@ -560,27 +560,36 @@ export function useConsolidatedFillerPdf() {
         console.warn('[ConsolidatedPDF] Falha ao resolver mapa facial:', err);
       }
 
-      const [applicationsResult, mapImagesResult] = await Promise.all([
-        supabase
-          .from('facial_map_applications')
-          .select('*')
-          .eq('facial_map_id', selectedMap.id)
-          .order('created_at', { ascending: true }),
-        supabase
-          .from('facial_map_images')
-          .select('image_url')
-          .eq('facial_map_id', selectedMap.id)
-          .order('created_at', { ascending: false })
-          .limit(1),
-      ]);
+      let fillerApps: ReturnType<typeof parseApplicationRow>[] = [];
+      let mapImageUrl = fillerFrontalImg;
+      let mapNotes = '';
 
-      if (applicationsResult.error) throw applicationsResult.error;
-      if (mapImagesResult.error) throw mapImagesResult.error;
+      if (selectedMap) {
+        const [applicationsResult, mapImagesResult] = await Promise.all([
+          supabase
+            .from('facial_map_applications')
+            .select('*')
+            .eq('facial_map_id', selectedMap.id)
+            .order('created_at', { ascending: true }),
+          supabase
+            .from('facial_map_images')
+            .select('image_url')
+            .eq('facial_map_id', selectedMap.id)
+            .order('created_at', { ascending: false })
+            .limit(1),
+        ]);
 
-      const applications = (applicationsResult.data || []).map(parseApplicationRow);
-      const fillerApps = applications.filter((application) => (application.procedure_type || 'filler') === 'filler');
-      const mapImageUrl = mapImagesResult.data?.[0]?.image_url || fillerFrontalImg;
-      const mapNotes = selectedMap?.notes || '';
+        if (!applicationsResult.error) {
+          const applications = (applicationsResult.data || []).map(parseApplicationRow);
+          fillerApps = applications.filter((application) => (application.procedure_type || 'filler') === 'filler');
+        } else {
+          console.warn('[ConsolidatedPDF] Erro ao buscar aplicações:', applicationsResult.error);
+        }
+        if (!mapImagesResult.error && mapImagesResult.data?.[0]?.image_url) {
+          mapImageUrl = mapImagesResult.data[0].image_url;
+        }
+        mapNotes = selectedMap?.notes || '';
+      }
 
       // 5. Fetch products used (and fallback to map applications if table is unavailable)
       let products: ConsolidatedProduct[] = [];
