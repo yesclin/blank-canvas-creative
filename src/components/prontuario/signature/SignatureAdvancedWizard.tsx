@@ -11,12 +11,13 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Shield, AlertTriangle, FileCheck, Lock, Clock, User, FileText,
   CheckCircle2, KeyRound, Eye, EyeOff, Loader2, Camera, PenTool,
-  ChevronRight, ChevronLeft, Hash,
+  ChevronRight, ChevronLeft, Hash, Upload, Image,
 } from 'lucide-react';
 import type { MedicalRecordEntry } from '@/hooks/prontuario/useMedicalRecordEntries';
 import { SignatureCanvas } from './SignatureCanvas';
 import { SelfieCapture } from './SelfieCapture';
 import { useClinicSignatureSettings } from '@/hooks/prontuario/useClinicSignatureSettings';
+import { useProfessionalSignature } from '@/hooks/useProfessionalSignature';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useClinicData } from '@/hooks/useClinicData';
@@ -64,6 +65,7 @@ export function SignatureAdvancedWizard({
   const { professionalId } = usePermissions();
   const docType = entry?.entry_type === 'anamnesis' ? 'anamnesis' : 'evolution';
   const { settings } = useClinicSignatureSettings(docType);
+  const { signature: savedSignature, getSignedUrl } = useProfessionalSignature();
 
   // Compute steps based on settings
   const steps: WizardStep[] = (() => {
@@ -95,6 +97,9 @@ export function SignatureAdvancedWizard({
 
   // Step 4 state
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
+  const [useSavedSignature, setUseSavedSignature] = useState(false);
+  const [savedSignatureUrl, setSavedSignatureUrl] = useState<string | null>(null);
+  const [showManualFallback, setShowManualFallback] = useState(false);
 
   // Step 5 state
   const [finalizing, setFinalizing] = useState(false);
@@ -114,11 +119,23 @@ export function SignatureAdvancedWizard({
       setSelfieDataUrl(null);
       setCameraUnavailable(false);
       setSignatureDataUrl(null);
+      setUseSavedSignature(false);
+      setSavedSignatureUrl(null);
+      setShowManualFallback(false);
       setFinalizing(false);
       setFinalized(false);
       setResultHash(null);
     }
   }, [open]);
+
+  // Load saved signature URL when wizard opens
+  useEffect(() => {
+    if (open && savedSignature?.signature_file_url) {
+      getSignedUrl(savedSignature.signature_file_url).then(url => {
+        if (url) setSavedSignatureUrl(url);
+      });
+    }
+  }, [open, savedSignature, getSignedUrl]);
 
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const t = e.currentTarget;
@@ -144,7 +161,7 @@ export function SignatureAdvancedWizard({
       case 'review': return confirmAccuracy && confirmIrreversible && scrolledToEnd;
       case 'authenticate': return authPassed;
       case 'selfie': return !!selfieDataUrl || (cameraUnavailable && settings.allow_camera_fallback);
-      case 'sign': return !!signatureDataUrl;
+      case 'sign': return useSavedSignature || !!signatureDataUrl;
       case 'finalize': return finalized;
       default: return false;
     }
@@ -189,7 +206,7 @@ export function SignatureAdvancedWizard({
           signed_by: userId,
           signed_by_professional_id: professionalId,
           signed_by_name: professionalName,
-          sign_method: 'password_reauth',
+          sign_method: useSavedSignature ? 'saved_signature' : 'password_reauth',
           signature_level: settings.signature_level,
           ip_address: ipAddress,
           user_agent: userAgent,
@@ -198,6 +215,8 @@ export function SignatureAdvancedWizard({
           evidence_snapshot: {
             has_selfie: !!selfieDataUrl,
             has_handwritten: !!signatureDataUrl,
+            has_saved_signature: useSavedSignature,
+            saved_signature_id: useSavedSignature ? savedSignature?.id : null,
             signature_level: settings.signature_level,
           } as any,
         })
@@ -247,7 +266,7 @@ export function SignatureAdvancedWizard({
       // Log events
       await supabase.from('medical_signature_events').insert({
         signature_id: sigId, clinic_id: clinic.id, event_type: 'document_signed',
-        metadata: { hash: documentHash, sign_method: 'password_reauth', level: settings.signature_level } as any,
+        metadata: { hash: documentHash, sign_method: useSavedSignature ? 'saved_signature' : 'manual_canvas', level: settings.signature_level } as any,
         created_by: userId,
       });
 
@@ -408,13 +427,75 @@ export function SignatureAdvancedWizard({
           {/* STEP: SIGN */}
           {currentStep === 'sign' && (
             <div className="space-y-4">
-              <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
-                <h4 className="font-medium flex items-center gap-2"><PenTool className="h-4 w-4" /> Assinatura Manual</h4>
-                <p className="text-sm text-muted-foreground">Assine no campo abaixo usando mouse ou toque.</p>
-              </div>
-              <SignatureCanvas onSignatureChange={setSignatureDataUrl} />
-              {signatureDataUrl && (
-                <div className="flex items-center gap-2 text-sm text-green-600"><CheckCircle2 className="h-4 w-4" /> Assinatura capturada</div>
+              {/* Saved signature as primary */}
+              {savedSignature && savedSignatureUrl && !showManualFallback ? (
+                <div className="space-y-4">
+                  <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                    <h4 className="font-medium flex items-center gap-2"><Image className="h-4 w-4" /> Assinatura Salva</h4>
+                    <p className="text-sm text-muted-foreground">Sua assinatura cadastrada será usada neste documento.</p>
+                  </div>
+                  <div className="rounded-lg border bg-white p-6 flex items-center justify-center min-h-[120px]">
+                    <img
+                      src={savedSignatureUrl}
+                      alt="Assinatura do profissional"
+                      className="max-h-[100px] max-w-full object-contain"
+                    />
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      id="useSaved"
+                      checked={useSavedSignature}
+                      onCheckedChange={c => setUseSavedSignature(c === true)}
+                    />
+                    <label htmlFor="useSaved" className="text-sm leading-relaxed cursor-pointer">
+                      Confirmo o uso da minha assinatura salva neste documento
+                    </label>
+                  </div>
+                  {useSavedSignature && (
+                    <div className="flex items-center gap-2 text-sm text-green-600">
+                      <CheckCircle2 className="h-4 w-4" /> Assinatura confirmada
+                    </div>
+                  )}
+                  <Separator />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-muted-foreground"
+                    onClick={() => setShowManualFallback(true)}
+                  >
+                    <PenTool className="h-3 w-3 mr-1" />
+                    Prefiro assinar manualmente
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {!savedSignature && (
+                    <Alert>
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        Você não possui assinatura cadastrada. Cadastre em <strong>Configurações → Usuários → Minha Assinatura</strong> para agilizar futuras assinaturas.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                    <h4 className="font-medium flex items-center gap-2"><PenTool className="h-4 w-4" /> Assinatura Manual</h4>
+                    <p className="text-sm text-muted-foreground">Assine no campo abaixo usando mouse ou toque.</p>
+                  </div>
+                  <SignatureCanvas onSignatureChange={setSignatureDataUrl} />
+                  {signatureDataUrl && (
+                    <div className="flex items-center gap-2 text-sm text-green-600"><CheckCircle2 className="h-4 w-4" /> Assinatura capturada</div>
+                  )}
+                  {savedSignature && showManualFallback && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-muted-foreground"
+                      onClick={() => { setShowManualFallback(false); setSignatureDataUrl(null); }}
+                    >
+                      ← Voltar para assinatura salva
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -437,8 +518,8 @@ export function SignatureAdvancedWizard({
                       )}
                       {steps.includes('sign') && (
                         <div className="flex items-center gap-2">
-                          {signatureDataUrl ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <AlertTriangle className="h-4 w-4 text-yellow-600" />}
-                          Assinatura manual {signatureDataUrl ? 'capturada' : 'pendente'}
+                          {(useSavedSignature || signatureDataUrl) ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <AlertTriangle className="h-4 w-4 text-yellow-600" />}
+                          {useSavedSignature ? 'Assinatura salva utilizada' : signatureDataUrl ? 'Assinatura manual capturada' : 'Assinatura pendente'}
                         </div>
                       )}
                     </div>

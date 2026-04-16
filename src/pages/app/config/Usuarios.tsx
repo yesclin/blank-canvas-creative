@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   UserCog, Plus, Search, Edit, RotateCcw, ToggleLeft, ToggleRight,
   Shield, AlertCircle, Crown, Loader2, Users, CheckCircle2, XCircle,
-  Mail, Clock, Send, RefreshCw, X, History, Save
+  Mail, Clock, Send, RefreshCw, X, History, Save, PenTool
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PermissionsManager } from "@/components/permissions/PermissionsManager";
 import { UserAuditLog } from "@/components/config/UserAuditLog";
+import { ProfessionalSignatureManager } from "@/components/config/ProfessionalSignatureManager";
 import { useClinicUsers, ClinicUser } from "@/hooks/useClinicUsers";
 import { useUserInvitations } from "@/hooks/useUserInvitations";
 import { useSpecialties } from "@/hooks/useSpecialties";
@@ -341,6 +342,10 @@ export default function ConfigUsuarios() {
           <TabsTrigger value="audit" className="gap-2">
             <History className="h-4 w-4" />
             Auditoria
+          </TabsTrigger>
+          <TabsTrigger value="signature" className="gap-2">
+            <PenTool className="h-4 w-4" />
+            Minha Assinatura
           </TabsTrigger>
         </TabsList>
 
@@ -764,6 +769,10 @@ export default function ConfigUsuarios() {
 
         <TabsContent value="audit">
           <UserAuditLog clinicId={clinicId} />
+        </TabsContent>
+
+        <TabsContent value="signature">
+          <ProfessionalSignatureManager />
         </TabsContent>
       </Tabs>
 

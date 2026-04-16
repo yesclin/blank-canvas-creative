@@ -8772,6 +8772,54 @@ export type Database = {
           },
         ]
       }
+      professional_signatures: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          professional_id: string
+          signature_file_url: string
+          signature_type: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          professional_id: string
+          signature_file_url: string
+          signature_type?: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          professional_id?: string
+          signature_file_url?: string
+          signature_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_signatures_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_signatures_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professional_specialties: {
         Row: {
           created_at: string
