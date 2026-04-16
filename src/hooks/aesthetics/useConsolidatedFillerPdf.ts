@@ -662,7 +662,7 @@ export function useConsolidatedFillerPdf() {
 
       // 6b. Fetch professional's saved signature image
       let signatureImageBase64 = '';
-      let signatureWidth = 200;
+      let signatureWidthPx = 200;
       let signatureAlignment = 'center';
       if (professionalId) {
         try {
