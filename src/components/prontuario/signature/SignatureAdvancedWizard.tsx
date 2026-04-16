@@ -119,11 +119,23 @@ export function SignatureAdvancedWizard({
       setSelfieDataUrl(null);
       setCameraUnavailable(false);
       setSignatureDataUrl(null);
+      setUseSavedSignature(false);
+      setSavedSignatureUrl(null);
+      setShowManualFallback(false);
       setFinalizing(false);
       setFinalized(false);
       setResultHash(null);
     }
   }, [open]);
+
+  // Load saved signature URL when wizard opens
+  useEffect(() => {
+    if (open && savedSignature?.signature_file_url) {
+      getSignedUrl(savedSignature.signature_file_url).then(url => {
+        if (url) setSavedSignatureUrl(url);
+      });
+    }
+  }, [open, savedSignature, getSignedUrl]);
 
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const t = e.currentTarget;
