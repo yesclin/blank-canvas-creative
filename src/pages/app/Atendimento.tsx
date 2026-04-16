@@ -66,8 +66,10 @@ interface SessionRow {
   status: string;
   patient_name: string;
   patient_id: string;
+  professional_id: string;
   professional_name: string;
   specialty_name: string | null;
+  specialty_slug: string | null;
   procedure_name: string | null;
   is_paused: boolean;
   total_paused_seconds: number;
