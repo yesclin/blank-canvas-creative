@@ -20,6 +20,35 @@ interface SignedRecordBadgeProps {
 
 export function SignedRecordBadge({ signature, compact = false, clinicId }: SignedRecordBadgeProps) {
   const [auditOpen, setAuditOpen] = useState(false);
+  const [signatureImageUrl, setSignatureImageUrl] = useState<string | null>(null);
+
+  // Load saved professional signature image if available
+  const evidenceSnapshot = (signature as any)?.evidence_snapshot;
+  const signedByProfId = (signature as any)?.signed_by_professional_id;
+
+  useEffect(() => {
+    if (!signedByProfId || !signature) return;
+    // Check if this was signed with saved signature
+    if (evidenceSnapshot?.has_saved_signature) {
+      // Fetch the professional's saved signature file
+      supabase
+        .from('professional_signatures')
+        .select('signature_file_url')
+        .eq('professional_id', signedByProfId)
+        .eq('is_active', true)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.signature_file_url) {
+            supabase.storage
+              .from('professional-signatures')
+              .createSignedUrl(data.signature_file_url, 3600)
+              .then(({ data: urlData }) => {
+                if (urlData?.signedUrl) setSignatureImageUrl(urlData.signedUrl);
+              });
+          }
+        });
+    }
+  }, [signedByProfId, evidenceSnapshot, signature]);
 
   if (!signature) return null;
 
