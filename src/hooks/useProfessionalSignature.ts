@@ -11,9 +11,26 @@ export interface ProfessionalSignature {
   signature_file_url: string;
   signature_type: string;
   is_active: boolean;
+  signature_width: number;
+  signature_scale: number;
+  signature_alignment: string;
+  signature_offset_x: number;
+  signature_offset_y: number;
   created_at: string;
   updated_at: string;
 }
+
+export const SIGNATURE_DEFAULTS = {
+  width: 200,
+  scale: 1.0,
+  alignment: 'center',
+  offsetX: 0,
+  offsetY: 0,
+  minWidth: 80,
+  maxWidth: 400,
+  minScale: 0.5,
+  maxScale: 2.0,
+};
 
 export function useProfessionalSignature() {
   const { clinic } = useClinicData();
@@ -58,7 +75,6 @@ export function useProfessionalSignature() {
         return false;
       }
 
-      // Validate file
       if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
         toast.error('Formato inválido. Use PNG, JPEG ou WebP.');
         return false;
@@ -68,11 +84,9 @@ export function useProfessionalSignature() {
         return false;
       }
 
-      // Upload to storage
       const ext = file.name.split('.').pop() || 'png';
       const path = `${userId}/${professionalId}/signature.${ext}`;
-      
-      // Remove old file if exists
+
       await supabase.storage.from('professional-signatures').remove([path]);
 
       const { error: uploadError } = await supabase.storage
@@ -81,29 +95,26 @@ export function useProfessionalSignature() {
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('professional-signatures')
-        .getPublicUrl(path);
-
-      const fileUrl = urlData.publicUrl;
-
-      // Deactivate any existing signatures
+      // Deactivate existing
       await supabase
         .from('professional_signatures')
         .update({ is_active: false, updated_at: new Date().toISOString() })
         .eq('clinic_id', clinic.id)
         .eq('professional_id', professionalId);
 
-      // Insert new signature record
       const { data, error } = await supabase
         .from('professional_signatures')
         .insert({
           clinic_id: clinic.id,
           professional_id: professionalId,
-          signature_file_url: path, // store path, resolve URL on display
+          signature_file_url: path,
           signature_type: 'uploaded',
           is_active: true,
+          signature_width: SIGNATURE_DEFAULTS.width,
+          signature_scale: SIGNATURE_DEFAULTS.scale,
+          signature_alignment: SIGNATURE_DEFAULTS.alignment,
+          signature_offset_x: SIGNATURE_DEFAULTS.offsetX,
+          signature_offset_y: SIGNATURE_DEFAULTS.offsetY,
         })
         .select()
         .single();
@@ -121,13 +132,35 @@ export function useProfessionalSignature() {
     }
   }, [clinic?.id, professionalId]);
 
+  const updateSignatureSize = useCallback(async (updates: {
+    signature_width?: number;
+    signature_scale?: number;
+    signature_alignment?: string;
+    signature_offset_x?: number;
+    signature_offset_y?: number;
+  }): Promise<boolean> => {
+    if (!signature) return false;
+    try {
+      const { error } = await supabase
+        .from('professional_signatures')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', signature.id);
+
+      if (error) throw error;
+      setSignature(prev => prev ? { ...prev, ...updates } : prev);
+      toast.success('Configurações de tamanho salvas');
+      return true;
+    } catch (err: any) {
+      console.error('[PROF_SIGNATURE] Update size error:', err);
+      toast.error('Erro ao salvar configurações');
+      return false;
+    }
+  }, [signature]);
+
   const removeSignature = useCallback(async (): Promise<boolean> => {
     if (!signature) return false;
     try {
-      // Remove from storage
       await supabase.storage.from('professional-signatures').remove([signature.signature_file_url]);
-      
-      // Deactivate record
       await supabase
         .from('professional_signatures')
         .update({ is_active: false, updated_at: new Date().toISOString() })
@@ -148,7 +181,6 @@ export function useProfessionalSignature() {
     return data.publicUrl;
   }, []);
 
-  // Get a signed URL for private bucket access
   const getSignedUrl = useCallback(async (filePath: string): Promise<string | null> => {
     const { data, error } = await supabase.storage
       .from('professional-signatures')
@@ -166,6 +198,7 @@ export function useProfessionalSignature() {
     uploading,
     uploadSignature,
     removeSignature,
+    updateSignatureSize,
     getSignatureUrl,
     getSignedUrl,
     refetch: fetchSignature,
