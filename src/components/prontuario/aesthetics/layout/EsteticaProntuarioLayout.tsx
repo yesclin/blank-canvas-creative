@@ -75,6 +75,7 @@ export function EsteticaProntuarioLayout({
           patientCpf={patientCpf}
           professionalName={professionalName}
           professionalRegistration={professionalRegistration}
+          professionalId={professionalId}
         />
       );
 
