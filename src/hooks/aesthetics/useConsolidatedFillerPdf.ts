@@ -534,28 +534,30 @@ export function useConsolidatedFillerPdf() {
 
       const planFieldsHtml = buildPlanFields(anamnesisData, templateStructure);
 
-      // 4. Resolve linked facial map + applications + map image
-      const { data: mapRows, error: mapError } = await supabase
-        .from('facial_maps')
-        .select('*')
-        .eq('clinic_id', clinic.id)
-        .eq('patient_id', patientId)
-        .order('created_at', { ascending: false })
-        .limit(50);
+      // 4. Resolve linked facial map + applications + map image (OPTIONAL — não aborta se não houver mapa)
+      let selectedMap: any = null;
+      try {
+        const { data: mapRows, error: mapError } = await supabase
+          .from('facial_maps')
+          .select('*')
+          .eq('clinic_id', clinic.id)
+          .eq('patient_id', patientId)
+          .order('created_at', { ascending: false })
+          .limit(50);
 
-      if (mapError) throw mapError;
-
-      const selectedMap = selectBestFacialMap(mapRows || [], {
-        appointmentId: resolvedAppointmentId,
-        recordId: recordId || resolvedRecord?.id || null,
-        templateId: resolvedTemplateId,
-        templateVersionId: resolvedTemplateVersionId,
-        recordCreatedAt: resolvedRecord?.created_at || null,
-      });
-
-      if (!selectedMap) {
-        toast.error('Não foi encontrado mapa facial vinculado ao registro selecionado.');
-        return;
+        if (mapError) {
+          console.warn('[ConsolidatedPDF] Erro ao buscar mapas faciais (continuando sem mapa):', mapError);
+        } else {
+          selectedMap = selectBestFacialMap(mapRows || [], {
+            appointmentId: resolvedAppointmentId,
+            recordId: recordId || resolvedRecord?.id || null,
+            templateId: resolvedTemplateId,
+            templateVersionId: resolvedTemplateVersionId,
+            recordCreatedAt: resolvedRecord?.created_at || null,
+          });
+        }
+      } catch (err) {
+        console.warn('[ConsolidatedPDF] Falha ao resolver mapa facial:', err);
       }
 
       const [applicationsResult, mapImagesResult] = await Promise.all([
