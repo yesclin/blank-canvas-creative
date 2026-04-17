@@ -417,7 +417,7 @@ export function ProcedimentosRealizadosBlock({
             </Button>
             <Button
               onClick={handleSave}
-              disabled={!procedureName.trim() || createMutation.isPending}
+              disabled={!procedureId || !procedureName.trim() || createMutation.isPending}
             >
               {createMutation.isPending ? 'Salvando...' : 'Salvar'}
             </Button>
