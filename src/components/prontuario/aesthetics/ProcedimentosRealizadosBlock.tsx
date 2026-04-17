@@ -115,6 +115,7 @@ export function ProcedimentosRealizadosBlock({
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   // Form state
+  const [procedureId, setProcedureId] = useState<string>('');
   const [procedureName, setProcedureName] = useState('');
   const [region, setRegion] = useState('');
   const [technique, setTechnique] = useState('');
@@ -128,16 +129,29 @@ export function ProcedimentosRealizadosBlock({
     specialtyId,
   );
 
+  // Official procedure catalog from /app/config/procedimentos (single source of truth)
+  const { procedures: catalog, isLoading: catalogLoading } = useProcedureCatalog({
+    clinicId,
+    specialtyId,
+  });
+
   const createMutation = useCreatePerformedProcedure(patientId, appointmentId);
   const deleteMutation = useDeletePerformedProcedure(patientId, appointmentId);
 
   const resetForm = useCallback(() => {
+    setProcedureId('');
     setProcedureName('');
     setRegion('');
     setTechnique('');
     setNotes('');
     setStatus('realizado');
   }, []);
+
+  const handleSelectProcedure = useCallback((id: string) => {
+    setProcedureId(id);
+    const found = catalog.find(p => p.id === id);
+    if (found) setProcedureName(found.name);
+  }, [catalog]);
 
   const handleSave = useCallback(() => {
     if (!procedureName.trim() || !clinicId) return;
@@ -148,6 +162,7 @@ export function ProcedimentosRealizadosBlock({
       professional_id: professionalId ?? null,
       appointment_id: appointmentId ?? null,
       specialty_id: specialtyId ?? null,
+      procedure_id: procedureId || null,
       procedure_name: procedureName.trim(),
       region: region.trim() || null,
       technique: technique.trim() || null,
