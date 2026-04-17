@@ -86,24 +86,6 @@ const STATUS_COLORS: Record<string, string> = {
   cancelado: 'bg-red-100 text-red-800 border-red-200',
 };
 
-const PROCEDURE_SUGGESTIONS = [
-  'Aplicação de Toxina Botulínica',
-  'Preenchimento com Ácido Hialurônico',
-  'Bioestimulador de Colágeno',
-  'Skinbooster',
-  'Harmonização Facial',
-  'Limpeza de Pele',
-  'Peeling Químico',
-  'Microagulhamento',
-  'Laser Fracionado',
-  'Radiofrequência',
-  'Ultrassom Microfocado',
-  'Criolipólise',
-  'Fios de PDO',
-  'Mesoterapia',
-  'Carboxiterapia',
-];
-
 const REGION_SUGGESTIONS = [
   'Testa',
   'Glabela',
