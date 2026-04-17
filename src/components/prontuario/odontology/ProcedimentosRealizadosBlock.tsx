@@ -76,7 +76,7 @@ interface ProcedimentosRealizadosBlockProps {
   clinicId?: string | null;
   /** Active specialty — filters the catalog */
   specialtyId?: string | null;
-  onSave: (data: Omit<ProcedimentoRealizado, 'id' | 'patient_id' | 'created_at' | 'created_by' | 'professional_name'> & { procedure_id?: string | null }) => Promise<void>;
+  onSave: (data: Omit<ProcedimentoRealizado, 'id' | 'patient_id' | 'created_at' | 'created_by' | 'professional_name'> & { procedure_id?: string | null; clinical_data?: Record<string, unknown>; status?: string }) => Promise<void>;
   onNavigateToOdontograma?: (toothCode: string) => void;
 }
 
