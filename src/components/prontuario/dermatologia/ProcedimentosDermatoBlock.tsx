@@ -46,6 +46,7 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { BODY_LOCATIONS } from "./ExameDermatoBlock";
+import { useProcedureCatalog } from "@/hooks/prontuario/useProcedureCatalog";
 
 /**
  * Tipos de procedimentos dermatológicos
@@ -124,6 +125,7 @@ export interface ProcedimentoDermatoItem {
   id: string;
   tipo_procedimento: string;
   tipo_procedimento_custom?: string;
+  procedure_id?: string | null;
   regiao_tratada: string;
   regiao_tratada_detalhe?: string;
   tecnica_utilizada: string[];
@@ -142,6 +144,10 @@ interface ProcedimentosDermatoBlockProps {
   loading?: boolean;
   saving?: boolean;
   canEdit?: boolean;
+  /** Clinic context — required to load the official procedure catalog */
+  clinicId?: string | null;
+  /** Active specialty — filters the catalog */
+  specialtyId?: string | null;
   onAdd: (data: Omit<ProcedimentoDermatoItem, 'id'>) => Promise<void>;
   onUpdate?: (id: string, data: Partial<ProcedimentoDermatoItem>) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
