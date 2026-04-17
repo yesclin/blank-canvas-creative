@@ -402,7 +402,7 @@ export function ProcedimentosRealizadosBlock({
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="p-6 pt-3 border-t shrink-0">
             <Button variant="outline" onClick={() => { resetForm(); setDialogOpen(false); }}>
               Cancelar
             </Button>
