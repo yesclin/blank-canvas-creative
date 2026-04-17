@@ -323,54 +323,40 @@ export function ProcedimentosDermatoBlock({
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Tipo de Procedimento */}
+              {/* Procedimento (catálogo oficial /app/config/procedimentos) */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2 text-sm">
                   <Scissors className="h-3 w-3" />
-                  Tipo de Procedimento *
+                  Procedimento *
                 </Label>
-                <Select
-                  value={formData.tipo_procedimento}
-                  onValueChange={(v) => updateFormField('tipo_procedimento', v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o procedimento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <div className="text-xs text-muted-foreground px-2 py-1 font-medium">
-                      Diagnósticos
-                    </div>
-                    {DERMATOLOGY_PROCEDURE_TYPES.filter(p => p.category === 'diagnostico').map(proc => (
-                      <SelectItem key={proc.value} value={proc.value}>
-                        {proc.label}
-                      </SelectItem>
-                    ))}
-                    <div className="text-xs text-muted-foreground px-2 py-1 font-medium mt-2">
-                      Terapêuticos
-                    </div>
-                    {DERMATOLOGY_PROCEDURE_TYPES.filter(p => p.category === 'terapeutico').map(proc => (
-                      <SelectItem key={proc.value} value={proc.value}>
-                        {proc.label}
-                      </SelectItem>
-                    ))}
-                    <div className="text-xs text-muted-foreground px-2 py-1 font-medium mt-2">
-                      Estéticos
-                    </div>
-                    {DERMATOLOGY_PROCEDURE_TYPES.filter(p => p.category === 'estetico').map(proc => (
-                      <SelectItem key={proc.value} value={proc.value}>
-                        {proc.label}
-                      </SelectItem>
-                    ))}
-                    <div className="text-xs text-muted-foreground px-2 py-1 font-medium mt-2">
-                      Outros
-                    </div>
-                    {DERMATOLOGY_PROCEDURE_TYPES.filter(p => p.category === 'outro').map(proc => (
-                      <SelectItem key={proc.value} value={proc.value}>
-                        {proc.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {catalog.length === 0 ? (
+                  <div className="rounded-md border border-dashed bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                    {catalogLoading
+                      ? 'Carregando procedimentos...'
+                      : 'Nenhum procedimento ativo cadastrado para esta especialidade. Cadastre em Configurações › Procedimentos.'}
+                  </div>
+                ) : (
+                  <Select
+                    value={formData.procedure_id ?? ''}
+                    onValueChange={(id) => {
+                      const found = catalog.find(p => p.id === id);
+                      setFormData(prev => ({
+                        ...prev,
+                        procedure_id: id,
+                        tipo_procedimento: found?.name ?? prev.tipo_procedimento,
+                      }));
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o procedimento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {catalog.map(p => (
+                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
               {/* Data */}
