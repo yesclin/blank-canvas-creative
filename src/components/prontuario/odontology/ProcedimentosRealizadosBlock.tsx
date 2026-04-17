@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useProcedureCatalog } from "@/hooks/prontuario/useProcedureCatalog";
 
 /**
  * Estrutura de um procedimento realizado
@@ -71,7 +72,11 @@ interface ProcedimentosRealizadosBlockProps {
   saving?: boolean;
   canEdit?: boolean;
   professionals?: { id: string; name: string }[];
-  onSave: (data: Omit<ProcedimentoRealizado, 'id' | 'patient_id' | 'created_at' | 'created_by' | 'professional_name'>) => Promise<void>;
+  /** Clinic context — required to load the official procedure catalog */
+  clinicId?: string | null;
+  /** Active specialty — filters the catalog */
+  specialtyId?: string | null;
+  onSave: (data: Omit<ProcedimentoRealizado, 'id' | 'patient_id' | 'created_at' | 'created_by' | 'professional_name'> & { procedure_id?: string | null }) => Promise<void>;
   onNavigateToOdontograma?: (toothCode: string) => void;
 }
 
@@ -85,27 +90,11 @@ const FACES_DENTARIAS = [
   { value: 'I', label: 'Incisal' },
 ];
 
-// Procedimentos comuns (sugestões)
-const PROCEDIMENTOS_COMUNS = [
-  'Restauração em resina',
-  'Restauração em amálgama',
-  'Extração simples',
-  'Extração de siso',
-  'Tratamento de canal',
-  'Profilaxia',
-  'Raspagem',
-  'Aplicação de flúor',
-  'Selante',
-  'Clareamento',
-  'Instalação de prótese',
-  'Ajuste oclusal',
-  'Gengivectomia',
-  'Gengivoplastia',
-  'Implante',
-  'Enxerto ósseo',
-];
+// NOTE: The official procedure catalog now comes from the `procedures` table
+// (cadastrados em /app/config/procedimentos). Any hardcoded list was removed.
 
 type FormDataType = {
+  procedure_id: string;
   procedimento: string;
   procedimento_codigo: string;
   dente: string;
@@ -117,6 +106,7 @@ type FormDataType = {
 };
 
 const getEmptyFormData = (): FormDataType => ({
+  procedure_id: '',
   procedimento: '',
   procedimento_codigo: '',
   dente: '',
@@ -145,6 +135,8 @@ export function ProcedimentosRealizadosBlock({
   saving = false,
   canEdit = false,
   professionals = [],
+  clinicId,
+  specialtyId,
   onSave,
   onNavigateToOdontograma,
 }: ProcedimentosRealizadosBlockProps) {
@@ -154,6 +146,12 @@ export function ProcedimentosRealizadosBlock({
   const [filterDente, setFilterDente] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Official catalog from /app/config/procedimentos
+  const { procedures: catalog, isLoading: catalogLoading } = useProcedureCatalog({
+    clinicId,
+    specialtyId,
+  });
 
   const handleStartAdd = () => {
     setFormData(getEmptyFormData());
@@ -165,9 +163,18 @@ export function ProcedimentosRealizadosBlock({
     setFormData(getEmptyFormData());
   };
 
+  const handleSelectProcedure = (id: string) => {
+    const found = catalog.find(p => p.id === id);
+    setFormData(prev => ({
+      ...prev,
+      procedure_id: id,
+      procedimento: found?.name ?? prev.procedimento,
+    }));
+  };
+
   const handleSave = async () => {
     if (!formData.procedimento.trim() || !formData.dente.trim() || !formData.professional_id) return;
-    
+
     await onSave({
       procedimento: formData.procedimento,
       procedimento_codigo: formData.procedimento_codigo || undefined,
@@ -177,6 +184,7 @@ export function ProcedimentosRealizadosBlock({
       data_realizacao: formData.data_realizacao,
       observacoes: formData.observacoes || undefined,
       appointment_id: formData.appointment_id || undefined,
+      procedure_id: formData.procedure_id || null,
     });
     setIsAdding(false);
     setFormData(getEmptyFormData());
@@ -418,20 +426,27 @@ export function ProcedimentosRealizadosBlock({
 
           <ScrollArea className="max-h-[60vh]">
             <div className="space-y-5 pr-2">
-              {/* Procedimento */}
+              {/* Procedimento (catálogo oficial) */}
               <div className="space-y-2">
                 <Label>Procedimento *</Label>
-                <Input
-                  placeholder="Digite ou selecione o procedimento..."
-                  value={formData.procedimento}
-                  onChange={(e) => setFormData(prev => ({ ...prev, procedimento: e.target.value }))}
-                  list="procedimentos-list"
-                />
-                <datalist id="procedimentos-list">
-                  {PROCEDIMENTOS_COMUNS.map(p => (
-                    <option key={p} value={p} />
-                  ))}
-                </datalist>
+                {catalog.length === 0 ? (
+                  <div className="rounded-md border border-dashed bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                    {catalogLoading
+                      ? 'Carregando procedimentos...'
+                      : 'Nenhum procedimento ativo cadastrado. Cadastre em Configurações › Procedimentos.'}
+                  </div>
+                ) : (
+                  <Select value={formData.procedure_id} onValueChange={handleSelectProcedure}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o procedimento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {catalog.map(p => (
+                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
               {/* Código */}

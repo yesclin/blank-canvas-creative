@@ -63,6 +63,7 @@ import {
   useDeletePerformedProcedure,
   type CreatePerformedProcedureInput,
 } from '@/hooks/prontuario/usePerformedProcedures';
+import { useProcedureCatalog } from '@/hooks/prontuario/useProcedureCatalog';
 
 interface Props {
   patientId: string;
@@ -84,24 +85,6 @@ const STATUS_COLORS: Record<string, string> = {
   parcial: 'bg-yellow-100 text-yellow-800 border-yellow-200',
   cancelado: 'bg-red-100 text-red-800 border-red-200',
 };
-
-const PROCEDURE_SUGGESTIONS = [
-  'Aplicação de Toxina Botulínica',
-  'Preenchimento com Ácido Hialurônico',
-  'Bioestimulador de Colágeno',
-  'Skinbooster',
-  'Harmonização Facial',
-  'Limpeza de Pele',
-  'Peeling Químico',
-  'Microagulhamento',
-  'Laser Fracionado',
-  'Radiofrequência',
-  'Ultrassom Microfocado',
-  'Criolipólise',
-  'Fios de PDO',
-  'Mesoterapia',
-  'Carboxiterapia',
-];
 
 const REGION_SUGGESTIONS = [
   'Testa',
@@ -132,6 +115,7 @@ export function ProcedimentosRealizadosBlock({
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   // Form state
+  const [procedureId, setProcedureId] = useState<string>('');
   const [procedureName, setProcedureName] = useState('');
   const [region, setRegion] = useState('');
   const [technique, setTechnique] = useState('');
@@ -145,16 +129,29 @@ export function ProcedimentosRealizadosBlock({
     specialtyId,
   );
 
+  // Official procedure catalog from /app/config/procedimentos (single source of truth)
+  const { procedures: catalog, isLoading: catalogLoading } = useProcedureCatalog({
+    clinicId,
+    specialtyId,
+  });
+
   const createMutation = useCreatePerformedProcedure(patientId, appointmentId);
   const deleteMutation = useDeletePerformedProcedure(patientId, appointmentId);
 
   const resetForm = useCallback(() => {
+    setProcedureId('');
     setProcedureName('');
     setRegion('');
     setTechnique('');
     setNotes('');
     setStatus('realizado');
   }, []);
+
+  const handleSelectProcedure = useCallback((id: string) => {
+    setProcedureId(id);
+    const found = catalog.find(p => p.id === id);
+    if (found) setProcedureName(found.name);
+  }, [catalog]);
 
   const handleSave = useCallback(() => {
     if (!procedureName.trim() || !clinicId) return;
@@ -165,6 +162,7 @@ export function ProcedimentosRealizadosBlock({
       professional_id: professionalId ?? null,
       appointment_id: appointmentId ?? null,
       specialty_id: specialtyId ?? null,
+      procedure_id: procedureId || null,
       procedure_name: procedureName.trim(),
       region: region.trim() || null,
       technique: technique.trim() || null,
@@ -178,7 +176,7 @@ export function ProcedimentosRealizadosBlock({
         setDialogOpen(false);
       },
     });
-  }, [procedureName, region, technique, notes, status, clinicId, patientId, professionalId, appointmentId, specialtyId, createMutation, resetForm]);
+  }, [procedureId, procedureName, region, technique, notes, status, clinicId, patientId, professionalId, appointmentId, specialtyId, createMutation, resetForm]);
 
   const handleDelete = useCallback(() => {
     if (!deleteId) return;
@@ -344,15 +342,26 @@ export function ProcedimentosRealizadosBlock({
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Procedimento *</Label>
-              <Input
-                placeholder="Ex: Aplicação de Toxina Botulínica"
-                value={procedureName}
-                onChange={(e) => setProcedureName(e.target.value)}
-                list="proc-suggestions"
-              />
-              <datalist id="proc-suggestions">
-                {PROCEDURE_SUGGESTIONS.map(s => <option key={s} value={s} />)}
-              </datalist>
+              {catalog.length === 0 ? (
+                <div className="rounded-md border border-dashed bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                  {catalogLoading
+                    ? 'Carregando procedimentos...'
+                    : 'Nenhum procedimento ativo cadastrado para esta especialidade. Cadastre em Configurações › Procedimentos.'}
+                </div>
+              ) : (
+                <Select value={procedureId} onValueChange={handleSelectProcedure}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o procedimento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {catalog.map(p => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -408,7 +417,7 @@ export function ProcedimentosRealizadosBlock({
             </Button>
             <Button
               onClick={handleSave}
-              disabled={!procedureName.trim() || createMutation.isPending}
+              disabled={!procedureId || !procedureName.trim() || createMutation.isPending}
             >
               {createMutation.isPending ? 'Salvando...' : 'Salvar'}
             </Button>
