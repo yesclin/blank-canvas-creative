@@ -7,6 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   Select,
   SelectContent,
@@ -22,7 +30,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { 
+import {
   Wrench,
   Plus,
   Calendar,
@@ -34,7 +42,12 @@ import {
   ChevronUp,
   X,
   Save,
-  ExternalLink
+  ExternalLink,
+  ClipboardList,
+  Stethoscope,
+  Package,
+  ShieldAlert,
+  FileText,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -76,7 +89,7 @@ interface ProcedimentosRealizadosBlockProps {
   clinicId?: string | null;
   /** Active specialty — filters the catalog */
   specialtyId?: string | null;
-  onSave: (data: Omit<ProcedimentoRealizado, 'id' | 'patient_id' | 'created_at' | 'created_by' | 'professional_name'> & { procedure_id?: string | null }) => Promise<void>;
+  onSave: (data: Omit<ProcedimentoRealizado, 'id' | 'patient_id' | 'created_at' | 'created_by' | 'professional_name'> & { procedure_id?: string | null; clinical_data?: Record<string, unknown>; status?: string }) => Promise<void>;
   onNavigateToOdontograma?: (toothCode: string) => void;
 }
 
@@ -94,28 +107,99 @@ const FACES_DENTARIAS = [
 // (cadastrados em /app/config/procedimentos). Any hardcoded list was removed.
 
 type FormDataType = {
+  // Identificação
   procedure_id: string;
   procedimento: string;
   procedimento_codigo: string;
+  data_realizacao: string;
+  hora_realizacao: string;
+  professional_id: string;
+  appointment_id: string;
+  // Execução
   dente: string;
   faces: string[];
-  professional_id: string;
-  data_realizacao: string;
+  side: string; // direito/esquerdo/bilateral/central/outro
+  technique: string;
+  dose: string;
+  unit: string;
+  status: string;
+  // Clínico
+  objective: string;
+  immediate_result: string;
+  no_incidents: boolean;
+  incidents_description: string;
+  incidents_conduct: string;
+  post_instructions: string;
+  next_return: string;
+  // Produto
+  product_name: string;
+  product_batch: string;
+  product_manufacturer: string;
+  product_expiry: string;
+  product_consumed: string;
+  // Vínculos
+  link_before_after: boolean;
+  link_facial_map: boolean;
+  link_consent: boolean;
+  // Notas livres
   observacoes: string;
-  appointment_id: string;
+};
+
+const nowHHMM = () => {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 };
 
 const getEmptyFormData = (): FormDataType => ({
   procedure_id: '',
   procedimento: '',
   procedimento_codigo: '',
+  data_realizacao: format(new Date(), 'yyyy-MM-dd'),
+  hora_realizacao: nowHHMM(),
+  professional_id: '',
+  appointment_id: '',
   dente: '',
   faces: [],
-  professional_id: '',
-  data_realizacao: format(new Date(), 'yyyy-MM-dd'),
+  side: '',
+  technique: '',
+  dose: '',
+  unit: '',
+  status: 'realizado',
+  objective: '',
+  immediate_result: '',
+  no_incidents: true,
+  incidents_description: '',
+  incidents_conduct: '',
+  post_instructions: '',
+  next_return: '',
+  product_name: '',
+  product_batch: '',
+  product_manufacturer: '',
+  product_expiry: '',
+  product_consumed: '',
+  link_before_after: false,
+  link_facial_map: false,
+  link_consent: false,
   observacoes: '',
-  appointment_id: '',
 });
+
+const SIDE_OPTIONS = [
+  { value: 'direito', label: 'Direito' },
+  { value: 'esquerdo', label: 'Esquerdo' },
+  { value: 'bilateral', label: 'Bilateral' },
+  { value: 'central', label: 'Central' },
+  { value: 'outro', label: 'Outro' },
+];
+
+const UNIT_OPTIONS = ['ml', 'U/UI', 'ampola', 'seringa', 'sessão', 'unidade'];
+
+const STATUS_OPTIONS = [
+  { value: 'planejado', label: 'Planejado' },
+  { value: 'parcial', label: 'Parcial' },
+  { value: 'realizado', label: 'Realizado' },
+  { value: 'interrompido', label: 'Interrompido' },
+  { value: 'reagendado', label: 'Reagendado' },
+];
 
 /**
  * PROCEDIMENTOS REALIZADOS
@@ -175,6 +259,32 @@ export function ProcedimentosRealizadosBlock({
   const handleSave = async () => {
     if (!formData.procedimento.trim() || !formData.dente.trim() || !formData.professional_id) return;
 
+    // Build clinical_data with non-empty fields only
+    const cd: Record<string, unknown> = {};
+    const addStr = (k: string, v: string) => { if (v.trim()) cd[k] = v.trim(); };
+    addStr('side', formData.side);
+    addStr('technique', formData.technique);
+    addStr('dose', formData.dose);
+    addStr('unit', formData.unit);
+    addStr('objective', formData.objective);
+    addStr('immediate_result', formData.immediate_result);
+    addStr('post_instructions', formData.post_instructions);
+    addStr('next_return', formData.next_return);
+    addStr('product_name', formData.product_name);
+    addStr('product_batch', formData.product_batch);
+    addStr('product_manufacturer', formData.product_manufacturer);
+    addStr('product_expiry', formData.product_expiry);
+    addStr('product_consumed', formData.product_consumed);
+    addStr('hora_realizacao', formData.hora_realizacao);
+    if (formData.no_incidents) cd.no_incidents = true;
+    else {
+      addStr('incidents_description', formData.incidents_description);
+      addStr('incidents_conduct', formData.incidents_conduct);
+    }
+    if (formData.link_before_after) cd.link_before_after = true;
+    if (formData.link_facial_map) cd.link_facial_map = true;
+    if (formData.link_consent) cd.link_consent = true;
+
     await onSave({
       procedimento: formData.procedimento,
       procedimento_codigo: formData.procedimento_codigo || undefined,
@@ -185,6 +295,8 @@ export function ProcedimentosRealizadosBlock({
       observacoes: formData.observacoes || undefined,
       appointment_id: formData.appointment_id || undefined,
       procedure_id: formData.procedure_id || null,
+      status: formData.status,
+      clinical_data: cd,
     });
     setIsAdding(false);
     setFormData(getEmptyFormData());
@@ -411,127 +523,391 @@ export function ProcedimentosRealizadosBlock({
         </div>
       )}
 
-      {/* Add Dialog */}
+      {/* Add Dialog — ENRIQUECIDO em 6 blocos clínicos */}
       <Dialog open={isAdding} onOpenChange={setIsAdding}>
-        <DialogContent className="sm:max-w-[550px]">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Wrench className="h-5 w-5 text-primary" />
               Registrar Procedimento
             </DialogTitle>
             <DialogDescription>
-              O procedimento será vinculado automaticamente ao odontograma.
+              Registro estruturado e completo do procedimento odontológico realizado.
+              Vinculado automaticamente ao odontograma.
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="max-h-[60vh]">
-            <div className="space-y-5 pr-2">
-              {/* Procedimento (catálogo oficial) */}
-              <div className="space-y-2">
-                <Label>Procedimento *</Label>
-                {catalog.length === 0 ? (
-                  <div className="rounded-md border border-dashed bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-                    {catalogLoading
-                      ? 'Carregando procedimentos...'
-                      : 'Nenhum procedimento ativo cadastrado. Cadastre em Configurações › Procedimentos.'}
+          <ScrollArea className="max-h-[70vh]">
+            <div className="space-y-5 pr-3">
+              {/* === BLOCO 1: IDENTIFICAÇÃO === */}
+              <section className="space-y-3">
+                <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                  <ClipboardList className="h-4 w-4 text-primary" />
+                  Identificação
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Data *</Label>
+                    <Input
+                      type="date"
+                      value={formData.data_realizacao}
+                      onChange={(e) => setFormData(prev => ({ ...prev, data_realizacao: e.target.value }))}
+                    />
                   </div>
-                ) : (
-                  <Select value={formData.procedure_id} onValueChange={handleSelectProcedure}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o procedimento" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {catalog.map(p => (
-                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-
-              {/* Código */}
-              <div className="space-y-2">
-                <Label>Código (opcional)</Label>
-                <Input
-                  placeholder="Ex: 81000065"
-                  value={formData.procedimento_codigo}
-                  onChange={(e) => setFormData(prev => ({ ...prev, procedimento_codigo: e.target.value }))}
-                />
-              </div>
-
-              {/* Dente */}
-              <div className="space-y-2">
-                <Label>Dente *</Label>
-                <Input
-                  placeholder="Ex: 16, 26, 47..."
-                  value={formData.dente}
-                  onChange={(e) => setFormData(prev => ({ ...prev, dente: e.target.value }))}
-                />
-              </div>
-
-              {/* Faces */}
-              <div className="space-y-2">
-                <Label>Face(s) Dentária(s)</Label>
-                <div className="flex flex-wrap gap-2">
-                  {FACES_DENTARIAS.map(face => (
-                    <Button
-                      key={face.value}
-                      type="button"
-                      variant={formData.faces.includes(face.value) ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => toggleFace(face.value)}
-                      className="min-w-[80px]"
+                  <div className="space-y-1.5">
+                    <Label>Hora</Label>
+                    <Input
+                      type="time"
+                      value={formData.hora_realizacao}
+                      onChange={(e) => setFormData(prev => ({ ...prev, hora_realizacao: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5 col-span-2">
+                    <Label>Profissional Responsável *</Label>
+                    <Select
+                      value={formData.professional_id}
+                      onValueChange={(v) => setFormData(prev => ({ ...prev, professional_id: v }))}
                     >
-                      <span className="font-mono mr-1">{face.value}</span>
-                      <span className="text-xs opacity-75">({face.label})</span>
-                    </Button>
-                  ))}
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o profissional" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {professionals.map(prof => (
+                          <SelectItem key={prof.id} value={prof.id}>{prof.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                {formData.faces.length > 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    Selecionado: <span className="font-mono font-medium">{formData.faces.join('')}</span>
-                  </p>
-                )}
-              </div>
+              </section>
 
-              {/* Profissional */}
-              <div className="space-y-2">
-                <Label>Profissional Responsável *</Label>
-                <Select
-                  value={formData.professional_id}
-                  onValueChange={(v) => setFormData(prev => ({ ...prev, professional_id: v }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o profissional" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {professionals.map(prof => (
-                      <SelectItem key={prof.id} value={prof.id}>
-                        {prof.name}
-                      </SelectItem>
+              <Separator />
+
+              {/* === BLOCO 2: EXECUÇÃO === */}
+              <section className="space-y-3">
+                <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                  <Stethoscope className="h-4 w-4 text-primary" />
+                  Execução
+                </h3>
+
+                <div className="space-y-1.5">
+                  <Label>Procedimento *</Label>
+                  {catalog.length === 0 ? (
+                    <div className="rounded-md border border-dashed bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                      {catalogLoading
+                        ? 'Carregando procedimentos...'
+                        : 'Nenhum procedimento ativo cadastrado. Cadastre em Configurações › Procedimentos.'}
+                    </div>
+                  ) : (
+                    <Select value={formData.procedure_id} onValueChange={handleSelectProcedure}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o procedimento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {catalog.map(p => (
+                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Código (opcional)</Label>
+                    <Input
+                      placeholder="Ex: 81000065"
+                      value={formData.procedimento_codigo}
+                      onChange={(e) => setFormData(prev => ({ ...prev, procedimento_codigo: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Dente *</Label>
+                    <Input
+                      placeholder="Ex: 16, 26, 47..."
+                      value={formData.dente}
+                      onChange={(e) => setFormData(prev => ({ ...prev, dente: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>Face(s) Dentária(s)</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {FACES_DENTARIAS.map(face => (
+                      <Button
+                        key={face.value}
+                        type="button"
+                        variant={formData.faces.includes(face.value) ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => toggleFace(face.value)}
+                        className="min-w-[80px]"
+                      >
+                        <span className="font-mono mr-1">{face.value}</span>
+                        <span className="text-xs opacity-75">({face.label})</span>
+                      </Button>
                     ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  </div>
+                  {formData.faces.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Selecionado: <span className="font-mono font-medium">{formData.faces.join('')}</span>
+                    </p>
+                  )}
+                </div>
 
-              {/* Data */}
-              <div className="space-y-2">
-                <Label>Data de Realização *</Label>
-                <Input
-                  type="date"
-                  value={formData.data_realizacao}
-                  onChange={(e) => setFormData(prev => ({ ...prev, data_realizacao: e.target.value }))}
-                />
-              </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Lado / Local</Label>
+                    <Select value={formData.side} onValueChange={(v) => setFormData(prev => ({ ...prev, side: v }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SIDE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Técnica</Label>
+                    <Input
+                      placeholder="Ex: Restauração direta classe II"
+                      value={formData.technique}
+                      onChange={(e) => setFormData(prev => ({ ...prev, technique: e.target.value }))}
+                    />
+                  </div>
+                </div>
 
-              {/* Observações */}
-              <div className="space-y-2">
-                <Label>Observações</Label>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Quantidade / Dose</Label>
+                    <Input
+                      inputMode="decimal"
+                      placeholder="Ex: 1.5"
+                      value={formData.dose}
+                      onChange={(e) => setFormData(prev => ({ ...prev, dose: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Unidade</Label>
+                    <Select value={formData.unit} onValueChange={(v) => setFormData(prev => ({ ...prev, unit: v }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Unidade" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {UNIT_OPTIONS.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Status *</Label>
+                    <Select value={formData.status} onValueChange={(v) => setFormData(prev => ({ ...prev, status: v }))}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STATUS_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </section>
+
+              <Separator />
+
+              {/* === BLOCOS COLAPSÁVEIS === */}
+              <Accordion type="multiple" className="w-full">
+                {/* BLOCO 3: CLÍNICO */}
+                <AccordionItem value="clinical">
+                  <AccordionTrigger className="text-sm font-semibold">
+                    <span className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-primary" />
+                      Objetivo clínico e pós-procedimento
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-3 pt-2">
+                    <div className="space-y-1.5">
+                      <Label>Objetivo / Indicação</Label>
+                      <Textarea
+                        rows={2}
+                        placeholder="Indicação clínica do procedimento"
+                        value={formData.objective}
+                        onChange={(e) => setFormData(prev => ({ ...prev, objective: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Resultado imediato</Label>
+                      <Textarea
+                        rows={2}
+                        placeholder="Avaliação inicial do ato realizado"
+                        value={formData.immediate_result}
+                        onChange={(e) => setFormData(prev => ({ ...prev, immediate_result: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Orientações pós-procedimento</Label>
+                      <Textarea
+                        rows={2}
+                        placeholder="Cuidados, restrições, sinais de alerta"
+                        value={formData.post_instructions}
+                        onChange={(e) => setFormData(prev => ({ ...prev, post_instructions: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Retorno sugerido</Label>
+                      <Input
+                        placeholder="Ex: 7 dias para reavaliação"
+                        value={formData.next_return}
+                        onChange={(e) => setFormData(prev => ({ ...prev, next_return: e.target.value }))}
+                      />
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* BLOCO 4: PRODUTO E RASTREABILIDADE */}
+                <AccordionItem value="product">
+                  <AccordionTrigger className="text-sm font-semibold">
+                    <span className="flex items-center gap-2">
+                      <Package className="h-4 w-4 text-primary" />
+                      Produto e rastreabilidade
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-3 pt-2">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label>Produto utilizado</Label>
+                        <Input
+                          placeholder="Nome comercial"
+                          value={formData.product_name}
+                          onChange={(e) => setFormData(prev => ({ ...prev, product_name: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Fabricante</Label>
+                        <Input
+                          value={formData.product_manufacturer}
+                          onChange={(e) => setFormData(prev => ({ ...prev, product_manufacturer: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Lote</Label>
+                        <Input
+                          value={formData.product_batch}
+                          onChange={(e) => setFormData(prev => ({ ...prev, product_batch: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Validade</Label>
+                        <Input
+                          type="date"
+                          value={formData.product_expiry}
+                          onChange={(e) => setFormData(prev => ({ ...prev, product_expiry: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-1.5 col-span-2">
+                        <Label>Quantidade consumida</Label>
+                        <Input
+                          placeholder="Ex: 1 ampola, 0.5 ml"
+                          value={formData.product_consumed}
+                          onChange={(e) => setFormData(prev => ({ ...prev, product_consumed: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* BLOCO 5: SEGURANÇA */}
+                <AccordionItem value="safety">
+                  <AccordionTrigger className="text-sm font-semibold">
+                    <span className="flex items-center gap-2">
+                      <ShieldAlert className="h-4 w-4 text-primary" />
+                      Segurança e intercorrências
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-3 pt-2">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="odo-no-incidents"
+                        checked={formData.no_incidents}
+                        onCheckedChange={(v) => setFormData(prev => ({ ...prev, no_incidents: !!v }))}
+                      />
+                      <Label htmlFor="odo-no-incidents" className="cursor-pointer font-normal">
+                        Sem intercorrências durante o procedimento
+                      </Label>
+                    </div>
+                    {!formData.no_incidents && (
+                      <>
+                        <div className="space-y-1.5">
+                          <Label>Descrição da intercorrência</Label>
+                          <Textarea
+                            rows={2}
+                            value={formData.incidents_description}
+                            onChange={(e) => setFormData(prev => ({ ...prev, incidents_description: e.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label>Conduta adotada</Label>
+                          <Textarea
+                            rows={2}
+                            value={formData.incidents_conduct}
+                            onChange={(e) => setFormData(prev => ({ ...prev, incidents_conduct: e.target.value }))}
+                          />
+                        </div>
+                      </>
+                    )}
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* BLOCO 6: VÍNCULOS */}
+                <AccordionItem value="links">
+                  <AccordionTrigger className="text-sm font-semibold">
+                    <span className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-primary" />
+                      Vínculos adicionais
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-2 pt-2">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="odo-link-ba"
+                        checked={formData.link_before_after}
+                        onCheckedChange={(v) => setFormData(prev => ({ ...prev, link_before_after: !!v }))}
+                      />
+                      <Label htmlFor="odo-link-ba" className="cursor-pointer font-normal">
+                        Vincular fotos antes/depois
+                      </Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="odo-link-fm"
+                        checked={formData.link_facial_map}
+                        onCheckedChange={(v) => setFormData(prev => ({ ...prev, link_facial_map: !!v }))}
+                      />
+                      <Label htmlFor="odo-link-fm" className="cursor-pointer font-normal">
+                        Vincular mapa/odontograma
+                      </Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="odo-link-consent"
+                        checked={formData.link_consent}
+                        onCheckedChange={(v) => setFormData(prev => ({ ...prev, link_consent: !!v }))}
+                      />
+                      <Label htmlFor="odo-link-consent" className="cursor-pointer font-normal">
+                        Vincular termo/consentimento
+                      </Label>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+
+              {/* OBSERVAÇÕES RÁPIDAS */}
+              <div className="space-y-1.5">
+                <Label>Observações rápidas</Label>
                 <Textarea
-                  placeholder="Observações sobre o procedimento..."
+                  placeholder="Resumo curto que aparece na lista..."
                   value={formData.observacoes}
                   onChange={(e) => setFormData(prev => ({ ...prev, observacoes: e.target.value }))}
-                  rows={3}
+                  rows={2}
                   className="resize-none"
                 />
               </div>
@@ -543,12 +919,12 @@ export function ProcedimentosRealizadosBlock({
               <X className="h-4 w-4 mr-1" />
               Cancelar
             </Button>
-            <Button 
-              onClick={handleSave} 
+            <Button
+              onClick={handleSave}
               disabled={saving || !formData.procedimento.trim() || !formData.dente.trim() || !formData.professional_id}
             >
               <Save className="h-4 w-4 mr-1" />
-              {saving ? 'Salvando...' : 'Salvar'}
+              {saving ? 'Salvando...' : 'Salvar procedimento'}
             </Button>
           </DialogFooter>
         </DialogContent>
