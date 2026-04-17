@@ -426,20 +426,27 @@ export function ProcedimentosRealizadosBlock({
 
           <ScrollArea className="max-h-[60vh]">
             <div className="space-y-5 pr-2">
-              {/* Procedimento */}
+              {/* Procedimento (catálogo oficial) */}
               <div className="space-y-2">
                 <Label>Procedimento *</Label>
-                <Input
-                  placeholder="Digite ou selecione o procedimento..."
-                  value={formData.procedimento}
-                  onChange={(e) => setFormData(prev => ({ ...prev, procedimento: e.target.value }))}
-                  list="procedimentos-list"
-                />
-                <datalist id="procedimentos-list">
-                  {PROCEDIMENTOS_COMUNS.map(p => (
-                    <option key={p} value={p} />
-                  ))}
-                </datalist>
+                {catalog.length === 0 ? (
+                  <div className="rounded-md border border-dashed bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                    {catalogLoading
+                      ? 'Carregando procedimentos...'
+                      : 'Nenhum procedimento ativo cadastrado. Cadastre em Configurações › Procedimentos.'}
+                  </div>
+                ) : (
+                  <Select value={formData.procedure_id} onValueChange={handleSelectProcedure}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o procedimento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {catalog.map(p => (
+                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
               {/* Código */}
