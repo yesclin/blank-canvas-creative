@@ -246,6 +246,32 @@ export function ProcedimentosRealizadosBlock({
   const handleSave = async () => {
     if (!formData.procedimento.trim() || !formData.dente.trim() || !formData.professional_id) return;
 
+    // Build clinical_data with non-empty fields only
+    const cd: Record<string, unknown> = {};
+    const addStr = (k: string, v: string) => { if (v.trim()) cd[k] = v.trim(); };
+    addStr('side', formData.side);
+    addStr('technique', formData.technique);
+    addStr('dose', formData.dose);
+    addStr('unit', formData.unit);
+    addStr('objective', formData.objective);
+    addStr('immediate_result', formData.immediate_result);
+    addStr('post_instructions', formData.post_instructions);
+    addStr('next_return', formData.next_return);
+    addStr('product_name', formData.product_name);
+    addStr('product_batch', formData.product_batch);
+    addStr('product_manufacturer', formData.product_manufacturer);
+    addStr('product_expiry', formData.product_expiry);
+    addStr('product_consumed', formData.product_consumed);
+    addStr('hora_realizacao', formData.hora_realizacao);
+    if (formData.no_incidents) cd.no_incidents = true;
+    else {
+      addStr('incidents_description', formData.incidents_description);
+      addStr('incidents_conduct', formData.incidents_conduct);
+    }
+    if (formData.link_before_after) cd.link_before_after = true;
+    if (formData.link_facial_map) cd.link_facial_map = true;
+    if (formData.link_consent) cd.link_consent = true;
+
     await onSave({
       procedimento: formData.procedimento,
       procedimento_codigo: formData.procedimento_codigo || undefined,
@@ -256,6 +282,8 @@ export function ProcedimentosRealizadosBlock({
       observacoes: formData.observacoes || undefined,
       appointment_id: formData.appointment_id || undefined,
       procedure_id: formData.procedure_id || null,
+      status: formData.status,
+      clinical_data: cd,
     });
     setIsAdding(false);
     setFormData(getEmptyFormData());
