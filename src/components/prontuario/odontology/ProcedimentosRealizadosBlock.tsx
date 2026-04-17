@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useProcedureCatalog } from "@/hooks/prontuario/useProcedureCatalog";
 
 /**
  * Estrutura de um procedimento realizado
@@ -93,6 +94,7 @@ const FACES_DENTARIAS = [
 // (cadastrados em /app/config/procedimentos). Any hardcoded list was removed.
 
 type FormDataType = {
+  procedure_id: string;
   procedimento: string;
   procedimento_codigo: string;
   dente: string;
@@ -104,6 +106,7 @@ type FormDataType = {
 };
 
 const getEmptyFormData = (): FormDataType => ({
+  procedure_id: '',
   procedimento: '',
   procedimento_codigo: '',
   dente: '',
@@ -132,6 +135,8 @@ export function ProcedimentosRealizadosBlock({
   saving = false,
   canEdit = false,
   professionals = [],
+  clinicId,
+  specialtyId,
   onSave,
   onNavigateToOdontograma,
 }: ProcedimentosRealizadosBlockProps) {
@@ -141,6 +146,12 @@ export function ProcedimentosRealizadosBlock({
   const [filterDente, setFilterDente] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Official catalog from /app/config/procedimentos
+  const { procedures: catalog, isLoading: catalogLoading } = useProcedureCatalog({
+    clinicId,
+    specialtyId,
+  });
 
   const handleStartAdd = () => {
     setFormData(getEmptyFormData());
@@ -152,9 +163,18 @@ export function ProcedimentosRealizadosBlock({
     setFormData(getEmptyFormData());
   };
 
+  const handleSelectProcedure = (id: string) => {
+    const found = catalog.find(p => p.id === id);
+    setFormData(prev => ({
+      ...prev,
+      procedure_id: id,
+      procedimento: found?.name ?? prev.procedimento,
+    }));
+  };
+
   const handleSave = async () => {
     if (!formData.procedimento.trim() || !formData.dente.trim() || !formData.professional_id) return;
-    
+
     await onSave({
       procedimento: formData.procedimento,
       procedimento_codigo: formData.procedimento_codigo || undefined,
@@ -164,6 +184,7 @@ export function ProcedimentosRealizadosBlock({
       data_realizacao: formData.data_realizacao,
       observacoes: formData.observacoes || undefined,
       appointment_id: formData.appointment_id || undefined,
+      procedure_id: formData.procedure_id || null,
     });
     setIsAdding(false);
     setFormData(getEmptyFormData());
