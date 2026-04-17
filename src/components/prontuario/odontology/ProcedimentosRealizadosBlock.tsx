@@ -71,7 +71,11 @@ interface ProcedimentosRealizadosBlockProps {
   saving?: boolean;
   canEdit?: boolean;
   professionals?: { id: string; name: string }[];
-  onSave: (data: Omit<ProcedimentoRealizado, 'id' | 'patient_id' | 'created_at' | 'created_by' | 'professional_name'>) => Promise<void>;
+  /** Clinic context — required to load the official procedure catalog */
+  clinicId?: string | null;
+  /** Active specialty — filters the catalog */
+  specialtyId?: string | null;
+  onSave: (data: Omit<ProcedimentoRealizado, 'id' | 'patient_id' | 'created_at' | 'created_by' | 'professional_name'> & { procedure_id?: string | null }) => Promise<void>;
   onNavigateToOdontograma?: (toothCode: string) => void;
 }
 
@@ -85,25 +89,8 @@ const FACES_DENTARIAS = [
   { value: 'I', label: 'Incisal' },
 ];
 
-// Procedimentos comuns (sugestões)
-const PROCEDIMENTOS_COMUNS = [
-  'Restauração em resina',
-  'Restauração em amálgama',
-  'Extração simples',
-  'Extração de siso',
-  'Tratamento de canal',
-  'Profilaxia',
-  'Raspagem',
-  'Aplicação de flúor',
-  'Selante',
-  'Clareamento',
-  'Instalação de prótese',
-  'Ajuste oclusal',
-  'Gengivectomia',
-  'Gengivoplastia',
-  'Implante',
-  'Enxerto ósseo',
-];
+// NOTE: The official procedure catalog now comes from the `procedures` table
+// (cadastrados em /app/config/procedimentos). Any hardcoded list was removed.
 
 type FormDataType = {
   procedimento: string;
