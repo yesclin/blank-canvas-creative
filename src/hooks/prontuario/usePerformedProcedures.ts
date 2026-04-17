@@ -21,6 +21,7 @@ export interface PerformedProcedure {
   notes: string | null;
   status: string;
   performed_at: string;
+  clinical_data: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;
@@ -44,6 +45,7 @@ export interface CreatePerformedProcedureInput {
   notes?: string | null;
   status?: string;
   performed_at?: string;
+  clinical_data?: Record<string, unknown>;
   created_by?: string | null;
 }
 
