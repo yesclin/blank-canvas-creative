@@ -32,6 +32,8 @@ export interface SearchResult {
   date: string;
   tabKey: string;
   highlight: string[];
+  sourceTable?: string;
+  sourceRecordId?: string | null;
 }
 
 interface MedicalRecordEntry {
@@ -69,6 +71,10 @@ interface ProntuarioSearchBarProps {
   patientId?: string | null;
   clinicId?: string | null;
   specialtyId?: string | null;
+  specialtyKey?: string | null;
+  appointmentId?: string | null;
+  professionalId?: string | null;
+  procedureId?: string | null;
   onResultClick: (result: SearchResult) => void;
   onNavigateToTab: (tabKey: string) => void;
   className?: string;
@@ -82,6 +88,8 @@ interface RemoteHit {
   snippet: string;
   date: string;
   tabKey: string;
+  sourceTable: string;
+  sourceRecordId?: string | null;
 }
 
 const filterOptions: { id: SearchResultType | 'all'; label: string; icon: React.ReactNode }[] = [
@@ -102,7 +110,9 @@ const dateRangeOptions = [
 // Map entry_type to tab key
 const entryTypeToTab: Record<string, string> = {
   'anamnese': 'anamnese',
+  'anamnesis': 'anamnese',
   'evolucao': 'evolucao',
+  'evolution': 'evolucao',
   'diagnostico': 'diagnostico',
   'prescricao': 'prescricoes',
   'procedimento': 'procedimentos',
@@ -115,7 +125,9 @@ const categoryLabels: Record<string, string> = {
   'file': 'Arquivo',
   'alert': 'Alerta',
   'anamnese': 'Anamnese',
+  'anamnesis': 'Anamnese',
   'evolucao': 'Evolução',
+  'evolution': 'Evolução',
   'diagnostico': 'Diagnóstico',
   'prescricao': 'Prescrição',
   'procedimento': 'Procedimento',
@@ -123,6 +135,80 @@ const categoryLabels: Record<string, string> = {
   'document': 'Documento',
   'image': 'Imagem',
   'report': 'Laudo',
+  'clinical_document': 'Documento Clínico',
+  'addendum': 'Adendo',
+  'facial_map': 'Mapa Facial',
+  'produto': 'Produto',
+  'procedimento_realizado': 'Procedimento',
+  'before_after': 'Antes e Depois',
+};
+
+const normalizeText = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
+const includesSearchTerm = (value: string, term: string) => {
+  if (!value.trim() || !term.trim()) return false;
+  return normalizeText(value).includes(normalizeText(term));
+};
+
+const extractSearchText = (value: unknown): string => {
+  const chunks: string[] = [];
+
+  const visit = (current: unknown) => {
+    if (current === null || current === undefined) return;
+
+    if (typeof current === 'string' || typeof current === 'number' || typeof current === 'boolean') {
+      chunks.push(String(current));
+      return;
+    }
+
+    if (Array.isArray(current)) {
+      current.forEach(visit);
+      return;
+    }
+
+    if (typeof current === 'object') {
+      Object.entries(current as Record<string, unknown>).forEach(([key, nestedValue]) => {
+        chunks.push(key.replace(/[_-]/g, ' '));
+        visit(nestedValue);
+      });
+    }
+  };
+
+  visit(value);
+
+  return chunks.join(' ').replace(/\s+/g, ' ').trim();
+};
+
+const buildSnippet = (text: string, term: string, fallback: string) => {
+  const cleanText = text.replace(/\s+/g, ' ').trim();
+  if (!cleanText) return fallback;
+
+  const plainText = cleanText.toLowerCase();
+  const plainTerm = term.toLowerCase();
+  const termIndex = plainText.indexOf(plainTerm);
+
+  if (termIndex === -1) {
+    return cleanText.length > 180 ? `${cleanText.slice(0, 177)}...` : cleanText;
+  }
+
+  const start = Math.max(0, termIndex - 60);
+  const end = Math.min(cleanText.length, termIndex + term.length + 100);
+
+  return `${start > 0 ? '...' : ''}${cleanText.slice(start, end)}${end < cleanText.length ? '...' : ''}`;
+};
+
+const resolveEvolutionTab = (evolutionType?: string | null) => {
+  const normalizedType = (evolutionType || '').toLowerCase();
+
+  if (normalizedType.includes('diagnost')) return 'diagnostico';
+  if (normalizedType.includes('conduta') || normalizedType.includes('plano')) return 'conduta';
+  if (normalizedType.includes('exam')) return 'exame_fisico';
+
+  return 'evolucao';
 };
 
 export function ProntuarioSearchBar({ 
@@ -132,6 +218,10 @@ export function ProntuarioSearchBar({
   patientId,
   clinicId,
   specialtyId,
+  specialtyKey,
+  appointmentId,
+  professionalId,
+  procedureId,
   onResultClick,
   onNavigateToTab,
   className
@@ -173,7 +263,7 @@ export function ProntuarioSearchBar({
     }
   }, [query]);
 
-  // Remote DB search: clinical_documents, clinical_media, clinical_addendums, clinical_alerts
+  // Remote DB search: clinical record tables + specialty-specific sources
   useEffect(() => {
     if (!debouncedQuery || debouncedQuery.length < 2 || !patientId || !clinicId) {
       setRemoteHits([]);
@@ -181,116 +271,458 @@ export function ProntuarioSearchBar({
     }
     let cancelled = false;
     const term = debouncedQuery.trim();
-    const like = `%${term}%`;
 
     (async () => {
       try {
-        const [docsRes, mediaRes, addRes, alertsRes] = await Promise.all([
-          supabase
-            .from('clinical_documents')
-            .select('id, title, document_type, content, created_at, signed_at')
-            .eq('clinic_id', clinicId)
-            .eq('patient_id', patientId)
-            .or(`title.ilike.${like},document_type.ilike.${like}`)
-            .order('created_at', { ascending: false })
-            .limit(15),
-          supabase
-            .from('clinical_media')
-            .select('id, file_name, description, category, created_at')
-            .eq('clinic_id', clinicId)
-            .eq('patient_id', patientId)
-            .or(`file_name.ilike.${like},description.ilike.${like},category.ilike.${like}`)
-            .order('created_at', { ascending: false })
-            .limit(15),
-          supabase
-            .from('clinical_addendums')
-            .select('id, content, reason, record_type, record_id, created_at')
-            .eq('clinic_id', clinicId)
-            .eq('patient_id', patientId)
-            .or(`content.ilike.${like},reason.ilike.${like}`)
-            .order('created_at', { ascending: false })
-            .limit(15),
-          supabase
-            .from('clinical_alerts')
-            .select('id, title, description, alert_type, severity, created_at, is_active')
-            .eq('clinic_id', clinicId)
-            .eq('patient_id', patientId)
-            .or(`title.ilike.${like},description.ilike.${like},alert_type.ilike.${like}`)
-            .order('created_at', { ascending: false })
-            .limit(15),
-        ]);
+        console.log('[ProntuarioSearch] query context', {
+          term,
+          patientId,
+          clinicId,
+          specialtyId: specialtyId || null,
+          specialtyKey: specialtyKey || null,
+          appointmentId: appointmentId || null,
+          professionalId: professionalId || null,
+          procedureId: procedureId || null,
+        });
+
+        const searchDefinitions = [
+          {
+            sourceTable: 'clinical_evolutions',
+            type: 'entry' as const,
+            category: 'evolution',
+            tabKey: 'evolucao',
+            dateField: 'created_at',
+            buildQuery: () => {
+              let query = supabase
+                .from('clinical_evolutions')
+                .select('id, evolution_type, content, notes, created_at, appointment_id, specialty_id, professional_id')
+                .eq('clinic_id', clinicId)
+                .eq('patient_id', patientId)
+                .order('created_at', { ascending: false })
+                .limit(1000);
+
+              if (specialtyId) query = query.eq('specialty_id', specialtyId);
+              if (appointmentId) query = query.eq('appointment_id', appointmentId);
+              if (professionalId) query = query.eq('professional_id', professionalId);
+
+              return query;
+            },
+            toHit: (row: any): RemoteHit | null => {
+              const searchableText = extractSearchText({
+                evolution_type: row.evolution_type,
+                notes: row.notes,
+                content: row.content,
+              });
+
+              if (!includesSearchTerm(searchableText, term)) return null;
+
+              return {
+                id: row.id,
+                type: 'entry',
+                category: row.evolution_type || 'evolution',
+                title: categoryLabels[row.evolution_type] || 'Evolução Clínica',
+                snippet: buildSnippet(searchableText, term, 'Evolução clínica'),
+                date: row.created_at,
+                tabKey: resolveEvolutionTab(row.evolution_type),
+                sourceTable: 'clinical_evolutions',
+                sourceRecordId: row.id,
+              };
+            },
+          },
+          {
+            sourceTable: 'anamnesis_records',
+            type: 'entry' as const,
+            category: 'anamnesis',
+            tabKey: 'anamnese',
+            dateField: 'created_at',
+            buildQuery: () => {
+              let query = supabase
+                .from('anamnesis_records')
+                .select('id, data, responses, created_at, appointment_id, specialty_id, professional_id, status')
+                .eq('clinic_id', clinicId)
+                .eq('patient_id', patientId)
+                .order('created_at', { ascending: false })
+                .limit(1000);
+
+              if (specialtyId) query = query.eq('specialty_id', specialtyId);
+              if (appointmentId) query = query.eq('appointment_id', appointmentId);
+              if (professionalId) query = query.eq('professional_id', professionalId);
+
+              return query;
+            },
+            toHit: (row: any): RemoteHit | null => {
+              const searchableText = extractSearchText({ data: row.data, responses: row.responses, status: row.status });
+              if (!includesSearchTerm(searchableText, term)) return null;
+
+              return {
+                id: row.id,
+                type: 'entry',
+                category: 'anamnesis',
+                title: 'Anamnese',
+                snippet: buildSnippet(searchableText, term, 'Registro de anamnese'),
+                date: row.created_at,
+                tabKey: 'anamnese',
+                sourceTable: 'anamnesis_records',
+                sourceRecordId: row.id,
+              };
+            },
+          },
+          {
+            sourceTable: 'clinical_documents',
+            type: 'file' as const,
+            category: 'clinical_document',
+            tabKey: 'documentos_clinicos',
+            dateField: 'created_at',
+            buildQuery: () => {
+              let query = supabase
+                .from('clinical_documents')
+                .select('id, title, document_type, content, created_at, appointment_id, professional_id, source_record_id')
+                .eq('clinic_id', clinicId)
+                .eq('patient_id', patientId)
+                .order('created_at', { ascending: false })
+                .limit(1000);
+
+              if (appointmentId) query = query.eq('appointment_id', appointmentId);
+              if (professionalId) query = query.eq('professional_id', professionalId);
+
+              return query;
+            },
+            toHit: (row: any): RemoteHit | null => {
+              const searchableText = extractSearchText({ title: row.title, document_type: row.document_type, content: row.content });
+              if (!includesSearchTerm(searchableText, term)) return null;
+
+              return {
+                id: row.id,
+                type: 'file',
+                category: 'clinical_document',
+                title: row.title || row.document_type || 'Documento Clínico',
+                snippet: buildSnippet(searchableText, term, 'Documento clínico'),
+                date: row.created_at,
+                tabKey: 'documentos_clinicos',
+                sourceTable: 'clinical_documents',
+                sourceRecordId: row.source_record_id || row.id,
+              };
+            },
+          },
+          {
+            sourceTable: 'clinical_media',
+            type: 'file' as const,
+            category: 'document',
+            tabKey: 'exames',
+            dateField: 'created_at',
+            buildQuery: () => {
+              let query = supabase
+                .from('clinical_media')
+                .select('id, file_name, description, category, created_at, appointment_id, professional_id, file_type')
+                .eq('clinic_id', clinicId)
+                .eq('patient_id', patientId)
+                .order('created_at', { ascending: false })
+                .limit(1000);
+
+              if (appointmentId) query = query.eq('appointment_id', appointmentId);
+              if (professionalId) query = query.eq('professional_id', professionalId);
+
+              return query;
+            },
+            toHit: (row: any): RemoteHit | null => {
+              const searchableText = extractSearchText(row);
+              if (!includesSearchTerm(searchableText, term)) return null;
+
+              return {
+                id: row.id,
+                type: 'file',
+                category: row.category || (row.file_type?.startsWith('image/') ? 'image' : 'document'),
+                title: row.file_name || 'Arquivo Clínico',
+                snippet: buildSnippet(searchableText, term, row.description || 'Arquivo clínico'),
+                date: row.created_at,
+                tabKey: 'exames',
+                sourceTable: 'clinical_media',
+                sourceRecordId: row.id,
+              };
+            },
+          },
+          {
+            sourceTable: 'clinical_addendums',
+            type: 'entry' as const,
+            category: 'addendum',
+            tabKey: 'evolucao',
+            dateField: 'created_at',
+            buildQuery: () => {
+              let query = supabase
+                .from('clinical_addendums')
+                .select('id, content, reason, record_type, record_id, created_at, specialty_id, professional_id')
+                .eq('clinic_id', clinicId)
+                .eq('patient_id', patientId)
+                .order('created_at', { ascending: false })
+                .limit(1000);
+
+              if (specialtyId) query = query.eq('specialty_id', specialtyId);
+              if (professionalId) query = query.eq('professional_id', professionalId);
+
+              return query;
+            },
+            toHit: (row: any): RemoteHit | null => {
+              const searchableText = extractSearchText(row);
+              if (!includesSearchTerm(searchableText, term)) return null;
+
+              return {
+                id: row.id,
+                type: 'entry',
+                category: 'addendum',
+                title: `Adendo em ${row.record_type || 'registro'}`,
+                snippet: buildSnippet(searchableText, term, row.reason || 'Adendo clínico'),
+                date: row.created_at,
+                tabKey: row.record_type === 'clinical_documents' ? 'documentos_clinicos' : 'evolucao',
+                sourceTable: 'clinical_addendums',
+                sourceRecordId: row.record_id || row.id,
+              };
+            },
+          },
+          {
+            sourceTable: 'clinical_alerts',
+            type: 'alert' as const,
+            category: 'alert',
+            tabKey: 'alertas',
+            dateField: 'created_at',
+            buildQuery: () => {
+              let query = supabase
+                .from('clinical_alerts')
+                .select('id, title, description, alert_type, severity, created_at, appointment_id, is_active')
+                .eq('clinic_id', clinicId)
+                .eq('patient_id', patientId)
+                .order('created_at', { ascending: false })
+                .limit(1000);
+
+              if (appointmentId) query = query.eq('appointment_id', appointmentId);
+
+              return query;
+            },
+            toHit: (row: any): RemoteHit | null => {
+              const searchableText = extractSearchText(row);
+              if (!includesSearchTerm(searchableText, term)) return null;
+
+              return {
+                id: row.id,
+                type: 'alert',
+                category: row.severity || 'info',
+                title: row.title || 'Alerta Clínico',
+                snippet: buildSnippet(searchableText, term, row.description || 'Alerta clínico'),
+                date: row.created_at,
+                tabKey: 'alertas',
+                sourceTable: 'clinical_alerts',
+                sourceRecordId: row.id,
+              };
+            },
+          },
+          ...(specialtyKey === 'estetica'
+            ? [
+                {
+                  sourceTable: 'facial_maps',
+                  type: 'entry' as const,
+                  category: 'facial_map',
+                  tabKey: 'facial_map',
+                  dateField: 'created_at',
+                  buildQuery: () => {
+                    let query = supabase
+                      .from('facial_maps')
+                      .select('id, map_type, general_notes, created_at, appointment_id, professional_id')
+                      .eq('clinic_id', clinicId)
+                      .eq('patient_id', patientId)
+                      .order('created_at', { ascending: false })
+                      .limit(1000);
+
+                    if (appointmentId) query = query.eq('appointment_id', appointmentId);
+                    if (professionalId) query = query.eq('professional_id', professionalId);
+
+                    return query;
+                  },
+                  toHit: (row: any): RemoteHit | null => {
+                    const searchableText = extractSearchText(row);
+                    if (!includesSearchTerm(searchableText, term)) return null;
+
+                    return {
+                      id: row.id,
+                      type: 'entry',
+                      category: 'facial_map',
+                      title: 'Mapa Facial',
+                      snippet: buildSnippet(searchableText, term, row.general_notes || 'Mapa facial'),
+                      date: row.created_at,
+                      tabKey: 'facial_map',
+                      sourceTable: 'facial_maps',
+                      sourceRecordId: row.id,
+                    };
+                  },
+                },
+                {
+                  sourceTable: 'aesthetic_products_used',
+                  type: 'entry' as const,
+                  category: 'produto',
+                  tabKey: 'produtos_utilizados',
+                  dateField: 'registered_at',
+                  buildQuery: () => {
+                    let query = supabase
+                      .from('aesthetic_products_used')
+                      .select('id, product_name, manufacturer, batch_number, procedure_description, procedure_type, application_area, notes, registered_at, appointment_id')
+                      .eq('clinic_id', clinicId)
+                      .eq('patient_id', patientId)
+                      .order('registered_at', { ascending: false })
+                      .limit(1000);
+
+                    if (appointmentId) query = query.eq('appointment_id', appointmentId);
+
+                    return query;
+                  },
+                  toHit: (row: any): RemoteHit | null => {
+                    const searchableText = extractSearchText(row);
+                    if (!includesSearchTerm(searchableText, term)) return null;
+
+                    return {
+                      id: row.id,
+                      type: 'entry',
+                      category: 'produto',
+                      title: row.product_name || 'Produto Utilizado',
+                      snippet: buildSnippet(searchableText, term, row.notes || 'Produto utilizado'),
+                      date: row.registered_at,
+                      tabKey: 'produtos_utilizados',
+                      sourceTable: 'aesthetic_products_used',
+                      sourceRecordId: row.id,
+                    };
+                  },
+                },
+                {
+                  sourceTable: 'clinical_performed_procedures',
+                  type: 'entry' as const,
+                  category: 'procedimento_realizado',
+                  tabKey: 'procedimentos_realizados',
+                  dateField: 'performed_at',
+                  buildQuery: () => {
+                    let query = supabase
+                      .from('clinical_performed_procedures')
+                      .select('id, procedure_name, region, technique, notes, status, performed_at, appointment_id, specialty_id, professional_id, procedure_id')
+                      .eq('clinic_id', clinicId)
+                      .eq('patient_id', patientId)
+                      .order('performed_at', { ascending: false })
+                      .limit(1000);
+
+                    if (specialtyId) query = query.eq('specialty_id', specialtyId);
+                    if (appointmentId) query = query.eq('appointment_id', appointmentId);
+                    if (professionalId) query = query.eq('professional_id', professionalId);
+                    if (procedureId) query = query.eq('procedure_id', procedureId);
+
+                    return query;
+                  },
+                  toHit: (row: any): RemoteHit | null => {
+                    const searchableText = extractSearchText(row);
+                    if (!includesSearchTerm(searchableText, term)) return null;
+
+                    return {
+                      id: row.id,
+                      type: 'entry',
+                      category: 'procedimento_realizado',
+                      title: row.procedure_name || 'Procedimento Realizado',
+                      snippet: buildSnippet(searchableText, term, row.notes || 'Procedimento realizado'),
+                      date: row.performed_at,
+                      tabKey: 'procedimentos_realizados',
+                      sourceTable: 'clinical_performed_procedures',
+                      sourceRecordId: row.id,
+                    };
+                  },
+                },
+                {
+                  sourceTable: 'aesthetic_before_after',
+                  type: 'file' as const,
+                  category: 'before_after',
+                  tabKey: 'before_after_photos',
+                  dateField: 'created_at',
+                  buildQuery: () => {
+                    let query = supabase
+                      .from('aesthetic_before_after')
+                      .select('id, title, description, procedure_type, view_angle, created_at, appointment_id, procedure_id')
+                      .eq('clinic_id', clinicId)
+                      .eq('patient_id', patientId)
+                      .order('created_at', { ascending: false })
+                      .limit(1000);
+
+                    if (appointmentId) query = query.eq('appointment_id', appointmentId);
+                    if (procedureId) query = query.eq('procedure_id', procedureId);
+
+                    return query;
+                  },
+                  toHit: (row: any): RemoteHit | null => {
+                    const searchableText = extractSearchText(row);
+                    if (!includesSearchTerm(searchableText, term)) return null;
+
+                    return {
+                      id: row.id,
+                      type: 'file',
+                      category: 'before_after',
+                      title: row.title || 'Antes e Depois',
+                      snippet: buildSnippet(searchableText, term, row.description || 'Registro antes e depois'),
+                      date: row.created_at,
+                      tabKey: 'before_after_photos',
+                      sourceTable: 'aesthetic_before_after',
+                      sourceRecordId: row.id,
+                    };
+                  },
+                },
+              ]
+            : []),
+        ];
+
+        const response = await Promise.all(
+          searchDefinitions.map(async (definition) => {
+            try {
+              const { data, error } = await definition.buildQuery();
+
+              if (error) {
+                console.error(`[ProntuarioSearch] ${definition.sourceTable} error`, error);
+                return { definition, rows: 0, hits: 0, results: [] as RemoteHit[] };
+              }
+
+              const rows = data || [];
+              const results = rows
+                .map((row: any) => definition.toHit(row))
+                .filter((hit: RemoteHit | null): hit is RemoteHit => hit !== null);
+
+              return {
+                definition,
+                rows: rows.length,
+                hits: results.length,
+                results,
+              };
+            } catch (tableError) {
+              console.error(`[ProntuarioSearch] ${definition.sourceTable} unexpected failure`, tableError);
+              return { definition, rows: 0, hits: 0, results: [] as RemoteHit[] };
+            }
+          })
+        );
 
         if (cancelled) return;
 
-        const hits: RemoteHit[] = [];
+        const hits = response.flatMap(item => item.results);
 
-        if (docsRes.error) console.error('[ProntuarioSearch] clinical_documents error:', docsRes.error);
-        else {
-          (docsRes.data || []).forEach((d: any) => {
-            const contentStr = typeof d.content === 'string' ? d.content : JSON.stringify(d.content || '');
-            hits.push({
-              id: d.id,
-              type: 'file',
-              category: 'document',
-              title: d.title || d.document_type || 'Documento clínico',
-              snippet: contentStr.slice(0, 160) || `Documento: ${d.document_type || ''}`,
-              date: d.created_at,
-              tabKey: 'documentos',
-            });
-          });
-        }
+        console.log('[ProntuarioSearch] entities consulted', response.map(item => ({
+          table: item.definition.sourceTable,
+          rows: item.rows,
+          hits: item.hits,
+        })));
 
-        if (mediaRes.error) console.error('[ProntuarioSearch] clinical_media error:', mediaRes.error);
-        else {
-          (mediaRes.data || []).forEach((m: any) => {
-            hits.push({
-              id: m.id,
-              type: 'file',
-              category: m.category || 'image',
-              title: m.file_name || 'Mídia clínica',
-              snippet: m.description || `Mídia ${m.category || ''}`,
-              date: m.created_at,
-              tabKey: m.category === 'image' ? 'imagens' : 'documentos',
-            });
-          });
-        }
-
-        if (addRes.error) console.error('[ProntuarioSearch] clinical_addendums error:', addRes.error);
-        else {
-          (addRes.data || []).forEach((a: any) => {
-            hits.push({
-              id: a.id,
-              type: 'entry',
-              category: 'addendum',
-              title: `Adendo (${a.record_type})`,
-              snippet: a.content?.slice(0, 200) || a.reason || 'Adendo clínico',
-              date: a.created_at,
-              tabKey: 'evolucao',
-            });
-          });
-        }
-
-        if (alertsRes.error) console.error('[ProntuarioSearch] clinical_alerts error:', alertsRes.error);
-        else {
-          (alertsRes.data || []).forEach((al: any) => {
-            hits.push({
-              id: al.id,
-              type: 'alert',
-              category: al.severity || 'info',
-              title: al.title,
-              snippet: al.description || `Alerta ${al.severity}`,
-              date: al.created_at,
-              tabKey: 'alertas',
-            });
-          });
-        }
-
-        console.log(`[ProntuarioSearch] term="${term}" remote hits:`, {
-          documents: docsRes.data?.length || 0,
-          media: mediaRes.data?.length || 0,
-          addendums: addRes.data?.length || 0,
-          alerts: alertsRes.data?.length || 0,
+        console.log('[ProntuarioSearch] results by tab', {
+          all: hits.length,
+          evolucoes: hits.filter(hit => hit.type === 'entry').length,
+          arquivos: hits.filter(hit => hit.type === 'file').length,
+          alertas: hits.filter(hit => hit.type === 'alert').length,
         });
+
+        if (hits.length === 0) {
+          console.warn('[ProntuarioSearch] no remote results for current query', {
+            term,
+            patientId,
+            clinicId,
+            specialtyId: specialtyId || null,
+            appointmentId: appointmentId || null,
+          });
+        }
 
         setRemoteHits(hits);
       } catch (err) {
@@ -300,7 +732,7 @@ export function ProntuarioSearchBar({
     })();
 
     return () => { cancelled = true; };
-  }, [debouncedQuery, patientId, clinicId, specialtyId]);
+  }, [debouncedQuery, patientId, clinicId, specialtyId, specialtyKey, appointmentId, professionalId, procedureId]);
 
   // Check if date is within range
   const isInDateRange = useCallback((dateStr: string) => {
@@ -330,25 +762,13 @@ export function ProntuarioSearchBar({
 
   // Extract text content from entry for search
   const extractEntryText = (entry: MedicalRecordEntry): string => {
-    const parts: string[] = [];
-    
-    if (entry.notes) parts.push(entry.notes);
-    
-    // Extract all string values from content
-    if (entry.content && typeof entry.content === 'object') {
-      const extractStrings = (obj: unknown): void => {
-        if (typeof obj === 'string') {
-          parts.push(obj);
-        } else if (Array.isArray(obj)) {
-          obj.forEach(extractStrings);
-        } else if (typeof obj === 'object' && obj !== null) {
-          Object.values(obj).forEach(extractStrings);
-        }
-      };
-      extractStrings(entry.content);
-    }
-    
-    return parts.join(' ');
+    return extractSearchText({
+      entry_type: entry.entry_type,
+      template_id: entry.template_id,
+      notes: entry.notes,
+      content: entry.content,
+      status: entry.status,
+    });
   };
 
   // Search across all data
@@ -365,14 +785,7 @@ export function ProntuarioSearchBar({
         
         const searchableText = extractEntryText(entry);
         
-        if (searchableText.toLowerCase().includes(searchLower)) {
-          const idx = searchableText.toLowerCase().indexOf(searchLower);
-          const start = Math.max(0, idx - 40);
-          const end = Math.min(searchableText.length, idx + debouncedQuery.length + 80);
-          const snippet = (start > 0 ? '...' : '') + 
-            searchableText.substring(start, end) + 
-            (end < searchableText.length ? '...' : '');
-
+        if (includesSearchTerm(searchableText, searchLower)) {
           const tabKey = entryTypeToTab[entry.entry_type] || entryTypeToTab['default'];
 
           results.push({
@@ -380,10 +793,12 @@ export function ProntuarioSearchBar({
             type: 'entry',
             category: entry.entry_type,
             title: categoryLabels[entry.entry_type] || 'Evolução',
-            snippet,
+            snippet: buildSnippet(searchableText, debouncedQuery, 'Registro clínico'),
             date: entry.created_at,
             tabKey,
-            highlight: [debouncedQuery]
+            highlight: [debouncedQuery],
+            sourceTable: entry.entry_type === 'anamnesis' ? 'anamnesis_records' : 'clinical_evolutions',
+            sourceRecordId: entry.id,
           });
         }
       }
@@ -396,16 +811,18 @@ export function ProntuarioSearchBar({
         
         const searchableText = `${file.file_name} ${file.description || ''} ${file.category}`;
         
-        if (searchableText.toLowerCase().includes(searchLower)) {
+        if (includesSearchTerm(searchableText, searchLower)) {
           results.push({
             id: file.id,
             type: 'file',
             category: file.category,
             title: file.file_name,
-            snippet: file.description || `Arquivo ${categoryLabels[file.category] || file.category}`,
+            snippet: buildSnippet(searchableText, debouncedQuery, file.description || `Arquivo ${categoryLabels[file.category] || file.category}`),
             date: file.created_at,
-            tabKey: file.category === 'image' ? 'imagens' : 'exames',
-            highlight: [debouncedQuery]
+            tabKey: 'exames',
+            highlight: [debouncedQuery],
+            sourceTable: 'clinical_media',
+            sourceRecordId: file.id,
           });
         }
       }
@@ -418,27 +835,29 @@ export function ProntuarioSearchBar({
         
         const searchableText = `${alert.title} ${alert.description || ''} ${alert.alert_type}`;
         
-        if (searchableText.toLowerCase().includes(searchLower)) {
+        if (includesSearchTerm(searchableText, searchLower)) {
           results.push({
             id: alert.id,
             type: 'alert',
             category: alert.alert_type,
             title: alert.title,
-            snippet: alert.description || `Alerta ${alert.severity}`,
+            snippet: buildSnippet(searchableText, debouncedQuery, alert.description || `Alerta ${alert.severity}`),
             date: alert.created_at,
             tabKey: 'alertas',
-            highlight: [debouncedQuery]
+            highlight: [debouncedQuery],
+            sourceTable: 'clinical_alerts',
+            sourceRecordId: alert.id,
           });
         }
       }
     }
 
     // Merge remote DB hits (clinical_documents/media/addendums/alerts)
-    const seen = new Set(results.map((r) => `${r.type}-${r.id}`));
+    const seen = new Set(results.map((r) => `${r.sourceTable || r.type}-${r.id}`));
     for (const h of remoteHits) {
       if (activeFilter !== 'all' && activeFilter !== h.type) continue;
       if (!isInDateRange(h.date)) continue;
-      const key = `${h.type}-${h.id}`;
+      const key = `${h.sourceTable}-${h.id}`;
       if (seen.has(key)) continue;
       seen.add(key);
       results.push({ ...h, highlight: [debouncedQuery] });
@@ -453,8 +872,8 @@ export function ProntuarioSearchBar({
   }, [debouncedQuery, activeFilter, entries, files, alerts, remoteHits, isInDateRange]);
 
   const handleResultClick = (result: SearchResult) => {
-    onResultClick(result);
     onNavigateToTab(result.tabKey);
+    onResultClick(result);
     setIsOpen(false);
     setQuery("");
   };
