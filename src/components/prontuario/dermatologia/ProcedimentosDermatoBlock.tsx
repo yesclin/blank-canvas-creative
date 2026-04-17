@@ -195,6 +195,8 @@ export function ProcedimentosDermatoBlock({
   loading = false,
   saving = false,
   canEdit = false,
+  clinicId,
+  specialtyId,
   onAdd,
   onUpdate,
   onDelete,
@@ -202,10 +204,16 @@ export function ProcedimentosDermatoBlock({
   const [isAdding, setIsAdding] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [selectedDetail, setSelectedDetail] = useState<ProcedimentoDermatoItem | null>(null);
-  
+
   // Form state
   const [formData, setFormData] = useState<Omit<ProcedimentoDermatoItem, 'id'>>(createEmptyProcedimento());
   const [dataProcedimento, setDataProcedimento] = useState<Date>(new Date());
+
+  // Official catalog from /app/config/procedimentos
+  const { procedures: catalog, isLoading: catalogLoading } = useProcedureCatalog({
+    clinicId,
+    specialtyId,
+  });
 
   const handleStartAdd = () => {
     setFormData(createEmptyProcedimento());
