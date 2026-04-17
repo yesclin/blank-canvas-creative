@@ -113,8 +113,8 @@ import { useFinalizeSession } from "@/hooks/useAppointmentSession";
 import { useGlobalActiveAppointment } from "@/contexts/GlobalActiveAppointmentContext";
 import type { Appointment } from "@/types/agenda";
 import { ConsentCollectionDialog } from "@/components/prontuario/ConsentCollectionDialog";
-import { UnifiedSignatureWizard } from "@/components/signature/UnifiedSignatureWizard";
-import type { SignableDocumentContext } from "@/types/documentSigning";
+import { AdvancedSignatureDialog } from "@/components/prontuario/AdvancedSignatureDialog";
+import { useAdvancedSignature } from "@/hooks/prontuario/useAdvancedSignature";
 import { SignedRecordBadge } from "@/components/prontuario/SignedRecordBadge";
 import { PatientSelector } from "@/components/prontuario/PatientSelector";
 import { ClinicalTimeline } from "@/components/prontuario/ClinicalTimeline";
@@ -546,7 +546,11 @@ export default function Prontuario() {
     signing: legacySigning,
   } = useMedicalRecordSignatures();
 
-  // Advanced Signature — now unified
+  // Advanced Signature
+  const {
+    signing,
+    signRecord: advancedSignRecord,
+  } = useAdvancedSignature();
 
   // Granular Permissions (only used if tab permissions are enabled)
   const {
@@ -2203,12 +2207,11 @@ export default function Prontuario() {
         },
         professionalName: currentProfessionalName,
         professionalRegistration: docClinicoProfReg,
-        professionalId: currentProfessionalId,
       });
     } else {
       handlePrint();
     }
-  }, [handlePrint, patientId, patient, activeAppointment, isEsteticaSpecialty, generateConsolidatedPdf, currentProfessionalName, docClinicoProfReg, currentProfessionalId]);
+  }, [handlePrint, patientId, patient, activeAppointment, isEsteticaSpecialty, generateConsolidatedPdf, currentProfessionalName, docClinicoProfReg]);
 
   // Export handler - consolidated PDF for Estética/filler, default for others
   // Export handler - consolidated PDF for Estética/filler, default for others
@@ -2226,12 +2229,11 @@ export default function Prontuario() {
         },
         professionalName: currentProfessionalName,
         professionalRegistration: docClinicoProfReg,
-        professionalId: currentProfessionalId,
       });
     } else {
       handleExport(patientId, activeAppointment?.id, patient.full_name);
     }
-  }, [patientId, patient, activeAppointment, handleExport, isEsteticaSpecialty, generateConsolidatedPdf, currentProfessionalName, docClinicoProfReg, currentProfessionalId]);
+  }, [patientId, patient, activeAppointment, handleExport, isEsteticaSpecialty, generateConsolidatedPdf, currentProfessionalName, docClinicoProfReg]);
 
   // No patient selected - show patient selector (only after auto-redirect check completes)
   if (!patientId) {
@@ -2262,24 +2264,30 @@ export default function Prontuario() {
     return await grantConsent();
   };
 
-  // Handler for digital signature — unified flow
+  // Handler for digital signature
   const handleOpenSignature = (entry: MedicalRecordEntry) => {
     setSelectedEntryForSignature(entry);
     setSignatureDialogOpen(true);
   };
 
-  const unifiedSignatureContext: SignableDocumentContext | null = selectedEntryForSignature && patientId ? {
-    record_id: selectedEntryForSignature.id,
-    document_type: selectedEntryForSignature.entry_type as 'evolution' | 'anamnesis',
-    source_module: 'prontuario',
-    specialty_slug: activeSpecialtySlug || undefined,
-    patient_id: patientId,
-    appointment_id: activeAppointment?.id,
-    content: selectedEntryForSignature.content,
-    patient_name: patient?.full_name || '',
-    professional_name: currentProfessionalName || 'Profissional',
-    has_valid_consent: hasValidConsent,
-  } : null;
+  const handleSignRecord = async (password: string): Promise<boolean> => {
+    if (!selectedEntryForSignature || !patientId) return false;
+    
+    const result = await advancedSignRecord({
+      record_id: selectedEntryForSignature.id,
+      record_type: selectedEntryForSignature.entry_type as 'evolution' | 'anamnesis',
+      patient_id: patientId,
+      content: selectedEntryForSignature.content,
+      professional_name: currentProfessionalName || 'Profissional',
+    }, password);
+
+    if (result.success) {
+      setSelectedEntryForSignature(null);
+      // Refresh signatures
+      fetchSignaturesForPatient(patientId);
+    }
+    return result.success;
+  };
 
 
   return (
@@ -2308,16 +2316,19 @@ export default function Prontuario() {
         />
       )}
 
-      {/* Unified Digital Signature Wizard */}
-      <UnifiedSignatureWizard
-        open={signatureDialogOpen}
-        onOpenChange={setSignatureDialogOpen}
-        context={unifiedSignatureContext}
-        onComplete={() => {
-          setSelectedEntryForSignature(null);
-          if (patientId) fetchSignaturesForPatient(patientId);
-        }}
-      />
+      {/* Advanced Digital Signature Dialog */}
+      {patient && (
+        <AdvancedSignatureDialog
+          open={signatureDialogOpen}
+          onOpenChange={setSignatureDialogOpen}
+          entry={selectedEntryForSignature}
+          professionalName={currentProfessionalName || 'Profissional'}
+          patientName={patient.full_name}
+          hasValidConsent={hasValidConsent}
+          onSign={handleSignRecord}
+          signing={signing}
+        />
+      )}
 
       {shouldHoldProntuarioRendering && (
         <div className="flex-1 space-y-4 p-4 md:p-6">
@@ -2393,13 +2404,6 @@ export default function Prontuario() {
             entries={entries}
             files={files}
             alerts={activeAlerts}
-            patientId={patientId}
-            clinicId={clinic?.id}
-            specialtyId={resolvedSpecialtyId}
-            specialtyKey={activeSpecialtyKey}
-            appointmentId={preferredAppointmentId ?? activeAppointment?.id ?? null}
-            professionalId={currentProfessionalId || null}
-            procedureId={activeAppointment?.procedure_id ?? null}
             onResultClick={handleSearchResultClick}
             onNavigateToTab={handleNavigateToTab}
             className="max-w-2xl"

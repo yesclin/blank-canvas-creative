@@ -47,8 +47,8 @@ import {
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { UnifiedSignatureWizard } from '@/components/signature/UnifiedSignatureWizard';
-import type { SignableDocumentContext } from '@/types/documentSigning';
+import { useAdvancedSignature } from '@/hooks/prontuario/useAdvancedSignature';
+import { AdvancedSignatureDialog } from '@/components/prontuario/AdvancedSignatureDialog';
 import {
   useEvolucoesEsteticaData,
   SATISFACTION_LEVELS,
@@ -79,9 +79,10 @@ export function EvolucoesEsteticaBlock({
     isSigning,
   } = useEvolucoesEsteticaData({ patientId, appointmentId });
 
-  // Unified signature
+  // Advanced signature
+  const { signRecord: advancedSignRecord, signing: advancedSigning } = useAdvancedSignature();
   const [signDialogOpen, setSignDialogOpen] = useState(false);
-  const [signCtx, setSignCtx] = useState<SignableDocumentContext | null>(null);
+  const [signEntry, setSignEntry] = useState<any>(null);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState<EvolucaoEsteticaFormData>({
@@ -131,44 +132,42 @@ export function EvolucoesEsteticaBlock({
 
     const result = await create(formData);
     if (result && andSign) {
-      // Open unified sign dialog
-      if (patientId) {
-        setSignCtx({
-          record_id: result.id,
-          document_type: 'evolution',
-          source_module: 'prontuario',
-          specialty_slug: 'estetica',
-          patient_id: patientId,
-          appointment_id: appointmentId || undefined,
-          content: formData as unknown as Record<string, unknown>,
-          patient_name: 'Paciente',
-          professional_name: 'Profissional',
-          has_valid_consent: true,
-        });
-        setSignDialogOpen(true);
-      }
+      // Open advanced sign dialog instead of direct sign
+      setSignEntry({
+        id: result.id,
+        entry_type: 'evolution',
+        content: formData as unknown as Record<string, unknown>,
+        created_at: result.created_at || new Date().toISOString(),
+        professional_name: 'Profissional',
+      });
+      setSignDialogOpen(true);
     }
     setDialogOpen(false);
     resetForm();
   };
 
   const handleSign = (ev: EvolucaoEstetica) => {
-    if (!patientId) return;
-    setSignCtx({
-      record_id: ev.id,
-      document_type: 'evolution',
-      source_module: 'prontuario',
-      specialty_slug: 'estetica',
-      patient_id: patientId,
-      appointment_id: appointmentId || undefined,
+    setSignEntry({
+      id: ev.id,
+      entry_type: 'evolution',
       content: ev as unknown as Record<string, unknown>,
-      patient_name: 'Paciente',
+      created_at: ev.created_at,
       professional_name: 'Profissional',
-      has_valid_consent: true,
     });
     setSignDialogOpen(true);
   };
 
+  const handleAdvancedSign = async (password: string): Promise<boolean> => {
+    if (!signEntry || !patientId) return false;
+    const result = await advancedSignRecord({
+      record_id: signEntry.id,
+      record_type: 'evolution',
+      patient_id: patientId,
+      content: signEntry.content,
+      professional_name: signEntry.professional_name || 'Profissional',
+    }, password);
+    return result.success;
+  };
 
   const toggleComplication = (complication: string) => {
     const current = formData.complications || [];
@@ -394,7 +393,7 @@ export function EvolucoesEsteticaBlock({
                       size="sm"
                       variant="outline"
                       onClick={() => handleSign(ev)}
-                      disabled={isSigning}
+                      disabled={isSigning || advancedSigning}
                     >
                       <FileSignature className="h-4 w-4 mr-1.5" />
                       Assinatura Avançada YesClin
@@ -620,12 +619,16 @@ export function EvolucoesEsteticaBlock({
         </DialogContent>
       </Dialog>
 
-      {/* Unified Signature Wizard */}
-      <UnifiedSignatureWizard
+      {/* Advanced Signature Dialog */}
+      <AdvancedSignatureDialog
         open={signDialogOpen}
         onOpenChange={setSignDialogOpen}
-        context={signCtx}
-        onComplete={() => {}}
+        entry={signEntry}
+        professionalName="Profissional"
+        patientName="Paciente"
+        hasValidConsent={true}
+        onSign={handleAdvancedSign}
+        signing={advancedSigning}
       />
     </div>
   );

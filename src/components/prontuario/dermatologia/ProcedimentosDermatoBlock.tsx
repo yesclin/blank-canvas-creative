@@ -46,7 +46,6 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { BODY_LOCATIONS } from "./ExameDermatoBlock";
-import { useProcedureCatalog } from "@/hooks/prontuario/useProcedureCatalog";
 
 /**
  * Tipos de procedimentos dermatológicos
@@ -125,7 +124,6 @@ export interface ProcedimentoDermatoItem {
   id: string;
   tipo_procedimento: string;
   tipo_procedimento_custom?: string;
-  procedure_id?: string | null;
   regiao_tratada: string;
   regiao_tratada_detalhe?: string;
   tecnica_utilizada: string[];
@@ -144,10 +142,6 @@ interface ProcedimentosDermatoBlockProps {
   loading?: boolean;
   saving?: boolean;
   canEdit?: boolean;
-  /** Clinic context — required to load the official procedure catalog */
-  clinicId?: string | null;
-  /** Active specialty — filters the catalog */
-  specialtyId?: string | null;
   onAdd: (data: Omit<ProcedimentoDermatoItem, 'id'>) => Promise<void>;
   onUpdate?: (id: string, data: Partial<ProcedimentoDermatoItem>) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
@@ -195,8 +189,6 @@ export function ProcedimentosDermatoBlock({
   loading = false,
   saving = false,
   canEdit = false,
-  clinicId,
-  specialtyId,
   onAdd,
   onUpdate,
   onDelete,
@@ -204,16 +196,10 @@ export function ProcedimentosDermatoBlock({
   const [isAdding, setIsAdding] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [selectedDetail, setSelectedDetail] = useState<ProcedimentoDermatoItem | null>(null);
-
+  
   // Form state
   const [formData, setFormData] = useState<Omit<ProcedimentoDermatoItem, 'id'>>(createEmptyProcedimento());
   const [dataProcedimento, setDataProcedimento] = useState<Date>(new Date());
-
-  // Official catalog from /app/config/procedimentos
-  const { procedures: catalog, isLoading: catalogLoading } = useProcedureCatalog({
-    clinicId,
-    specialtyId,
-  });
 
   const handleStartAdd = () => {
     setFormData(createEmptyProcedimento());
@@ -323,40 +309,54 @@ export function ProcedimentosDermatoBlock({
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Procedimento (catálogo oficial /app/config/procedimentos) */}
+              {/* Tipo de Procedimento */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2 text-sm">
                   <Scissors className="h-3 w-3" />
-                  Procedimento *
+                  Tipo de Procedimento *
                 </Label>
-                {catalog.length === 0 ? (
-                  <div className="rounded-md border border-dashed bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-                    {catalogLoading
-                      ? 'Carregando procedimentos...'
-                      : 'Nenhum procedimento ativo cadastrado para esta especialidade. Cadastre em Configurações › Procedimentos.'}
-                  </div>
-                ) : (
-                  <Select
-                    value={formData.procedure_id ?? ''}
-                    onValueChange={(id) => {
-                      const found = catalog.find(p => p.id === id);
-                      setFormData(prev => ({
-                        ...prev,
-                        procedure_id: id,
-                        tipo_procedimento: found?.name ?? prev.tipo_procedimento,
-                      }));
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o procedimento" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {catalog.map(p => (
-                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+                <Select
+                  value={formData.tipo_procedimento}
+                  onValueChange={(v) => updateFormField('tipo_procedimento', v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o procedimento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <div className="text-xs text-muted-foreground px-2 py-1 font-medium">
+                      Diagnósticos
+                    </div>
+                    {DERMATOLOGY_PROCEDURE_TYPES.filter(p => p.category === 'diagnostico').map(proc => (
+                      <SelectItem key={proc.value} value={proc.value}>
+                        {proc.label}
+                      </SelectItem>
+                    ))}
+                    <div className="text-xs text-muted-foreground px-2 py-1 font-medium mt-2">
+                      Terapêuticos
+                    </div>
+                    {DERMATOLOGY_PROCEDURE_TYPES.filter(p => p.category === 'terapeutico').map(proc => (
+                      <SelectItem key={proc.value} value={proc.value}>
+                        {proc.label}
+                      </SelectItem>
+                    ))}
+                    <div className="text-xs text-muted-foreground px-2 py-1 font-medium mt-2">
+                      Estéticos
+                    </div>
+                    {DERMATOLOGY_PROCEDURE_TYPES.filter(p => p.category === 'estetico').map(proc => (
+                      <SelectItem key={proc.value} value={proc.value}>
+                        {proc.label}
+                      </SelectItem>
+                    ))}
+                    <div className="text-xs text-muted-foreground px-2 py-1 font-medium mt-2">
+                      Outros
+                    </div>
+                    {DERMATOLOGY_PROCEDURE_TYPES.filter(p => p.category === 'outro').map(proc => (
+                      <SelectItem key={proc.value} value={proc.value}>
+                        {proc.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Data */}

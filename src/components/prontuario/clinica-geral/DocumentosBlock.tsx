@@ -297,8 +297,6 @@ export function DocumentosBlock({
                   {docs.map((documento) => (
                     <Card 
                       key={documento.id}
-                      data-search-record-id={documento.id}
-                      data-search-activate="true"
                       className="hover:shadow-md transition-shadow cursor-pointer"
                       onClick={() => handleViewDocumento(documento)}
                     >

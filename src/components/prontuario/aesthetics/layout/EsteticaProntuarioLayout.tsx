@@ -75,7 +75,6 @@ export function EsteticaProntuarioLayout({
           patientCpf={patientCpf}
           professionalName={professionalName}
           professionalRegistration={professionalRegistration}
-          professionalId={professionalId}
         />
       );
 
@@ -160,9 +159,7 @@ export function EsteticaProntuarioLayout({
           clinicId={clinicId}
           appointmentId={appointmentId}
           specialtyId={specialtyId}
-          specialtyName="Estética / Harmonização"
           professionalId={professionalId}
-          professionalName={professionalName}
           canEdit={canEdit}
         />
       );

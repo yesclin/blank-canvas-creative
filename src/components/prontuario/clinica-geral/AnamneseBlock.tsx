@@ -961,8 +961,6 @@ export function AnamneseBlock({
           {v2Records.map((record) => (
             <div
               key={record.id}
-              data-search-record-id={record.id}
-              data-search-activate="true"
               onClick={() => handleSelectRecord(record.id)}
               className={cn(
                 "flex-shrink-0 p-3 rounded-lg border cursor-pointer transition-all min-w-[200px] max-w-[280px]",

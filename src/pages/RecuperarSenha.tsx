@@ -9,7 +9,6 @@ import { ArrowLeft, Mail, AlertCircle } from "lucide-react";
 import logoFull from "@/assets/logo-full.png";
 import { motion } from "framer-motion";
 import { z } from "zod";
-import { getAppUrl } from "@/utils/appUrl";
 
 // Email validation schema
 const emailSchema = z.string().email("Formato de email inválido").min(1, "Email é obrigatório");
@@ -36,15 +35,10 @@ const RecuperarSenha = () => {
 
     try {
       // Use native auth password reset - sends email directly
-      const appUrl = getAppUrl();
-      const redirectTo = `${appUrl}/redefinir-senha`;
-      console.log("[RecuperarSenha] appUrl:", appUrl);
-      console.log("[RecuperarSenha] redirectTo:", redirectTo);
-
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(
         email.trim().toLowerCase(),
         {
-          redirectTo,
+          redirectTo: `${window.location.origin}/redefinir-senha`,
         }
       );
 

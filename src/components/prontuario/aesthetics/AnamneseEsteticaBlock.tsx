@@ -66,8 +66,8 @@ import type { AnamnesisTemplateV2 } from '@/hooks/useAnamnesisTemplatesV2';
 import { useAnamnesisEditability } from '@/hooks/prontuario/useAnamnesisEditability';
 import { RecordEditLockBanner } from '@/components/prontuario/RecordEditLockBanner';
 import { AddendumSection } from '@/components/prontuario/AddendumSection';
-import { UnifiedSignatureWizard } from '@/components/signature/UnifiedSignatureWizard';
-import type { SignableDocumentContext } from '@/types/documentSigning';
+import { useAdvancedSignature } from '@/hooks/prontuario/useAdvancedSignature';
+import { AdvancedSignatureDialog } from '@/components/prontuario/AdvancedSignatureDialog';
 import type { MedicalRecordEntry } from '@/hooks/prontuario/useMedicalRecordEntries';
 import { cn } from '@/lib/utils';
 
@@ -133,7 +133,6 @@ interface AnamneseEsteticaBlockProps {
   patientCpf?: string | null;
   professionalName?: string | null;
   professionalRegistration?: string | null;
-  professionalId?: string | null;
   canExport?: boolean;
 }
 
@@ -150,7 +149,6 @@ export function AnamneseEsteticaBlock({
   patientCpf,
   professionalName,
   professionalRegistration,
-  professionalId,
   canExport = true,
 }: AnamneseEsteticaBlockProps) {
   // ─── Template resolution ──────────────────────────────────────────
@@ -392,23 +390,12 @@ export function AnamneseEsteticaBlock({
   const anamnesisEditability = useAnamnesisEditability(editabilityRecord);
   const uiStatus = resolveUiStatus(currentRecord, anamnesisEditability);
 
-  // Signature flow — Unified YesClin
+  // Signature flow — Advanced YesClin
+  const { signRecord: advancedSignRecord, signing: signingSig } = useAdvancedSignature();
   const [showAdvancedSignDialog, setShowAdvancedSignDialog] = useState(false);
+  const [signatureEntry, setSignatureEntry] = useState<MedicalRecordEntry | null>(null);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [discardReason, setDiscardReason] = useState('');
-
-  const unifiedSignCtx: SignableDocumentContext | null = currentRecord && patientId ? {
-    record_id: currentRecord.id,
-    document_type: 'anamnesis',
-    source_module: 'prontuario',
-    specialty_slug: 'estetica',
-    patient_id: patientId,
-    appointment_id: appointmentId || undefined,
-    content: (isAdvanced ? dynamicValues : standardValues) as Record<string, unknown>,
-    patient_name: patientName || 'Paciente',
-    professional_name: professionalName || 'Profissional',
-    has_valid_consent: true,
-  } : null;
 
   const handleSign = useCallback(async () => {
     if (!currentRecord) return;
@@ -418,8 +405,37 @@ export function AnamneseEsteticaBlock({
       toast.error('Salve as alterações antes de assinar.');
       return;
     }
+    // Build a MedicalRecordEntry-like object for the dialog
+    setSignatureEntry({
+      id: currentRecord.id,
+      entry_type: 'anamnesis',
+      content: (isAdvanced ? dynamicValues : standardValues) as Record<string, unknown>,
+      created_at: currentRecord.created_at,
+      professional_id: currentRecord.professional_id,
+      professional_name: professionalName || 'Profissional',
+    } as unknown as MedicalRecordEntry);
     setShowAdvancedSignDialog(true);
-  }, [currentRecord, isAdvanced, dynamicHasChanges, standardHasChanges]);
+  }, [currentRecord, isAdvanced, dynamicHasChanges, standardHasChanges, dynamicValues, standardValues, professionalName]);
+
+  const handleAdvancedSign = useCallback(async (password: string): Promise<boolean> => {
+    if (!currentRecord || !patientId) return false;
+    const content = isAdvanced ? dynamicValues : standardValues;
+    const result = await advancedSignRecord({
+      record_id: currentRecord.id,
+      record_type: 'anamnesis',
+      patient_id: patientId,
+      content: content as Record<string, unknown>,
+      professional_name: professionalName || 'Profissional',
+    }, password);
+    if (result.success) {
+      if (isAdvanced) {
+        refetchDynamic();
+      } else {
+        setStandardRecord((prev: any) => prev ? { ...prev, signed_at: new Date().toISOString() } : prev);
+      }
+    }
+    return result.success;
+  }, [currentRecord, patientId, isAdvanced, dynamicValues, standardValues, advancedSignRecord, professionalName, refetchDynamic]);
 
   // ─── Unsaved changes guard ───────────────────────────────────────
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
@@ -479,11 +495,10 @@ export function AnamneseEsteticaBlock({
       },
       professionalName,
       professionalRegistration,
-      professionalId,
       recordResponses: responses,
       recordData: responses,
     });
-  }, [patientId, appointmentId, isAdvanced, dynamicRecord, standardValues, patientName, patientBirthDate, patientPhone, patientCpf, professionalName, professionalRegistration, professionalId, generateConsolidatedPdf]);
+  }, [patientId, appointmentId, isAdvanced, dynamicRecord, standardValues, patientName, patientBirthDate, patientPhone, patientCpf, professionalName, professionalRegistration, generateConsolidatedPdf]);
 
   // Template change with unsaved guard
   const handleTemplateChange = useCallback((templateId: string) => {
@@ -713,7 +728,7 @@ export function AnamneseEsteticaBlock({
       // Sign button (only after save)
       if (currentRecord && !currentHasChanges) {
         actions.push(
-          <Button key="sign" variant="outline" size="sm" onClick={handleSign}>
+          <Button key="sign" variant="outline" size="sm" onClick={handleSign} disabled={signingSig}>
             <ShieldCheck className="h-4 w-4 mr-1.5" />
             Assinatura Avançada YesClin
           </Button>
@@ -734,7 +749,7 @@ export function AnamneseEsteticaBlock({
       // Can still sign if not yet signed
       if (currentRecord) {
         actions.push(
-          <Button key="sign" variant="outline" size="sm" onClick={handleSign}>
+          <Button key="sign" variant="outline" size="sm" onClick={handleSign} disabled={signingSig}>
             <ShieldCheck className="h-4 w-4 mr-1.5" />
             Assinatura Avançada YesClin
           </Button>
@@ -934,18 +949,16 @@ export function AnamneseEsteticaBlock({
         />
       )}
 
-      {/* Unified Signature Wizard */}
-      <UnifiedSignatureWizard
+      {/* Advanced Signature Dialog */}
+      <AdvancedSignatureDialog
         open={showAdvancedSignDialog}
         onOpenChange={setShowAdvancedSignDialog}
-        context={unifiedSignCtx}
-        onComplete={() => {
-          if (isAdvanced) {
-            refetchDynamic();
-          } else {
-            setStandardRecord((prev: any) => prev ? { ...prev, signed_at: new Date().toISOString() } : prev);
-          }
-        }}
+        entry={signatureEntry}
+        professionalName={professionalName || 'Profissional'}
+        patientName={patientName || 'Paciente'}
+        hasValidConsent={true}
+        onSign={handleAdvancedSign}
+        signing={signingSig}
       />
 
       {/* Unsaved changes confirmation dialog */}

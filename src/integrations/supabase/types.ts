@@ -1614,56 +1614,6 @@ export type Database = {
           },
         ]
       }
-      clinic_signature_settings: {
-        Row: {
-          allow_camera_fallback: boolean
-          allow_geolocation: boolean
-          allow_typed_name: boolean
-          clinic_id: string
-          created_at: string
-          document_type: string
-          id: string
-          require_otp: boolean
-          require_selfie: boolean
-          signature_level: string
-          updated_at: string
-        }
-        Insert: {
-          allow_camera_fallback?: boolean
-          allow_geolocation?: boolean
-          allow_typed_name?: boolean
-          clinic_id: string
-          created_at?: string
-          document_type?: string
-          id?: string
-          require_otp?: boolean
-          require_selfie?: boolean
-          signature_level?: string
-          updated_at?: string
-        }
-        Update: {
-          allow_camera_fallback?: boolean
-          allow_geolocation?: boolean
-          allow_typed_name?: boolean
-          clinic_id?: string
-          created_at?: string
-          document_type?: string
-          id?: string
-          require_otp?: boolean
-          require_selfie?: boolean
-          signature_level?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "clinic_signature_settings_clinic_id_fkey"
-            columns: ["clinic_id"]
-            isOneToOne: false
-            referencedRelation: "clinics"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       clinic_specialty_modules: {
         Row: {
           clinic_id: string
@@ -2460,7 +2410,6 @@ export type Database = {
         Row: {
           appointment_id: string | null
           clinic_id: string
-          clinical_data: Json
           created_at: string
           created_by: string | null
           evolution_id: string | null
@@ -2481,7 +2430,6 @@ export type Database = {
         Insert: {
           appointment_id?: string | null
           clinic_id: string
-          clinical_data?: Json
           created_at?: string
           created_by?: string | null
           evolution_id?: string | null
@@ -2502,7 +2450,6 @@ export type Database = {
         Update: {
           appointment_id?: string | null
           clinic_id?: string
-          clinical_data?: Json
           created_at?: string
           created_by?: string | null
           evolution_id?: string | null
@@ -5015,174 +4962,6 @@ export type Database = {
           },
         ]
       }
-      marketing_model_clicks: {
-        Row: {
-          clicked_at: string
-          clinic_id: string
-          id: string
-          source_context: string | null
-          specialty_id: string | null
-          template_id: string
-          user_id: string
-        }
-        Insert: {
-          clicked_at?: string
-          clinic_id: string
-          id?: string
-          source_context?: string | null
-          specialty_id?: string | null
-          template_id: string
-          user_id: string
-        }
-        Update: {
-          clicked_at?: string
-          clinic_id?: string
-          id?: string
-          source_context?: string | null
-          specialty_id?: string | null
-          template_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "marketing_model_clicks_clinic_id_fkey"
-            columns: ["clinic_id"]
-            isOneToOne: false
-            referencedRelation: "clinics"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "marketing_model_clicks_specialty_id_fkey"
-            columns: ["specialty_id"]
-            isOneToOne: false
-            referencedRelation: "specialties"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "marketing_model_clicks_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "marketing_model_library"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      marketing_model_favorites: {
-        Row: {
-          created_at: string
-          id: string
-          template_id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          template_id: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          template_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "marketing_model_favorites_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "marketing_model_library"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      marketing_model_library: {
-        Row: {
-          category: string
-          channel: string
-          clinic_id: string | null
-          created_at: string
-          created_by: string | null
-          cta_label: string | null
-          description: string | null
-          external_provider: string
-          external_url: string
-          id: string
-          is_active: boolean
-          is_featured: boolean
-          is_system: boolean
-          occasion: string | null
-          preview_url: string | null
-          slug: string
-          sort_order: number
-          specialty_id: string | null
-          thumbnail_url: string | null
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          category: string
-          channel?: string
-          clinic_id?: string | null
-          created_at?: string
-          created_by?: string | null
-          cta_label?: string | null
-          description?: string | null
-          external_provider?: string
-          external_url: string
-          id?: string
-          is_active?: boolean
-          is_featured?: boolean
-          is_system?: boolean
-          occasion?: string | null
-          preview_url?: string | null
-          slug: string
-          sort_order?: number
-          specialty_id?: string | null
-          thumbnail_url?: string | null
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          category?: string
-          channel?: string
-          clinic_id?: string | null
-          created_at?: string
-          created_by?: string | null
-          cta_label?: string | null
-          description?: string | null
-          external_provider?: string
-          external_url?: string
-          id?: string
-          is_active?: boolean
-          is_featured?: boolean
-          is_system?: boolean
-          occasion?: string | null
-          preview_url?: string | null
-          slug?: string
-          sort_order?: number
-          specialty_id?: string | null
-          thumbnail_url?: string | null
-          title?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "marketing_model_library_clinic_id_fkey"
-            columns: ["clinic_id"]
-            isOneToOne: false
-            referencedRelation: "clinics"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "marketing_model_library_specialty_id_fkey"
-            columns: ["specialty_id"]
-            isOneToOne: false
-            referencedRelation: "specialties"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       material_consumption: {
         Row: {
           appointment_id: string | null
@@ -5459,14 +5238,10 @@ export type Database = {
       }
       medical_record_signatures: {
         Row: {
-          auth_method: string | null
           clinic_id: string
           device_fingerprint: string | null
           document_pdf_url: string | null
           document_snapshot_json: Json | null
-          evidence_snapshot: Json | null
-          geolocation: Json | null
-          handwritten_path: string | null
           id: string
           ip_address: string | null
           is_revoked: boolean
@@ -5476,10 +5251,8 @@ export type Database = {
           revoke_reason: string | null
           revoked_at: string | null
           revoked_by: string | null
-          selfie_path: string | null
           sign_method: string
           signature_hash: string | null
-          signature_level: string | null
           signed_at: string
           signed_by: string
           signed_by_name: string
@@ -5488,14 +5261,10 @@ export type Database = {
           verification_token: string | null
         }
         Insert: {
-          auth_method?: string | null
           clinic_id: string
           device_fingerprint?: string | null
           document_pdf_url?: string | null
           document_snapshot_json?: Json | null
-          evidence_snapshot?: Json | null
-          geolocation?: Json | null
-          handwritten_path?: string | null
           id?: string
           ip_address?: string | null
           is_revoked?: boolean
@@ -5505,10 +5274,8 @@ export type Database = {
           revoke_reason?: string | null
           revoked_at?: string | null
           revoked_by?: string | null
-          selfie_path?: string | null
           sign_method?: string
           signature_hash?: string | null
-          signature_level?: string | null
           signed_at?: string
           signed_by: string
           signed_by_name?: string
@@ -5517,14 +5284,10 @@ export type Database = {
           verification_token?: string | null
         }
         Update: {
-          auth_method?: string | null
           clinic_id?: string
           device_fingerprint?: string | null
           document_pdf_url?: string | null
           document_snapshot_json?: Json | null
-          evidence_snapshot?: Json | null
-          geolocation?: Json | null
-          handwritten_path?: string | null
           id?: string
           ip_address?: string | null
           is_revoked?: boolean
@@ -5534,10 +5297,8 @@ export type Database = {
           revoke_reason?: string | null
           revoked_at?: string | null
           revoked_by?: string | null
-          selfie_path?: string | null
           sign_method?: string
           signature_hash?: string | null
-          signature_level?: string | null
           signed_at?: string
           signed_by?: string
           signed_by_name?: string
@@ -8775,69 +8536,6 @@ export type Database = {
           },
         ]
       }
-      professional_signatures: {
-        Row: {
-          clinic_id: string
-          created_at: string
-          id: string
-          is_active: boolean
-          professional_id: string
-          signature_alignment: string | null
-          signature_file_url: string
-          signature_offset_x: number | null
-          signature_offset_y: number | null
-          signature_scale: number | null
-          signature_type: string
-          signature_width: number | null
-          updated_at: string
-        }
-        Insert: {
-          clinic_id: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          professional_id: string
-          signature_alignment?: string | null
-          signature_file_url: string
-          signature_offset_x?: number | null
-          signature_offset_y?: number | null
-          signature_scale?: number | null
-          signature_type?: string
-          signature_width?: number | null
-          updated_at?: string
-        }
-        Update: {
-          clinic_id?: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          professional_id?: string
-          signature_alignment?: string | null
-          signature_file_url?: string
-          signature_offset_x?: number | null
-          signature_offset_y?: number | null
-          signature_scale?: number | null
-          signature_type?: string
-          signature_width?: number | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "professional_signatures_clinic_id_fkey"
-            columns: ["clinic_id"]
-            isOneToOne: false
-            referencedRelation: "clinics"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "professional_signatures_professional_id_fkey"
-            columns: ["professional_id"]
-            isOneToOne: false
-            referencedRelation: "professionals"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       professional_specialties: {
         Row: {
           created_at: string
@@ -9758,54 +9456,6 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      signature_evidence: {
-        Row: {
-          clinic_id: string
-          collected_at: string
-          created_at: string
-          evidence_data: Json | null
-          evidence_type: string
-          file_path: string | null
-          id: string
-          signature_id: string
-        }
-        Insert: {
-          clinic_id: string
-          collected_at?: string
-          created_at?: string
-          evidence_data?: Json | null
-          evidence_type: string
-          file_path?: string | null
-          id?: string
-          signature_id: string
-        }
-        Update: {
-          clinic_id?: string
-          collected_at?: string
-          created_at?: string
-          evidence_data?: Json | null
-          evidence_type?: string
-          file_path?: string | null
-          id?: string
-          signature_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "signature_evidence_clinic_id_fkey"
-            columns: ["clinic_id"]
-            isOneToOne: false
-            referencedRelation: "clinics"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "signature_evidence_signature_id_fkey"
-            columns: ["signature_id"]
-            isOneToOne: false
-            referencedRelation: "medical_record_signatures"
             referencedColumns: ["id"]
           },
         ]

@@ -263,12 +263,7 @@ export function SessoesPsicologiaBlock({
               <div className={`absolute left-2.5 top-3 w-3 h-3 rounded-full border-2 ${
                 sessao.status === 'assinada' ? 'bg-green-500 border-green-300' : 'bg-yellow-500 border-yellow-300'
               }`} />
-              <Card
-                data-search-record-id={sessao.id}
-                data-search-activate="true"
-                className="hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => setSelectedSessao(sessao)}
-              >
+              <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedSessao(sessao)}>
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
