@@ -94,28 +94,99 @@ const FACES_DENTARIAS = [
 // (cadastrados em /app/config/procedimentos). Any hardcoded list was removed.
 
 type FormDataType = {
+  // Identificação
   procedure_id: string;
   procedimento: string;
   procedimento_codigo: string;
+  data_realizacao: string;
+  hora_realizacao: string;
+  professional_id: string;
+  appointment_id: string;
+  // Execução
   dente: string;
   faces: string[];
-  professional_id: string;
-  data_realizacao: string;
+  side: string; // direito/esquerdo/bilateral/central/outro
+  technique: string;
+  dose: string;
+  unit: string;
+  status: string;
+  // Clínico
+  objective: string;
+  immediate_result: string;
+  no_incidents: boolean;
+  incidents_description: string;
+  incidents_conduct: string;
+  post_instructions: string;
+  next_return: string;
+  // Produto
+  product_name: string;
+  product_batch: string;
+  product_manufacturer: string;
+  product_expiry: string;
+  product_consumed: string;
+  // Vínculos
+  link_before_after: boolean;
+  link_facial_map: boolean;
+  link_consent: boolean;
+  // Notas livres
   observacoes: string;
-  appointment_id: string;
+};
+
+const nowHHMM = () => {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 };
 
 const getEmptyFormData = (): FormDataType => ({
   procedure_id: '',
   procedimento: '',
   procedimento_codigo: '',
+  data_realizacao: format(new Date(), 'yyyy-MM-dd'),
+  hora_realizacao: nowHHMM(),
+  professional_id: '',
+  appointment_id: '',
   dente: '',
   faces: [],
-  professional_id: '',
-  data_realizacao: format(new Date(), 'yyyy-MM-dd'),
+  side: '',
+  technique: '',
+  dose: '',
+  unit: '',
+  status: 'realizado',
+  objective: '',
+  immediate_result: '',
+  no_incidents: true,
+  incidents_description: '',
+  incidents_conduct: '',
+  post_instructions: '',
+  next_return: '',
+  product_name: '',
+  product_batch: '',
+  product_manufacturer: '',
+  product_expiry: '',
+  product_consumed: '',
+  link_before_after: false,
+  link_facial_map: false,
+  link_consent: false,
   observacoes: '',
-  appointment_id: '',
 });
+
+const SIDE_OPTIONS = [
+  { value: 'direito', label: 'Direito' },
+  { value: 'esquerdo', label: 'Esquerdo' },
+  { value: 'bilateral', label: 'Bilateral' },
+  { value: 'central', label: 'Central' },
+  { value: 'outro', label: 'Outro' },
+];
+
+const UNIT_OPTIONS = ['ml', 'U/UI', 'ampola', 'seringa', 'sessão', 'unidade'];
+
+const STATUS_OPTIONS = [
+  { value: 'planejado', label: 'Planejado' },
+  { value: 'parcial', label: 'Parcial' },
+  { value: 'realizado', label: 'Realizado' },
+  { value: 'interrompido', label: 'Interrompido' },
+  { value: 'reagendado', label: 'Reagendado' },
+];
 
 /**
  * PROCEDIMENTOS REALIZADOS
