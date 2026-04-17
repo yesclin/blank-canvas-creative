@@ -337,11 +337,11 @@ export function ProcedimentosRealizadosBlock({
 
       {/* Create Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="p-6 pb-3 border-b shrink-0">
             <DialogTitle>Registrar Procedimento</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+          <div className="space-y-4 px-6 py-4 overflow-y-auto flex-1 min-h-0">
             <div className="space-y-1.5">
               <Label>Procedimento *</Label>
               <Input
@@ -402,7 +402,7 @@ export function ProcedimentosRealizadosBlock({
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="p-6 pt-3 border-t shrink-0">
             <Button variant="outline" onClick={() => { resetForm(); setDialogOpen(false); }}>
               Cancelar
             </Button>
