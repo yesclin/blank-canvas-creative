@@ -226,6 +226,7 @@ export function AlertasBlock({
     return (
       <div
         key={alerta.id}
+        data-search-record-id={alerta.id}
         className={`p-3 rounded-lg border ${config.bgColor} ${config.borderColor} ${!alerta.is_active ? 'opacity-60' : ''}`}
       >
         <div className="flex items-start justify-between gap-3">
