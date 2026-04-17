@@ -63,6 +63,7 @@ import {
   useDeletePerformedProcedure,
   type CreatePerformedProcedureInput,
 } from '@/hooks/prontuario/usePerformedProcedures';
+import { useProcedureCatalog } from '@/hooks/prontuario/useProcedureCatalog';
 
 interface Props {
   patientId: string;
