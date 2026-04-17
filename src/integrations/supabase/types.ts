@@ -2460,6 +2460,7 @@ export type Database = {
         Row: {
           appointment_id: string | null
           clinic_id: string
+          clinical_data: Json
           created_at: string
           created_by: string | null
           evolution_id: string | null
@@ -2480,6 +2481,7 @@ export type Database = {
         Insert: {
           appointment_id?: string | null
           clinic_id: string
+          clinical_data?: Json
           created_at?: string
           created_by?: string | null
           evolution_id?: string | null
@@ -2500,6 +2502,7 @@ export type Database = {
         Update: {
           appointment_id?: string | null
           clinic_id?: string
+          clinical_data?: Json
           created_at?: string
           created_by?: string | null
           evolution_id?: string | null
