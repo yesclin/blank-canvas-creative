@@ -2396,6 +2396,10 @@ export default function Prontuario() {
             patientId={patientId}
             clinicId={clinic?.id}
             specialtyId={resolvedSpecialtyId}
+            specialtyKey={activeSpecialtyKey}
+            appointmentId={preferredAppointmentId ?? activeAppointment?.id ?? null}
+            professionalId={currentProfessionalId || null}
+            procedureId={activeAppointment?.procedure_id ?? null}
             onResultClick={handleSearchResultClick}
             onNavigateToTab={handleNavigateToTab}
             className="max-w-2xl"

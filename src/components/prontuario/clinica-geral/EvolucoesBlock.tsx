@@ -242,6 +242,8 @@ export function EvolucoesBlock({
               }`} />
               
               <Card 
+                data-search-record-id={evolucao.id}
+                data-search-activate="true"
                 className="hover:shadow-md transition-shadow cursor-pointer" 
                 onClick={() => handleViewEvolucao(evolucao)}
               >

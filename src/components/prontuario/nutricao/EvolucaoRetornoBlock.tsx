@@ -624,6 +624,8 @@ export function EvolucaoRetornoBlock({
                 {evolucoes.map((evolucao, index) => (
                   <button
                     key={evolucao.id}
+                    data-search-record-id={evolucao.id}
+                    data-search-activate="true"
                     onClick={() => setSelectedEvolucao(evolucao)}
                     className="w-full p-4 rounded-lg border hover:bg-muted/50 transition-colors text-left"
                   >

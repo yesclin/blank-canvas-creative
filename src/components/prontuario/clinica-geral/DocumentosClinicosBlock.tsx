@@ -375,7 +375,13 @@ export function DocumentosClinicosBlock({
                   {documentos.map(doc => {
                     const tipoInfo = TIPO_DOC_ICONS[doc.tipo];
                     return (
-                      <div key={doc.id} className="flex items-center justify-between border rounded-lg p-3 gap-3">
+                      <div
+                        key={doc.id}
+                        data-search-record-id={doc.id}
+                        data-search-activate="true"
+                        className="flex items-center justify-between border rounded-lg p-3 gap-3 cursor-pointer"
+                        onClick={() => setViewingDoc(doc)}
+                      >
                         <div className="flex items-center gap-3 min-w-0 flex-1">
                           <div className={`h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0 ${tipoInfo.bg}`}>
                             {tipoInfo.icon}

@@ -204,11 +204,104 @@ const buildSnippet = (text: string, term: string, fallback: string) => {
 const resolveEvolutionTab = (evolutionType?: string | null) => {
   const normalizedType = (evolutionType || '').toLowerCase();
 
+  const exactMatchMap: Record<string, string> = {
+    documento_fisioterapia: 'exames',
+    documento_pilates: 'exames',
+    alerta_funcional_fisio: 'alertas',
+    alerta_funcional_pilates: 'alertas',
+    anamnese_fisioterapia: 'anamnese',
+    anamnese_funcional_pilates: 'anamnese',
+    anamnese_nutricional: 'anamnese',
+    avaliacao_nutricional_inicial: 'avaliacao_nutricional',
+    avaliacao_funcional_fisio: 'avaliacao_funcional',
+    avaliacao_funcional_pilates: 'avaliacao_funcional',
+    avaliacao_dor_fisio: 'avaliacao_dor',
+    avaliacao_dor_pilates: 'avaliacao_dor',
+    avaliacao_postural_pilates: 'avaliacao_funcional',
+    diagnostico_funcional_fisio: 'diagnostico',
+    plano_terapeutico_fisio: 'conduta',
+    exercicios_prescritos_fisio: 'exercicios_prescritos',
+    sessao_fisioterapia: 'evolucao',
+    sessao_pilates: 'evolucao',
+    plano_exercicios_pilates: 'evolucao',
+    evolucao_retorno: 'evolucao',
+    plano_alimentar: 'plano_alimentar',
+    meta_nutricional: 'evolucao',
+    recordatorio_alimentar: 'evolucao',
+    conduct_dermato: 'conduta',
+  };
+
+  if (exactMatchMap[normalizedType]) return exactMatchMap[normalizedType];
+
   if (normalizedType.includes('diagnost')) return 'diagnostico';
   if (normalizedType.includes('conduta') || normalizedType.includes('plano')) return 'conduta';
   if (normalizedType.includes('exam')) return 'exame_fisico';
 
   return 'evolucao';
+};
+
+const matchesSpecialtyContext = ({
+  activeSpecialtyId,
+  activeSpecialtyKey,
+  rowSpecialtyId,
+  dedicatedSpecialtyKey,
+}: {
+  activeSpecialtyId?: string | null;
+  activeSpecialtyKey?: string | null;
+  rowSpecialtyId?: string | null;
+  dedicatedSpecialtyKey?: string | null;
+}) => {
+  if (dedicatedSpecialtyKey) {
+    return !activeSpecialtyKey || activeSpecialtyKey === dedicatedSpecialtyKey;
+  }
+
+  if (!activeSpecialtyId) return true;
+  if (!rowSpecialtyId) return true;
+
+  return rowSpecialtyId === activeSpecialtyId;
+};
+
+const activateSearchTarget = (element: HTMLElement) => {
+  element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  element.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+  window.setTimeout(() => {
+    element.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
+  }, 2200);
+
+  const isInteractive =
+    element instanceof HTMLButtonElement ||
+    element.tagName === 'BUTTON' ||
+    element.dataset.searchActivate === 'true' ||
+    typeof (element as HTMLButtonElement).click === 'function';
+
+  if (isInteractive) {
+    (element as HTMLButtonElement).click();
+  }
+};
+
+const findSearchTarget = (result: SearchResult) => {
+  const candidateIds = [result.sourceRecordId, result.id].filter(Boolean) as string[];
+
+  for (const candidateId of candidateIds) {
+    const exactMatch = document.querySelector<HTMLElement>(`[data-search-record-id="${candidateId}"]`);
+    if (exactMatch) return exactMatch;
+  }
+
+  const searchNeedles = [result.title, ...result.highlight, result.snippet]
+    .filter(Boolean)
+    .map(value => normalizeText(value))
+    .filter(value => value.length >= 4);
+
+  if (searchNeedles.length === 0) return null;
+
+  const clickableCandidates = Array.from(
+    document.querySelectorAll<HTMLElement>('button, [role="button"], [data-search-record-id], .cursor-pointer')
+  );
+
+  return clickableCandidates.find((element) => {
+    const text = normalizeText(element.innerText || element.textContent || '');
+    return searchNeedles.some((needle) => text.includes(needle));
+  }) || null;
 };
 
 export function ProntuarioSearchBar({ 
@@ -236,6 +329,28 @@ export function ProntuarioSearchBar({
   const [showFilters, setShowFilters] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const scheduleResultNavigation = useCallback((result: SearchResult) => {
+    [140, 420, 900].forEach((delay) => {
+      window.setTimeout(() => {
+        const target = findSearchTarget(result);
+        const found = Boolean(target);
+
+        console.log('[ProntuarioSearch] navigation attempt', {
+          delay,
+          resultId: result.id,
+          sourceTable: result.sourceTable || null,
+          sourceRecordId: result.sourceRecordId || null,
+          tabKey: result.tabKey,
+          found,
+        });
+
+        if (target) {
+          activateSearchTarget(target);
+        }
+      }, delay);
+    });
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -301,13 +416,20 @@ export function ProntuarioSearchBar({
                 .order('created_at', { ascending: false })
                 .limit(1000);
 
-              if (specialtyId) query = query.eq('specialty_id', specialtyId);
               if (appointmentId) query = query.eq('appointment_id', appointmentId);
               if (professionalId) query = query.eq('professional_id', professionalId);
 
               return query;
             },
             toHit: (row: any): RemoteHit | null => {
+              if (!matchesSpecialtyContext({
+                activeSpecialtyId: specialtyId,
+                activeSpecialtyKey: specialtyKey,
+                rowSpecialtyId: row.specialty_id,
+              })) {
+                return null;
+              }
+
               const searchableText = extractSearchText({
                 evolution_type: row.evolution_type,
                 notes: row.notes,
@@ -344,13 +466,20 @@ export function ProntuarioSearchBar({
                 .order('created_at', { ascending: false })
                 .limit(1000);
 
-              if (specialtyId) query = query.eq('specialty_id', specialtyId);
               if (appointmentId) query = query.eq('appointment_id', appointmentId);
               if (professionalId) query = query.eq('professional_id', professionalId);
 
               return query;
             },
             toHit: (row: any): RemoteHit | null => {
+              if (!matchesSpecialtyContext({
+                activeSpecialtyId: specialtyId,
+                activeSpecialtyKey: specialtyKey,
+                rowSpecialtyId: row.specialty_id,
+              })) {
+                return null;
+              }
+
               const searchableText = extractSearchText({ data: row.data, responses: row.responses, status: row.status });
               if (!includesSearchTerm(searchableText, term)) return null;
 
@@ -363,6 +492,43 @@ export function ProntuarioSearchBar({
                 date: row.created_at,
                 tabKey: 'anamnese',
                 sourceTable: 'anamnesis_records',
+                sourceRecordId: row.id,
+              };
+            },
+          },
+          {
+            sourceTable: 'patient_documentos',
+            type: 'file' as const,
+            category: 'document',
+            tabKey: 'exames',
+            dateField: 'created_at',
+            buildQuery: () => {
+              let query = supabase
+                .from('patient_documentos')
+                .select('id, titulo, tipo, conteudo, file_url, created_at, appointment_id, professional_id, status')
+                .eq('clinic_id', clinicId)
+                .eq('patient_id', patientId)
+                .order('created_at', { ascending: false })
+                .limit(1000);
+
+              if (appointmentId) query = query.eq('appointment_id', appointmentId);
+              if (professionalId) query = query.eq('professional_id', professionalId);
+
+              return query;
+            },
+            toHit: (row: any): RemoteHit | null => {
+              const searchableText = extractSearchText(row);
+              if (!includesSearchTerm(searchableText, term)) return null;
+
+              return {
+                id: row.id,
+                type: 'file',
+                category: row.tipo || 'document',
+                title: row.titulo || 'Documento',
+                snippet: buildSnippet(searchableText, term, 'Documento do paciente'),
+                date: row.created_at,
+                tabKey: 'exames',
+                sourceTable: 'patient_documentos',
                 sourceRecordId: row.id,
               };
             },
@@ -441,6 +607,190 @@ export function ProntuarioSearchBar({
               };
             },
           },
+          ...(specialtyKey === 'psicologia'
+            ? [
+                {
+                  sourceTable: 'sessoes_psicologia',
+                  type: 'entry' as const,
+                  category: 'evolution',
+                  tabKey: 'evolucao',
+                  dateField: 'data_sessao',
+                  buildQuery: () => {
+                    let query = supabase
+                      .from('sessoes_psicologia')
+                      .select('id, data_sessao, tema_central, relato_paciente, observacoes_terapeuta, intervencoes_realizadas, objetivo_sessao, demanda_principal, professional_id, appointment_id')
+                      .eq('clinic_id', clinicId)
+                      .eq('patient_id', patientId)
+                      .order('data_sessao', { ascending: false })
+                      .limit(1000);
+
+                    if (appointmentId) query = query.eq('appointment_id', appointmentId);
+                    if (professionalId) query = query.eq('professional_id', professionalId);
+
+                    return query;
+                  },
+                  toHit: (row: any): RemoteHit | null => {
+                    const searchableText = extractSearchText(row);
+                    if (!includesSearchTerm(searchableText, term)) return null;
+
+                    return {
+                      id: row.id,
+                      type: 'entry',
+                      category: 'evolution',
+                      title: row.tema_central || row.demanda_principal || 'Sessão de Psicologia',
+                      snippet: buildSnippet(searchableText, term, 'Sessão terapêutica'),
+                      date: row.data_sessao || row.created_at,
+                      tabKey: 'evolucao',
+                      sourceTable: 'sessoes_psicologia',
+                      sourceRecordId: row.id,
+                    };
+                  },
+                },
+                {
+                  sourceTable: 'patient_anamnese_psicologia',
+                  type: 'entry' as const,
+                  category: 'anamnesis',
+                  tabKey: 'anamnese',
+                  dateField: 'created_at',
+                  buildQuery: () => {
+                    let query = supabase
+                      .from('patient_anamnese_psicologia')
+                      .select('id, queixa_principal, historico_pessoal, historico_familiar, medicamentos, data, created_at, appointment_id, professional_id')
+                      .eq('clinic_id', clinicId)
+                      .eq('patient_id', patientId)
+                      .order('created_at', { ascending: false })
+                      .limit(1000);
+
+                    if (appointmentId) query = query.eq('appointment_id', appointmentId);
+                    if (professionalId) query = query.eq('professional_id', professionalId);
+
+                    return query;
+                  },
+                  toHit: (row: any): RemoteHit | null => {
+                    const searchableText = extractSearchText(row);
+                    if (!includesSearchTerm(searchableText, term)) return null;
+
+                    return {
+                      id: row.id,
+                      type: 'entry',
+                      category: 'anamnesis',
+                      title: row.queixa_principal || 'Anamnese Psicológica',
+                      snippet: buildSnippet(searchableText, term, 'Anamnese psicológica'),
+                      date: row.created_at,
+                      tabKey: 'anamnese',
+                      sourceTable: 'patient_anamnese_psicologia',
+                      sourceRecordId: row.id,
+                    };
+                  },
+                },
+                {
+                  sourceTable: 'psychology_diagnostic_hypotheses',
+                  type: 'entry' as const,
+                  category: 'diagnostico',
+                  tabKey: 'diagnostico',
+                  dateField: 'created_at',
+                  buildQuery: () => {
+                    let query = supabase
+                      .from('psychology_diagnostic_hypotheses')
+                      .select('id, hipotese_principal, hipoteses_secundarias, descricao_clinica, sintomas_observados, observacoes, data_registro, appointment_id, professional_id')
+                      .eq('clinic_id', clinicId)
+                      .eq('patient_id', patientId)
+                      .order('created_at', { ascending: false })
+                      .limit(1000);
+
+                    if (appointmentId) query = query.eq('appointment_id', appointmentId);
+                    if (professionalId) query = query.eq('professional_id', professionalId);
+
+                    return query;
+                  },
+                  toHit: (row: any): RemoteHit | null => {
+                    const searchableText = extractSearchText(row);
+                    if (!includesSearchTerm(searchableText, term)) return null;
+
+                    return {
+                      id: row.id,
+                      type: 'entry',
+                      category: 'diagnostico',
+                      title: row.hipotese_principal || 'Hipótese Diagnóstica',
+                      snippet: buildSnippet(searchableText, term, 'Hipótese diagnóstica psicológica'),
+                      date: row.data_registro || row.created_at,
+                      tabKey: 'diagnostico',
+                      sourceTable: 'psychology_diagnostic_hypotheses',
+                      sourceRecordId: row.id,
+                    };
+                  },
+                },
+              ]
+            : []),
+          ...(specialtyKey === 'pediatria'
+            ? [
+                {
+                  sourceTable: 'body_measurements',
+                  type: 'entry' as const,
+                  category: 'exam',
+                  tabKey: 'crescimento_desenvolvimento',
+                  dateField: 'created_at',
+                  buildQuery: () => supabase
+                    .from('body_measurements')
+                    .select('id, measurement_type, data, created_at, appointment_id, professional_id')
+                    .eq('clinic_id', clinicId)
+                    .eq('patient_id', patientId)
+                    .in('measurement_type', ['pediatric_growth', 'pediatric_milestones'])
+                    .order('created_at', { ascending: false })
+                    .limit(1000),
+                  toHit: (row: any): RemoteHit | null => {
+                    const searchableText = extractSearchText(row);
+                    if (!includesSearchTerm(searchableText, term)) return null;
+
+                    return {
+                      id: row.id,
+                      type: 'entry',
+                      category: 'exam',
+                      title: row.measurement_type === 'pediatric_milestones' ? 'Marcos do Desenvolvimento' : 'Crescimento e Desenvolvimento',
+                      snippet: buildSnippet(searchableText, term, 'Registro pediátrico'),
+                      date: row.created_at,
+                      tabKey: 'crescimento_desenvolvimento',
+                      sourceTable: 'body_measurements',
+                      sourceRecordId: row.id,
+                    };
+                  },
+                },
+              ]
+            : []),
+          ...(specialtyKey === 'dermatologia'
+            ? [
+                {
+                  sourceTable: 'patient_condutas',
+                  type: 'entry' as const,
+                  category: 'conduta',
+                  tabKey: 'conduta',
+                  dateField: 'created_at',
+                  buildQuery: () => supabase
+                    .from('patient_condutas')
+                    .select('id, orientacoes, solicitacao_exames, prescricoes, encaminhamentos, retorno_observacoes, data_hora, created_at, appointment_id, profissional_id')
+                    .eq('clinic_id', clinicId)
+                    .eq('patient_id', patientId)
+                    .order('created_at', { ascending: false })
+                    .limit(1000),
+                  toHit: (row: any): RemoteHit | null => {
+                    const searchableText = extractSearchText(row);
+                    if (!includesSearchTerm(searchableText, term)) return null;
+
+                    return {
+                      id: row.id,
+                      type: 'entry',
+                      category: 'conduta',
+                      title: 'Plano de Conduta Dermatológica',
+                      snippet: buildSnippet(searchableText, term, 'Plano dermatológico'),
+                      date: row.data_hora || row.created_at,
+                      tabKey: 'conduta',
+                      sourceTable: 'patient_condutas',
+                      sourceRecordId: row.id,
+                    };
+                  },
+                },
+              ]
+            : []),
           {
             sourceTable: 'clinical_addendums',
             type: 'entry' as const,
@@ -705,6 +1055,10 @@ export function ProntuarioSearchBar({
           table: item.definition.sourceTable,
           rows: item.rows,
           hits: item.hits,
+          specialtyKey: specialtyKey || null,
+          specialtyId: specialtyId || null,
+          appointmentId: appointmentId || null,
+          professionalId: professionalId || null,
         })));
 
         console.log('[ProntuarioSearch] results by tab', {
@@ -872,8 +1226,10 @@ export function ProntuarioSearchBar({
   }, [debouncedQuery, activeFilter, entries, files, alerts, remoteHits, isInDateRange]);
 
   const handleResultClick = (result: SearchResult) => {
+    console.log('[ProntuarioSearch] result clicked', result);
     onNavigateToTab(result.tabKey);
     onResultClick(result);
+    scheduleResultNavigation(result);
     setIsOpen(false);
     setQuery("");
   };
