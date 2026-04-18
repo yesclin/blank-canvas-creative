@@ -13,6 +13,7 @@ export interface ClinicWhatsAppIntegration {
   status: string | null;
   instance_name: string | null;
   instance_external_id: string | null;
+  instance_token: string | null;
   instance_status: string | null;
   instance_phone: string | null;
   instance_profile_name: string | null;
@@ -129,7 +130,7 @@ export function useClinicWhatsAppIntegration() {
     invokeAction("send_test", { phone, message });
 
   const isConnected = integration?.instance_status === "connected" || integration?.status === "active";
-  const hasInstance = !!integration?.instance_external_id || !!integration?.instance_name;
+  const hasInstance = !!integration?.instance_token || !!integration?.instance_external_id;
 
   return {
     integration,

@@ -282,6 +282,7 @@ Deno.serve(async (req) => {
         }
       }
       const updated = await patchIntegration({
+        instance_name: null,
         instance_token: null,
         instance_external_id: null,
         instance_status: null,
