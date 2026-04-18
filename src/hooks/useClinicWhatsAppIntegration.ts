@@ -148,6 +148,7 @@ export function useClinicWhatsAppIntegration() {
     disconnectInstance,
     resetInstance,
     sendTestMessage,
+    runDiagnostics,
     refetch: fetchIntegration,
   };
 }
