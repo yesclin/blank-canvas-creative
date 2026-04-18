@@ -478,10 +478,17 @@ Deno.serve(async (req) => {
       }
 
       const sInst = statusRes.data?.instance || statusRes.data || {};
+      const sStatusBlock = statusRes.data?.status || {};
       mapped = mapStatus(sInst?.status) || mapped;
       qrcode = qrcode || sInst?.qrcode || null;
       paircode = paircode || sInst?.paircode || null;
-      phoneVal = sInst?.phone || sInst?.wid || phoneVal;
+      const ownerRaw =
+        sInst?.owner ||
+        sInst?.phone ||
+        sInst?.wid ||
+        (typeof sStatusBlock?.jid === "string" ? sStatusBlock.jid.split("@")[0].split(":")[0] : null);
+      const normalizedPhone = ownerRaw ? String(ownerRaw).replace(/\D/g, "") : null;
+      phoneVal = normalizedPhone || phoneVal;
       profileName = sInst?.profileName || sInst?.name || profileName;
       profilePic = sInst?.profilePicUrl || profilePic;
       isBusiness = !!sInst?.isBusiness;
