@@ -535,11 +535,18 @@ Deno.serve(async (req) => {
       mapped = mapStatus(sInst?.status) || mapped;
       qrcode = qrcode || sInst?.qrcode || null;
       paircode = paircode || sInst?.paircode || null;
+      const jidToDigitsC = (j: any) =>
+        typeof j === "string" ? j.split("@")[0].split(":")[0] : null;
       const ownerRaw =
         sInst?.owner ||
         sInst?.phone ||
         sInst?.wid ||
-        (typeof sStatusBlock?.jid === "string" ? sStatusBlock.jid.split("@")[0].split(":")[0] : null);
+        sInst?.number ||
+        sInst?.msisdn ||
+        jidToDigitsC(sInst?.jid) ||
+        jidToDigitsC(sInst?.me?.id) ||
+        jidToDigitsC(sStatusBlock?.jid) ||
+        jidToDigitsC(statusRes.data?.jid);
       const normalizedPhone = ownerRaw ? String(ownerRaw).replace(/\D/g, "") : null;
       phoneVal = normalizedPhone || phoneVal;
       profileName = sInst?.profileName || sInst?.name || profileName;
@@ -607,13 +614,21 @@ Deno.serve(async (req) => {
       const statusBlock = res.data?.status || {};
       const mapped = mapStatus(inst?.status);
 
-      // UAZAPI returns the connected phone in `owner` (e.g. "5514982017971")
-      // or inside status.jid (e.g. "5514982017971:30@s.whatsapp.net"). Normalize to digits only.
+      // UAZAPI may return the connected phone under different keys depending on
+      // version/provider. Confirmed format from logs: `inst.owner` = "5514982017971"
+      // and `status.jid` = "5514982017971:30@s.whatsapp.net".
+      const jidToDigits = (j: any) =>
+        typeof j === "string" ? j.split("@")[0].split(":")[0] : null;
       const ownerRaw =
         inst?.owner ||
         inst?.phone ||
         inst?.wid ||
-        (typeof statusBlock?.jid === "string" ? statusBlock.jid.split("@")[0].split(":")[0] : null);
+        inst?.number ||
+        inst?.msisdn ||
+        jidToDigits(inst?.jid) ||
+        jidToDigits(inst?.me?.id) ||
+        jidToDigits(statusBlock?.jid) ||
+        jidToDigits(res.data?.jid);
       const normalizedPhone = ownerRaw ? String(ownerRaw).replace(/\D/g, "") : null;
 
       const updated = await patchIntegration({
