@@ -31,15 +31,36 @@ function getSupabase() {
 }
 
 async function getIntegration(supabase: any, clinicId: string) {
+  // Prefer active UAZAPI integration; fall back to any active whatsapp integration
   const { data, error } = await supabase
     .from("clinic_channel_integrations")
     .select("*")
     .eq("clinic_id", clinicId)
     .eq("channel", "whatsapp")
-    .eq("status", "active")
+    .eq("is_active", true)
+    .order("provider", { ascending: false }) // 'uazapi' > 'evolution-api'
+    .limit(1)
     .maybeSingle();
   if (error) throw error;
   return data;
+}
+
+async function sendViaUazapi(integration: any, phone: string, message: string) {
+  const baseUrl = (Deno.env.get("UAZAPI_BASE_URL") || "").replace(/\/$/, "");
+  const token = integration.instance_token;
+  if (!baseUrl) return { ok: false, status: 500, body: { error: "UAZAPI_BASE_URL não configurada" } };
+  if (!token) return { ok: false, status: 422, body: { error: "Instância sem token configurado" } };
+
+  const url = `${baseUrl}/send/text`;
+  console.log("[UAZAPI] URL:", url, "Phone:", phone);
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "token": token },
+    body: JSON.stringify({ number: phone, text: message }),
+  });
+  const body = await response.json().catch(() => ({}));
+  console.log("[UAZAPI] Status:", response.status, "Body:", JSON.stringify(body));
+  return { ok: response.ok, status: response.status, body };
 }
 
 async function sendViaEvolution(integration: any, phone: string, message: string) {
@@ -48,20 +69,19 @@ async function sendViaEvolution(integration: any, phone: string, message: string
   const url = `${apiUrl}/message/sendText/${instance_id}`;
 
   console.log("[Evolution] URL:", url);
-  console.log("[Evolution] Phone:", phone);
-
   const response = await fetch(url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "apikey": access_token,
-    },
+    headers: { "Content-Type": "application/json", "apikey": access_token },
     body: JSON.stringify({ number: phone, text: message }),
   });
-
   const body = await response.json().catch(() => ({}));
   console.log("[Evolution] Status:", response.status, "Body:", JSON.stringify(body));
   return { ok: response.ok, status: response.status, body };
+}
+
+async function sendMessage(integration: any, phone: string, message: string) {
+  if (integration.provider === "uazapi") return sendViaUazapi(integration, phone, message);
+  return sendViaEvolution(integration, phone, message);
 }
 
 Deno.serve(async (req) => {
@@ -166,7 +186,7 @@ Deno.serve(async (req) => {
 
     let result;
     try {
-      result = await sendViaEvolution(integration, formattedPhone, message);
+      result = await sendMessage(integration, formattedPhone, message);
     } catch (fetchErr: any) {
       const newAttempts = currentAttempts + 1;
       const shouldRetry = newAttempts < 3;
