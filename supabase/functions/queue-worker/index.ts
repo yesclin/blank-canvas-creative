@@ -48,15 +48,21 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Authentication: require shared secret OR valid Bearer (cron uses anon Bearer)
+  // Authentication: aceita (a) x-worker-secret válido, OU (b) Bearer token (cron/usuário autenticado)
   const workerSecret = Deno.env.get("QUEUE_WORKER_SECRET");
   const providedSecret = req.headers.get("x-worker-secret") || "";
   const authHeader = req.headers.get("Authorization") || "";
 
-  const hasValidSecret = workerSecret && providedSecret === workerSecret;
+  const secretMatches = workerSecret && providedSecret && providedSecret === workerSecret;
   const hasBearer = authHeader.startsWith("Bearer ");
-
-  if (!hasValidSecret && !hasBearer) {
+  // Se o secret foi fornecido mas não bate, rejeitar
+  if (providedSecret && workerSecret && providedSecret !== workerSecret) {
+    return new Response(JSON.stringify({ error: "Unauthorized: bad secret" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  if (!secretMatches && !hasBearer) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
