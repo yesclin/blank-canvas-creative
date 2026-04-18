@@ -185,17 +185,32 @@ Deno.serve(async (req) => {
         return jsonResponse({ error: "Falha ao criar instância na UAZAPI", details: res.data }, res.status);
       }
       const inst = res.data?.instance || res.data;
+      const instToken = inst?.token || null;
+
+      // Valida imediatamente buscando o status com o token recém-criado
+      let mappedStatus = mapStatus(inst?.status) || "disconnected";
+      let validated = false;
+      if (instToken) {
+        const statusRes = await uazapiFetch("/instance/status", { token: instToken, method: "GET" });
+        console.log("UAZAPI post-create status:", statusRes.status, JSON.stringify(statusRes.data));
+        if (statusRes.ok) {
+          validated = true;
+          const sInst = statusRes.data?.instance || statusRes.data || {};
+          mappedStatus = mapStatus(sInst?.status) || mappedStatus;
+        }
+      }
+
       const updated = await patchIntegration({
         instance_name: inst?.name || instanceName,
         instance_external_id: inst?.id || inst?.token || null,
-        instance_token: inst?.token || null,
-        instance_status: mapStatus(inst?.status),
-        status: "connecting",
-        last_error: null,
+        instance_token: instToken,
+        instance_status: validated ? mappedStatus : "error",
+        status: validated ? "connecting" : "error",
+        last_error: validated ? null : `Instância criada mas não validada na UAZAPI. Verifique UAZAPI_BASE_URL e UAZAPI_ADMIN_TOKEN.`,
         last_connection_check_at: new Date().toISOString(),
-        last_connection_status: mapStatus(inst?.status),
+        last_connection_status: validated ? mappedStatus : "error",
       });
-      return jsonResponse({ success: true, integration: { ...updated, instance_token: undefined } });
+      return jsonResponse({ success: true, validated, integration: { ...updated, instance_token: undefined } });
     }
 
     if (action === "link_existing") {
