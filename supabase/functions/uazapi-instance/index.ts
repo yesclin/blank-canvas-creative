@@ -244,37 +244,108 @@ Deno.serve(async (req) => {
         method: "POST",
         body: phone ? { phone } : {},
       });
+      console.log("UAZAPI /instance/connect:", res.status, JSON.stringify(res.data));
+
+      // Se a UAZAPI não encontrar a instância (404) ou retornar erro, marca como erro real
+      if (!res.ok) {
+        const errMsg = `connect ${res.status}: ${JSON.stringify(res.data)}`;
+        const isNotFound = res.status === 404 || /not.?found|invalid.?token|unauthorized/i.test(JSON.stringify(res.data));
+        const updated = await patchIntegration({
+          instance_status: isNotFound ? "error" : "disconnected",
+          status: "error",
+          last_error: isNotFound
+            ? `Instância não encontrada na UAZAPI. Verifique se o token pertence ao mesmo ambiente/conta UAZAPI configurado (UAZAPI_BASE_URL).`
+            : errMsg,
+          last_connection_status: "error",
+          last_connection_check_at: new Date().toISOString(),
+        });
+        return jsonResponse({
+          success: false,
+          error: updated.last_error,
+          instance_status: updated.instance_status,
+        }, res.status);
+      }
+
       const inst = res.data?.instance || res.data;
+      let qrcode = inst?.qrcode || res.data?.qrcode || null;
+      let paircode = inst?.paircode || res.data?.paircode || null;
+      let mapped = mapStatus(inst?.status) || "connecting";
+
+      // Sincroniza estado real imediatamente após connect
+      const statusRes = await uazapiFetch("/instance/status", { token: instToken, method: "GET" });
+      console.log("UAZAPI auto-status after connect:", statusRes.status, JSON.stringify(statusRes.data));
+      let phoneVal = existing!.instance_phone;
+      let profileName = existing!.instance_profile_name;
+      let profilePic = existing!.instance_profile_pic_url;
+      let isBusiness = !!existing!.is_business;
+      if (statusRes.ok) {
+        const sInst = statusRes.data?.instance || statusRes.data || {};
+        mapped = mapStatus(sInst?.status) || mapped;
+        qrcode = qrcode || sInst?.qrcode || null;
+        paircode = paircode || sInst?.paircode || null;
+        phoneVal = sInst?.phone || sInst?.wid || phoneVal;
+        profileName = sInst?.profileName || sInst?.name || profileName;
+        profilePic = sInst?.profilePicUrl || profilePic;
+        isBusiness = !!sInst?.isBusiness;
+      }
+
       const updated = await patchIntegration({
-        instance_status: mapStatus(inst?.status) || "connecting",
-        status: "connecting",
-        last_error: res.ok ? null : `connect: ${JSON.stringify(res.data)}`,
+        instance_status: mapped,
+        instance_phone: phoneVal,
+        instance_profile_name: profileName,
+        instance_profile_pic_url: profilePic,
+        is_business: isBusiness,
+        status: mapped === "connected" ? "active" : "connecting",
+        last_error: null,
+        last_connection_status: mapped,
         last_connection_check_at: new Date().toISOString(),
       });
+
       return jsonResponse({
-        success: res.ok,
-        qrcode: inst?.qrcode || res.data?.qrcode || null,
-        paircode: inst?.paircode || res.data?.paircode || null,
+        success: true,
+        qrcode,
+        paircode,
         instance_status: updated.instance_status,
-      }, res.ok ? 200 : res.status);
+      });
     }
 
     if (action === "status") {
       const res = await uazapiFetch("/instance/status", { token: instToken, method: "GET" });
+      console.log("UAZAPI /instance/status:", res.status, JSON.stringify(res.data));
+
+      if (!res.ok) {
+        const isNotFound = res.status === 404 || /not.?found|invalid.?token|unauthorized/i.test(JSON.stringify(res.data));
+        const updated = await patchIntegration({
+          instance_status: "error",
+          status: "error",
+          last_connection_status: "error",
+          last_connection_check_at: new Date().toISOString(),
+          last_error: isNotFound
+            ? `Instância não encontrada na UAZAPI (${res.status}). O token salvo não corresponde a nenhuma instância no ambiente atual (${UAZAPI_BASE_URL}). Use "Resetar" e crie/vincule novamente.`
+            : `status ${res.status}: ${JSON.stringify(res.data)}`,
+        });
+        return jsonResponse({
+          success: false,
+          error: updated.last_error,
+          integration: { ...updated, instance_token: undefined },
+        }, res.status);
+      }
+
       const inst = res.data?.instance || res.data;
+      const mapped = mapStatus(inst?.status);
       const updated = await patchIntegration({
-        instance_status: mapStatus(inst?.status),
+        instance_status: mapped,
         instance_phone: inst?.phone || inst?.wid || existing!.instance_phone,
         instance_profile_name: inst?.profileName || inst?.name || existing!.instance_profile_name,
         instance_profile_pic_url: inst?.profilePicUrl || existing!.instance_profile_pic_url,
         is_business: !!inst?.isBusiness,
-        status: mapStatus(inst?.status) === "connected" ? "active" : (existing!.status || "not_configured"),
-        last_connection_status: mapStatus(inst?.status),
+        status: mapped === "connected" ? "active" : (mapped === "connecting" ? "connecting" : "not_configured"),
+        last_connection_status: mapped,
         last_connection_check_at: new Date().toISOString(),
-        last_error: res.ok ? null : `status: ${JSON.stringify(res.data)}`,
+        last_error: null,
       });
       return jsonResponse({
-        success: res.ok,
+        success: true,
         integration: { ...updated, instance_token: undefined },
         qrcode: inst?.qrcode || null,
         paircode: inst?.paircode || null,
