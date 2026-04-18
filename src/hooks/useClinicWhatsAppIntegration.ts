@@ -129,7 +129,7 @@ export function useClinicWhatsAppIntegration() {
     invokeAction("send_test", { phone, message });
 
   const isConnected = integration?.instance_status === "connected" || integration?.status === "active";
-  const hasInstance = !!integration?.instance_external_id || !!integration?.instance_name;
+  const hasInstance = !!integration?.instance_token || !!integration?.instance_external_id;
 
   return {
     integration,
