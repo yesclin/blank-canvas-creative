@@ -74,6 +74,7 @@ export function WhatsAppUazapiManager() {
     disconnectInstance,
     resetInstance,
     sendTestMessage,
+    runDiagnostics,
   } = useClinicWhatsAppIntegration();
 
   const [instanceName, setInstanceName] = useState("");
