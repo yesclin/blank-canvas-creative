@@ -48,10 +48,11 @@ import {
   type DelayType,
   type AutomationChannel,
 } from "@/hooks/useAutomationRules";
-import { useMessageTemplates } from "@/hooks/useMessageTemplates";
+import { useMessageTemplates, type TemplateFormData } from "@/hooks/useMessageTemplates";
 import { useWhatsAppIntegration } from "@/hooks/useWhatsAppIntegration";
 import { DYNAMIC_FIELDS } from "@/types/comunicacao";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 // ── Constants ──
 
@@ -81,16 +82,33 @@ const emptyForm: AutomationFormData = {
   priority: 0,
 };
 
+const normalizeAutomationMessage = (content: string) =>
+  content
+    .replace(/\{\{nome_paciente\}\}/g, "{{paciente}}")
+    .replace(/\{\{primeiro_nome\}\}/g, "{{paciente}}")
+    .replace(/\{\{data_consulta\}\}/g, "{{data}}")
+    .replace(/\{\{hora_consulta\}\}/g, "{{hora}}")
+    .replace(/\{\{nome_clinica\}\}/g, "{{clinica}}")
+    .replace(/\{\{endereco_clinica\}\}/g, "{{clinica}}")
+    .replace(/\{\{profissional\}\}/g, "{{profissional}}")
+    .replace(/\{\{link_agenda\}\}/g, "")
+    .replace(/\{\{link_confirmacao\}\}/g, "");
+
 // ── Helper: preview content ──
 const previewContent = (content: string) =>
   content
+    .replace(/\{\{paciente\}\}/g, "Maria Silva")
+    .replace(/\{\{data\}\}/g, "25/01/2024")
+    .replace(/\{\{hora\}\}/g, "14:00")
+    .replace(/\{\{clinica\}\}/g, "Clínica YesClin")
     .replace(/\{\{nome_paciente\}\}/g, "Maria Silva")
     .replace(/\{\{primeiro_nome\}\}/g, "Maria")
     .replace(/\{\{data_consulta\}\}/g, "25/01/2024")
     .replace(/\{\{hora_consulta\}\}/g, "14:00")
     .replace(/\{\{profissional\}\}/g, "Dr. João Oliveira")
     .replace(/\{\{endereco_clinica\}\}/g, "Av. Paulista, 1000")
-    .replace(/\{\{link_agenda\}\}/g, "https://clinica.com/agendar")
+    .replace(/\{\{link_agenda\}\}/g, "[link indisponível]")
+    .replace(/\{\{link_confirmacao\}\}/g, "[link indisponível]")
     .replace(/\{\{nome_clinica\}\}/g, "Clínica YesClin");
 
 export default function MarketingAutomacoes() {
@@ -99,7 +117,7 @@ export default function MarketingAutomacoes() {
     createAutomation, updateAutomation, deleteAutomation,
     toggleAutomation, duplicateAutomation,
   } = useAutomationRules();
-  const { templates } = useMessageTemplates();
+  const { templates, createTemplate, refetch: refetchTemplates } = useMessageTemplates();
   const { isConfigured: whatsappConfigured } = useWhatsAppIntegration();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -156,8 +174,34 @@ export default function MarketingAutomacoes() {
   };
 
   const handleWizardSave = async () => {
+    if (!form.template_id && (customMessage.includes("{{link_agenda}}") || customMessage.includes("{{link_confirmacao}}"))) {
+      toast.error("{{link_agenda}} ainda não está implementado ponta a ponta.");
+      return;
+    }
+
+    let resolvedTemplateId = form.template_id;
+
+    if (!resolvedTemplateId && customMessage.trim()) {
+      const createdTemplate = await createTemplate({
+        name: form.name || `${EVENT_TYPE_LABELS[form.trigger_type]} - Template`,
+        category: "confirmacao_consulta",
+        channel: form.channel,
+        content: normalizeAutomationMessage(customMessage.trim()),
+        is_active: true,
+      } satisfies TemplateFormData);
+
+      await refetchTemplates();
+
+      if (!createdTemplate?.id) {
+        return;
+      }
+
+      resolvedTemplateId = createdTemplate.id;
+    }
+
     const finalForm = {
       ...form,
+      template_id: resolvedTemplateId,
       name: form.name || `${EVENT_TYPE_LABELS[form.trigger_type]} - ${DELAY_TYPE_LABELS[form.delay_type]}`,
     };
     await createAutomation(finalForm);
