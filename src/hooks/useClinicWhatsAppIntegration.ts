@@ -13,6 +13,7 @@ export interface ClinicWhatsAppIntegration {
   status: string | null;
   instance_name: string | null;
   instance_external_id: string | null;
+  instance_token: string | null;
   instance_status: string | null;
   instance_phone: string | null;
   instance_profile_name: string | null;
