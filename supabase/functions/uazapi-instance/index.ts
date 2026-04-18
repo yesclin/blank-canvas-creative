@@ -580,24 +580,8 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: res.ok, integration: { ...updated, instance_token: undefined } });
     }
 
-    if (action === "reset") {
-      // Disconnect + clear instance data
-      await uazapiFetch("/instance/disconnect", { token: instToken, method: "POST" });
-      const updated = await patchIntegration({
-        instance_token: null,
-        instance_external_id: null,
-        instance_status: null,
-        instance_phone: null,
-        instance_profile_name: null,
-        instance_profile_pic_url: null,
-        is_business: false,
-        status: "not_configured",
-        last_connection_status: "disconnected",
-        last_error: null,
-        last_connection_check_at: new Date().toISOString(),
-      });
-      return jsonResponse({ success: true, integration: { ...updated, instance_token: undefined } });
-    }
+    // (action === "reset" já tratado no topo, antes do guard de token)
+
 
     if (action === "send_test") {
       const phone = String(payload.phone || "").replace(/\D/g, "");
