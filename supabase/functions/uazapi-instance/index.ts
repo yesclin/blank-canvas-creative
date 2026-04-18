@@ -307,14 +307,42 @@ Deno.serve(async (req) => {
 
       if (!res.ok) {
         const responseText = typeof res.data === "string" ? res.data : JSON.stringify(res.data);
-        const isMissingOrUnauthorized =
+        const isInvalidToken =
           res.status === 401 ||
           res.status === 404 ||
-          /not.?found|invalid.?token|unauthorized|invalid token|instance/i.test(responseText);
-        const readableError = isMissingOrUnauthorized
-          ? `A UAZAPI rejeitou o connect da instância \"${existing!.instance_name || "(sem nome)"}\". Isso normalmente significa que o token salvo não pertence ao mesmo ambiente/painel configurado no backend.`
-          : `Falha no connect UAZAPI (${res.status}): ${responseText}`;
+          /invalid.?token|not.?found|unauthorized/i.test(responseText);
 
+        // Token inválido = instância não existe nesse painel UAZAPI.
+        // Auto-limpa o token para destravar o fluxo (próximo create funciona limpo).
+        if (isInvalidToken) {
+          const updated = await patchIntegration({
+            instance_token: null,
+            instance_external_id: null,
+            instance_status: null,
+            instance_phone: null,
+            instance_profile_name: null,
+            instance_profile_pic_url: null,
+            status: "not_configured",
+            last_connection_status: "error",
+            last_connection_check_at: new Date().toISOString(),
+            last_error: `A instância "${existing!.instance_name || "(sem nome)"}" não existe ou o token é inválido no painel UAZAPI atual (${UAZAPI_BASE_URL}). O vínculo foi resetado automaticamente — clique em "Criar instância" novamente.`,
+          });
+          return jsonResponse({
+            success: false,
+            error: updated.last_error,
+            instance_status: updated.instance_status,
+            auto_reset: true,
+            diagnostics: {
+              action: "connect",
+              instance_name: existing!.instance_name,
+              uazapi_response_status: res.status,
+              uazapi_response_body: res.data,
+              ...envDiagnostics(instToken),
+            },
+          });
+        }
+
+        const readableError = `Falha no connect UAZAPI (${res.status}): ${responseText}`;
         const updated = await patchIntegration({
           instance_status: "error",
           status: "error",
@@ -333,7 +361,6 @@ Deno.serve(async (req) => {
             uazapi_response_status: res.status,
             uazapi_response_body: res.data,
             ...envDiagnostics(instToken),
-            same_context_hint: "Confirme se o painel UAZAPI aberto manualmente usa a mesma base/conta dos secrets UAZAPI_BASE_URL e UAZAPI_ADMIN_TOKEN.",
           },
         });
       }
