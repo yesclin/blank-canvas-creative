@@ -10,6 +10,7 @@ const UAZAPI_ADMIN_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
 
 type Action =
   | "create"
+  | "link_existing"
   | "connect"
   | "status"
   | "disconnect"
@@ -169,11 +170,16 @@ Deno.serve(async (req) => {
     // ========== ACTIONS ==========
     if (action === "create") {
       const instanceName = (payload.instance_name as string) || `clinic-${clinic_id.substring(0, 8)}`;
+      // systemName é opcional na UAZAPI free; só envia se explicitamente fornecido
+      const initBody: Record<string, unknown> = { name: instanceName };
+      if (payload.system_name) initBody.systemName = payload.system_name;
+
       const res = await uazapiFetch("/instance/init", {
         useAdmin: true,
         method: "POST",
-        body: { name: instanceName, systemName: "YesClin" },
+        body: initBody,
       });
+      console.log("UAZAPI /instance/init response:", res.status, JSON.stringify(res.data));
       if (!res.ok) {
         await patchIntegration({ last_error: `create: ${res.status} ${JSON.stringify(res.data)}`, last_connection_check_at: new Date().toISOString() });
         return jsonResponse({ error: "Falha ao criar instância na UAZAPI", details: res.data }, res.status);
@@ -188,6 +194,39 @@ Deno.serve(async (req) => {
         last_error: null,
         last_connection_check_at: new Date().toISOString(),
         last_connection_status: mapStatus(inst?.status),
+      });
+      return jsonResponse({ success: true, integration: { ...updated, instance_token: undefined } });
+    }
+
+    if (action === "link_existing") {
+      const instance_name = String(payload.instance_name || "").trim();
+      const instance_token = String(payload.instance_token || "").trim();
+      const instance_external_id = (payload.instance_external_id as string) || null;
+      if (!instance_name || !instance_token) {
+        return jsonResponse({ error: "instance_name e instance_token são obrigatórios" }, 400);
+      }
+      // Tenta validar o token consultando o status na UAZAPI
+      let inst: any = {};
+      let mappedStatus = "disconnected";
+      const statusRes = await uazapiFetch("/instance/status", { token: instance_token, method: "GET" });
+      console.log("UAZAPI link_existing status:", statusRes.status, JSON.stringify(statusRes.data));
+      if (statusRes.ok) {
+        inst = statusRes.data?.instance || statusRes.data || {};
+        mappedStatus = mapStatus(inst?.status);
+      }
+      const updated = await patchIntegration({
+        instance_name,
+        instance_token,
+        instance_external_id: instance_external_id || inst?.id || null,
+        instance_status: mappedStatus,
+        instance_phone: inst?.phone || inst?.wid || null,
+        instance_profile_name: inst?.profileName || inst?.name || null,
+        instance_profile_pic_url: inst?.profilePicUrl || null,
+        is_business: !!inst?.isBusiness,
+        status: mappedStatus === "connected" ? "active" : "connecting",
+        last_connection_status: mappedStatus,
+        last_connection_check_at: new Date().toISOString(),
+        last_error: statusRes.ok ? null : `link_existing: token não validado (${statusRes.status})`,
       });
       return jsonResponse({ success: true, integration: { ...updated, instance_token: undefined } });
     }

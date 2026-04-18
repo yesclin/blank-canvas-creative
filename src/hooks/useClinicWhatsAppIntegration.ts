@@ -28,7 +28,7 @@ export interface ClinicWhatsAppIntegration {
   updated_at: string;
 }
 
-type Action = "create" | "connect" | "status" | "disconnect" | "reset" | "send_test";
+type Action = "create" | "link_existing" | "connect" | "status" | "disconnect" | "reset" | "send_test";
 
 export function useClinicWhatsAppIntegration() {
   const { clinic } = useClinicData();
@@ -116,7 +116,10 @@ export function useClinicWhatsAppIntegration() {
     [clinic?.id, fetchIntegration]
   );
 
-  const createInstance = (instance_name?: string) => invokeAction("create", instance_name ? { instance_name } : {});
+  const createInstance = (instance_name?: string, system_name?: string) =>
+    invokeAction("create", { ...(instance_name ? { instance_name } : {}), ...(system_name ? { system_name } : {}) });
+  const linkExistingInstance = (params: { instance_name: string; instance_token: string; instance_external_id?: string }) =>
+    invokeAction("link_existing", params);
   const connectInstance = (phone?: string) => invokeAction("connect", phone ? { phone } : {});
   const refreshStatus = () => invokeAction("status");
   const disconnectInstance = () => invokeAction("disconnect");
@@ -136,6 +139,7 @@ export function useClinicWhatsAppIntegration() {
     isConnected,
     hasInstance,
     createInstance,
+    linkExistingInstance,
     connectInstance,
     refreshStatus,
     disconnectInstance,
