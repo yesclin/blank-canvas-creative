@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.medications-search]
 verify_jwt = false
+
+[functions.uazapi-instance]
+verify_jwt = false
