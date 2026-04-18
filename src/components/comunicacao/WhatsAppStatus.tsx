@@ -57,7 +57,7 @@ export function WhatsAppStatus() {
               <div>
                 <p className="font-medium text-sm">Instância Conectada</p>
                 <p className="text-lg font-bold text-green-700 dark:text-green-400">
-                  {integration?.display_phone_number || integration?.instance_id || 'Configurado'}
+                  {integration?.instance_phone || integration?.display_phone_number || integration?.instance_name || 'Configurado'}
                 </p>
               </div>
               <Button variant="outline" size="sm" onClick={() => navigate('/app/marketing?tab=whatsapp')}>
