@@ -315,6 +315,29 @@ Deno.serve(async (req) => {
     }
 
     if (!existing?.instance_token && action !== "create") {
+      // Reset deve sempre funcionar localmente, mesmo sem token
+      // (instância pode já ter sido apagada/expirada no provider gratuito)
+      if (action === "reset") {
+        const updated = await patchIntegration({
+          instance_token: null,
+          instance_external_id: null,
+          instance_status: null,
+          instance_phone: null,
+          instance_profile_name: null,
+          instance_profile_pic_url: null,
+          instance_name: null,
+          is_business: false,
+          status: "not_configured",
+          last_connection_status: "disconnected",
+          last_error: null,
+          last_connection_check_at: new Date().toISOString(),
+        });
+        return jsonResponse({
+          success: true,
+          local_only: true,
+          integration: { ...updated, instance_token: undefined },
+        });
+      }
       return jsonResponse({ error: "Instância não criada ainda. Use action=create primeiro." }, 422);
     }
 
@@ -539,8 +562,17 @@ Deno.serve(async (req) => {
     }
 
     if (action === "reset") {
-      // Disconnect + clear instance data
-      await uazapiFetch("/instance/disconnect", { token: instToken, method: "POST" });
+      // Tenta disconnect best-effort. Se a instância já foi apagada/expirada
+      // no provider gratuito (404, not found, invalid/expired instance),
+      // seguimos com o reset local mesmo assim.
+      try {
+        const res = await uazapiFetch("/instance/disconnect", { token: instToken, method: "POST" });
+        if (!res.ok) {
+          console.warn("UAZAPI reset: disconnect falhou (ignorado)", res.status, JSON.stringify(res.data));
+        }
+      } catch (e) {
+        console.warn("UAZAPI reset: disconnect lançou exceção (ignorado)", (e as Error)?.message);
+      }
       const updated = await patchIntegration({
         instance_token: null,
         instance_external_id: null,
@@ -548,6 +580,7 @@ Deno.serve(async (req) => {
         instance_phone: null,
         instance_profile_name: null,
         instance_profile_pic_url: null,
+        instance_name: null,
         is_business: false,
         status: "not_configured",
         last_connection_status: "disconnected",
