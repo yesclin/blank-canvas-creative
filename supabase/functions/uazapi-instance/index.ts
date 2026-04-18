@@ -31,6 +31,20 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+function maskedToken(token: string | null | undefined) {
+  if (!token) return null;
+  return `${token.slice(0, 6)}...${token.slice(-4)}`;
+}
+
+function envDiagnostics(token?: string | null) {
+  return {
+    uazapi_base_url: UAZAPI_BASE_URL || null,
+    uazapi_host: UAZAPI_BASE_URL ? new URL(UAZAPI_BASE_URL).host : null,
+    instance_token_masked: maskedToken(token),
+    instance_token_length: token?.length || 0,
+  };
+}
+
 async function uazapiFetch(path: string, opts: { token?: string; useAdmin?: boolean; method?: string; body?: unknown }) {
   if (!UAZAPI_BASE_URL) throw new Error("UAZAPI_BASE_URL não configurada");
   const headers: Record<string, string> = { "Content-Type": "application/json" };

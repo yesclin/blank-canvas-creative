@@ -95,20 +95,20 @@ export function useClinicWhatsAppIntegration() {
         const { data, error } = await supabase.functions.invoke("uazapi-instance", {
           body: { action, clinic_id: clinic.id, payload },
         });
-        if (error) throw error;
+
         if (data?.qrcode !== undefined) setQrcode(data.qrcode);
         if (data?.paircode !== undefined) setPaircode(data.paircode);
-        if (data?.error) {
-          toast.error(data.error);
-          return null;
+
+        const backendError = data?.error || error?.message;
+        if (backendError) {
+          console.error(`UAZAPI ${action} error:`, { error, data });
+          toast.error(backendError);
+          return data ?? null;
         }
+
+        if (error) throw error;
         await fetchIntegration();
         return data;
-      } catch (err: any) {
-        const msg = err?.message || "Erro na operação";
-        console.error(`UAZAPI ${action} error:`, err);
-        toast.error(msg);
-        return null;
       } finally {
         setActionLoading(null);
       }
