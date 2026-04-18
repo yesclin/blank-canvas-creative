@@ -104,16 +104,37 @@ Deno.serve(async (req) => {
     const role = roleRow?.role;
     if (!["owner", "admin"].includes(role || "")) return jsonResponse({ error: "Apenas owner/admin" }, 403);
 
-    // Get current integration (if any)
+    // Get current integration (if any) — lookup by unique key (clinic_id, channel)
     const { data: existing } = await supabase
       .from("clinic_channel_integrations")
       .select("*")
       .eq("clinic_id", clinic_id)
       .eq("channel", "whatsapp")
-      .eq("provider", "uazapi")
       .maybeSingle();
 
-    // Helper to update integration row
+    // If existing row uses a different provider (e.g. legacy 'evolution'), migrate it to uazapi
+    if (existing && existing.provider !== "uazapi") {
+      const { data: migrated, error: migrateErr } = await supabase
+        .from("clinic_channel_integrations")
+        .update({
+          provider: "uazapi",
+          is_active: true,
+          is_default: true,
+          status: "not_configured",
+          instance_token: null,
+          instance_external_id: null,
+          instance_status: null,
+          last_error: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id)
+        .select()
+        .single();
+      if (migrateErr) throw migrateErr;
+      Object.assign(existing, migrated);
+    }
+
+    // Helper to update or insert integration row (upsert on unique key)
     async function patchIntegration(values: Record<string, unknown>) {
       if (existing?.id) {
         const { data, error } = await supabase
@@ -127,15 +148,18 @@ Deno.serve(async (req) => {
       }
       const { data, error } = await supabase
         .from("clinic_channel_integrations")
-        .insert({
-          clinic_id,
-          channel: "whatsapp",
-          provider: "uazapi",
-          is_active: true,
-          is_default: true,
-          status: "not_configured",
-          ...values,
-        })
+        .upsert(
+          {
+            clinic_id,
+            channel: "whatsapp",
+            provider: "uazapi",
+            is_active: true,
+            is_default: true,
+            status: "not_configured",
+            ...values,
+          },
+          { onConflict: "clinic_id,channel" }
+        )
         .select()
         .single();
       if (error) throw error;
