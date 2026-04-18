@@ -29,7 +29,7 @@ export interface ClinicWhatsAppIntegration {
   updated_at: string;
 }
 
-type Action = "create" | "link_existing" | "connect" | "status" | "disconnect" | "reset" | "send_test";
+type Action = "create" | "link_existing" | "connect" | "status" | "disconnect" | "reset" | "send_test" | "diagnostics";
 
 export function useClinicWhatsAppIntegration() {
   const { clinic } = useClinicData();
