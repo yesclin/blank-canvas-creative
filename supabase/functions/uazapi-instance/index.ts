@@ -66,6 +66,36 @@ async function uazapiFetch(path: string, opts: { token?: string; useAdmin?: bool
   return { ok: res.ok, status: res.status, data };
 }
 
+function normalizePhone(raw: unknown): string | null {
+  if (raw == null) return null;
+  let s = String(raw).trim();
+  if (!s) return null;
+  // Remove sufixos JID/WID típicos do WhatsApp: 5511999999999@s.whatsapp.net, @c.us, :12@...
+  s = s.split("@")[0].split(":")[0];
+  // Mantém apenas dígitos
+  const digits = s.replace(/\D+/g, "");
+  if (digits.length < 8) return null;
+  return digits;
+}
+
+function extractPhone(inst: any, root?: any): string | null {
+  if (!inst && !root) return null;
+  const candidates = [
+    inst?.phone, inst?.wid, inst?.owner, inst?.number, inst?.phoneNumber, inst?.jid,
+    inst?.phoneConnected, inst?.connectedPhone, inst?.user, inst?.userId, inst?.id,
+    inst?.me?.id, inst?.me?.user, inst?.me?.wid, inst?.me?.phone,
+    inst?.instance?.phone, inst?.instance?.wid, inst?.instance?.owner,
+    inst?.profile?.phone, inst?.profile?.wid,
+    root?.phone, root?.wid, root?.owner, root?.number, root?.phoneNumber,
+    root?.me?.id, root?.me?.user, root?.me?.wid,
+  ];
+  for (const c of candidates) {
+    const p = normalizePhone(c);
+    if (p) return p;
+  }
+  return null;
+}
+
 function mapStatus(s: string | undefined | null): string {
   const v = (s || "").toLowerCase();
   if (["connected", "open", "online"].includes(v)) return "connected";
