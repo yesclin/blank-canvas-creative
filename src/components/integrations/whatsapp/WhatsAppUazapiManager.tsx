@@ -68,6 +68,7 @@ export function WhatsAppUazapiManager() {
     isConnected,
     hasInstance,
     createInstance,
+    linkExistingInstance,
     connectInstance,
     refreshStatus,
     disconnectInstance,
@@ -80,6 +81,10 @@ export function WhatsAppUazapiManager() {
   const [testPhone, setTestPhone] = useState("");
   const [testMessage, setTestMessage] = useState("✅ Teste de conexão YesClin via UAZAPI");
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [showLinkForm, setShowLinkForm] = useState(false);
+  const [linkName, setLinkName] = useState("");
+  const [linkToken, setLinkToken] = useState("");
+  const [linkExternalId, setLinkExternalId] = useState("");
 
   if (!canManageClinic) {
     return (
@@ -184,31 +189,74 @@ export function WhatsAppUazapiManager() {
         </CardHeader>
         <CardContent className="space-y-4">
           {!hasInstance ? (
-            <div className="text-center py-8 space-y-4">
-              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto">
-                <PlugZap className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <div>
-                <h3 className="font-medium mb-1">Nenhuma instância criada</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Crie a instância de WhatsApp para esta clínica para começar.
-                </p>
-              </div>
-              <div className="flex flex-col sm:flex-row items-center gap-2 justify-center">
-                <Input
-                  placeholder="Nome opcional (ex: clinica-central)"
-                  value={instanceName}
-                  onChange={(e) => setInstanceName(e.target.value)}
-                  className="max-w-xs"
-                />
-                <Button
-                  onClick={() => createInstance(instanceName.trim() || undefined)}
-                  disabled={actionLoading === "create"}
-                >
-                  {actionLoading === "create" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PlugZap className="h-4 w-4 mr-2" />}
-                  Criar instância da clínica
+            <div className="space-y-6">
+              <div className="text-center py-6 space-y-4">
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto">
+                  <PlugZap className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <div>
+                  <h3 className="font-medium mb-1">Nenhuma instância criada</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Crie uma nova instância ou vincule uma já existente na UAZAPI.
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row items-center gap-2 justify-center">
+                  <Input
+                    placeholder="Nome opcional (ex: clinica-central)"
+                    value={instanceName}
+                    onChange={(e) => setInstanceName(e.target.value)}
+                    className="max-w-xs"
+                  />
+                  <Button
+                    onClick={() => createInstance(instanceName.trim() || undefined)}
+                    disabled={actionLoading === "create"}
+                  >
+                    {actionLoading === "create" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PlugZap className="h-4 w-4 mr-2" />}
+                    Criar instância da clínica
+                  </Button>
+                </div>
+                <Button variant="link" size="sm" onClick={() => setShowLinkForm((v) => !v)}>
+                  {showLinkForm ? "Cancelar vínculo manual" : "Já tenho uma instância na UAZAPI — vincular"}
                 </Button>
               </div>
+
+              {showLinkForm && (
+                <div className="border rounded-lg p-4 space-y-3 bg-muted/20">
+                  <div>
+                    <p className="font-medium text-sm">Vincular instância existente</p>
+                    <p className="text-xs text-muted-foreground">
+                      Use esta opção se a instância já foi criada diretamente no painel da UAZAPI.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="link_name">instance_name *</Label>
+                      <Input id="link_name" value={linkName} onChange={(e) => setLinkName(e.target.value)} placeholder="nome-da-instancia" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="link_token">instance_token *</Label>
+                      <Input id="link_token" value={linkToken} onChange={(e) => setLinkToken(e.target.value)} placeholder="token UAZAPI da instância" />
+                    </div>
+                    <div className="space-y-1 md:col-span-2">
+                      <Label htmlFor="link_ext">instance_external_id (opcional)</Label>
+                      <Input id="link_ext" value={linkExternalId} onChange={(e) => setLinkExternalId(e.target.value)} placeholder="id externo (se houver)" />
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() =>
+                      linkExistingInstance({
+                        instance_name: linkName.trim(),
+                        instance_token: linkToken.trim(),
+                        instance_external_id: linkExternalId.trim() || undefined,
+                      })
+                    }
+                    disabled={actionLoading === "link_existing" || !linkName.trim() || !linkToken.trim()}
+                  >
+                    {actionLoading === "link_existing" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plug className="h-4 w-4 mr-2" />}
+                    Vincular instância
+                  </Button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
