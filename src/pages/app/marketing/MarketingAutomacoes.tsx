@@ -359,8 +359,8 @@ export default function MarketingAutomacoes() {
             </div>
           </div>
 
-          {/* Step Content */}
-          <ScrollArea className="flex-1 min-h-0 px-6 py-5">
+          {/* Step Content - scrollable body */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5">
             <div key={wizardStep} className="animate-fade-in">
 
               {/* ── STEP 1: EVENT ── */}
@@ -677,7 +677,7 @@ export default function MarketingAutomacoes() {
                 </div>
               )}
             </div>
-          </ScrollArea>
+          </div>
 
           {/* Footer */}
           <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/30">
