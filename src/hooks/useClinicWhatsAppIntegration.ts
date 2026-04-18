@@ -13,7 +13,6 @@ export interface ClinicWhatsAppIntegration {
   status: string | null;
   instance_name: string | null;
   instance_external_id: string | null;
-  instance_token: string | null;
   instance_status: string | null;
   instance_phone: string | null;
   instance_profile_name: string | null;
@@ -29,7 +28,7 @@ export interface ClinicWhatsAppIntegration {
   updated_at: string;
 }
 
-type Action = "create" | "link_existing" | "connect" | "status" | "disconnect" | "reset" | "send_test" | "diagnostics";
+type Action = "create" | "link_existing" | "connect" | "status" | "disconnect" | "reset" | "send_test";
 
 export function useClinicWhatsAppIntegration() {
   const { clinic } = useClinicData();
@@ -103,7 +102,6 @@ export function useClinicWhatsAppIntegration() {
         const backendError = data?.error || error?.message;
         if (backendError) {
           console.error(`UAZAPI ${action} error:`, { error, data });
-          await fetchIntegration();
           toast.error(backendError);
           return data ?? null;
         }
@@ -128,10 +126,9 @@ export function useClinicWhatsAppIntegration() {
   const resetInstance = () => invokeAction("reset");
   const sendTestMessage = (phone: string, message: string) =>
     invokeAction("send_test", { phone, message });
-  const runDiagnostics = () => invokeAction("diagnostics" as any);
 
   const isConnected = integration?.instance_status === "connected" || integration?.status === "active";
-  const hasInstance = !!integration?.instance_token || !!integration?.instance_external_id;
+  const hasInstance = !!integration?.instance_external_id || !!integration?.instance_name;
 
   return {
     integration,
@@ -148,7 +145,6 @@ export function useClinicWhatsAppIntegration() {
     disconnectInstance,
     resetInstance,
     sendTestMessage,
-    runDiagnostics,
     refetch: fetchIntegration,
   };
 }

@@ -74,7 +74,6 @@ export function WhatsAppUazapiManager() {
     disconnectInstance,
     resetInstance,
     sendTestMessage,
-    runDiagnostics,
   } = useClinicWhatsAppIntegration();
 
   const [instanceName, setInstanceName] = useState("");
@@ -86,12 +85,6 @@ export function WhatsAppUazapiManager() {
   const [linkName, setLinkName] = useState("");
   const [linkToken, setLinkToken] = useState("");
   const [linkExternalId, setLinkExternalId] = useState("");
-  const [diagnostics, setDiagnostics] = useState<any | null>(null);
-
-  const handleDiagnostics = async () => {
-    const res = await runDiagnostics();
-    if (res) setDiagnostics(res);
-  };
 
   if (!canManageClinic) {
     return (
@@ -183,120 +176,6 @@ export function WhatsAppUazapiManager() {
                 <p className="font-medium">Último erro</p>
                 <p className="text-xs break-all">{integration.last_error}</p>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* 1.5 Diagnóstico de Ambiente */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between gap-3 flex-wrap">
-            <div>
-              <CardTitle className="text-lg">Diagnóstico de ambiente UAZAPI</CardTitle>
-              <CardDescription>
-                Confirme que o YesClin e o painel manual da UAZAPI estão usando o mesmo ambiente.
-              </CardDescription>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDiagnostics}
-              disabled={actionLoading === "diagnostics"}
-            >
-              {actionLoading === "diagnostics" ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
-              )}
-              Verificar ambiente
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          {!diagnostics ? (
-            <p className="text-muted-foreground text-xs">
-              Clique em "Verificar ambiente" para mostrar a base URL, host e token usados pelo backend,
-              e comparar com a instância local.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg bg-muted/40">
-                  <p className="text-xs text-muted-foreground">UAZAPI base URL</p>
-                  <p className="font-mono text-xs break-all">{diagnostics.environment?.uazapi_base_url || "—"}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-muted/40">
-                  <p className="text-xs text-muted-foreground">Host</p>
-                  <p className="font-mono text-xs break-all">{diagnostics.environment?.uazapi_host || "—"}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-muted/40">
-                  <p className="text-xs text-muted-foreground">Token da instância (mascarado)</p>
-                  <p className="font-mono text-xs break-all">{diagnostics.environment?.instance_token_masked || "—"}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-muted/40">
-                  <p className="text-xs text-muted-foreground">Comprimento do token</p>
-                  <p className="font-mono text-xs">{diagnostics.environment?.instance_token_length ?? 0}</p>
-                </div>
-              </div>
-
-              {diagnostics.admin_check?.attempted && (
-                <div className="p-3 rounded-lg border">
-                  <p className="text-xs font-medium mb-1">Verificação com admin token (lista global)</p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
-                    <div>
-                      <span className="text-muted-foreground">Admin token: </span>
-                      <span className="font-mono">{diagnostics.admin_check.admin_token_masked || "—"}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Total de instâncias: </span>
-                      <span className="font-medium">{diagnostics.admin_check.total_instances ?? "—"}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Instância local visível: </span>
-                      <span className="font-medium">
-                        {diagnostics.admin_check.matches_local === true
-                          ? "Sim"
-                          : diagnostics.admin_check.matches_local === false
-                          ? "Não"
-                          : "—"}
-                      </span>
-                    </div>
-                  </div>
-                  {diagnostics.admin_check.error && (
-                    <p className="text-xs text-destructive mt-2 break-all">
-                      {diagnostics.admin_check.error}
-                    </p>
-                  )}
-                  {diagnostics.admin_check.matches_local === false && (
-                    <p className="text-xs text-amber-600 mt-2">
-                      O admin token configurado no backend não enxerga a instância da clínica.
-                      Provavelmente o painel manual está em outro ambiente/conta UAZAPI.
-                      Como a integração já opera (envio de mensagens funcional), o YesClin é a fonte de verdade.
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {diagnostics.instance_check?.attempted && (
-                <div className="p-3 rounded-lg border">
-                  <p className="text-xs font-medium mb-1">Verificação com token da instância</p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
-                    <div>
-                      <span className="text-muted-foreground">UAZAPI status: </span>
-                      <span className="font-medium">{diagnostics.instance_check.uazapi_status || "—"}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">UAZAPI id: </span>
-                      <span className="font-mono break-all">{diagnostics.instance_check.uazapi_instance_id || "—"}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">UAZAPI name: </span>
-                      <span className="font-mono break-all">{diagnostics.instance_check.uazapi_instance_name || "—"}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </CardContent>

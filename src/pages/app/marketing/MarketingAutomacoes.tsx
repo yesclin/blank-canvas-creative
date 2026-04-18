@@ -360,7 +360,7 @@ export default function MarketingAutomacoes() {
           </div>
 
           {/* Step Content */}
-          <ScrollArea className="flex-1 min-h-0 px-6 py-5">
+          <ScrollArea className="flex-1 px-6 py-5">
             <div key={wizardStep} className="animate-fade-in min-h-[280px]">
 
               {/* ── STEP 1: EVENT ── */}

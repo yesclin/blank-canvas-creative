@@ -16,8 +16,7 @@ type Action =
   | "disconnect"
   | "reset"
   | "send_test"
-  | "sync"
-  | "diagnostics";
+  | "sync";
 
 interface RequestBody {
   action: Action;
@@ -183,58 +182,6 @@ Deno.serve(async (req) => {
     }
 
     // ========== ACTIONS ==========
-
-    // Diagnóstico de ambiente: ajuda a confirmar que o backend usa o mesmo
-    // contexto UAZAPI do painel manual aberto pelo cliente.
-    if (action === "diagnostics") {
-      const env = envDiagnostics(existing?.instance_token);
-      let admin_check: any = { attempted: false };
-      if (UAZAPI_ADMIN_TOKEN) {
-        admin_check = { attempted: true };
-        try {
-          const res = await uazapiFetch("/instance/all", { useAdmin: true, method: "GET" });
-          const list = Array.isArray(res.data) ? res.data : (res.data?.instances || res.data?.data || []);
-          admin_check.ok = res.ok;
-          admin_check.status = res.status;
-          admin_check.total_instances = Array.isArray(list) ? list.length : null;
-          admin_check.matches_local = Array.isArray(list)
-            ? list.some((i: any) =>
-                (existing?.instance_token && i?.token === existing.instance_token) ||
-                (existing?.instance_name && (i?.name === existing.instance_name)) ||
-                (existing?.instance_external_id && i?.id === existing.instance_external_id)
-              )
-            : null;
-          admin_check.admin_token_masked = maskedToken(UAZAPI_ADMIN_TOKEN);
-        } catch (e: any) {
-          admin_check.ok = false;
-          admin_check.error = e?.message || String(e);
-        }
-      }
-      let instance_check: any = { attempted: false };
-      if (existing?.instance_token) {
-        instance_check = { attempted: true };
-        const res = await uazapiFetch("/instance/status", { token: existing.instance_token, method: "GET" });
-        instance_check.ok = res.ok;
-        instance_check.status = res.status;
-        instance_check.uazapi_instance_id = res.data?.instance?.id || null;
-        instance_check.uazapi_instance_name = res.data?.instance?.name || null;
-        instance_check.uazapi_status = res.data?.instance?.status || null;
-      }
-      return jsonResponse({
-        success: true,
-        environment: env,
-        local: {
-          instance_name: existing?.instance_name || null,
-          instance_external_id: existing?.instance_external_id || null,
-          instance_status: existing?.instance_status || null,
-          status: existing?.status || null,
-          last_connection_status: existing?.last_connection_status || null,
-        },
-        admin_check,
-        instance_check,
-      });
-    }
-
     if (action === "create") {
       // Se já existe instância com token, exige reset explícito antes de recriar
       // (evita perder uma instância válida acidentalmente)
@@ -278,36 +225,17 @@ Deno.serve(async (req) => {
       const inst = res.data?.instance || res.data;
       const instToken = inst?.token || null;
 
-      // Sem token = instância NÃO foi realmente criada na UAZAPI. Não persistir como criada.
-      if (!instToken) {
-        await patchIntegration({
-          instance_token: null,
-          instance_external_id: null,
-          instance_status: null,
-          instance_phone: null,
-          instance_profile_name: null,
-          instance_profile_pic_url: null,
-          status: "not_configured",
-          last_connection_status: "error",
-          last_connection_check_at: new Date().toISOString(),
-          last_error: `UAZAPI respondeu 200 mas não retornou token da instância. Verifique UAZAPI_BASE_URL/UAZAPI_ADMIN_TOKEN. Resposta: ${JSON.stringify(res.data)}`,
-        });
-        return jsonResponse({
-          success: false,
-          error: "UAZAPI não retornou token. Instância não foi persistida. Verifique credenciais do painel.",
-          diagnostics: { action: "create", uazapi_response: res.data, ...envDiagnostics(null) },
-        });
-      }
-
       // Valida imediatamente buscando o status com o token recém-criado
       let mappedStatus = mapStatus(inst?.status) || "disconnected";
       let validated = false;
-      const statusRes = await uazapiFetch("/instance/status", { token: instToken, method: "GET" });
-      console.log("UAZAPI post-create status:", statusRes.status, JSON.stringify(statusRes.data));
-      if (statusRes.ok) {
-        validated = true;
-        const sInst = statusRes.data?.instance || statusRes.data || {};
-        mappedStatus = mapStatus(sInst?.status) || mappedStatus;
+      if (instToken) {
+        const statusRes = await uazapiFetch("/instance/status", { token: instToken, method: "GET" });
+        console.log("UAZAPI post-create status:", statusRes.status, JSON.stringify(statusRes.data));
+        if (statusRes.ok) {
+          validated = true;
+          const sInst = statusRes.data?.instance || statusRes.data || {};
+          mappedStatus = mapStatus(sInst?.status) || mappedStatus;
+        }
       }
 
       const updated = await patchIntegration({
@@ -321,38 +249,6 @@ Deno.serve(async (req) => {
         last_connection_status: validated ? mappedStatus : "error",
       });
       return jsonResponse({ success: true, validated, integration: { ...updated, instance_token: undefined } });
-    }
-
-    // Reset deve funcionar SEMPRE, com ou sem token, para destravar estados quebrados.
-    if (action === "reset") {
-      const hadToken = !!existing?.instance_token;
-      if (hadToken) {
-        // best-effort: não falha o reset se a UAZAPI rejeitar
-        try {
-          await uazapiFetch("/instance/disconnect", { token: existing!.instance_token as string, method: "POST" });
-        } catch (e) {
-          console.warn("reset: disconnect remoto falhou (ignorado):", (e as Error).message);
-        }
-      }
-      const updated = await patchIntegration({
-        instance_name: null,
-        instance_token: null,
-        instance_external_id: null,
-        instance_status: null,
-        instance_phone: null,
-        instance_profile_name: null,
-        instance_profile_pic_url: null,
-        is_business: false,
-        status: "not_configured",
-        last_connection_status: "disconnected",
-        last_error: null,
-        last_connection_check_at: new Date().toISOString(),
-      });
-      return jsonResponse({
-        success: true,
-        local_only: !hadToken,
-        integration: { ...updated, instance_token: undefined },
-      });
     }
 
     if (action === "link_existing") {
@@ -389,29 +285,7 @@ Deno.serve(async (req) => {
     }
 
     if (!existing?.instance_token && action !== "create") {
-      const readableError = `Instância local sem token salvo para \"${existing?.instance_name || "(sem nome)"}\". O connect não foi enviado para a UAZAPI porque não há instance_token persistido. Ambiente backend atual: ${UAZAPI_BASE_URL || "não configurado"}. Recomendação: resetar e recriar a instância, ou usar \"Vincular instância existente\" com o token do mesmo painel UAZAPI.`;
-
-      if (existing?.id) {
-        await patchIntegration({
-          instance_status: "error",
-          status: "error",
-          last_connection_status: "error",
-          last_connection_check_at: new Date().toISOString(),
-          last_error: readableError,
-        });
-      }
-
-      return jsonResponse({
-        success: false,
-        error: readableError,
-        diagnostics: {
-          action,
-          instance_name: existing?.instance_name || null,
-          uazapi_connect_called: false,
-          reason: "missing_instance_token",
-          ...envDiagnostics(existing?.instance_token),
-        },
-      });
+      return jsonResponse({ error: "Instância não criada ainda. Use action=create primeiro." }, 422);
     }
 
     const instToken = existing!.instance_token as string;
@@ -531,24 +405,10 @@ Deno.serve(async (req) => {
       }
 
       const sInst = statusRes.data?.instance || statusRes.data || {};
-      const sStatusBlock = statusRes.data?.status || {};
       mapped = mapStatus(sInst?.status) || mapped;
       qrcode = qrcode || sInst?.qrcode || null;
       paircode = paircode || sInst?.paircode || null;
-      const jidToDigitsC = (j: any) =>
-        typeof j === "string" ? j.split("@")[0].split(":")[0] : null;
-      const ownerRaw =
-        sInst?.owner ||
-        sInst?.phone ||
-        sInst?.wid ||
-        sInst?.number ||
-        sInst?.msisdn ||
-        jidToDigitsC(sInst?.jid) ||
-        jidToDigitsC(sInst?.me?.id) ||
-        jidToDigitsC(sStatusBlock?.jid) ||
-        jidToDigitsC(statusRes.data?.jid);
-      const normalizedPhone = ownerRaw ? String(ownerRaw).replace(/\D/g, "") : null;
-      phoneVal = normalizedPhone || phoneVal;
+      phoneVal = sInst?.phone || sInst?.wid || phoneVal;
       profileName = sInst?.profileName || sInst?.name || profileName;
       profilePic = sInst?.profilePicUrl || profilePic;
       isBusiness = !!sInst?.isBusiness;
@@ -611,29 +471,10 @@ Deno.serve(async (req) => {
       }
 
       const inst = res.data?.instance || res.data;
-      const statusBlock = res.data?.status || {};
       const mapped = mapStatus(inst?.status);
-
-      // UAZAPI may return the connected phone under different keys depending on
-      // version/provider. Confirmed format from logs: `inst.owner` = "5514982017971"
-      // and `status.jid` = "5514982017971:30@s.whatsapp.net".
-      const jidToDigits = (j: any) =>
-        typeof j === "string" ? j.split("@")[0].split(":")[0] : null;
-      const ownerRaw =
-        inst?.owner ||
-        inst?.phone ||
-        inst?.wid ||
-        inst?.number ||
-        inst?.msisdn ||
-        jidToDigits(inst?.jid) ||
-        jidToDigits(inst?.me?.id) ||
-        jidToDigits(statusBlock?.jid) ||
-        jidToDigits(res.data?.jid);
-      const normalizedPhone = ownerRaw ? String(ownerRaw).replace(/\D/g, "") : null;
-
       const updated = await patchIntegration({
         instance_status: mapped,
-        instance_phone: normalizedPhone || existing!.instance_phone,
+        instance_phone: inst?.phone || inst?.wid || existing!.instance_phone,
         instance_profile_name: inst?.profileName || inst?.name || existing!.instance_profile_name,
         instance_profile_pic_url: inst?.profilePicUrl || existing!.instance_profile_pic_url,
         is_business: !!inst?.isBusiness,
@@ -667,8 +508,24 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: res.ok, integration: { ...updated, instance_token: undefined } });
     }
 
-    // (action === "reset" já tratado no topo, antes do guard de token)
-
+    if (action === "reset") {
+      // Disconnect + clear instance data
+      await uazapiFetch("/instance/disconnect", { token: instToken, method: "POST" });
+      const updated = await patchIntegration({
+        instance_token: null,
+        instance_external_id: null,
+        instance_status: null,
+        instance_phone: null,
+        instance_profile_name: null,
+        instance_profile_pic_url: null,
+        is_business: false,
+        status: "not_configured",
+        last_connection_status: "disconnected",
+        last_error: null,
+        last_connection_check_at: new Date().toISOString(),
+      });
+      return jsonResponse({ success: true, integration: { ...updated, instance_token: undefined } });
+    }
 
     if (action === "send_test") {
       const phone = String(payload.phone || "").replace(/\D/g, "");
