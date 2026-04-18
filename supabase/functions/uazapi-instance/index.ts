@@ -225,17 +225,36 @@ Deno.serve(async (req) => {
       const inst = res.data?.instance || res.data;
       const instToken = inst?.token || null;
 
+      // Sem token = instância NÃO foi realmente criada na UAZAPI. Não persistir como criada.
+      if (!instToken) {
+        await patchIntegration({
+          instance_token: null,
+          instance_external_id: null,
+          instance_status: null,
+          instance_phone: null,
+          instance_profile_name: null,
+          instance_profile_pic_url: null,
+          status: "not_configured",
+          last_connection_status: "error",
+          last_connection_check_at: new Date().toISOString(),
+          last_error: `UAZAPI respondeu 200 mas não retornou token da instância. Verifique UAZAPI_BASE_URL/UAZAPI_ADMIN_TOKEN. Resposta: ${JSON.stringify(res.data)}`,
+        });
+        return jsonResponse({
+          success: false,
+          error: "UAZAPI não retornou token. Instância não foi persistida. Verifique credenciais do painel.",
+          diagnostics: { action: "create", uazapi_response: res.data, ...envDiagnostics(null) },
+        });
+      }
+
       // Valida imediatamente buscando o status com o token recém-criado
       let mappedStatus = mapStatus(inst?.status) || "disconnected";
       let validated = false;
-      if (instToken) {
-        const statusRes = await uazapiFetch("/instance/status", { token: instToken, method: "GET" });
-        console.log("UAZAPI post-create status:", statusRes.status, JSON.stringify(statusRes.data));
-        if (statusRes.ok) {
-          validated = true;
-          const sInst = statusRes.data?.instance || statusRes.data || {};
-          mappedStatus = mapStatus(sInst?.status) || mappedStatus;
-        }
+      const statusRes = await uazapiFetch("/instance/status", { token: instToken, method: "GET" });
+      console.log("UAZAPI post-create status:", statusRes.status, JSON.stringify(statusRes.data));
+      if (statusRes.ok) {
+        validated = true;
+        const sInst = statusRes.data?.instance || statusRes.data || {};
+        mappedStatus = mapStatus(sInst?.status) || mappedStatus;
       }
 
       const updated = await patchIntegration({
