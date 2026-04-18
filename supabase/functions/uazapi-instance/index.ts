@@ -285,7 +285,29 @@ Deno.serve(async (req) => {
     }
 
     if (!existing?.instance_token && action !== "create") {
-      return jsonResponse({ error: "Instância não criada ainda. Use action=create primeiro." }, 422);
+      const readableError = `Instância local sem token salvo para \"${existing?.instance_name || "(sem nome)"}\". O connect não foi enviado para a UAZAPI porque não há instance_token persistido. Ambiente backend atual: ${UAZAPI_BASE_URL || "não configurado"}. Recomendação: resetar e recriar a instância, ou usar \"Vincular instância existente\" com o token do mesmo painel UAZAPI.`;
+
+      if (existing?.id) {
+        await patchIntegration({
+          instance_status: "error",
+          status: "error",
+          last_connection_status: "error",
+          last_connection_check_at: new Date().toISOString(),
+          last_error: readableError,
+        });
+      }
+
+      return jsonResponse({
+        success: false,
+        error: readableError,
+        diagnostics: {
+          action,
+          instance_name: existing?.instance_name || null,
+          uazapi_connect_called: false,
+          reason: "missing_instance_token",
+          ...envDiagnostics(existing?.instance_token),
+        },
+      });
     }
 
     const instToken = existing!.instance_token as string;

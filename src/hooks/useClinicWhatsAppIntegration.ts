@@ -102,6 +102,7 @@ export function useClinicWhatsAppIntegration() {
         const backendError = data?.error || error?.message;
         if (backendError) {
           console.error(`UAZAPI ${action} error:`, { error, data });
+          await fetchIntegration();
           toast.error(backendError);
           return data ?? null;
         }
