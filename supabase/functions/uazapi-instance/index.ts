@@ -225,17 +225,36 @@ Deno.serve(async (req) => {
       const inst = res.data?.instance || res.data;
       const instToken = inst?.token || null;
 
+      // Sem token = instância NÃO foi realmente criada na UAZAPI. Não persistir como criada.
+      if (!instToken) {
+        await patchIntegration({
+          instance_token: null,
+          instance_external_id: null,
+          instance_status: null,
+          instance_phone: null,
+          instance_profile_name: null,
+          instance_profile_pic_url: null,
+          status: "not_configured",
+          last_connection_status: "error",
+          last_connection_check_at: new Date().toISOString(),
+          last_error: `UAZAPI respondeu 200 mas não retornou token da instância. Verifique UAZAPI_BASE_URL/UAZAPI_ADMIN_TOKEN. Resposta: ${JSON.stringify(res.data)}`,
+        });
+        return jsonResponse({
+          success: false,
+          error: "UAZAPI não retornou token. Instância não foi persistida. Verifique credenciais do painel.",
+          diagnostics: { action: "create", uazapi_response: res.data, ...envDiagnostics(null) },
+        });
+      }
+
       // Valida imediatamente buscando o status com o token recém-criado
       let mappedStatus = mapStatus(inst?.status) || "disconnected";
       let validated = false;
-      if (instToken) {
-        const statusRes = await uazapiFetch("/instance/status", { token: instToken, method: "GET" });
-        console.log("UAZAPI post-create status:", statusRes.status, JSON.stringify(statusRes.data));
-        if (statusRes.ok) {
-          validated = true;
-          const sInst = statusRes.data?.instance || statusRes.data || {};
-          mappedStatus = mapStatus(sInst?.status) || mappedStatus;
-        }
+      const statusRes = await uazapiFetch("/instance/status", { token: instToken, method: "GET" });
+      console.log("UAZAPI post-create status:", statusRes.status, JSON.stringify(statusRes.data));
+      if (statusRes.ok) {
+        validated = true;
+        const sInst = statusRes.data?.instance || statusRes.data || {};
+        mappedStatus = mapStatus(sInst?.status) || mappedStatus;
       }
 
       const updated = await patchIntegration({
@@ -249,6 +268,37 @@ Deno.serve(async (req) => {
         last_connection_status: validated ? mappedStatus : "error",
       });
       return jsonResponse({ success: true, validated, integration: { ...updated, instance_token: undefined } });
+    }
+
+    // Reset deve funcionar SEMPRE, com ou sem token, para destravar estados quebrados.
+    if (action === "reset") {
+      const hadToken = !!existing?.instance_token;
+      if (hadToken) {
+        // best-effort: não falha o reset se a UAZAPI rejeitar
+        try {
+          await uazapiFetch("/instance/disconnect", { token: existing!.instance_token as string, method: "POST" });
+        } catch (e) {
+          console.warn("reset: disconnect remoto falhou (ignorado):", (e as Error).message);
+        }
+      }
+      const updated = await patchIntegration({
+        instance_token: null,
+        instance_external_id: null,
+        instance_status: null,
+        instance_phone: null,
+        instance_profile_name: null,
+        instance_profile_pic_url: null,
+        is_business: false,
+        status: "not_configured",
+        last_connection_status: "disconnected",
+        last_error: null,
+        last_connection_check_at: new Date().toISOString(),
+      });
+      return jsonResponse({
+        success: true,
+        local_only: !hadToken,
+        integration: { ...updated, instance_token: undefined },
+      });
     }
 
     if (action === "link_existing") {
@@ -530,24 +580,8 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: res.ok, integration: { ...updated, instance_token: undefined } });
     }
 
-    if (action === "reset") {
-      // Disconnect + clear instance data
-      await uazapiFetch("/instance/disconnect", { token: instToken, method: "POST" });
-      const updated = await patchIntegration({
-        instance_token: null,
-        instance_external_id: null,
-        instance_status: null,
-        instance_phone: null,
-        instance_profile_name: null,
-        instance_profile_pic_url: null,
-        is_business: false,
-        status: "not_configured",
-        last_connection_status: "disconnected",
-        last_error: null,
-        last_connection_check_at: new Date().toISOString(),
-      });
-      return jsonResponse({ success: true, integration: { ...updated, instance_token: undefined } });
-    }
+    // (action === "reset" já tratado no topo, antes do guard de token)
+
 
     if (action === "send_test") {
       const phone = String(payload.phone || "").replace(/\D/g, "");
