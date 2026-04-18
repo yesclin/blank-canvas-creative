@@ -183,6 +183,30 @@ Deno.serve(async (req) => {
 
     // ========== ACTIONS ==========
     if (action === "create") {
+      // Se já existe instância com token, exige reset explícito antes de recriar
+      // (evita perder uma instância válida acidentalmente)
+      const force = payload.force === true;
+      if (existing?.instance_token && !force) {
+        return jsonResponse({
+          error: "Já existe uma instância vinculada. Use 'Resetar instância' antes de criar uma nova, ou envie force=true.",
+          existing_instance_name: existing.instance_name,
+          instance_status: existing.instance_status,
+        }, 409);
+      }
+
+      // Limpa qualquer token órfão antes de criar
+      if (existing?.instance_token) {
+        await patchIntegration({
+          instance_token: null,
+          instance_external_id: null,
+          instance_status: null,
+          instance_phone: null,
+          instance_profile_name: null,
+          instance_profile_pic_url: null,
+          last_error: null,
+        });
+      }
+
       const instanceName = (payload.instance_name as string) || `clinic-${clinic_id.substring(0, 8)}`;
       // systemName é opcional na UAZAPI free; só envia se explicitamente fornecido
       const initBody: Record<string, unknown> = { name: instanceName };
