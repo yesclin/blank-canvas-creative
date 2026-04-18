@@ -6,13 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -315,9 +315,9 @@ export default function MarketingAutomacoes() {
           WIZARD DIALOG — 4-Step Premium Flow
          ══════════════════════════════════════════════════════════ */}
       <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+        <DialogContent className="w-full max-w-4xl max-h-[90vh] gap-0 overflow-hidden p-0">
           {/* Step Progress Bar */}
-          <div className="px-6 pt-6 pb-4 border-b border-border">
+          <div className="shrink-0 border-b border-border px-6 pt-6 pb-4">
             <DialogHeader className="mb-4">
               <DialogTitle className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-primary" />
@@ -360,13 +360,13 @@ export default function MarketingAutomacoes() {
           </div>
 
           {/* Step Content - scrollable body */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5">
+          <DialogBody className="px-6 py-6">
             <div key={wizardStep} className="animate-fade-in">
 
               {/* ── STEP 1: EVENT ── */}
               {wizardStep === 0 && (
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground mb-1">Selecione o evento que dispara esta automação:</p>
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">Selecione o evento que dispara esta automação:</p>
                   {EVENT_CARDS.map(({ type, icon: EventIcon, description }) => (
                     <button
                       key={type}
@@ -404,9 +404,9 @@ export default function MarketingAutomacoes() {
 
               {/* ── STEP 2: TIMING & CHANNEL ── */}
               {wizardStep === 1 && (
-                <div className="space-y-6">
+                <div className="space-y-8">
                   {/* Timing */}
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <Label className="text-sm font-medium">Quando enviar a mensagem:</Label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {(Object.entries(DELAY_TYPE_LABELS) as [DelayType, string][]).map(([key, label]) => (
@@ -448,7 +448,7 @@ export default function MarketingAutomacoes() {
                   <Separator />
 
                   {/* Channel */}
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <Label className="text-sm font-medium">Canal de envio:</Label>
                     <div className="flex gap-3">
                       <button
@@ -496,15 +496,15 @@ export default function MarketingAutomacoes() {
 
               {/* ── STEP 3: MESSAGE ── */}
               {wizardStep === 2 && (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {/* Template Selection */}
-                  <div>
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium">Template de mensagem:</Label>
                     <Select
                       value={form.template_id || "custom"}
                       onValueChange={(v) => setForm((prev) => ({ ...prev, template_id: v === "custom" ? null : v }))}
                     >
-                      <SelectTrigger className="mt-1">
+                      <SelectTrigger>
                         <SelectValue placeholder="Selecione um template" />
                       </SelectTrigger>
                       <SelectContent>
@@ -519,14 +519,14 @@ export default function MarketingAutomacoes() {
                   </div>
 
                   {/* Custom message editor or template preview */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
                     {/* Left: Editor */}
-                    <div className="space-y-2">
+                    <div className="space-y-4">
                       <Label className="text-xs text-muted-foreground">
                         {form.template_id ? "Conteúdo do template:" : "Sua mensagem:"}
                       </Label>
                       {form.template_id ? (
-                        <div className="p-3 rounded-lg border bg-muted/30 text-sm whitespace-pre-wrap min-h-[160px]">
+                        <div className="min-h-[220px] rounded-lg border bg-muted/30 p-4 text-sm whitespace-pre-wrap">
                           {selectedTemplate?.content || "Template não encontrado"}
                         </div>
                       ) : (
@@ -536,8 +536,8 @@ export default function MarketingAutomacoes() {
                             value={customMessage}
                             onChange={(e) => setCustomMessage(e.target.value)}
                             placeholder="Olá {{primeiro_nome}}, sua consulta está agendada para {{data_consulta}} às {{hora_consulta}}..."
-                            rows={7}
-                            className="resize-none"
+                            rows={10}
+                            className="min-h-[220px] resize-none"
                           />
                           <p className="text-xs text-muted-foreground text-right">{customMessage.length} caracteres</p>
                         </>
@@ -545,15 +545,15 @@ export default function MarketingAutomacoes() {
 
                       {/* Variable buttons */}
                       {!form.template_id && (
-                        <div>
+                        <div className="space-y-2 rounded-xl border border-border/60 bg-muted/20 p-4">
                           <Label className="text-xs text-muted-foreground">Inserir variável no cursor:</Label>
-                          <div className="flex flex-wrap gap-1 mt-1">
+                          <div className="flex flex-wrap gap-2">
                             {DYNAMIC_FIELDS.map((field) => (
                               <Button
                                 key={field.key}
                                 variant="outline"
                                 size="sm"
-                                className="text-xs h-7 px-2"
+                                className="h-8 px-3 text-xs"
                                 onClick={() => insertVariable(field.key)}
                               >
                                 {field.label}
@@ -565,12 +565,12 @@ export default function MarketingAutomacoes() {
                     </div>
 
                     {/* Right: Preview */}
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <Label className="text-xs text-muted-foreground flex items-center gap-1">
                         <Eye className="h-3 w-3" /> Preview
                       </Label>
                       <div className={cn(
-                        "rounded-2xl p-4 min-h-[160px]",
+                        "min-h-[220px] rounded-2xl p-4",
                         form.channel === "whatsapp"
                           ? "bg-[#e5ddd5] dark:bg-[#0b141a]"
                           : "bg-muted/50 border"
@@ -609,24 +609,22 @@ export default function MarketingAutomacoes() {
 
               {/* ── STEP 4: REVIEW & ACTIVATE ── */}
               {wizardStep === 3 && (
-                <div className="space-y-5">
-                  <div>
+                <div className="space-y-6">
+                  <div className="space-y-2">
                     <Label>Nome da Automação *</Label>
                     <Input
                       value={form.name}
                       onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
                       placeholder={`${EVENT_TYPE_LABELS[form.trigger_type]} - ${DELAY_TYPE_LABELS[form.delay_type]}`}
-                      className="mt-1"
                     />
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label>Descrição (opcional)</Label>
                     <Textarea
                       value={form.description}
                       onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
                       placeholder="Descreva o que esta automação faz..."
                       rows={2}
-                      className="mt-1"
                     />
                   </div>
 
@@ -677,10 +675,10 @@ export default function MarketingAutomacoes() {
                 </div>
               )}
             </div>
-          </div>
+          </DialogBody>
 
           {/* Footer */}
-          <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/30">
+          <div className="shrink-0 flex items-center justify-between border-t border-border bg-muted/30 px-6 py-4">
             <div>
               {wizardStep > 0 && (
                 <Button variant="ghost" onClick={() => setWizardStep((s) => s - 1)} className="gap-1">
@@ -711,20 +709,21 @@ export default function MarketingAutomacoes() {
           EDIT DIALOG
          ══════════════════════════════════════════════════════════ */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="w-full max-w-2xl max-h-[90vh] gap-0 overflow-hidden p-0">
+          <DialogHeader className="border-b border-border px-6 py-5">
             <DialogTitle>Editar Automação</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
+          <DialogBody className="px-6 py-6">
+            <div className="space-y-6">
+            <div className="space-y-2">
               <Label>Nome *</Label>
               <Input value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} />
             </div>
-            <div>
+            <div className="space-y-2">
               <Label>Descrição</Label>
               <Textarea value={form.description} onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))} rows={2} />
             </div>
-            <div>
+            <div className="space-y-2">
               <Label>Evento</Label>
               <Select value={form.trigger_type} onValueChange={(v) => setForm((prev) => ({ ...prev, trigger_type: v as EventType }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -735,8 +734,8 @@ export default function MarketingAutomacoes() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
                 <Label>Quando enviar</Label>
                 <Select value={form.delay_type} onValueChange={(v) => setForm((prev) => ({ ...prev, delay_type: v as DelayType }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -748,13 +747,13 @@ export default function MarketingAutomacoes() {
                 </Select>
               </div>
               {needsDelayValue && (
-                <div>
+                <div className="space-y-2">
                   <Label>Valor</Label>
                   <Input type="number" min={1} value={form.delay_value || ""} onChange={(e) => setForm((prev) => ({ ...prev, delay_value: Number(e.target.value) || 0 }))} />
                 </div>
               )}
             </div>
-            <div>
+            <div className="space-y-2">
               <Label>Canal</Label>
               <Select value={form.channel} onValueChange={(v) => setForm((prev) => ({ ...prev, channel: v as AutomationChannel }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -764,7 +763,7 @@ export default function MarketingAutomacoes() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
+            <div className="space-y-2">
               <Label>Template</Label>
               <Select value={form.template_id || "none"} onValueChange={(v) => setForm((prev) => ({ ...prev, template_id: v === "none" ? null : v }))}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
@@ -781,7 +780,8 @@ export default function MarketingAutomacoes() {
               <Label>Ativa</Label>
             </div>
           </div>
-          <DialogFooter>
+          </DialogBody>
+          <DialogFooter className="border-t border-border bg-muted/30 px-6 py-4">
             <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
             <Button onClick={handleEditSave} disabled={saving || !form.name}>
               {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
