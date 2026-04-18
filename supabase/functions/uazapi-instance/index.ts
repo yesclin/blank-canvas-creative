@@ -183,6 +183,58 @@ Deno.serve(async (req) => {
     }
 
     // ========== ACTIONS ==========
+
+    // Diagnóstico de ambiente: ajuda a confirmar que o backend usa o mesmo
+    // contexto UAZAPI do painel manual aberto pelo cliente.
+    if (action === "diagnostics") {
+      const env = envDiagnostics(existing?.instance_token);
+      let admin_check: any = { attempted: false };
+      if (UAZAPI_ADMIN_TOKEN) {
+        admin_check = { attempted: true };
+        try {
+          const res = await uazapiFetch("/instance/all", { useAdmin: true, method: "GET" });
+          const list = Array.isArray(res.data) ? res.data : (res.data?.instances || res.data?.data || []);
+          admin_check.ok = res.ok;
+          admin_check.status = res.status;
+          admin_check.total_instances = Array.isArray(list) ? list.length : null;
+          admin_check.matches_local = Array.isArray(list)
+            ? list.some((i: any) =>
+                (existing?.instance_token && i?.token === existing.instance_token) ||
+                (existing?.instance_name && (i?.name === existing.instance_name)) ||
+                (existing?.instance_external_id && i?.id === existing.instance_external_id)
+              )
+            : null;
+          admin_check.admin_token_masked = maskedToken(UAZAPI_ADMIN_TOKEN);
+        } catch (e: any) {
+          admin_check.ok = false;
+          admin_check.error = e?.message || String(e);
+        }
+      }
+      let instance_check: any = { attempted: false };
+      if (existing?.instance_token) {
+        instance_check = { attempted: true };
+        const res = await uazapiFetch("/instance/status", { token: existing.instance_token, method: "GET" });
+        instance_check.ok = res.ok;
+        instance_check.status = res.status;
+        instance_check.uazapi_instance_id = res.data?.instance?.id || null;
+        instance_check.uazapi_instance_name = res.data?.instance?.name || null;
+        instance_check.uazapi_status = res.data?.instance?.status || null;
+      }
+      return jsonResponse({
+        success: true,
+        environment: env,
+        local: {
+          instance_name: existing?.instance_name || null,
+          instance_external_id: existing?.instance_external_id || null,
+          instance_status: existing?.instance_status || null,
+          status: existing?.status || null,
+          last_connection_status: existing?.last_connection_status || null,
+        },
+        admin_check,
+        instance_check,
+      });
+    }
+
     if (action === "create") {
       // Se já existe instância com token, exige reset explícito antes de recriar
       // (evita perder uma instância válida acidentalmente)
