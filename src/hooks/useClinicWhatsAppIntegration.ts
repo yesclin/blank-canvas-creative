@@ -29,7 +29,7 @@ export interface ClinicWhatsAppIntegration {
   updated_at: string;
 }
 
-type Action = "create" | "link_existing" | "connect" | "status" | "disconnect" | "reset" | "send_test";
+type Action = "create" | "link_existing" | "connect" | "status" | "disconnect" | "reset" | "send_test" | "diagnostics";
 
 export function useClinicWhatsAppIntegration() {
   const { clinic } = useClinicData();
@@ -128,6 +128,7 @@ export function useClinicWhatsAppIntegration() {
   const resetInstance = () => invokeAction("reset");
   const sendTestMessage = (phone: string, message: string) =>
     invokeAction("send_test", { phone, message });
+  const runDiagnostics = () => invokeAction("diagnostics" as any);
 
   const isConnected = integration?.instance_status === "connected" || integration?.status === "active";
   const hasInstance = !!integration?.instance_token || !!integration?.instance_external_id;
@@ -147,6 +148,7 @@ export function useClinicWhatsAppIntegration() {
     disconnectInstance,
     resetInstance,
     sendTestMessage,
+    runDiagnostics,
     refetch: fetchIntegration,
   };
 }
