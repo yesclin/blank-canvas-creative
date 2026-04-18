@@ -16,7 +16,8 @@ type Action =
   | "disconnect"
   | "reset"
   | "send_test"
-  | "sync";
+  | "sync"
+  | "diagnostics";
 
 interface RequestBody {
   action: Action;
