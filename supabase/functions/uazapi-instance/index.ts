@@ -535,11 +535,18 @@ Deno.serve(async (req) => {
       mapped = mapStatus(sInst?.status) || mapped;
       qrcode = qrcode || sInst?.qrcode || null;
       paircode = paircode || sInst?.paircode || null;
+      const jidToDigitsC = (j: any) =>
+        typeof j === "string" ? j.split("@")[0].split(":")[0] : null;
       const ownerRaw =
         sInst?.owner ||
         sInst?.phone ||
         sInst?.wid ||
-        (typeof sStatusBlock?.jid === "string" ? sStatusBlock.jid.split("@")[0].split(":")[0] : null);
+        sInst?.number ||
+        sInst?.msisdn ||
+        jidToDigitsC(sInst?.jid) ||
+        jidToDigitsC(sInst?.me?.id) ||
+        jidToDigitsC(sStatusBlock?.jid) ||
+        jidToDigitsC(statusRes.data?.jid);
       const normalizedPhone = ownerRaw ? String(ownerRaw).replace(/\D/g, "") : null;
       phoneVal = normalizedPhone || phoneVal;
       profileName = sInst?.profileName || sInst?.name || profileName;
