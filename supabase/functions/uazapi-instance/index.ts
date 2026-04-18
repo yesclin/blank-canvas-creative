@@ -268,6 +268,12 @@ Deno.serve(async (req) => {
 
     if (action === "connect") {
       const phone = (payload.phone as string) || existing!.instance_phone || "";
+      console.log("UAZAPI connect attempt:", JSON.stringify({
+        instance_name: existing!.instance_name,
+        ...envDiagnostics(instToken),
+        phone_supplied: !!phone,
+      }));
+
       const res = await uazapiFetch("/instance/connect", {
         token: instToken,
         method: "POST",
@@ -275,24 +281,37 @@ Deno.serve(async (req) => {
       });
       console.log("UAZAPI /instance/connect:", res.status, JSON.stringify(res.data));
 
-      // Se a UAZAPI não encontrar a instância (404) ou retornar erro, marca como erro real
       if (!res.ok) {
-        const errMsg = `connect ${res.status}: ${JSON.stringify(res.data)}`;
-        const isNotFound = res.status === 404 || /not.?found|invalid.?token|unauthorized/i.test(JSON.stringify(res.data));
+        const responseText = typeof res.data === "string" ? res.data : JSON.stringify(res.data);
+        const isMissingOrUnauthorized =
+          res.status === 401 ||
+          res.status === 404 ||
+          /not.?found|invalid.?token|unauthorized|invalid token|instance/i.test(responseText);
+        const readableError = isMissingOrUnauthorized
+          ? `A UAZAPI rejeitou o connect da instância \"${existing!.instance_name || "(sem nome)"}\". Isso normalmente significa que o token salvo não pertence ao mesmo ambiente/painel configurado no backend.`
+          : `Falha no connect UAZAPI (${res.status}): ${responseText}`;
+
         const updated = await patchIntegration({
-          instance_status: isNotFound ? "error" : "disconnected",
+          instance_status: "error",
           status: "error",
-          last_error: isNotFound
-            ? `Instância não encontrada na UAZAPI. Verifique se o token pertence ao mesmo ambiente/conta UAZAPI configurado (UAZAPI_BASE_URL).`
-            : errMsg,
+          last_error: readableError,
           last_connection_status: "error",
           last_connection_check_at: new Date().toISOString(),
         });
+
         return jsonResponse({
           success: false,
-          error: updated.last_error,
+          error: readableError,
           instance_status: updated.instance_status,
-        }, res.status);
+          diagnostics: {
+            action: "connect",
+            instance_name: existing!.instance_name,
+            uazapi_response_status: res.status,
+            uazapi_response_body: res.data,
+            ...envDiagnostics(instToken),
+            same_context_hint: "Confirme se o painel UAZAPI aberto manualmente usa a mesma base/conta dos secrets UAZAPI_BASE_URL e UAZAPI_ADMIN_TOKEN.",
+          },
+        });
       }
 
       const inst = res.data?.instance || res.data;
@@ -300,23 +319,48 @@ Deno.serve(async (req) => {
       let paircode = inst?.paircode || res.data?.paircode || null;
       let mapped = mapStatus(inst?.status) || "connecting";
 
-      // Sincroniza estado real imediatamente após connect
       const statusRes = await uazapiFetch("/instance/status", { token: instToken, method: "GET" });
       console.log("UAZAPI auto-status after connect:", statusRes.status, JSON.stringify(statusRes.data));
       let phoneVal = existing!.instance_phone;
       let profileName = existing!.instance_profile_name;
       let profilePic = existing!.instance_profile_pic_url;
       let isBusiness = !!existing!.is_business;
-      if (statusRes.ok) {
-        const sInst = statusRes.data?.instance || statusRes.data || {};
-        mapped = mapStatus(sInst?.status) || mapped;
-        qrcode = qrcode || sInst?.qrcode || null;
-        paircode = paircode || sInst?.paircode || null;
-        phoneVal = sInst?.phone || sInst?.wid || phoneVal;
-        profileName = sInst?.profileName || sInst?.name || profileName;
-        profilePic = sInst?.profilePicUrl || profilePic;
-        isBusiness = !!sInst?.isBusiness;
+
+      if (!statusRes.ok) {
+        const responseText = typeof statusRes.data === "string" ? statusRes.data : JSON.stringify(statusRes.data);
+        const updated = await patchIntegration({
+          instance_status: "error",
+          status: "error",
+          last_error: `Connect executado, mas a revalidação de status falhou (${statusRes.status}): ${responseText}`,
+          last_connection_status: "error",
+          last_connection_check_at: new Date().toISOString(),
+        });
+        return jsonResponse({
+          success: false,
+          error: updated.last_error,
+          instance_status: updated.instance_status,
+          qrcode,
+          paircode,
+          diagnostics: {
+            action: "connect->status",
+            instance_name: existing!.instance_name,
+            connect_response_status: res.status,
+            connect_response_body: res.data,
+            status_response_status: statusRes.status,
+            status_response_body: statusRes.data,
+            ...envDiagnostics(instToken),
+          },
+        });
       }
+
+      const sInst = statusRes.data?.instance || statusRes.data || {};
+      mapped = mapStatus(sInst?.status) || mapped;
+      qrcode = qrcode || sInst?.qrcode || null;
+      paircode = paircode || sInst?.paircode || null;
+      phoneVal = sInst?.phone || sInst?.wid || phoneVal;
+      profileName = sInst?.profileName || sInst?.name || profileName;
+      profilePic = sInst?.profilePicUrl || profilePic;
+      isBusiness = !!sInst?.isBusiness;
 
       const updated = await patchIntegration({
         instance_status: mapped,
@@ -335,29 +379,44 @@ Deno.serve(async (req) => {
         qrcode,
         paircode,
         instance_status: updated.instance_status,
+        diagnostics: {
+          action: "connect",
+          instance_name: existing!.instance_name,
+          ...envDiagnostics(instToken),
+        },
       });
     }
 
     if (action === "status") {
+      console.log("UAZAPI status check:", JSON.stringify({
+        instance_name: existing!.instance_name,
+        ...envDiagnostics(instToken),
+      }));
+
       const res = await uazapiFetch("/instance/status", { token: instToken, method: "GET" });
       console.log("UAZAPI /instance/status:", res.status, JSON.stringify(res.data));
 
       if (!res.ok) {
-        const isNotFound = res.status === 404 || /not.?found|invalid.?token|unauthorized/i.test(JSON.stringify(res.data));
+        const responseText = typeof res.data === "string" ? res.data : JSON.stringify(res.data);
         const updated = await patchIntegration({
           instance_status: "error",
           status: "error",
           last_connection_status: "error",
           last_connection_check_at: new Date().toISOString(),
-          last_error: isNotFound
-            ? `Instância não encontrada na UAZAPI (${res.status}). O token salvo não corresponde a nenhuma instância no ambiente atual (${UAZAPI_BASE_URL}). Use "Resetar" e crie/vincule novamente.`
-            : `status ${res.status}: ${JSON.stringify(res.data)}`,
+          last_error: `Falha ao consultar status real da UAZAPI (${res.status}): ${responseText}`,
         });
         return jsonResponse({
           success: false,
           error: updated.last_error,
           integration: { ...updated, instance_token: undefined },
-        }, res.status);
+          diagnostics: {
+            action: "status",
+            instance_name: existing!.instance_name,
+            uazapi_response_status: res.status,
+            uazapi_response_body: res.data,
+            ...envDiagnostics(instToken),
+          },
+        });
       }
 
       const inst = res.data?.instance || res.data;
@@ -378,6 +437,11 @@ Deno.serve(async (req) => {
         integration: { ...updated, instance_token: undefined },
         qrcode: inst?.qrcode || null,
         paircode: inst?.paircode || null,
+        diagnostics: {
+          action: "status",
+          instance_name: existing!.instance_name,
+          ...envDiagnostics(instToken),
+        },
       });
     }
 
