@@ -251,6 +251,37 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: true, validated, integration: { ...updated, instance_token: undefined } });
     }
 
+    // Reset deve funcionar SEMPRE, com ou sem token, para destravar estados quebrados.
+    if (action === "reset") {
+      const hadToken = !!existing?.instance_token;
+      if (hadToken) {
+        // best-effort: não falha o reset se a UAZAPI rejeitar
+        try {
+          await uazapiFetch("/instance/disconnect", { token: existing!.instance_token as string, method: "POST" });
+        } catch (e) {
+          console.warn("reset: disconnect remoto falhou (ignorado):", (e as Error).message);
+        }
+      }
+      const updated = await patchIntegration({
+        instance_token: null,
+        instance_external_id: null,
+        instance_status: null,
+        instance_phone: null,
+        instance_profile_name: null,
+        instance_profile_pic_url: null,
+        is_business: false,
+        status: "not_configured",
+        last_connection_status: "disconnected",
+        last_error: null,
+        last_connection_check_at: new Date().toISOString(),
+      });
+      return jsonResponse({
+        success: true,
+        local_only: !hadToken,
+        integration: { ...updated, instance_token: undefined },
+      });
+    }
+
     if (action === "link_existing") {
       const instance_name = String(payload.instance_name || "").trim();
       const instance_token = String(payload.instance_token || "").trim();
