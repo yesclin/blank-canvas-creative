@@ -1378,13 +1378,28 @@ export type Database = {
           created_at: string
           display_phone_number: string | null
           id: string
+          instance_external_id: string | null
           instance_id: string | null
+          instance_name: string | null
+          instance_phone: string | null
+          instance_profile_name: string | null
+          instance_profile_pic_url: string | null
+          instance_status: string | null
+          instance_token: string | null
           is_active: boolean
+          is_business: boolean
+          is_default: boolean
+          last_connection_check_at: string | null
+          last_connection_status: string | null
+          last_error: string | null
           metadata: Json | null
           phone_number_id: string | null
           provider: string | null
+          settings_json: Json
           status: string | null
           updated_at: string
+          webhook_enabled: boolean
+          webhook_url: string | null
         }
         Insert: {
           access_token?: string | null
@@ -1397,13 +1412,28 @@ export type Database = {
           created_at?: string
           display_phone_number?: string | null
           id?: string
+          instance_external_id?: string | null
           instance_id?: string | null
+          instance_name?: string | null
+          instance_phone?: string | null
+          instance_profile_name?: string | null
+          instance_profile_pic_url?: string | null
+          instance_status?: string | null
+          instance_token?: string | null
           is_active?: boolean
+          is_business?: boolean
+          is_default?: boolean
+          last_connection_check_at?: string | null
+          last_connection_status?: string | null
+          last_error?: string | null
           metadata?: Json | null
           phone_number_id?: string | null
           provider?: string | null
+          settings_json?: Json
           status?: string | null
           updated_at?: string
+          webhook_enabled?: boolean
+          webhook_url?: string | null
         }
         Update: {
           access_token?: string | null
@@ -1416,13 +1446,28 @@ export type Database = {
           created_at?: string
           display_phone_number?: string | null
           id?: string
+          instance_external_id?: string | null
           instance_id?: string | null
+          instance_name?: string | null
+          instance_phone?: string | null
+          instance_profile_name?: string | null
+          instance_profile_pic_url?: string | null
+          instance_status?: string | null
+          instance_token?: string | null
           is_active?: boolean
+          is_business?: boolean
+          is_default?: boolean
+          last_connection_check_at?: string | null
+          last_connection_status?: string | null
+          last_error?: string | null
           metadata?: Json | null
           phone_number_id?: string | null
           provider?: string | null
+          settings_json?: Json
           status?: string | null
           updated_at?: string
+          webhook_enabled?: boolean
+          webhook_url?: string | null
         }
         Relationships: [
           {
