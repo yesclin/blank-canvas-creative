@@ -34,7 +34,7 @@ export function WhatsAppStatus() {
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
             <MessageCircle className="h-5 w-5 text-green-600" />
-            WhatsApp via Evolution API
+            WhatsApp via UAZAPI
           </CardTitle>
           <Badge 
             variant={status === 'active' ? "default" : status === 'invalid' ? "destructive" : "secondary"}
@@ -72,7 +72,7 @@ export function WhatsAppStatus() {
               <MessageCircle className="h-8 w-8 text-muted-foreground" />
             </div>
             
-            <h3 className="font-medium mb-2">Conecte seu WhatsApp via Evolution API</h3>
+            <h3 className="font-medium mb-2">Conecte seu WhatsApp via UAZAPI</h3>
             <p className="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">
               Automatize confirmações, lembretes e campanhas diretamente pelo WhatsApp da sua clínica.
             </p>
@@ -84,7 +84,7 @@ export function WhatsAppStatus() {
             
             <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
               <Shield className="h-3 w-3" />
-              <span>Integração via Evolution API — isolamento por clínica</span>
+              <span>Integração via UAZAPI — isolamento por clínica</span>
             </div>
           </div>
         )}
