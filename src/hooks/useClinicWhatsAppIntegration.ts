@@ -128,6 +128,7 @@ export function useClinicWhatsAppIntegration() {
   const resetInstance = () => invokeAction("reset");
   const sendTestMessage = (phone: string, message: string) =>
     invokeAction("send_test", { phone, message });
+  const runDiagnostics = () => invokeAction("diagnostics" as any);
 
   const isConnected = integration?.instance_status === "connected" || integration?.status === "active";
   const hasInstance = !!integration?.instance_token || !!integration?.instance_external_id;
