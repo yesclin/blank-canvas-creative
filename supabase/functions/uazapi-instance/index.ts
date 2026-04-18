@@ -544,10 +544,21 @@ Deno.serve(async (req) => {
       }
 
       const inst = res.data?.instance || res.data;
+      const statusBlock = res.data?.status || {};
       const mapped = mapStatus(inst?.status);
+
+      // UAZAPI returns the connected phone in `owner` (e.g. "5514982017971")
+      // or inside status.jid (e.g. "5514982017971:30@s.whatsapp.net"). Normalize to digits only.
+      const ownerRaw =
+        inst?.owner ||
+        inst?.phone ||
+        inst?.wid ||
+        (typeof statusBlock?.jid === "string" ? statusBlock.jid.split("@")[0].split(":")[0] : null);
+      const normalizedPhone = ownerRaw ? String(ownerRaw).replace(/\D/g, "") : null;
+
       const updated = await patchIntegration({
         instance_status: mapped,
-        instance_phone: inst?.phone || inst?.wid || existing!.instance_phone,
+        instance_phone: normalizedPhone || existing!.instance_phone,
         instance_profile_name: inst?.profileName || inst?.name || existing!.instance_profile_name,
         instance_profile_pic_url: inst?.profilePicUrl || existing!.instance_profile_pic_url,
         is_business: !!inst?.isBusiness,
