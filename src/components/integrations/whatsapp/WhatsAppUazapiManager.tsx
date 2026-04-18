@@ -86,6 +86,12 @@ export function WhatsAppUazapiManager() {
   const [linkName, setLinkName] = useState("");
   const [linkToken, setLinkToken] = useState("");
   const [linkExternalId, setLinkExternalId] = useState("");
+  const [diagnostics, setDiagnostics] = useState<any | null>(null);
+
+  const handleDiagnostics = async () => {
+    const res = await runDiagnostics();
+    if (res) setDiagnostics(res);
+  };
 
   if (!canManageClinic) {
     return (
