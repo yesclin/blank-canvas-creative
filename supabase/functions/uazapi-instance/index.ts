@@ -66,36 +66,6 @@ async function uazapiFetch(path: string, opts: { token?: string; useAdmin?: bool
   return { ok: res.ok, status: res.status, data };
 }
 
-function normalizePhone(raw: unknown): string | null {
-  if (raw == null) return null;
-  let s = String(raw).trim();
-  if (!s) return null;
-  // Remove sufixos JID/WID típicos do WhatsApp: 5511999999999@s.whatsapp.net, @c.us, :12@...
-  s = s.split("@")[0].split(":")[0];
-  // Mantém apenas dígitos
-  const digits = s.replace(/\D+/g, "");
-  if (digits.length < 8) return null;
-  return digits;
-}
-
-function extractPhone(inst: any, root?: any): string | null {
-  if (!inst && !root) return null;
-  const candidates = [
-    inst?.phone, inst?.wid, inst?.owner, inst?.number, inst?.phoneNumber, inst?.jid,
-    inst?.phoneConnected, inst?.connectedPhone, inst?.user, inst?.userId, inst?.id,
-    inst?.me?.id, inst?.me?.user, inst?.me?.wid, inst?.me?.phone,
-    inst?.instance?.phone, inst?.instance?.wid, inst?.instance?.owner,
-    inst?.profile?.phone, inst?.profile?.wid,
-    root?.phone, root?.wid, root?.owner, root?.number, root?.phoneNumber,
-    root?.me?.id, root?.me?.user, root?.me?.wid,
-  ];
-  for (const c of candidates) {
-    const p = normalizePhone(c);
-    if (p) return p;
-  }
-  return null;
-}
-
 function mapStatus(s: string | undefined | null): string {
   const v = (s || "").toLowerCase();
   if (["connected", "open", "online"].includes(v)) return "connected";
@@ -302,7 +272,7 @@ Deno.serve(async (req) => {
         instance_token,
         instance_external_id: instance_external_id || inst?.id || null,
         instance_status: mappedStatus,
-        instance_phone: extractPhone(inst, statusRes.data),
+        instance_phone: inst?.phone || inst?.wid || null,
         instance_profile_name: inst?.profileName || inst?.name || null,
         instance_profile_pic_url: inst?.profilePicUrl || null,
         is_business: !!inst?.isBusiness,
@@ -315,29 +285,6 @@ Deno.serve(async (req) => {
     }
 
     if (!existing?.instance_token && action !== "create") {
-      // Reset deve sempre funcionar localmente, mesmo sem token
-      // (instância pode já ter sido apagada/expirada no provider gratuito)
-      if (action === "reset") {
-        const updated = await patchIntegration({
-          instance_token: null,
-          instance_external_id: null,
-          instance_status: null,
-          instance_phone: null,
-          instance_profile_name: null,
-          instance_profile_pic_url: null,
-          instance_name: null,
-          is_business: false,
-          status: "not_configured",
-          last_connection_status: "disconnected",
-          last_error: null,
-          last_connection_check_at: new Date().toISOString(),
-        });
-        return jsonResponse({
-          success: true,
-          local_only: true,
-          integration: { ...updated, instance_token: undefined },
-        });
-      }
       return jsonResponse({ error: "Instância não criada ainda. Use action=create primeiro." }, 422);
     }
 
@@ -461,7 +408,7 @@ Deno.serve(async (req) => {
       mapped = mapStatus(sInst?.status) || mapped;
       qrcode = qrcode || sInst?.qrcode || null;
       paircode = paircode || sInst?.paircode || null;
-      phoneVal = extractPhone(sInst, statusRes.data) || phoneVal;
+      phoneVal = sInst?.phone || sInst?.wid || phoneVal;
       profileName = sInst?.profileName || sInst?.name || profileName;
       profilePic = sInst?.profilePicUrl || profilePic;
       isBusiness = !!sInst?.isBusiness;
@@ -527,7 +474,7 @@ Deno.serve(async (req) => {
       const mapped = mapStatus(inst?.status);
       const updated = await patchIntegration({
         instance_status: mapped,
-        instance_phone: extractPhone(inst, res.data) || existing!.instance_phone,
+        instance_phone: inst?.phone || inst?.wid || existing!.instance_phone,
         instance_profile_name: inst?.profileName || inst?.name || existing!.instance_profile_name,
         instance_profile_pic_url: inst?.profilePicUrl || existing!.instance_profile_pic_url,
         is_business: !!inst?.isBusiness,
@@ -562,17 +509,8 @@ Deno.serve(async (req) => {
     }
 
     if (action === "reset") {
-      // Tenta disconnect best-effort. Se a instância já foi apagada/expirada
-      // no provider gratuito (404, not found, invalid/expired instance),
-      // seguimos com o reset local mesmo assim.
-      try {
-        const res = await uazapiFetch("/instance/disconnect", { token: instToken, method: "POST" });
-        if (!res.ok) {
-          console.warn("UAZAPI reset: disconnect falhou (ignorado)", res.status, JSON.stringify(res.data));
-        }
-      } catch (e) {
-        console.warn("UAZAPI reset: disconnect lançou exceção (ignorado)", (e as Error)?.message);
-      }
+      // Disconnect + clear instance data
+      await uazapiFetch("/instance/disconnect", { token: instToken, method: "POST" });
       const updated = await patchIntegration({
         instance_token: null,
         instance_external_id: null,
@@ -580,7 +518,6 @@ Deno.serve(async (req) => {
         instance_phone: null,
         instance_profile_name: null,
         instance_profile_pic_url: null,
-        instance_name: null,
         is_business: false,
         status: "not_configured",
         last_connection_status: "disconnected",

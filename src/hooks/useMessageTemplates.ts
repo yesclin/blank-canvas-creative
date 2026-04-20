@@ -47,7 +47,7 @@ export function useMessageTemplates() {
     if (!clinic?.id) return;
     setSaving(true);
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('message_templates')
         .insert({
           clinic_id: clinic.id,
@@ -58,17 +58,13 @@ export function useMessageTemplates() {
           content: formData.content,
           is_active: formData.is_active,
           is_system: false,
-        })
-        .select()
-        .single();
+        });
       if (error) throw error;
       toast.success('Template criado com sucesso');
       await fetchTemplates();
-      return data as unknown as MessageTemplate;
     } catch (err: any) {
       console.error('Error creating template:', err);
       toast.error('Erro ao criar template: ' + (err.message || ''));
-      return null;
     } finally {
       setSaving(false);
     }
