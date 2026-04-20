@@ -189,12 +189,12 @@ describe('Isolamento de Contexto Especialidade', () => {
 describe('Coerência Slug x Capabilities', () => {
   it('todo slug oficial deve mapear para uma capability válida', () => {
     const slugToKeyMap: Record<string, string> = {
-      'clinica-geral': 'geral',
+      'geral': 'geral',
       'psicologia': 'psicologia',
       'nutricao': 'nutricao',
       'fisioterapia': 'fisioterapia',
       'pilates': 'pilates',
-      'estetica-harmonizacao': 'estetica',
+      'estetica': 'estetica',
       'odontologia': 'odontologia',
       'dermatologia': 'dermatologia',
       'pediatria': 'pediatria',
