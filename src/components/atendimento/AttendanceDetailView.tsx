@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import type { AttendanceDetail } from "@/hooks/useAttendanceDetail";
 import { Badge } from "@/components/ui/badge";
@@ -19,8 +19,12 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+export type AttendanceDetailAction =
+  | "sign" | "note" | "addendum" | "print" | "pdf" | "history" | null;
+
 interface Props {
   detail: AttendanceDetail;
+  initialAction?: AttendanceDetailAction;
 }
 
 // ─── Helpers ─────────────────────────────────────────────
@@ -50,7 +54,7 @@ function statusBadgeVariant(s: string): "default" | "secondary" | "destructive" 
 }
 
 // ─── Main Component ──────────────────────────────────────
-export function AttendanceDetailView({ detail }: Props) {
+export function AttendanceDetailView({ detail, initialAction = null }: Props) {
   const navigate = useNavigate();
   const pending = Math.max(0, detail.amount_expected - detail.amount_received);
   const hasConsolidated = !!detail.consolidated_document;
