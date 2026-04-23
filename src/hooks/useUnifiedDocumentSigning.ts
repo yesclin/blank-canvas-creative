@@ -117,7 +117,7 @@ async function uploadSignatureEvidence(
   return path;
 }
 
-async function logEvent(
+export async function logSignatureEvent(
   signatureId: string | null,
   clinicId: string,
   eventType: string,
@@ -125,27 +125,36 @@ async function logEvent(
 ) {
   try {
     const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id || null;
+    const enriched = {
+      ...metadata,
+      user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+      logged_at: new Date().toISOString(),
+    };
     if (signatureId) {
       await supabase.from("medical_signature_events").insert({
         signature_id: signatureId,
         clinic_id: clinicId,
         event_type: eventType,
-        metadata: metadata as any,
-        created_by: userData?.user?.id || null,
+        metadata: enriched as any,
+        created_by: userId,
       });
     } else {
       await supabase.from("access_logs").insert({
         clinic_id: clinicId,
-        user_id: userData?.user?.id || "",
+        user_id: userId || "",
         action: `signature_event_${eventType}`,
         resource_type: "medical_signature",
-        details: metadata as any,
+        details: enriched as any,
       });
     }
   } catch (e) {
     console.warn("[SIGN] log event failed:", e);
   }
 }
+
+// Backwards-compatible alias used internally below
+const logEvent = logSignatureEvent;
 
 export function useUnifiedDocumentSigning() {
   const { clinic } = useClinicData();
