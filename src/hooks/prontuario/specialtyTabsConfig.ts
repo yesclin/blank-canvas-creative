@@ -74,7 +74,7 @@ export const SPECIALTY_TABS: Record<SpecialtyKey, ClinicalBlockKey[]> = {
   odontologia: ['odontograma', 'procedimentos_realizados', 'produtos_utilizados', 'before_after_photos'],
   psicologia: ['termos_consentimentos'],
   nutricao: [],
-  estetica: ['facial_map', 'procedimentos_realizados', 'produtos_utilizados', 'before_after_photos', 'termos_consentimentos'],
+  estetica: ['facial_map', 'procedimentos_realizados', 'before_after_photos', 'termos_consentimentos'],
   dermatologia: ['before_after_photos'],
   fisioterapia: ['procedimentos_realizados'],
   pilates: ['avaliacao_funcional'],

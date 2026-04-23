@@ -100,7 +100,7 @@ export const SPECIALTY_CAPABILITIES: Record<SpecialtyKey, SpecialtyCapability> =
     anamnesisSlug: 'estetica-harmonizacao',
     enabledBlocks: [
       'resumo', 'anamnese', 'exame_fisico', 'evolucao',
-      'procedimentos_realizados', 'produtos_utilizados', 'before_after_photos',
+      'procedimentos_realizados', 'before_after_photos',
       'termos_consentimentos', 'facial_map', 'alertas', 'timeline',
     ],
     defaultModules: [...CORE_MODULES, 'before_after', 'body_measurements', 'procedures_module', 'advanced_uploads', 'interactive_map'],

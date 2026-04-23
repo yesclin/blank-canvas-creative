@@ -442,7 +442,7 @@ const DEFAULT_NAV_ITEMS = [
   // Aesthetics tabs (using correct system IDs from yesclinSpecialties)
   { id: 'exame_fisico', label: 'Avaliação Estética', icon: Sparkles },
   { id: 'procedimentos_realizados', label: 'Procedimentos Realizados', icon: Syringe },
-  { id: 'produtos_utilizados', label: 'Produtos Utilizados', icon: Package },
+  
   { id: 'before_after_photos', label: 'Fotos Antes/Depois', icon: ImageIcon },
   { id: 'termos_consentimentos', label: 'Termos de Consentimento', icon: FileCheck },
   { id: 'facial_map', label: 'Mapa Facial', icon: MapPin },
@@ -2157,16 +2157,6 @@ export default function Prontuario() {
       case 'aesthetic_consent':
         return (
           <ConsentModule
-            patientId={patientId!}
-            appointmentId={activeAppointment?.id}
-            canEdit={canEditCurrentTab}
-          />
-        );
-
-      case 'produtos_utilizados':
-        // Estética - Produtos Utilizados
-        return (
-          <ProdutosUtilizadosBlock
             patientId={patientId!}
             appointmentId={activeAppointment?.id}
             canEdit={canEditCurrentTab}
