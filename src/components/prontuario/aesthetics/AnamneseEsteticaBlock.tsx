@@ -470,10 +470,13 @@ export function AnamneseEsteticaBlock({
   const { generateConsolidatedPdf, exporting: exportingPdf } = useConsolidatedFillerPdf();
 
   const handlePrint = useCallback(() => {
-    if (!patientId) return;
-    const responses = isAdvanced
-      ? (dynamicRecord?.responses as Record<string, any> | null)
-      : standardValues;
+    // STRICT: Print/PDF only operate on the explicitly selected record.
+    // No fallback to in-memory form values or first-record auto-load.
+    if (!patientId || !selectedRecordId || !currentRecord) {
+      toast.error('Selecione uma anamnese registrada para imprimir.');
+      return;
+    }
+    const responses = (currentRecord.responses as Record<string, any> | null) || null;
     generateConsolidatedPdf({
       patientId,
       appointmentId: appointmentId || undefined,
@@ -488,7 +491,7 @@ export function AnamneseEsteticaBlock({
       recordResponses: responses,
       recordData: responses,
     });
-  }, [patientId, appointmentId, isAdvanced, dynamicRecord, standardValues, patientName, patientBirthDate, patientPhone, patientCpf, professionalName, professionalRegistration, generateConsolidatedPdf]);
+  }, [patientId, selectedRecordId, currentRecord, appointmentId, patientName, patientBirthDate, patientPhone, patientCpf, professionalName, professionalRegistration, generateConsolidatedPdf]);
 
   // Template change with unsaved guard
   const handleTemplateChange = useCallback((templateId: string) => {
@@ -667,8 +670,10 @@ export function AnamneseEsteticaBlock({
     const selector = renderTemplateSelector();
     if (selector) actions.push(<span key="selector">{selector}</span>);
 
-    // PDF/Print for saved records
-    if (canExport && currentRecord) {
+    // PDF/Print only when an anamnesis was explicitly selected from the list
+    // (modo detalhe). Never offered when the tab is in modo lista or for an
+    // auto-hydrated form without explicit selection.
+    if (canExport && selectedRecordId && currentRecord) {
       actions.push(
         <Button key="print" variant="outline" size="sm" onClick={handlePrint} disabled={exportingPdf}>
           <Printer className="h-4 w-4 mr-1.5" />
