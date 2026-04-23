@@ -11319,6 +11319,16 @@ export type Database = {
         Returns: number
       }
       get_pre_registration_by_token: { Args: { _token: string }; Returns: Json }
+      get_public_professionals: {
+        Args: { _clinic_id: string; _specialty_id?: string }
+        Returns: {
+          avatar_url: string
+          color: string
+          full_name: string
+          id: string
+          registration_number: string
+        }[]
+      }
       get_user_all_permissions: {
         Args: { _user_id: string }
         Returns: {
