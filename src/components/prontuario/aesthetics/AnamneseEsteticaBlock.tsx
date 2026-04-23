@@ -793,8 +793,82 @@ export function AnamneseEsteticaBlock({
     );
   }
 
-  // ─── Main rendering ──────────────────────────────────────────────
+  // ─── LIST MODE: records exist, none selected, not creating ──
+  // Explicit click required to open a record. NEVER auto-open.
+  if (v2Records.length > 0 && !selectedRecordId && !isCreatingNew) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-3">
+            <FileText className="h-5 w-5 text-primary" />
+            <h3 className="font-semibold">
+              Anamneses registradas ({v2Records.length})
+            </h3>
+          </div>
+          {canEdit && (
+            <Button
+              size="sm"
+              onClick={() => {
+                setSelectedRecordId(null);
+                setIsCreatingNew(true);
+              }}
+            >
+              <Plus className="h-4 w-4 mr-1.5" />
+              Nova Anamnese
+            </Button>
+          )}
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {v2Records.map((record) => (
+            <button
+              key={record.id}
+              type="button"
+              onClick={() => {
+                setSelectedRecordId(record.id);
+                if (record.template_id) setSelectedTemplateId(record.template_id);
+              }}
+              className={cn(
+                "text-left p-3 rounded-lg border bg-card transition-all",
+                "hover:bg-muted/50 hover:shadow-sm hover:border-primary/40",
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              )}
+            >
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <FileText className="h-3.5 w-3.5 text-primary/70 flex-shrink-0" />
+                <span className="text-sm font-medium truncate">
+                  {record.template_name || 'Anamnese'}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                {format(parseISO(record.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+              </div>
+              {record.signed_at && (
+                <Badge variant="outline" className="mt-2 text-[10px] bg-emerald-500/10 text-emerald-700 border-emerald-200">
+                  Assinado
+                </Badge>
+              )}
+              {!record.signed_at && record.locked_at && (
+                <Badge variant="outline" className="mt-2 text-[10px]">
+                  Bloqueado
+                </Badge>
+              )}
+              {!record.signed_at && !record.locked_at && (
+                <Badge variant="outline" className="mt-2 text-[10px]">
+                  Rascunho
+                </Badge>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Main rendering (DETAIL MODE) ────────────────────────────────
   return (
+
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
