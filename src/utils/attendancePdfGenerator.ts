@@ -236,6 +236,30 @@ export async function generateAttendancePDF(
   pdf.text('DOCUMENTO CONSOLIDADO DE ATENDIMENTO', M, y);
   y += 6;
 
+  // ── Signed status banner ─────────────────────────────────
+  if (integrity?.is_signed) {
+    const bannerH = 9;
+    const ok = hashesMatch;
+    if (ok) pdf.setFillColor(220, 245, 230); // light green
+    else pdf.setFillColor(254, 243, 199);     // light amber (mismatch)
+    pdf.setDrawColor(...BORDER_COLOR);
+    pdf.setLineWidth(0.2);
+    pdf.rect(M, y, CW, bannerH, 'FD');
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(FONT_BODY);
+    pdf.setTextColor(ok ? 22 : 146, ok ? 101 : 64, ok ? 52 : 14);
+    pdf.text(
+      ok
+        ? 'DOCUMENTO ASSINADO E TRAVADO — Integridade verificada'
+        : 'DOCUMENTO ASSINADO — Atenção: hash recomputado diverge do persistido',
+      M + 3,
+      y + 6
+    );
+    y += bannerH + 3;
+    pdf.setTextColor(...TEXT_COLOR);
+  }
+
+
   // ── 2. Appointment Context ──
   const apt = snapshot.appointment || {};
   const patient = snapshot.patient || {};
