@@ -40,6 +40,31 @@ interface SnapshotData {
   financial?: any;
 }
 
+/**
+ * Integrity payload describing the signature applied to the document.
+ * When provided, the PDF renders a "DOCUMENTO ASSINADO" status banner,
+ * embeds signer evidence in a dedicated section, and shows the SHA-256
+ * hash in the footer.
+ */
+export interface PdfIntegrityPayload {
+  is_signed: boolean;
+  is_locked?: boolean;
+  document_id?: string | null;
+  document_hash?: string | null;       // hash_sha256 stored on the document
+  signature_id?: string | null;
+  signed_at?: string | null;
+  signer_name?: string | null;
+  signer_user_id?: string | null;
+  sign_method?: string | null;          // 'saved_signature' | 'handwritten'
+  sign_method_label?: string | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  /** Embedded signature image (PNG dataURL) used at the moment of signing. */
+  signature_image_data_url?: string | null;
+  /** Hash recomputed from the snapshot used to render this PDF. */
+  recomputed_hash?: string | null;
+}
+
 // ─── Helpers ─────────────────────────────────────────────
 function fmtDateBR(d: string | null | undefined) {
   if (!d) return '—';
