@@ -66,9 +66,10 @@ import type { AnamnesisTemplateV2 } from '@/hooks/useAnamnesisTemplatesV2';
 import { useAnamnesisEditability } from '@/hooks/prontuario/useAnamnesisEditability';
 import { RecordEditLockBanner } from '@/components/prontuario/RecordEditLockBanner';
 import { AddendumSection } from '@/components/prontuario/AddendumSection';
-import { useAdvancedSignature } from '@/hooks/prontuario/useAdvancedSignature';
-import { AdvancedSignatureDialog } from '@/components/prontuario/AdvancedSignatureDialog';
-import type { MedicalRecordEntry } from '@/hooks/prontuario/useMedicalRecordEntries';
+import { UnifiedSignatureWizard } from '@/components/signature/UnifiedSignatureWizard';
+import type { SignableDocumentContext } from '@/hooks/useUnifiedDocumentSigning';
+import { useClinicData } from '@/hooks/useClinicData';
+
 import { cn } from '@/lib/utils';
 
 // ─── Template classification using catalog ─────────────────────────
@@ -390,52 +391,40 @@ export function AnamneseEsteticaBlock({
   const anamnesisEditability = useAnamnesisEditability(editabilityRecord);
   const uiStatus = resolveUiStatus(currentRecord, anamnesisEditability);
 
-  // Signature flow — Advanced YesClin
-  const { signRecord: advancedSignRecord, signing: signingSig } = useAdvancedSignature();
+  // Signature flow — Unified Advanced YesClin
+  const { clinic } = useClinicData();
   const [showAdvancedSignDialog, setShowAdvancedSignDialog] = useState(false);
-  const [signatureEntry, setSignatureEntry] = useState<MedicalRecordEntry | null>(null);
+  const [signatureContext, setSignatureContext] = useState<SignableDocumentContext | null>(null);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [discardReason, setDiscardReason] = useState('');
 
   const handleSign = useCallback(async () => {
-    if (!currentRecord) return;
+    if (!currentRecord || !patientId || !clinic?.id) return;
     const currentHasChanges = isAdvanced ? dynamicHasChanges : standardHasChanges;
     if (currentHasChanges) {
       const { toast } = await import('sonner');
       toast.error('Salve as alterações antes de assinar.');
       return;
     }
-    // Build a MedicalRecordEntry-like object for the dialog
-    setSignatureEntry({
-      id: currentRecord.id,
-      entry_type: 'anamnesis',
-      content: (isAdvanced ? dynamicValues : standardValues) as Record<string, unknown>,
-      created_at: currentRecord.created_at,
-      professional_id: currentRecord.professional_id,
-      professional_name: professionalName || 'Profissional',
-    } as unknown as MedicalRecordEntry);
-    setShowAdvancedSignDialog(true);
-  }, [currentRecord, isAdvanced, dynamicHasChanges, standardHasChanges, dynamicValues, standardValues, professionalName]);
-
-  const handleAdvancedSign = useCallback(async (password: string): Promise<boolean> => {
-    if (!currentRecord || !patientId) return false;
-    const content = isAdvanced ? dynamicValues : standardValues;
-    const result = await advancedSignRecord({
-      record_id: currentRecord.id,
-      record_type: 'anamnesis',
+    setSignatureContext({
+      document_type: 'anamnesis',
+      document_id: currentRecord.id,
       patient_id: patientId,
-      content: content as Record<string, unknown>,
+      clinic_id: clinic.id,
+      snapshot: (isAdvanced ? dynamicValues : standardValues) as Record<string, unknown>,
       professional_name: professionalName || 'Profissional',
-    }, password);
-    if (result.success) {
-      if (isAdvanced) {
-        refetchDynamic();
-      } else {
-        setStandardRecord((prev: any) => prev ? { ...prev, signed_at: new Date().toISOString() } : prev);
-      }
+    });
+    setShowAdvancedSignDialog(true);
+  }, [currentRecord, patientId, clinic?.id, isAdvanced, dynamicHasChanges, standardHasChanges, dynamicValues, standardValues, professionalName]);
+
+  const handleSignatureCompleted = useCallback(() => {
+    if (isAdvanced) {
+      refetchDynamic();
+    } else {
+      setStandardRecord((prev: any) => prev ? { ...prev, signed_at: new Date().toISOString() } : prev);
     }
-    return result.success;
-  }, [currentRecord, patientId, isAdvanced, dynamicValues, standardValues, advancedSignRecord, professionalName, refetchDynamic]);
+    setSignatureContext(null);
+  }, [isAdvanced, refetchDynamic]);
 
   // ─── Unsaved changes guard ───────────────────────────────────────
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
@@ -728,7 +717,7 @@ export function AnamneseEsteticaBlock({
       // Sign button (only after save)
       if (currentRecord && !currentHasChanges) {
         actions.push(
-          <Button key="sign" variant="outline" size="sm" onClick={handleSign} disabled={signingSig}>
+          <Button key="sign" variant="outline" size="sm" onClick={handleSign}>
             <ShieldCheck className="h-4 w-4 mr-1.5" />
             Assinatura Avançada YesClin
           </Button>
@@ -749,7 +738,7 @@ export function AnamneseEsteticaBlock({
       // Can still sign if not yet signed
       if (currentRecord) {
         actions.push(
-          <Button key="sign" variant="outline" size="sm" onClick={handleSign} disabled={signingSig}>
+          <Button key="sign" variant="outline" size="sm" onClick={handleSign}>
             <ShieldCheck className="h-4 w-4 mr-1.5" />
             Assinatura Avançada YesClin
           </Button>
@@ -949,16 +938,17 @@ export function AnamneseEsteticaBlock({
         />
       )}
 
-      {/* Advanced Signature Dialog */}
-      <AdvancedSignatureDialog
+      {/* Unified Advanced Signature Wizard */}
+      <UnifiedSignatureWizard
         open={showAdvancedSignDialog}
-        onOpenChange={setShowAdvancedSignDialog}
-        entry={signatureEntry}
-        professionalName={professionalName || 'Profissional'}
+        onOpenChange={(o) => {
+          setShowAdvancedSignDialog(o);
+          if (!o) setSignatureContext(null);
+        }}
+        context={signatureContext}
         patientName={patientName || 'Paciente'}
-        hasValidConsent={true}
-        onSign={handleAdvancedSign}
-        signing={signingSig}
+        generatedAt={currentRecord?.created_at}
+        onSigned={handleSignatureCompleted}
       />
 
       {/* Unsaved changes confirmation dialog */}
