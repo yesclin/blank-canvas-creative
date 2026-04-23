@@ -1,12 +1,15 @@
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   useDocumentNotes,
   useAddDocumentNote,
@@ -17,6 +20,7 @@ import {
 import {
   StickyNote, PenTool, History, Clock, FileText,
   CheckCircle2, AlertTriangle, Plus, Lock, Shield,
+  KeyRound, Eye, EyeOff, Loader2, User, FileCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
