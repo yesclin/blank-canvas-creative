@@ -11313,6 +11313,28 @@ export type Database = {
           start_time: string
         }[]
       }
+      get_channel_integration_credentials: {
+        Args: { _integration_id: string }
+        Returns: {
+          access_token: string
+          api_url: string
+          base_url: string
+          business_account_id: string
+          channel: string
+          clinic_id: string
+          config: Json
+          id: string
+          instance_external_id: string
+          instance_id: string
+          instance_token: string
+          last_error: string
+          metadata: Json
+          phone_number_id: string
+          provider: string
+          settings_json: Json
+          webhook_url: string
+        }[]
+      }
       get_my_clinic_id: { Args: never; Returns: string }
       get_next_document_number: {
         Args: { p_clinic_id: string }
