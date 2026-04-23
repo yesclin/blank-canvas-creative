@@ -342,6 +342,74 @@ export function SignatureAuditTrailDrawer({
               </div>
             </section>
 
+            {/* Selfie de verificação */}
+            <section className="space-y-2">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <Camera className="h-3.5 w-3.5" />
+                Selfie de verificação
+              </h4>
+              <div className="rounded-lg border bg-background p-3 flex items-center justify-center min-h-[120px]">
+                {selfieUrl ? (
+                  <img
+                    src={selfieUrl}
+                    alt="Selfie de verificação"
+                    className="max-h-[200px] object-contain rounded"
+                  />
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    Selfie não capturada neste ato.
+                  </span>
+                )}
+              </div>
+            </section>
+
+            {/* Geolocalização */}
+            <section className="space-y-2">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5" />
+                Geolocalização
+              </h4>
+              <div className="rounded-lg border bg-background p-3 text-sm">
+                {signature.geolocation?.status === "granted" ? (
+                  <div className="space-y-1">
+                    <Badge variant="secondary" className="gap-1">
+                      <CheckCircle2 className="h-3 w-3 text-green-600" />
+                      Coordenadas capturadas
+                    </Badge>
+                    <p className="font-mono text-xs text-muted-foreground">
+                      {Number(signature.geolocation.latitude).toFixed(6)},{" "}
+                      {Number(signature.geolocation.longitude).toFixed(6)}
+                      {signature.geolocation.accuracy &&
+                        ` (±${Math.round(signature.geolocation.accuracy)}m)`}
+                    </p>
+                    <a
+                      href={`https://www.google.com/maps?q=${signature.geolocation.latitude},${signature.geolocation.longitude}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-primary underline"
+                    >
+                      Abrir no mapa
+                    </a>
+                  </div>
+                ) : signature.geolocation?.status === "denied" ? (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <XCircle className="h-3.5 w-3.5 text-destructive" />
+                    Geolocalização negada pelo signatário.
+                  </div>
+                ) : signature.geolocation?.status === "unavailable" ? (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    Geolocalização indisponível neste dispositivo.
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    Geolocalização não coletada neste ato.
+                  </span>
+                )}
+              </div>
+            </section>
+
+
             {/* Timeline */}
             <section className="space-y-2">
               <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
