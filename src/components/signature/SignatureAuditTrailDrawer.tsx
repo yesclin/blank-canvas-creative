@@ -38,6 +38,9 @@ import {
   Lock,
   FileText,
   Activity,
+  Camera,
+  MapPin,
+  XCircle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
