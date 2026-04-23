@@ -469,10 +469,11 @@ export function AnamneseEsteticaBlock({
   // ─── PDF export ──────────────────────────────────────────────────
   const { generateConsolidatedPdf, exporting: exportingPdf } = useConsolidatedFillerPdf();
 
-  const handlePrint = useCallback(() => {
+  const handlePrint = useCallback(async () => {
     // STRICT: Print/PDF only operate on the explicitly selected record.
     // No fallback to in-memory form values or first-record auto-load.
     if (!patientId || !selectedRecordId || !currentRecord) {
+      const { toast } = await import('sonner');
       toast.error('Selecione uma anamnese registrada para imprimir.');
       return;
     }
