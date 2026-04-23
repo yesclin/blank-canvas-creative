@@ -70,16 +70,37 @@ interface EventRow {
   created_at: string;
 }
 
-const EVENT_LABELS: Record<string, { label: string; icon: any; tone: string }> = {
-  signature_requested: { label: "Documento aberto para assinatura", icon: FileText, tone: "text-muted-foreground" },
-  reauth_passed: { label: "Identidade validada por senha", icon: KeyRound, tone: "text-blue-600" },
-  reauth_failed: { label: "Falha na reautenticação", icon: AlertTriangle, tone: "text-destructive" },
-  document_hashed: { label: "Hash SHA-256 do documento gerado", icon: Hash, tone: "text-blue-600" },
-  document_signed: { label: "Documento assinado e travado", icon: Lock, tone: "text-green-600" },
-  pdf_generated: { label: "PDF assinado gerado", icon: FileCheck, tone: "text-muted-foreground" },
-  public_validation_viewed: { label: "Validação pública consultada", icon: Globe, tone: "text-muted-foreground" },
-  signature_revoked: { label: "Assinatura revogada", icon: AlertTriangle, tone: "text-destructive" },
+const EVENT_LABELS: Record<string, { label: string; icon: any; tone: string; dot: string }> = {
+  signature_requested: { label: "Documento aberto para assinatura", icon: FileText, tone: "text-muted-foreground", dot: "bg-muted-foreground/40" },
+  signature_started: { label: "Fluxo de assinatura iniciado", icon: PenTool, tone: "text-blue-600", dot: "bg-blue-500" },
+  reauth_passed: { label: "Identidade validada por senha", icon: KeyRound, tone: "text-blue-600", dot: "bg-blue-500" },
+  reauth_failed: { label: "Falha na reautenticação", icon: AlertTriangle, tone: "text-destructive", dot: "bg-destructive" },
+  document_hashed: { label: "Hash SHA-256 do documento gerado", icon: Hash, tone: "text-blue-600", dot: "bg-blue-500" },
+  document_signed: { label: "Assinatura confirmada", icon: CheckCircle2, tone: "text-green-600", dot: "bg-green-500" },
+  document_locked: { label: "Documento travado (imutável)", icon: Lock, tone: "text-green-700", dot: "bg-green-600" },
+  pdf_generated: { label: "PDF assinado gerado", icon: FileCheck, tone: "text-purple-600", dot: "bg-purple-500" },
+  print_generated: { label: "Documento enviado para impressão", icon: FileCheck, tone: "text-purple-600", dot: "bg-purple-500" },
+  public_validation_viewed: { label: "Validação pública consultada", icon: Globe, tone: "text-muted-foreground", dot: "bg-muted-foreground/40" },
+  signature_revoked: { label: "Assinatura revogada", icon: AlertTriangle, tone: "text-destructive", dot: "bg-destructive" },
 };
+
+// Friendly labels for known metadata keys so the audit reads as a human story
+const METADATA_LABELS: Record<string, string> = {
+  document_id: "Documento",
+  document_type: "Tipo",
+  patient_id: "Paciente",
+  signer_name: "Signatário",
+  ip_address: "IP",
+  user_agent: "Dispositivo",
+  method: "Modo",
+  hash_preview: "Hash",
+  document_hash_preview: "Hash",
+  target_table: "Tabela",
+  locked_at: "Travado em",
+  logged_at: "Registrado em",
+};
+
+const HIDDEN_METADATA_KEYS = new Set(["logged_at"]);
 
 function fmtDate(d?: string | null) {
   if (!d) return "—";
@@ -310,27 +331,66 @@ export function SignatureAuditTrailDrawer({
                   Nenhum evento registrado.
                 </p>
               ) : (
-                <ol className="relative border-l border-border ml-2 space-y-3">
+                <ol className="relative border-l border-border ml-2 space-y-4">
                   {events.map((evt) => {
                     const meta = EVENT_LABELS[evt.event_type] || {
                       label: evt.event_type,
                       icon: FileText,
                       tone: "text-muted-foreground",
+                      dot: "bg-muted-foreground/40",
                     };
                     const Icon = meta.icon;
+                    const entries = evt.metadata && typeof evt.metadata === "object"
+                      ? Object.entries(evt.metadata as Record<string, unknown>).filter(
+                          ([k, v]) =>
+                            !HIDDEN_METADATA_KEYS.has(k) &&
+                            v !== null &&
+                            v !== undefined &&
+                            v !== ""
+                        )
+                      : [];
+
                     return (
                       <li key={evt.id} className="ml-4">
-                        <span className="absolute -left-[7px] flex h-3.5 w-3.5 items-center justify-center rounded-full bg-background border">
-                          <Icon className={`h-2.5 w-2.5 ${meta.tone}`} />
+                        <span
+                          className={`absolute -left-[7px] flex h-3.5 w-3.5 items-center justify-center rounded-full ring-2 ring-background ${meta.dot}`}
+                        >
+                          <Icon className="h-2 w-2 text-white" />
                         </span>
-                        <p className="text-sm font-medium">{meta.label}</p>
+                        <p className={`text-sm font-medium ${meta.tone}`}>{meta.label}</p>
                         <p className="text-[11px] text-muted-foreground">
                           {fmtDate(evt.created_at)}
                         </p>
-                        {evt.metadata?.hash_preview && (
-                          <p className="text-[10px] text-muted-foreground font-mono">
-                            hash: {evt.metadata.hash_preview}…
-                          </p>
+
+                        {entries.length > 0 && (
+                          <div className="mt-1.5 rounded-md border bg-muted/30 px-2 py-1.5 space-y-0.5">
+                            {entries.map(([k, v]) => {
+                              const label = METADATA_LABELS[k] || k;
+                              const isLong =
+                                k === "user_agent" || k.includes("hash") || k.includes("id");
+                              const display =
+                                k === "method"
+                                  ? methodLabel(String(v))
+                                  : typeof v === "object"
+                                    ? JSON.stringify(v)
+                                    : String(v);
+                              return (
+                                <div
+                                  key={k}
+                                  className="flex items-baseline gap-2 text-[10.5px] leading-snug"
+                                >
+                                  <span className="text-muted-foreground/70 uppercase tracking-wider min-w-[60px] shrink-0">
+                                    {label}
+                                  </span>
+                                  <span
+                                    className={`text-foreground/80 break-all ${isLong ? "font-mono" : ""}`}
+                                  >
+                                    {display}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
                         )}
                       </li>
                     );
