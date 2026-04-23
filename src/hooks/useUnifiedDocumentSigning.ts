@@ -258,14 +258,29 @@ export function useUnifiedDocumentSigning() {
         const evidencePath = await uploadSignatureEvidence(
           userId,
           context.document_id,
-          evidenceDataUrl
+          evidenceDataUrl,
+          "signature"
         );
+
+        // Upload selfie evidence, if captured
+        let selfiePath: string | null = null;
+        if (selfieDataUrl) {
+          selfiePath = await uploadSignatureEvidence(
+            userId,
+            context.document_id,
+            selfieDataUrl,
+            "selfie"
+          );
+        }
 
         const evidenceSnapshot = {
           method,
           has_saved_signature: method === "saved_signature",
           handwritten_path: evidencePath,
           signature_data_url: evidenceDataUrl, // immutable copy embedded in row
+          selfie_path: selfiePath,
+          selfie_captured: !!selfieDataUrl,
+          geolocation: geolocation || null,
           captured_at: new Date().toISOString(),
         };
 
@@ -286,6 +301,8 @@ export function useUnifiedDocumentSigning() {
             ip_address: ipAddress,
             user_agent: userAgent,
             handwritten_path: evidencePath,
+            selfie_path: selfiePath,
+            geolocation: (geolocation || null) as any,
             evidence_snapshot: evidenceSnapshot as any,
             signature_level: "advanced",
             auth_method: "password_reauth",
@@ -297,6 +314,24 @@ export function useUnifiedDocumentSigning() {
         await logEvent(sigRow.id, clinic.id, "document_hashed", {
           hash_preview: documentHash.substring(0, 16),
         });
+
+        if (selfiePath) {
+          await logEvent(sigRow.id, clinic.id, "selfie_captured", {
+            selfie_path: selfiePath,
+          });
+        } else {
+          await logEvent(sigRow.id, clinic.id, "selfie_skipped", {
+            reason: "Selfie não capturada (indisponível ou não exigida).",
+          });
+        }
+
+        if (geolocation) {
+          await logEvent(sigRow.id, clinic.id, "geolocation_collected", {
+            status: geolocation.status,
+            latitude: geolocation.latitude ?? null,
+            longitude: geolocation.longitude ?? null,
+          });
+        }
 
         // Update source table
         const targetTable = context.target_table || SOURCE_TABLE_MAP[context.document_type];
