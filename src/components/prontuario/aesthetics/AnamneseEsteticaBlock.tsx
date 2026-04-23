@@ -530,12 +530,7 @@ export function AnamneseEsteticaBlock({
     pendingNavigationRef.current = null;
   }, []);
 
-  // Auto-select first record
-  useEffect(() => {
-    if (v2Records.length > 0 && !selectedRecordId) {
-      setSelectedRecordId(v2Records[0].id);
-    }
-  }, [v2Records, selectedRecordId]);
+  // NOTE: Removed auto-selection of v2Records[0]. Explicit click required to open a record.
 
   // ─── Loading ──────────────────────────────────────────────────────
   if (loadingTemplates) {
