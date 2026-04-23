@@ -284,7 +284,7 @@ export function SignatureAuditTrailDrawer({
                 <ImageIcon className="h-3.5 w-3.5" />
                 Assinatura utilizada no ato
               </h4>
-              <div className="rounded-lg border bg-white p-3 flex items-center justify-center min-h-[120px]">
+              <div className="rounded-lg border bg-background p-3 flex items-center justify-center min-h-[120px]">
                 {evidenceUrl ? (
                   <img
                     src={evidenceUrl}

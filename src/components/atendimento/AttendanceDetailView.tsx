@@ -11,6 +11,7 @@ import { handleDownloadPDF, handlePrintAttendance } from "@/utils/attendancePdfG
 import { logDocumentAction } from "@/hooks/useDocumentGovernance";
 import { AddNoteDialog, NotesHistoryPanel } from "@/components/atendimento/DocumentGovernanceDialogs";
 import { UnifiedSignatureWizard } from "@/components/signature/UnifiedSignatureWizard";
+import { SignatureAuditTrailDrawer } from "@/components/signature/SignatureAuditTrailDrawer";
 import type { SignableDocumentContext } from "@/hooks/useUnifiedDocumentSigning";
 import {
   ArrowLeft, FolderOpen, StickyNote, Printer, Download, PenTool,
