@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useAttendanceDetail } from "@/hooks/useAttendanceDetail";
 import { AttendanceDetailView } from "@/components/atendimento/AttendanceDetailView";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,6 +9,9 @@ import { Card, CardContent } from "@/components/ui/card";
 export default function VerAtendimento() {
   const { appointmentId } = useParams<{ appointmentId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const action = searchParams.get("action") as
+    | "sign" | "note" | "addendum" | "print" | "pdf" | "history" | null;
   const { data: detail, isLoading, error } = useAttendanceDetail(appointmentId || null);
 
   if (isLoading) {
@@ -45,5 +48,5 @@ export default function VerAtendimento() {
     );
   }
 
-  return <AttendanceDetailView detail={detail} />;
+  return <AttendanceDetailView detail={detail} initialAction={action} />;
 }

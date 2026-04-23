@@ -262,23 +262,24 @@ export default function Atendimento() {
     navigate(`/app/atendimento/${session.id}`);
   }, [navigate]);
 
+  // Todas as ações de governança (nota, adendo, impressão, PDF, assinatura)
+  // ficam centralizadas em AttendanceDetailView. A listagem apenas navega
+  // para a tela de detalhe passando a ação inicial via query string.
   const handleAddNote = useCallback((session: SessionRow) => {
-    toast.info("Funcionalidade de notas complementares em desenvolvimento.");
-  }, []);
+    navigate(`/app/atendimento/${session.id}?action=note`);
+  }, [navigate]);
 
   const handlePrint = useCallback((session: SessionRow) => {
-    // Open the appointment in print mode
-    const printUrl = `/app/prontuario/${session.patient_id}?appointmentId=${session.id}&print=true`;
-    window.open(printUrl, "_blank");
-  }, []);
+    navigate(`/app/atendimento/${session.id}?action=print`);
+  }, [navigate]);
 
   const handleDownloadPDF = useCallback((session: SessionRow) => {
-    toast.info("Geração de PDF em desenvolvimento.");
-  }, []);
+    navigate(`/app/atendimento/${session.id}?action=pdf`);
+  }, [navigate]);
 
   const handleSign = useCallback((session: SessionRow) => {
-    toast.info("Assinatura de documento em desenvolvimento.");
-  }, []);
+    navigate(`/app/atendimento/${session.id}?action=sign`);
+  }, [navigate]);
 
   if (permLoading) {
     return (
