@@ -127,8 +127,15 @@ export function UnifiedSignatureWizard({
       setShowPassword(false);
       setSetAsDefault(false);
       setHasInk(false);
+    } else if (context?.clinic_id) {
+      // Audit: opening of the signature flow (pre-signature, no signature_id yet)
+      logSignatureEvent(null, context.clinic_id, "signature_started", {
+        document_id: context.document_id,
+        document_type: context.document_type,
+        patient_id: context.patient_id,
+      });
     }
-  }, [open]);
+  }, [open, context?.clinic_id, context?.document_id, context?.document_type, context?.patient_id]);
 
   // Default mode = saved if available, else handwritten
   useEffect(() => {

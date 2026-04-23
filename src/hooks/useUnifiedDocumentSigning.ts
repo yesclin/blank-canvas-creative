@@ -325,6 +325,14 @@ export function useUnifiedDocumentSigning() {
         await logEvent(sigRow.id, clinic.id, "document_signed", {
           document_type: context.document_type,
           method,
+          signer_name: context.professional_name || null,
+          ip_address: ipAddress,
+        });
+
+        await logEvent(sigRow.id, clinic.id, "document_locked", {
+          document_type: context.document_type,
+          target_table: targetTable,
+          locked_at: now,
         });
 
         // Audit access_logs
