@@ -450,8 +450,86 @@ export async function generateAttendancePDF(
     addText(apt.notes, 2);
   }
 
+  // ── 10. Integridade & Assinatura ─────────────────────────
+  if (integrity?.is_signed) {
+    addSectionTitle('Integridade e Assinatura');
+
+    addKeyValue('Status', hashesMatch ? 'Assinado e travado — íntegro' : 'Assinado — hash divergente (revisar)', 2);
+    addKeyValue('Assinante', integrity.signer_name || '—', 2);
+    addKeyValue('ID do usuário', integrity.signer_user_id || '—', 2);
+    addKeyValue('Modo', integrity.sign_method_label || signMethodLabel(integrity.sign_method), 2);
+    addKeyValue(
+      'Assinado em',
+      integrity.signed_at
+        ? `${fmtDateBR(integrity.signed_at)} às ${fmtTimeBR(integrity.signed_at)}`
+        : '—',
+      2
+    );
+    addKeyValue('IP', integrity.ip_address || '—', 2);
+    if (integrity.user_agent) addKeyValue('Dispositivo', integrity.user_agent.substring(0, 110), 2);
+    if (integrity.signature_id) addKeyValue('ID da assinatura', integrity.signature_id, 2);
+    if (integrity.document_id) addKeyValue('ID do documento', integrity.document_id, 2);
+
+    y += 1;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(FONT_SMALL);
+    pdf.setTextColor(...MUTED_COLOR);
+    pdf.text('Hash SHA-256 do documento (persistido):', M + 2, y);
+    y += LINE_H - 0.5;
+    pdf.setFont('courier', 'normal');
+    pdf.setFontSize(FONT_SMALL);
+    pdf.setTextColor(...TEXT_COLOR);
+    const persistedLines = pdf.splitTextToSize(integrity.document_hash || '—', CW - 4);
+    pdf.text(persistedLines, M + 2, y);
+    y += persistedLines.length * (LINE_H - 0.5) + 1;
+
+    if (recomputedHash) {
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(FONT_SMALL);
+      pdf.setTextColor(...MUTED_COLOR);
+      pdf.text('Hash SHA-256 recomputado deste PDF:', M + 2, y);
+      y += LINE_H - 0.5;
+      pdf.setFont('courier', 'normal');
+      pdf.setTextColor(hashesMatch ? 22 : 146, hashesMatch ? 101 : 64, hashesMatch ? 52 : 14);
+      const recomputedLines = pdf.splitTextToSize(recomputedHash, CW - 4);
+      pdf.text(recomputedLines, M + 2, y);
+      y += recomputedLines.length * (LINE_H - 0.5) + 1;
+    }
+    pdf.setTextColor(...TEXT_COLOR);
+    pdf.setFont('helvetica', 'normal');
+
+    // Embedded signature image (immutable copy captured at signing time)
+    if (integrity.signature_image_data_url) {
+      try {
+        const sigImg = await loadImage(integrity.signature_image_data_url);
+        const maxW = 70;
+        const maxH = 25;
+        const ratio = Math.min(maxW / sigImg.width, maxH / sigImg.height, 1);
+        const w = sigImg.width * ratio;
+        const h = sigImg.height * ratio;
+        checkPage(h + 8);
+        y += 2;
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(FONT_SMALL);
+        pdf.setTextColor(...MUTED_COLOR);
+        pdf.text('Assinatura utilizada no ato:', M + 2, y);
+        y += LINE_H;
+        pdf.addImage(sigImg, 'PNG', M + 2, y, w, h);
+        y += h + 2;
+        pdf.setDrawColor(...BORDER_COLOR);
+        pdf.line(M + 2, y, M + 2 + w, y);
+        y += 3;
+        pdf.setTextColor(...TEXT_COLOR);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(FONT_SMALL);
+        pdf.text(integrity.signer_name || '', M + 2, y);
+        y += LINE_H;
+      } catch { /* signature image optional */ }
+    }
+  }
+
   // ── Footer on last page ──
-  addFooter(pdf, snapshot);
+  addFooter(pdf, snapshot, integrity, hashesMatch);
 
   // ── Output ──
   const blob = pdf.output('blob');
