@@ -36,6 +36,7 @@ import {
   QrCode,
 } from "lucide-react";
 import { useClinicWhatsAppIntegration } from "@/hooks/useClinicWhatsAppIntegration";
+import { useChannelIntegrationCredentials } from "@/hooks/useChannelIntegrationCredentials";
 import { usePermissions } from "@/hooks/usePermissions";
 
 function StatusBadge({ status }: { status: string | null | undefined }) {
