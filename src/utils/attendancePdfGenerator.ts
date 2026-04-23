@@ -131,7 +131,7 @@ export async function generateAttendancePDF(
   // ── Utility functions ──
   function checkPage(needed: number) {
     if (y + needed > A4_H - M - 10) {
-      addFooter(pdf, snapshot);
+      addFooter(pdf, snapshot, options?.integrity, false);
       pdf.addPage();
       y = M;
       return true;
