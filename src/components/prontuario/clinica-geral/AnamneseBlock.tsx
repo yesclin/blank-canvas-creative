@@ -323,12 +323,10 @@ export function AnamneseBlock({
 
 
   // ─── Selected record from records list ────────────────────────────
+  // IMPORTANT: never auto-fallback to v2Records[0]. Selection must be explicit.
   const selectedRecord = useMemo(() => {
-    if (!v2Records.length) return null;
-    if (selectedRecordId) {
-      return v2Records.find(r => r.id === selectedRecordId) || v2Records[0];
-    }
-    return v2Records[0];
+    if (!v2Records.length || !selectedRecordId) return null;
+    return v2Records.find(r => r.id === selectedRecordId) || null;
   }, [v2Records, selectedRecordId]);
 
   // Backward compat alias
