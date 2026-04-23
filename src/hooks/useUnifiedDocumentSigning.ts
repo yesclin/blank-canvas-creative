@@ -115,16 +115,17 @@ function dataUrlToBlob(dataUrl: string): Blob | null {
 async function uploadSignatureEvidence(
   userId: string,
   documentId: string,
-  dataUrl: string
+  dataUrl: string,
+  kind: "signature" | "selfie" = "signature"
 ): Promise<string | null> {
   const blob = dataUrlToBlob(dataUrl);
   if (!blob) return null;
-  const path = `${userId}/${documentId}-${Date.now()}.png`;
+  const path = `${userId}/${documentId}-${kind}-${Date.now()}.png`;
   const { error } = await supabase.storage
     .from("signature-evidence")
     .upload(path, blob, { contentType: "image/png", upsert: false });
   if (error) {
-    console.warn("[SIGN] evidence upload failed:", error);
+    console.warn(`[SIGN] ${kind} upload failed:`, error);
     return null;
   }
   return path;
