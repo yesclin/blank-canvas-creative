@@ -12,7 +12,7 @@ import { logDocumentAction } from "@/hooks/useDocumentGovernance";
 import { AddNoteDialog, NotesHistoryPanel } from "@/components/atendimento/DocumentGovernanceDialogs";
 import { UnifiedSignatureWizard } from "@/components/signature/UnifiedSignatureWizard";
 import { SignatureAuditTrailDrawer } from "@/components/signature/SignatureAuditTrailDrawer";
-import type { SignableDocumentContext } from "@/hooks/useUnifiedDocumentSigning";
+import { logSignatureEvent, type SignableDocumentContext } from "@/hooks/useUnifiedDocumentSigning";
 import {
   ArrowLeft, FolderOpen, StickyNote, Printer, Download, PenTool,
   GitCompare, History, Clock, Calendar, User, Stethoscope,
@@ -108,6 +108,13 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
     try {
       await handlePrintAttendance(snapshotSource, integrityPayload);
       if (docId) await logDocumentAction({ documentId: docId, clinicId, actionType: "printed" });
+      // Audit signature timeline (only when document is signed)
+      if (integrityPayload?.signature_id && clinicId) {
+        await logSignatureEvent(integrityPayload.signature_id, clinicId, "print_generated", {
+          document_id: docId,
+          document_hash_preview: integrityPayload.document_hash?.substring(0, 16) || null,
+        });
+      }
     } finally { setPrintLoading(false); }
   };
   const handlePDF = async () => {
@@ -116,6 +123,12 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
     try {
       await handleDownloadPDF(snapshotSource, integrityPayload);
       if (docId) await logDocumentAction({ documentId: docId, clinicId, actionType: "pdf_exported" });
+      if (integrityPayload?.signature_id && clinicId) {
+        await logSignatureEvent(integrityPayload.signature_id, clinicId, "pdf_generated", {
+          document_id: docId,
+          document_hash_preview: integrityPayload.document_hash?.substring(0, 16) || null,
+        });
+      }
     } finally { setPdfLoading(false); }
   };
   const handleSign = () => setSignDialogOpen(true);

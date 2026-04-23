@@ -51,6 +51,7 @@ import {
 import { cn } from "@/lib/utils";
 import {
   useUnifiedDocumentSigning,
+  logSignatureEvent,
   type SignableDocumentContext,
   type SignDocumentResult,
 } from "@/hooks/useUnifiedDocumentSigning";
