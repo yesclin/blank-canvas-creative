@@ -186,6 +186,26 @@ export async function generateAttendancePDF(
     }
   }
 
+  // ── Integrity context ──
+  // We use the EXACT snapshot persisted with the signed document. The
+  // recomputed hash uses the same algorithm as `useUnifiedDocumentSigning`,
+  // so it is byte-equivalent to `hash_sha256` if the snapshot wasn't tampered.
+  const integrity = options?.integrity;
+  let recomputedHash: string | null = null;
+  if (integrity?.is_signed) {
+    try {
+      recomputedHash = await sha256({
+        ...(snapshot || {}),
+        __sign_method: integrity.sign_method || null,
+      });
+    } catch { recomputedHash = null; }
+  }
+  const hashesMatch =
+    !!integrity?.is_signed &&
+    !!integrity?.document_hash &&
+    !!recomputedHash &&
+    integrity.document_hash === recomputedHash;
+
   // ── 1. Institutional Header ──
   const clinic = snapshot.clinic || {};
   pdf.setFontSize(FONT_TITLE);
