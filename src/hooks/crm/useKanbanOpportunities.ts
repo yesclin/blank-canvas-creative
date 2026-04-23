@@ -29,7 +29,7 @@ export function useKanbanOpportunities() {
           lead:crm_leads!crm_opportunities_lead_id_fkey(id, name, phone),
           specialty:specialties!crm_opportunities_specialty_id_fkey(id, name),
           procedure:procedures!crm_opportunities_procedure_id_fkey(id, name),
-          professional:professionals!crm_opportunities_professional_id_fkey(id, name)
+          professional:professionals!crm_opportunities_professional_id_fkey(id, full_name)
         `)
         .eq("clinic_id", clinicId)
         .order("updated_at", { ascending: false });
