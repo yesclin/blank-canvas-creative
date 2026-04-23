@@ -76,6 +76,7 @@ export function WhatsAppUazapiManager() {
     resetInstance,
     sendTestMessage,
   } = useClinicWhatsAppIntegration();
+  const { data: credentials } = useChannelIntegrationCredentials(integration?.id);
 
   const [instanceName, setInstanceName] = useState("");
   const [connectPhone, setConnectPhone] = useState("");
@@ -170,12 +171,12 @@ export function WhatsAppUazapiManager() {
             </div>
           </div>
 
-          {integration?.last_error && (
+          {credentials?.last_error && (
             <div className="flex items-start gap-2 p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
               <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
               <div>
                 <p className="font-medium">Último erro</p>
-                <p className="text-xs break-all">{integration.last_error}</p>
+                <p className="text-xs break-all">{credentials.last_error}</p>
               </div>
             </div>
           )}
@@ -393,7 +394,7 @@ export function WhatsAppUazapiManager() {
             </div>
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">URL configurada</Label>
-              <Input value={integration?.webhook_url || "—"} readOnly />
+              <Input value={credentials?.webhook_url || "—"} readOnly />
             </div>
             <div className="text-xs text-muted-foreground">
               Eventos monitorados: <span className="font-medium">connection.update, messages.upsert, qrcode.updated</span>
