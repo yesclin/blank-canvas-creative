@@ -159,10 +159,15 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
           <Button variant="outline" size="sm" className="gap-1.5" onClick={handleSign} disabled={!docId || isDocSigned}>
             <PenTool className="h-3.5 w-3.5" /> {isDocSigned ? "Assinado" : "Assinar"}
           </Button>
-          <Button variant="ghost" size="sm" className="gap-1.5" onClick={handleCompare}>
+          {isDocSigned && (
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setAuditTrailOpen(true)}>
+              <Shield className="h-3.5 w-3.5" /> Trilha de auditoria
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" className="gap-1.5" onClick={handleCompare} title="Comparar atendimentos">
             <GitCompare className="h-3.5 w-3.5" />
           </Button>
-          <Button variant="ghost" size="sm" className="gap-1.5" onClick={handleHistory}>
+          <Button variant="ghost" size="sm" className="gap-1.5" onClick={handleHistory} title="Histórico de notas">
             <History className="h-3.5 w-3.5" />
           </Button>
         </div>
