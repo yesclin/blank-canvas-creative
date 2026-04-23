@@ -38,6 +38,9 @@ import {
   Lock,
   FileText,
   Activity,
+  Camera,
+  MapPin,
+  XCircle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -61,6 +64,8 @@ interface SignatureRow {
   signature_level: string | null;
   evidence_snapshot: any;
   handwritten_path: string | null;
+  selfie_path: string | null;
+  geolocation: any;
 }
 
 interface EventRow {
@@ -76,6 +81,9 @@ const EVENT_LABELS: Record<string, { label: string; icon: any; tone: string; dot
   reauth_passed: { label: "Identidade validada por senha", icon: KeyRound, tone: "text-blue-600", dot: "bg-blue-500" },
   reauth_failed: { label: "Falha na reautenticação", icon: AlertTriangle, tone: "text-destructive", dot: "bg-destructive" },
   document_hashed: { label: "Hash SHA-256 do documento gerado", icon: Hash, tone: "text-blue-600", dot: "bg-blue-500" },
+  selfie_captured: { label: "Selfie de verificação capturada", icon: Camera, tone: "text-blue-600", dot: "bg-blue-500" },
+  selfie_skipped: { label: "Selfie não capturada", icon: Camera, tone: "text-muted-foreground", dot: "bg-muted-foreground/40" },
+  geolocation_collected: { label: "Geolocalização coletada", icon: MapPin, tone: "text-blue-600", dot: "bg-blue-500" },
   document_signed: { label: "Assinatura confirmada", icon: CheckCircle2, tone: "text-green-600", dot: "bg-green-500" },
   document_locked: { label: "Documento travado (imutável)", icon: Lock, tone: "text-green-700", dot: "bg-green-600" },
   pdf_generated: { label: "PDF assinado gerado", icon: FileCheck, tone: "text-purple-600", dot: "bg-purple-500" },
@@ -141,6 +149,7 @@ export function SignatureAuditTrailDrawer({
   const [signature, setSignature] = useState<SignatureRow | null>(null);
   const [events, setEvents] = useState<EventRow[]>([]);
   const [evidenceUrl, setEvidenceUrl] = useState<string | null>(null);
+  const [selfieUrl, setSelfieUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -148,6 +157,7 @@ export function SignatureAuditTrailDrawer({
       setSignature(null);
       setEvents([]);
       setEvidenceUrl(null);
+      setSelfieUrl(null);
       return;
     }
     setLoading(true);
@@ -188,6 +198,18 @@ export function SignatureAuditTrailDrawer({
         } else if ((sig as SignatureRow)?.evidence_snapshot?.signature_data_url) {
           if (!cancelled)
             setEvidenceUrl((sig as SignatureRow).evidence_snapshot.signature_data_url);
+        }
+
+        // Resolve selfie image
+        const selfiePath =
+          (sig as SignatureRow)?.selfie_path ||
+          (sig as SignatureRow)?.evidence_snapshot?.selfie_path ||
+          null;
+        if (selfiePath) {
+          const { data: u } = await supabase.storage
+            .from("signature-evidence")
+            .createSignedUrl(selfiePath, 60 * 30);
+          if (!cancelled) setSelfieUrl(u?.signedUrl || null);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -319,6 +341,74 @@ export function SignatureAuditTrailDrawer({
                 )}
               </div>
             </section>
+
+            {/* Selfie de verificação */}
+            <section className="space-y-2">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <Camera className="h-3.5 w-3.5" />
+                Selfie de verificação
+              </h4>
+              <div className="rounded-lg border bg-background p-3 flex items-center justify-center min-h-[120px]">
+                {selfieUrl ? (
+                  <img
+                    src={selfieUrl}
+                    alt="Selfie de verificação"
+                    className="max-h-[200px] object-contain rounded"
+                  />
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    Selfie não capturada neste ato.
+                  </span>
+                )}
+              </div>
+            </section>
+
+            {/* Geolocalização */}
+            <section className="space-y-2">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5" />
+                Geolocalização
+              </h4>
+              <div className="rounded-lg border bg-background p-3 text-sm">
+                {signature.geolocation?.status === "granted" ? (
+                  <div className="space-y-1">
+                    <Badge variant="secondary" className="gap-1">
+                      <CheckCircle2 className="h-3 w-3 text-green-600" />
+                      Coordenadas capturadas
+                    </Badge>
+                    <p className="font-mono text-xs text-muted-foreground">
+                      {Number(signature.geolocation.latitude).toFixed(6)},{" "}
+                      {Number(signature.geolocation.longitude).toFixed(6)}
+                      {signature.geolocation.accuracy &&
+                        ` (±${Math.round(signature.geolocation.accuracy)}m)`}
+                    </p>
+                    <a
+                      href={`https://www.google.com/maps?q=${signature.geolocation.latitude},${signature.geolocation.longitude}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-primary underline"
+                    >
+                      Abrir no mapa
+                    </a>
+                  </div>
+                ) : signature.geolocation?.status === "denied" ? (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <XCircle className="h-3.5 w-3.5 text-destructive" />
+                    Geolocalização negada pelo signatário.
+                  </div>
+                ) : signature.geolocation?.status === "unavailable" ? (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    Geolocalização indisponível neste dispositivo.
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    Geolocalização não coletada neste ato.
+                  </span>
+                )}
+              </div>
+            </section>
+
 
             {/* Timeline */}
             <section className="space-y-2">
