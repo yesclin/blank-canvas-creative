@@ -70,11 +70,18 @@ Deno.serve(async (req) => {
     });
 
     if (resetError) {
-      console.error("Reset error:", resetError);
-      return new Response(JSON.stringify({ error: resetError.message }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      const reqId = crypto.randomUUID();
+      console.error(`[reset-anamnesis-templates] [${reqId}] Reset error:`, resetError);
+      return new Response(
+        JSON.stringify({
+          error: "Não foi possível restaurar os modelos. Tente novamente.",
+          request_id: reqId,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     return new Response(JSON.stringify({ success: true }), {

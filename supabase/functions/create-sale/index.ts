@@ -303,9 +303,14 @@ serve(async (req) => {
       throw innerError;
     }
   } catch (error) {
-    console.error("Error in create-sale:", error);
+    const requestId = crypto.randomUUID();
+    console.error(`[create-sale] [${requestId}]`, error);
     return new Response(
-      JSON.stringify({ success: false, error: error instanceof Error ? error.message : "Erro desconhecido" }),
+      JSON.stringify({
+        success: false,
+        error: "Não foi possível concluir a venda. Tente novamente.",
+        request_id: requestId,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
     );
   }
