@@ -70,16 +70,37 @@ interface EventRow {
   created_at: string;
 }
 
-const EVENT_LABELS: Record<string, { label: string; icon: any; tone: string }> = {
-  signature_requested: { label: "Documento aberto para assinatura", icon: FileText, tone: "text-muted-foreground" },
-  reauth_passed: { label: "Identidade validada por senha", icon: KeyRound, tone: "text-blue-600" },
-  reauth_failed: { label: "Falha na reautenticação", icon: AlertTriangle, tone: "text-destructive" },
-  document_hashed: { label: "Hash SHA-256 do documento gerado", icon: Hash, tone: "text-blue-600" },
-  document_signed: { label: "Documento assinado e travado", icon: Lock, tone: "text-green-600" },
-  pdf_generated: { label: "PDF assinado gerado", icon: FileCheck, tone: "text-muted-foreground" },
-  public_validation_viewed: { label: "Validação pública consultada", icon: Globe, tone: "text-muted-foreground" },
-  signature_revoked: { label: "Assinatura revogada", icon: AlertTriangle, tone: "text-destructive" },
+const EVENT_LABELS: Record<string, { label: string; icon: any; tone: string; dot: string }> = {
+  signature_requested: { label: "Documento aberto para assinatura", icon: FileText, tone: "text-muted-foreground", dot: "bg-muted-foreground/40" },
+  signature_started: { label: "Fluxo de assinatura iniciado", icon: PenTool, tone: "text-blue-600", dot: "bg-blue-500" },
+  reauth_passed: { label: "Identidade validada por senha", icon: KeyRound, tone: "text-blue-600", dot: "bg-blue-500" },
+  reauth_failed: { label: "Falha na reautenticação", icon: AlertTriangle, tone: "text-destructive", dot: "bg-destructive" },
+  document_hashed: { label: "Hash SHA-256 do documento gerado", icon: Hash, tone: "text-blue-600", dot: "bg-blue-500" },
+  document_signed: { label: "Assinatura confirmada", icon: CheckCircle2, tone: "text-green-600", dot: "bg-green-500" },
+  document_locked: { label: "Documento travado (imutável)", icon: Lock, tone: "text-green-700", dot: "bg-green-600" },
+  pdf_generated: { label: "PDF assinado gerado", icon: FileCheck, tone: "text-purple-600", dot: "bg-purple-500" },
+  print_generated: { label: "Documento enviado para impressão", icon: FileCheck, tone: "text-purple-600", dot: "bg-purple-500" },
+  public_validation_viewed: { label: "Validação pública consultada", icon: Globe, tone: "text-muted-foreground", dot: "bg-muted-foreground/40" },
+  signature_revoked: { label: "Assinatura revogada", icon: AlertTriangle, tone: "text-destructive", dot: "bg-destructive" },
 };
+
+// Friendly labels for known metadata keys so the audit reads as a human story
+const METADATA_LABELS: Record<string, string> = {
+  document_id: "Documento",
+  document_type: "Tipo",
+  patient_id: "Paciente",
+  signer_name: "Signatário",
+  ip_address: "IP",
+  user_agent: "Dispositivo",
+  method: "Modo",
+  hash_preview: "Hash",
+  document_hash_preview: "Hash",
+  target_table: "Tabela",
+  locked_at: "Travado em",
+  logged_at: "Registrado em",
+};
+
+const HIDDEN_METADATA_KEYS = new Set(["logged_at"]);
 
 function fmtDate(d?: string | null) {
   if (!d) return "—";
