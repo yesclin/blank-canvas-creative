@@ -44,6 +44,15 @@ export interface SignableDocumentContext {
   target_table?: string;
 }
 
+export interface GeolocationEvidence {
+  status: "granted" | "denied" | "unavailable" | "skipped";
+  latitude?: number | null;
+  longitude?: number | null;
+  accuracy?: number | null;
+  captured_at: string;
+  error?: string | null;
+}
+
 export interface SignDocumentInput {
   context: SignableDocumentContext;
   password: string;
@@ -54,6 +63,10 @@ export interface SignDocumentInput {
   /** When method === 'saved_signature', a dataURL captured at sign time
    *  so the document keeps its own immutable copy. */
   savedSignatureDataUrl?: string;
+  /** Selfie captured during the signing flow (PNG dataURL). */
+  selfieDataUrl?: string | null;
+  /** Geolocation evidence captured during the signing flow. */
+  geolocation?: GeolocationEvidence | null;
 }
 
 export interface SignDocumentResult {
