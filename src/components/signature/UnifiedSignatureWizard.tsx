@@ -3,16 +3,15 @@
  *
  * Single signature modal used across Prontuário and Atendimento.
  *
- * Modes:
- *  - Saved signature  → use the professional's stored signature
- *  - Handwritten      → draw on canvas (mouse/touch)
- *
- * Pipeline:
- *  Step 1 — Review (document summary + irreversibility checkboxes)
- *  Step 2 — Sign   (choose mode, preview, optional set-as-default, password)
+ * Pipeline (4 steps — Assinatura Avançada YesClin):
+ *  Step 1 — Revisão     (document summary + irreversibility checkboxes)
+ *  Step 2 — Assinatura  (saved signature OR handwritten on canvas)
+ *  Step 3 — Selfie      (verification selfie via getUserMedia)
+ *  Step 4 — Geo + Senha (geolocation capture + password reauth + final submit)
  *
  * On confirm, calls `useUnifiedDocumentSigning.signDocument()`, which handles
- * hash, snapshot, evidence upload, source-table lock, and event log.
+ * hash, snapshot, evidence upload (signature + selfie), source-table lock,
+ * geolocation persistence, and event log.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -37,7 +36,6 @@ import {
   FileCheck,
   Lock,
   Clock,
-  User,
   FileText,
   KeyRound,
   Eye,
@@ -47,6 +45,11 @@ import {
   Eraser,
   CheckCircle2,
   ImageIcon,
+  Camera,
+  RefreshCw,
+  MapPin,
+  Globe,
+  XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -54,6 +57,7 @@ import {
   logSignatureEvent,
   type SignableDocumentContext,
   type SignDocumentResult,
+  type GeolocationEvidence,
 } from "@/hooks/useUnifiedDocumentSigning";
 import {
   useProfessionalSignature,
@@ -71,9 +75,17 @@ interface UnifiedSignatureWizardProps {
 }
 
 type Mode = "saved" | "handwritten";
+type Step = "review" | "sign" | "selfie" | "confirm";
 
 const CANVAS_WIDTH = 520;
 const CANVAS_HEIGHT = 180;
+
+const STEPS: { key: Step; label: string }[] = [
+  { key: "review", label: "Revisão" },
+  { key: "sign", label: "Assinatura" },
+  { key: "selfie", label: "Selfie" },
+  { key: "confirm", label: "Geo + Senha" },
+];
 
 function fmt(d?: string | null) {
   if (!d) return "—";
@@ -108,7 +120,7 @@ export function UnifiedSignatureWizard({
     loading: loadingSig,
   } = useProfessionalSignature();
 
-  const [step, setStep] = useState<"review" | "sign">("review");
+  const [step, setStep] = useState<Step>("review");
   const [mode, setMode] = useState<Mode>("saved");
   const [confirmIrreversible, setConfirmIrreversible] = useState(false);
   const [confirmAccuracy, setConfirmAccuracy] = useState(false);
@@ -116,6 +128,18 @@ export function UnifiedSignatureWizard({
   const [showPassword, setShowPassword] = useState(false);
   const [setAsDefault, setSetAsDefault] = useState(false);
   const [hasInk, setHasInk] = useState(false);
+
+  // Selfie state
+  const [selfieDataUrl, setSelfieDataUrl] = useState<string | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [cameraReady, setCameraReady] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const selfieCanvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  // Geolocation state
+  const [geolocation, setGeolocation] = useState<GeolocationEvidence | null>(null);
+  const [geoLoading, setGeoLoading] = useState(false);
 
   // Reset on open/close
   useEffect(() => {
@@ -128,14 +152,21 @@ export function UnifiedSignatureWizard({
       setShowPassword(false);
       setSetAsDefault(false);
       setHasInk(false);
+      setSelfieDataUrl(null);
+      setCameraError(null);
+      setCameraReady(false);
+      setGeolocation(null);
+      setGeoLoading(false);
+      // ensure camera released
+      stopCamera();
     } else if (context?.clinic_id) {
-      // Audit: opening of the signature flow (pre-signature, no signature_id yet)
       logSignatureEvent(null, context.clinic_id, "signature_started", {
         document_id: context.document_id,
         document_type: context.document_type,
         patient_id: context.patient_id,
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, context?.clinic_id, context?.document_id, context?.document_type, context?.patient_id]);
 
   // Default mode = saved if available, else handwritten
@@ -145,7 +176,7 @@ export function UnifiedSignatureWizard({
     }
   }, [open, loadingSig, hasSavedSignature]);
 
-  // ─── Canvas refs ───────────────────────────────────────────
+  // ─── Signature canvas refs ─────────────────────────────────
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawingRef = useRef(false);
 
@@ -165,10 +196,8 @@ export function UnifiedSignatureWizard({
     setHasInk(false);
   };
 
-  // (Re)init when entering sign step or switching to handwritten
   useEffect(() => {
     if (step === "sign" && mode === "handwritten") {
-      // wait for canvas to mount
       setTimeout(initCanvas, 0);
     }
   }, [step, mode]);
@@ -214,7 +243,7 @@ export function UnifiedSignatureWizard({
 
   const clearCanvas = () => initCanvas();
 
-  // ─── Saved signature dataURL (captured at sign time for immutability) ──
+  // ─── Saved signature dataURL (captured at sign time) ───────
   const [savedDataUrl, setSavedDataUrl] = useState<string | null>(null);
   useEffect(() => {
     let cancel = false;
@@ -231,15 +260,141 @@ export function UnifiedSignatureWizard({
     };
   }, [mode, savedSig?.signature_file_url]);
 
+  // ─── Selfie / camera ───────────────────────────────────────
+  function stopCamera() {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    setCameraReady(false);
+  }
+
+  async function startCamera() {
+    setCameraError(null);
+    setSelfieDataUrl(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      const v = videoRef.current;
+      if (v) {
+        v.srcObject = stream;
+        await v.play().catch(() => {});
+        setCameraReady(true);
+      }
+    } catch (err: any) {
+      console.warn("[SIGN] camera unavailable:", err);
+      setCameraError(
+        err?.name === "NotAllowedError"
+          ? "Permissão de câmera negada. Habilite o acesso para capturar a selfie de verificação."
+          : "Câmera indisponível neste dispositivo."
+      );
+    }
+  }
+
+  // Auto-start camera when entering the selfie step
+  useEffect(() => {
+    if (open && step === "selfie" && !selfieDataUrl) {
+      startCamera();
+    }
+    if (step !== "selfie") {
+      stopCamera();
+    }
+    return () => {
+      // released on unmount/close via outer effects
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, open]);
+
+  function captureSelfie() {
+    const v = videoRef.current;
+    const c = selfieCanvasRef.current;
+    if (!v || !c) return;
+    const w = v.videoWidth || 640;
+    const h = v.videoHeight || 480;
+    c.width = w;
+    c.height = h;
+    const ctx = c.getContext("2d");
+    if (!ctx) return;
+    // mirror for natural selfie feel
+    ctx.translate(w, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(v, 0, 0, w, h);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const url = c.toDataURL("image/png");
+    setSelfieDataUrl(url);
+    stopCamera();
+  }
+
+  function retakeSelfie() {
+    setSelfieDataUrl(null);
+    startCamera();
+  }
+
+  function skipSelfie() {
+    setSelfieDataUrl(null);
+    stopCamera();
+    setStep("confirm");
+  }
+
+  // ─── Geolocation ───────────────────────────────────────────
+  function captureGeolocation() {
+    setGeoLoading(true);
+    if (!navigator.geolocation) {
+      setGeolocation({
+        status: "unavailable",
+        captured_at: new Date().toISOString(),
+        error: "API de geolocalização indisponível neste dispositivo.",
+      });
+      setGeoLoading(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setGeolocation({
+          status: "granted",
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+          captured_at: new Date().toISOString(),
+        });
+        setGeoLoading(false);
+      },
+      (err) => {
+        setGeolocation({
+          status: err.code === err.PERMISSION_DENIED ? "denied" : "unavailable",
+          captured_at: new Date().toISOString(),
+          error: err.message,
+        });
+        setGeoLoading(false);
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+    );
+  }
+
+  // Auto-request geolocation when entering confirm step
+  useEffect(() => {
+    if (open && step === "confirm" && !geolocation && !geoLoading) {
+      captureGeolocation();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, open]);
+
   // ─── Validation ────────────────────────────────────────────
   const canProceedFromReview = confirmAccuracy && confirmIrreversible;
-  const canSubmit = useMemo(() => {
-    if (signing) return false;
-    if (password.trim().length < 6) return false;
+  const canProceedFromSign = useMemo(() => {
     if (mode === "handwritten") return hasInk;
     if (mode === "saved") return !!savedDataUrl;
     return false;
-  }, [signing, password, mode, hasInk, savedDataUrl]);
+  }, [mode, hasInk, savedDataUrl]);
+  const canSubmit = useMemo(() => {
+    if (signing) return false;
+    if (password.trim().length < 6) return false;
+    if (!canProceedFromSign) return false;
+    return true;
+  }, [signing, password, canProceedFromSign]);
 
   // ─── Submit ────────────────────────────────────────────────
   const handleSubmit = async () => {
@@ -251,7 +406,6 @@ export function UnifiedSignatureWizard({
       if (!c) return;
       handwrittenDataUrl = c.toDataURL("image/png");
 
-      // Optionally persist as default
       if (setAsDefault) {
         const blob = await new Promise<Blob | null>((resolve) =>
           c.toBlob((b) => resolve(b), "image/png")
@@ -266,6 +420,8 @@ export function UnifiedSignatureWizard({
       method: mode === "saved" ? "saved_signature" : "handwritten",
       handwrittenDataUrl,
       savedSignatureDataUrl: mode === "saved" ? savedDataUrl || undefined : undefined,
+      selfieDataUrl,
+      geolocation,
     });
 
     if (result.success) {
@@ -274,11 +430,14 @@ export function UnifiedSignatureWizard({
     }
   };
 
+  // ─── Step indicator ────────────────────────────────────────
+  const currentStepIdx = STEPS.findIndex((s) => s.key === step);
+
   if (!open) return null;
   if (!context) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) stopCamera(); onOpenChange(o); }}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -286,52 +445,45 @@ export function UnifiedSignatureWizard({
             Assinatura Avançada YesClin
           </DialogTitle>
           <DialogDescription>
-            Assinatura eletrônica avançada com reautenticação, integridade e trilha de auditoria.
+            Reautenticação, integridade, selfie de verificação, geolocalização e trilha de auditoria.
           </DialogDescription>
         </DialogHeader>
 
         {/* Steps indicator */}
-        <div className="flex items-center gap-4 text-sm">
-          <div
-            className={cn(
-              "flex items-center gap-2",
-              step === "review" ? "text-primary font-medium" : "text-muted-foreground"
-            )}
-          >
-            <div
-              className={cn(
-                "h-6 w-6 rounded-full flex items-center justify-center text-xs",
-                step === "review"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground"
-              )}
-            >
-              1
-            </div>
-            Revisão
-          </div>
-          <div className="h-px flex-1 bg-border" />
-          <div
-            className={cn(
-              "flex items-center gap-2",
-              step === "sign" ? "text-primary font-medium" : "text-muted-foreground"
-            )}
-          >
-            <div
-              className={cn(
-                "h-6 w-6 rounded-full flex items-center justify-center text-xs",
-                step === "sign"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground"
-              )}
-            >
-              2
-            </div>
-            Assinatura
-          </div>
+        <div className="flex items-center gap-2 text-xs">
+          {STEPS.map((s, idx) => {
+            const active = step === s.key;
+            const done = idx < currentStepIdx;
+            return (
+              <div key={s.key} className="flex items-center gap-2 flex-1">
+                <div
+                  className={cn(
+                    "flex items-center gap-1.5 transition-colors",
+                    active ? "text-primary font-medium" : done ? "text-foreground" : "text-muted-foreground"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "h-6 w-6 rounded-full flex items-center justify-center text-[11px] shrink-0",
+                      active
+                        ? "bg-primary text-primary-foreground"
+                        : done
+                        ? "bg-green-600 text-white"
+                        : "bg-muted text-muted-foreground"
+                    )}
+                  >
+                    {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : idx + 1}
+                  </div>
+                  <span className="hidden sm:inline">{s.label}</span>
+                </div>
+                {idx < STEPS.length - 1 && <div className="h-px flex-1 bg-border" />}
+              </div>
+            );
+          })}
         </div>
 
         <div className="overflow-y-auto max-h-[65vh] pr-2 space-y-5">
+          {/* ─── STEP 1 — Review ─────────────────────────── */}
           {step === "review" && (
             <>
               <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
@@ -398,26 +550,38 @@ export function UnifiedSignatureWizard({
               </div>
 
               <div className="rounded-lg bg-muted/50 p-4 space-y-2 text-sm">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                  Evidências que serão coletadas
+                </p>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <KeyRound className="h-4 w-4" />
-                  <span>Reautenticação por senha obrigatória</span>
+                  <span>Reautenticação por senha</span>
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <FileCheck className="h-4 w-4" />
-                  <span>Hash SHA-256 de integridade</span>
+                  <span>Hash SHA-256 do documento</span>
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
-                  <Lock className="h-4 w-4" />
-                  <span>Snapshot imutável da assinatura usada</span>
+                  <PenTool className="h-4 w-4" />
+                  <span>Snapshot da assinatura usada</span>
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
-                  <Clock className="h-4 w-4" />
-                  <span>Trilha de auditoria com IP e dispositivo</span>
+                  <Globe className="h-4 w-4" />
+                  <span>IP e dispositivo do signatário</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <MapPin className="h-4 w-4" />
+                  <span>Geolocalização (com sua autorização)</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Camera className="h-4 w-4" />
+                  <span>Selfie de verificação</span>
                 </div>
               </div>
             </>
           )}
 
+          {/* ─── STEP 2 — Sign ───────────────────────────── */}
           {step === "sign" && (
             <>
               <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)}>
@@ -512,9 +676,141 @@ export function UnifiedSignatureWizard({
                   </div>
                 </TabsContent>
               </Tabs>
+            </>
+          )}
+
+          {/* ─── STEP 3 — Selfie ─────────────────────────── */}
+          {step === "selfie" && (
+            <div className="space-y-4">
+              <div className="rounded-lg border bg-muted/30 p-3 flex items-start gap-3">
+                <Camera className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                <div className="text-sm">
+                  <p className="font-medium">Selfie de verificação</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Capture uma selfie para vincular a evidência facial à sua assinatura.
+                    Esta imagem será armazenada de forma privada como parte da trilha de auditoria.
+                  </p>
+                </div>
+              </div>
+
+              {cameraError ? (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Câmera indisponível</AlertTitle>
+                  <AlertDescription className="space-y-2">
+                    <p>{cameraError}</p>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={startCamera}>
+                        <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                        Tentar novamente
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={skipSelfie}>
+                        Continuar sem selfie
+                      </Button>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              ) : selfieDataUrl ? (
+                <div className="space-y-3">
+                  <div className="rounded-lg border bg-black flex items-center justify-center overflow-hidden">
+                    <img
+                      src={selfieDataUrl}
+                      alt="Selfie capturada"
+                      className="max-h-[320px] object-contain"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Badge variant="secondary" className="gap-1">
+                      <CheckCircle2 className="h-3 w-3 text-green-600" />
+                      Selfie capturada
+                    </Badge>
+                    <Button size="sm" variant="outline" onClick={retakeSelfie}>
+                      <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                      Refazer
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="rounded-lg border bg-black flex items-center justify-center overflow-hidden min-h-[280px]">
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="max-h-[320px] w-full object-contain transform -scale-x-100"
+                    />
+                  </div>
+                  <canvas ref={selfieCanvasRef} className="hidden" />
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">
+                      {cameraReady ? "Posicione seu rosto e clique em capturar." : "Iniciando câmera..."}
+                    </p>
+                    <Button size="sm" onClick={captureSelfie} disabled={!cameraReady}>
+                      <Camera className="h-3.5 w-3.5 mr-1.5" />
+                      Capturar selfie
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ─── STEP 4 — Geo + Password ─────────────────── */}
+          {step === "confirm" && (
+            <>
+              {/* Geolocation card */}
+              <div className="rounded-lg border p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium flex items-center gap-2 text-sm">
+                    <MapPin className="h-4 w-4 text-primary" />
+                    Geolocalização
+                  </h4>
+                  <Button size="sm" variant="ghost" onClick={captureGeolocation} disabled={geoLoading}>
+                    {geoLoading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                </div>
+                {geoLoading && (
+                  <p className="text-xs text-muted-foreground">Solicitando permissão...</p>
+                )}
+                {geolocation?.status === "granted" && (
+                  <div className="text-xs space-y-1">
+                    <Badge variant="secondary" className="gap-1">
+                      <CheckCircle2 className="h-3 w-3 text-green-600" />
+                      Coordenadas capturadas
+                    </Badge>
+                    <p className="font-mono text-muted-foreground">
+                      {geolocation.latitude?.toFixed(6)}, {geolocation.longitude?.toFixed(6)}
+                      {geolocation.accuracy && ` (±${Math.round(geolocation.accuracy)}m)`}
+                    </p>
+                  </div>
+                )}
+                {geolocation?.status === "denied" && (
+                  <Alert>
+                    <XCircle className="h-4 w-4" />
+                    <AlertDescription className="text-xs">
+                      Permissão negada. O evento será registrado como “geolocalização negada”
+                      na trilha de auditoria.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {geolocation?.status === "unavailable" && (
+                  <Alert>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription className="text-xs">
+                      Geolocalização indisponível neste dispositivo.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
 
               <Separator />
 
+              {/* Password */}
               <div className="space-y-2">
                 <Label htmlFor="uw-password" className="flex items-center gap-2">
                   <KeyRound className="h-4 w-4" />
@@ -543,8 +839,7 @@ export function UnifiedSignatureWizard({
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Método: Reautenticação por senha (password_reauth) +{" "}
-                  {mode === "saved" ? "assinatura salva" : "assinatura manuscrita"}
+                  Método: Reautenticação por senha + {mode === "saved" ? "assinatura salva" : "assinatura manuscrita"}
                 </p>
               </div>
 
@@ -556,8 +851,9 @@ export function UnifiedSignatureWizard({
                     <li>Snapshot imutável do documento e da assinatura usada</li>
                     <li>Hash SHA-256 do documento final</li>
                     <li>IP, navegador, dispositivo e carimbo de tempo</li>
-                    <li>Modo da assinatura ({mode === "saved" ? "salva" : "manuscrita"})</li>
-                    <li>Eventos da timeline na trilha de auditoria</li>
+                    <li>Selfie de verificação {selfieDataUrl ? "✓" : "(não capturada)"}</li>
+                    <li>Geolocalização: {geolocation?.status === "granted" ? "✓ capturada" : geolocation?.status === "denied" ? "negada" : "indisponível"}</li>
+                    <li>Eventos completos da timeline na trilha de auditoria</li>
                   </ul>
                 </AlertDescription>
               </Alert>
@@ -566,19 +862,48 @@ export function UnifiedSignatureWizard({
         </div>
 
         <DialogFooter className="border-t pt-4">
-          {step === "review" ? (
+          {step === "review" && (
             <>
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
               <Button onClick={() => setStep("sign")} disabled={!canProceedFromReview}>
                 <PenTool className="h-4 w-4 mr-2" />
-                Continuar para assinatura
+                Continuar
               </Button>
             </>
-          ) : (
+          )}
+          {step === "sign" && (
             <>
               <Button variant="outline" onClick={() => setStep("review")} disabled={signing}>
+                Voltar
+              </Button>
+              <Button onClick={() => setStep("selfie")} disabled={!canProceedFromSign}>
+                <Camera className="h-4 w-4 mr-2" />
+                Continuar para selfie
+              </Button>
+            </>
+          )}
+          {step === "selfie" && (
+            <>
+              <Button variant="outline" onClick={() => { stopCamera(); setStep("sign"); }} disabled={signing}>
+                Voltar
+              </Button>
+              {selfieDataUrl ? (
+                <Button onClick={() => setStep("confirm")}>
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Continuar
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={skipSelfie}>
+                  Pular selfie
+                </Button>
+              )}
+            </>
+          )}
+          {step === "confirm" && (
+            <>
+              <Button variant="outline" onClick={() => setStep("selfie")} disabled={signing}>
                 Voltar
               </Button>
               <Button onClick={handleSubmit} disabled={!canSubmit}>
