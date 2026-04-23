@@ -75,6 +75,30 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
   const clinicId = (snapshotSource as any)?.clinic?.id || "";
   const isDocSigned = !!detail.consolidated_document?.signed_at;
 
+  // Build integrity payload from the persisted signed document so the PDF
+  // shows status banner, signer evidence and SHA-256 hash.
+  const integrityPayload = (() => {
+    if (!isDocSigned || !detail.consolidated_document) return undefined;
+    const cd = detail.consolidated_document;
+    const sig = cd.signature;
+    const meta = cd.signature_metadata || {};
+    return {
+      is_signed: true,
+      is_locked: cd.is_locked,
+      document_id: cd.id,
+      document_hash: cd.hash_sha256 || sig?.signature_hash || meta.document_hash || null,
+      signature_id: sig?.id || meta.signature_id || null,
+      signed_at: cd.signed_at,
+      signer_name: sig?.signed_by_name || detail.professional_name || null,
+      signer_user_id: meta.user_id || null,
+      sign_method: sig?.sign_method || meta.method || null,
+      sign_method_label: meta.sign_method_label || null,
+      ip_address: sig?.ip_address || meta.ip_address || null,
+      user_agent: sig?.user_agent || meta.user_agent || null,
+      signature_image_data_url: sig?.evidence_snapshot?.signature_data_url || null,
+    };
+  })();
+
   // Toolbar actions
   const handleAddNote = () => { setNoteDialogMode("note"); setNoteDialogOpen(true); };
   const handleAddAddendum = () => { setNoteDialogMode("addendum"); setNoteDialogOpen(true); };
@@ -82,7 +106,7 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
     if (!snapshotSource) { toast.error("Documento consolidado não disponível para impressão."); return; }
     setPrintLoading(true);
     try {
-      await handlePrintAttendance(snapshotSource);
+      await handlePrintAttendance(snapshotSource, integrityPayload);
       if (docId) await logDocumentAction({ documentId: docId, clinicId, actionType: "printed" });
     } finally { setPrintLoading(false); }
   };
@@ -90,7 +114,7 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
     if (!snapshotSource) { toast.error("Documento consolidado não disponível para PDF."); return; }
     setPdfLoading(true);
     try {
-      await handleDownloadPDF(snapshotSource);
+      await handleDownloadPDF(snapshotSource, integrityPayload);
       if (docId) await logDocumentAction({ documentId: docId, clinicId, actionType: "pdf_exported" });
     } finally { setPdfLoading(false); }
   };
