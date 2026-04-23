@@ -9,7 +9,9 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { handleDownloadPDF, handlePrintAttendance } from "@/utils/attendancePdfGenerator";
 import { logDocumentAction } from "@/hooks/useDocumentGovernance";
-import { AddNoteDialog, SignDocumentDialog, NotesHistoryPanel } from "@/components/atendimento/DocumentGovernanceDialogs";
+import { AddNoteDialog, NotesHistoryPanel } from "@/components/atendimento/DocumentGovernanceDialogs";
+import { UnifiedSignatureWizard } from "@/components/signature/UnifiedSignatureWizard";
+import type { SignableDocumentContext } from "@/hooks/useUnifiedDocumentSigning";
 import {
   ArrowLeft, FolderOpen, StickyNote, Printer, Download, PenTool,
   GitCompare, History, Clock, Calendar, User, Stethoscope,
@@ -402,16 +404,21 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
             clinicId={clinicId}
             mode={noteDialogMode}
           />
-          <SignDocumentDialog
+          <UnifiedSignatureWizard
             open={signDialogOpen}
             onOpenChange={setSignDialogOpen}
-            documentId={docId}
-            clinicId={clinicId}
-            alreadySigned={isDocSigned}
+            context={
+              {
+                document_type: "consolidated_document",
+                document_id: docId,
+                patient_id: detail.patient_id,
+                clinic_id: clinicId,
+                snapshot: snapshotSource as Record<string, unknown> | null,
+                professional_name: detail.professional_name,
+              } as SignableDocumentContext
+            }
             patientName={detail.patient_name}
-            professionalName={detail.professional_name}
             generatedAt={detail.consolidated_document?.generated_at}
-            snapshot={snapshotSource}
           />
           <NotesHistoryPanel
             open={historyPanelOpen}
