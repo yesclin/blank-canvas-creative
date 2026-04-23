@@ -255,9 +255,13 @@ Deno.serve(async (req) => {
       );
     }
   } catch (err: any) {
-    console.error("send-whatsapp error:", err);
+    const reqId = crypto.randomUUID();
+    console.error(`[send-whatsapp] [${reqId}] error:`, err);
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({
+        error: "Erro interno ao enviar mensagem. Tente novamente.",
+        request_id: reqId,
+      }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
