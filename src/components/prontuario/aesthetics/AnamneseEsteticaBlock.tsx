@@ -69,7 +69,7 @@ import { AddendumSection } from '@/components/prontuario/AddendumSection';
 import { UnifiedSignatureWizard } from '@/components/signature/UnifiedSignatureWizard';
 import type { SignableDocumentContext } from '@/hooks/useUnifiedDocumentSigning';
 import { useClinicData } from '@/hooks/useClinicData';
-import type { MedicalRecordEntry } from '@/hooks/prontuario/useMedicalRecordEntries';
+
 import { cn } from '@/lib/utils';
 
 // ─── Template classification using catalog ─────────────────────────
@@ -717,7 +717,7 @@ export function AnamneseEsteticaBlock({
       // Sign button (only after save)
       if (currentRecord && !currentHasChanges) {
         actions.push(
-          <Button key="sign" variant="outline" size="sm" onClick={handleSign} disabled={signingSig}>
+          <Button key="sign" variant="outline" size="sm" onClick={handleSign}>
             <ShieldCheck className="h-4 w-4 mr-1.5" />
             Assinatura Avançada YesClin
           </Button>
@@ -738,7 +738,7 @@ export function AnamneseEsteticaBlock({
       // Can still sign if not yet signed
       if (currentRecord) {
         actions.push(
-          <Button key="sign" variant="outline" size="sm" onClick={handleSign} disabled={signingSig}>
+          <Button key="sign" variant="outline" size="sm" onClick={handleSign}>
             <ShieldCheck className="h-4 w-4 mr-1.5" />
             Assinatura Avançada YesClin
           </Button>
@@ -938,16 +938,17 @@ export function AnamneseEsteticaBlock({
         />
       )}
 
-      {/* Advanced Signature Dialog */}
-      <AdvancedSignatureDialog
+      {/* Unified Advanced Signature Wizard */}
+      <UnifiedSignatureWizard
         open={showAdvancedSignDialog}
-        onOpenChange={setShowAdvancedSignDialog}
-        entry={signatureEntry}
-        professionalName={professionalName || 'Profissional'}
+        onOpenChange={(o) => {
+          setShowAdvancedSignDialog(o);
+          if (!o) setSignatureContext(null);
+        }}
+        context={signatureContext}
         patientName={patientName || 'Paciente'}
-        hasValidConsent={true}
-        onSign={handleAdvancedSign}
-        signing={signingSig}
+        generatedAt={currentRecord?.created_at}
+        onSigned={handleSignatureCompleted}
       />
 
       {/* Unsaved changes confirmation dialog */}
