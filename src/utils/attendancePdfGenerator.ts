@@ -558,37 +558,48 @@ export async function generateAttendancePDF(
   return blob;
 }
 
-function addFooter(pdf: jsPDF, snapshot: SnapshotData) {
+function addFooter(
+  pdf: jsPDF,
+  snapshot: SnapshotData,
+  integrity?: PdfIntegrityPayload,
+  hashesMatch?: boolean,
+) {
   const pageCount = pdf.getNumberOfPages();
   const currentPage = pdf.getCurrentPageInfo().pageNumber;
-  
+
   pdf.setFontSize(7);
   pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(...MUTED_COLOR);
-  
-  // Footer line
+
   pdf.setDrawColor(...BORDER_COLOR);
   pdf.setLineWidth(0.2);
   pdf.line(M, A4_H - 15, M + CW, A4_H - 15);
-  
-  // Left: clinic name
+
   pdf.text(snapshot.clinic?.name || '', M, A4_H - 11);
-  
-  // Center: generation date
-  const genDate = snapshot.generated_at ? `Gerado em ${fmtDateBR(snapshot.generated_at)} às ${fmtTimeBR(snapshot.generated_at)}` : '';
+
+  const genDate = snapshot.generated_at
+    ? `Gerado em ${fmtDateBR(snapshot.generated_at)} às ${fmtTimeBR(snapshot.generated_at)}`
+    : '';
   if (genDate) {
     const tw = pdf.getTextWidth(genDate);
     pdf.text(genDate, M + (CW - tw) / 2, A4_H - 11);
   }
-  
-  // Right: page number
+
   const pageText = `Página ${currentPage} de ${pageCount}`;
   const pw = pdf.getTextWidth(pageText);
   pdf.text(pageText, M + CW - pw, A4_H - 11);
-  
-  // Integrity note
+
   pdf.setFontSize(6);
-  pdf.text('Documento consolidado de atendimento — gerado automaticamente pelo sistema YesClin', M, A4_H - 7);
+  if (integrity?.is_signed && integrity?.document_hash) {
+    const status = hashesMatch ? 'íntegro' : 'verificar';
+    pdf.text(
+      `Assinado e travado • SHA-256: ${shortHash(integrity.document_hash)} • ${status} • YesClin`,
+      M,
+      A4_H - 7,
+    );
+  } else {
+    pdf.text('Documento consolidado de atendimento — gerado automaticamente pelo sistema YesClin', M, A4_H - 7);
+  }
 }
 
 async function loadImage(url: string): Promise<HTMLImageElement> {
