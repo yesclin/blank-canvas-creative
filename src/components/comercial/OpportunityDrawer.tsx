@@ -78,7 +78,7 @@ export function OpportunityDrawer({ opportunity, open, onOpenChange, onEdit }: O
               <div className="text-sm">Procedimento: {opportunity.procedure.name}</div>
             )}
             {opportunity.professional && (
-              <div className="text-sm">Profissional: {opportunity.professional.name}</div>
+              <div className="text-sm">Profissional: {(opportunity.professional as any).full_name || (opportunity.professional as any).name}</div>
             )}
             {opportunity.expected_close_date && (
               <div className="flex items-center gap-2 text-sm">

@@ -63,7 +63,7 @@ const ACTIVE_APPOINTMENT_SELECT = `
   patients:patient_id(id, full_name, email, phone, cpf, birth_date, gender, avatar_url, has_clinical_alert, clinical_alert_text, is_active, clinic_id),
   professionals:professional_id(id, full_name, email, phone, registration_number, avatar_url, color, is_active, clinic_id),
   specialties:specialty_id(id, name, color, is_active, clinic_id),
-  procedures:procedure_id(id, name, duration_minutes, price:procedure_cost),
+  procedures:procedure_id(id, name, duration_minutes, price),
   rooms:room_id(id, name, is_active, clinic_id),
   insurances:insurance_id(id, name, is_active, clinic_id)
 `;

@@ -11378,6 +11378,17 @@ export type Database = {
         Args: { _clinic_id: string; _specialty_slug: string }
         Returns: undefined
       }
+      render_appointment_message: {
+        Args: {
+          p_clinic_name: string
+          p_patient_name: string
+          p_professional_name: string
+          p_scheduled_date: string
+          p_start_time: string
+          p_template: string
+        }
+        Returns: string
+      }
       reset_anamnesis_templates: {
         Args: { p_clinic_id: string; p_user_id: string }
         Returns: undefined
