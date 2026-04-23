@@ -18,15 +18,25 @@ export interface ClinicWhatsAppIntegration {
   instance_profile_name: string | null;
   instance_profile_pic_url: string | null;
   is_business: boolean;
-  webhook_url: string | null;
   webhook_enabled: boolean;
   last_connection_check_at: string | null;
   last_connection_status: string | null;
-  last_error: string | null;
-  settings_json: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }
+
+/**
+ * Non-sensitive columns readable by any clinic member.
+ * Sensitive columns (access_token, instance_token, webhook_url, api_url,
+ * base_url, phone_number_id, business_account_id, instance_external_id,
+ * config, metadata, settings_json, last_error) require admin access via
+ * the `get_channel_integration_credentials` RPC.
+ */
+const SAFE_COLUMNS =
+  "id, clinic_id, channel, provider, is_active, is_default, status, " +
+  "instance_name, instance_status, instance_phone, instance_profile_name, " +
+  "instance_profile_pic_url, is_business, webhook_enabled, " +
+  "last_connection_check_at, last_connection_status, created_at, updated_at";
 
 type Action = "create" | "link_existing" | "connect" | "status" | "disconnect" | "reset" | "send_test";
 
@@ -44,7 +54,7 @@ export function useClinicWhatsAppIntegration() {
       setLoading(true);
       const { data, error } = await supabase
         .from("clinic_channel_integrations")
-        .select("*")
+        .select(SAFE_COLUMNS)
         .eq("clinic_id", clinic.id)
         .eq("channel", "whatsapp")
         .eq("provider", "uazapi")
