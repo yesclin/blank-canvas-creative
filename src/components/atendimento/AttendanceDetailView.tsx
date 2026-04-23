@@ -445,6 +445,12 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
             documentId={docId}
             clinicId={clinicId}
           />
+          <SignatureAuditTrailDrawer
+            open={auditTrailOpen}
+            onOpenChange={setAuditTrailOpen}
+            recordId={docId}
+            clinicId={clinicId}
+          />
         </>
       )}
     </div>
