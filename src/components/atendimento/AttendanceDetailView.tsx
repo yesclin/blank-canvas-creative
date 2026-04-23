@@ -369,6 +369,10 @@ export function AttendanceDetailView({ detail }: Props) {
             documentId={docId}
             clinicId={clinicId}
             alreadySigned={isDocSigned}
+            patientName={detail.patient_name}
+            professionalName={detail.professional_name}
+            generatedAt={detail.consolidated_document?.generated_at}
+            snapshot={snapshotSource}
           />
           <NotesHistoryPanel
             open={historyPanelOpen}
