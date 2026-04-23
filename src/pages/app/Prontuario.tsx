@@ -2163,16 +2163,6 @@ export default function Prontuario() {
           />
         );
 
-      case 'produtos_utilizados':
-        // Estética - Produtos Utilizados
-        return (
-          <ProdutosUtilizadosBlock
-            patientId={patientId!}
-            appointmentId={activeAppointment?.id}
-            canEdit={canEditCurrentTab}
-          />
-        );
-
       case 'procedimentos_realizados':
         // Procedimentos Realizados - delegated to Estética layout when active
         return null;

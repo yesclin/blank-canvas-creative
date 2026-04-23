@@ -297,8 +297,7 @@ export const YESCLIN_SUPPORTED_SPECIALTIES: YesclinSpecialty[] = [
       'exame_fisico',             // 3. Avaliação Estética
       'evolucao',                 // 4. Evoluções
       'procedimentos_realizados', // 5. Procedimentos
-      'produtos_utilizados',      // 6. Produtos Utilizados
-      'before_after_photos',      // 7. Fotos Antes / Depois
+      'before_after_photos',      // 6. Fotos Antes / Depois
       'termos_consentimentos',    // 8. Termos
       'facial_map',               // 9. Mapa Facial
       'alertas',                  // 10. Alertas Clínicos

@@ -117,15 +117,6 @@ export function EsteticaProntuarioLayout({
         />
       );
 
-    case 'produtos_utilizados':
-      return (
-        <ProdutosUtilizadosBlock
-          patientId={patientId}
-          appointmentId={appointmentId}
-          canEdit={canEdit}
-        />
-      );
-
     case 'termos_consentimentos':
     case 'aesthetic_consent':
       return (
