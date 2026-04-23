@@ -107,6 +107,18 @@ export interface ConsolidatedDocRecord {
   signed_at: string | null;
   generated_at: string;
   snapshot_json: any;
+  hash_sha256: string | null;
+  signature_metadata: any | null;
+  signature?: {
+    id: string;
+    signed_by_name: string | null;
+    sign_method: string | null;
+    signature_hash: string | null;
+    ip_address: string | null;
+    user_agent: string | null;
+    signed_at: string;
+    evidence_snapshot: any | null;
+  } | null;
 }
 
 export function useAttendanceDetail(appointmentId: string | null) {
@@ -154,8 +166,22 @@ export function useAttendanceDetail(appointmentId: string | null) {
         supabase.from("clinical_documents").select("id, document_type, title, status, signed_at, created_at").eq("appointment_id", appointmentId).order("created_at"),
         supabase.from("clinical_alerts").select("id, alert_type, severity, title, description, is_active, created_at").eq("appointment_id", appointmentId).eq("is_active", true).order("created_at"),
         supabase.from("clinical_media").select("id, file_url, file_type, file_name, classification, description, created_at").eq("appointment_id", appointmentId).order("created_at"),
-        supabase.from("clinical_attendance_documents").select("id, status, is_locked, signed_at, generated_at, snapshot_json").eq("appointment_id", appointmentId).limit(1).maybeSingle(),
+        supabase.from("clinical_attendance_documents").select("id, status, is_locked, signed_at, generated_at, snapshot_json, hash_sha256, signature_metadata").eq("appointment_id", appointmentId).limit(1).maybeSingle(),
       ]);
+
+      // 3. If consolidated doc is signed, fetch the latest signature row
+      let latestSignature: any = null;
+      if (consolidatedDoc?.id && consolidatedDoc?.signed_at) {
+        const { data: sigRow } = await supabase
+          .from("medical_record_signatures")
+          .select("id, signed_by_name, sign_method, signature_hash, ip_address, user_agent, signed_at, evidence_snapshot")
+          .eq("record_id", consolidatedDoc.id)
+          .eq("record_type", "consolidated_document")
+          .order("signed_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        latestSignature = sigRow || null;
+      }
 
       const session = Array.isArray(apt.appointment_sessions) ? apt.appointment_sessions[0] : apt.appointment_sessions;
       const startedAt = apt.started_at ? new Date(apt.started_at).getTime() : 0;
@@ -239,6 +265,9 @@ export function useAttendanceDetail(appointmentId: string | null) {
           signed_at: consolidatedDoc.signed_at,
           generated_at: consolidatedDoc.generated_at,
           snapshot_json: consolidatedDoc.snapshot_json,
+          hash_sha256: (consolidatedDoc as any).hash_sha256 ?? null,
+          signature_metadata: (consolidatedDoc as any).signature_metadata ?? null,
+          signature: latestSignature,
         } : null,
       };
     },

@@ -40,6 +40,31 @@ interface SnapshotData {
   financial?: any;
 }
 
+/**
+ * Integrity payload describing the signature applied to the document.
+ * When provided, the PDF renders a "DOCUMENTO ASSINADO" status banner,
+ * embeds signer evidence in a dedicated section, and shows the SHA-256
+ * hash in the footer.
+ */
+export interface PdfIntegrityPayload {
+  is_signed: boolean;
+  is_locked?: boolean;
+  document_id?: string | null;
+  document_hash?: string | null;       // hash_sha256 stored on the document
+  signature_id?: string | null;
+  signed_at?: string | null;
+  signer_name?: string | null;
+  signer_user_id?: string | null;
+  sign_method?: string | null;          // 'saved_signature' | 'handwritten'
+  sign_method_label?: string | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  /** Embedded signature image (PNG dataURL) used at the moment of signing. */
+  signature_image_data_url?: string | null;
+  /** Hash recomputed from the snapshot used to render this PDF. */
+  recomputed_hash?: string | null;
+}
+
 // ─── Helpers ─────────────────────────────────────────────
 function fmtDateBR(d: string | null | undefined) {
   if (!d) return '—';
@@ -64,10 +89,38 @@ function fmtCurrency(v: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 }
 
+/**
+ * SHA-256 of a value, computed exactly the same way as the signing engine
+ * (`useUnifiedDocumentSigning.sha256`) — sorted top-level keys when object.
+ * This guarantees the recomputed hash is comparable to the persisted one.
+ */
+async function sha256(content: unknown): Promise<string> {
+  const json = JSON.stringify(
+    content,
+    content && typeof content === 'object' ? Object.keys(content as object).sort() : undefined
+  );
+  const buf = new TextEncoder().encode(json);
+  const digest = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function shortHash(h?: string | null) {
+  if (!h) return '—';
+  return `${h.substring(0, 16)}…${h.substring(h.length - 8)}`;
+}
+
+function signMethodLabel(m?: string | null) {
+  if (m === 'saved_signature') return 'Assinatura salva (Avançada YesClin)';
+  if (m === 'handwritten') return 'Manuscrita (Avançada YesClin)';
+  return m || '—';
+}
+
 // ─── PDF Builder ─────────────────────────────────────────
 export async function generateAttendancePDF(
   snapshot: SnapshotData,
-  options?: { download?: boolean; print?: boolean }
+  options?: { download?: boolean; print?: boolean; integrity?: PdfIntegrityPayload }
 ): Promise<Blob> {
   const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
   let y = M;
@@ -78,7 +131,7 @@ export async function generateAttendancePDF(
   // ── Utility functions ──
   function checkPage(needed: number) {
     if (y + needed > A4_H - M - 10) {
-      addFooter(pdf, snapshot);
+      addFooter(pdf, snapshot, options?.integrity, false);
       pdf.addPage();
       y = M;
       return true;
@@ -133,6 +186,26 @@ export async function generateAttendancePDF(
     }
   }
 
+  // ── Integrity context ──
+  // We use the EXACT snapshot persisted with the signed document. The
+  // recomputed hash uses the same algorithm as `useUnifiedDocumentSigning`,
+  // so it is byte-equivalent to `hash_sha256` if the snapshot wasn't tampered.
+  const integrity = options?.integrity;
+  let recomputedHash: string | null = null;
+  if (integrity?.is_signed) {
+    try {
+      recomputedHash = await sha256({
+        ...(snapshot || {}),
+        __sign_method: integrity.sign_method || null,
+      });
+    } catch { recomputedHash = null; }
+  }
+  const hashesMatch =
+    !!integrity?.is_signed &&
+    !!integrity?.document_hash &&
+    !!recomputedHash &&
+    integrity.document_hash === recomputedHash;
+
   // ── 1. Institutional Header ──
   const clinic = snapshot.clinic || {};
   pdf.setFontSize(FONT_TITLE);
@@ -162,6 +235,30 @@ export async function generateAttendancePDF(
   pdf.setTextColor(...TEXT_COLOR);
   pdf.text('DOCUMENTO CONSOLIDADO DE ATENDIMENTO', M, y);
   y += 6;
+
+  // ── Signed status banner ─────────────────────────────────
+  if (integrity?.is_signed) {
+    const bannerH = 9;
+    const ok = hashesMatch;
+    if (ok) pdf.setFillColor(220, 245, 230); // light green
+    else pdf.setFillColor(254, 243, 199);     // light amber (mismatch)
+    pdf.setDrawColor(...BORDER_COLOR);
+    pdf.setLineWidth(0.2);
+    pdf.rect(M, y, CW, bannerH, 'FD');
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(FONT_BODY);
+    pdf.setTextColor(ok ? 22 : 146, ok ? 101 : 64, ok ? 52 : 14);
+    pdf.text(
+      ok
+        ? 'DOCUMENTO ASSINADO E TRAVADO — Integridade verificada'
+        : 'DOCUMENTO ASSINADO — Atenção: hash recomputado diverge do persistido',
+      M + 3,
+      y + 6
+    );
+    y += bannerH + 3;
+    pdf.setTextColor(...TEXT_COLOR);
+  }
+
 
   // ── 2. Appointment Context ──
   const apt = snapshot.appointment || {};
@@ -353,8 +450,86 @@ export async function generateAttendancePDF(
     addText(apt.notes, 2);
   }
 
+  // ── 10. Integridade & Assinatura ─────────────────────────
+  if (integrity?.is_signed) {
+    addSectionTitle('Integridade e Assinatura');
+
+    addKeyValue('Status', hashesMatch ? 'Assinado e travado — íntegro' : 'Assinado — hash divergente (revisar)', 2);
+    addKeyValue('Assinante', integrity.signer_name || '—', 2);
+    addKeyValue('ID do usuário', integrity.signer_user_id || '—', 2);
+    addKeyValue('Modo', integrity.sign_method_label || signMethodLabel(integrity.sign_method), 2);
+    addKeyValue(
+      'Assinado em',
+      integrity.signed_at
+        ? `${fmtDateBR(integrity.signed_at)} às ${fmtTimeBR(integrity.signed_at)}`
+        : '—',
+      2
+    );
+    addKeyValue('IP', integrity.ip_address || '—', 2);
+    if (integrity.user_agent) addKeyValue('Dispositivo', integrity.user_agent.substring(0, 110), 2);
+    if (integrity.signature_id) addKeyValue('ID da assinatura', integrity.signature_id, 2);
+    if (integrity.document_id) addKeyValue('ID do documento', integrity.document_id, 2);
+
+    y += 1;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(FONT_SMALL);
+    pdf.setTextColor(...MUTED_COLOR);
+    pdf.text('Hash SHA-256 do documento (persistido):', M + 2, y);
+    y += LINE_H - 0.5;
+    pdf.setFont('courier', 'normal');
+    pdf.setFontSize(FONT_SMALL);
+    pdf.setTextColor(...TEXT_COLOR);
+    const persistedLines = pdf.splitTextToSize(integrity.document_hash || '—', CW - 4);
+    pdf.text(persistedLines, M + 2, y);
+    y += persistedLines.length * (LINE_H - 0.5) + 1;
+
+    if (recomputedHash) {
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(FONT_SMALL);
+      pdf.setTextColor(...MUTED_COLOR);
+      pdf.text('Hash SHA-256 recomputado deste PDF:', M + 2, y);
+      y += LINE_H - 0.5;
+      pdf.setFont('courier', 'normal');
+      pdf.setTextColor(hashesMatch ? 22 : 146, hashesMatch ? 101 : 64, hashesMatch ? 52 : 14);
+      const recomputedLines = pdf.splitTextToSize(recomputedHash, CW - 4);
+      pdf.text(recomputedLines, M + 2, y);
+      y += recomputedLines.length * (LINE_H - 0.5) + 1;
+    }
+    pdf.setTextColor(...TEXT_COLOR);
+    pdf.setFont('helvetica', 'normal');
+
+    // Embedded signature image (immutable copy captured at signing time)
+    if (integrity.signature_image_data_url) {
+      try {
+        const sigImg = await loadImage(integrity.signature_image_data_url);
+        const maxW = 70;
+        const maxH = 25;
+        const ratio = Math.min(maxW / sigImg.width, maxH / sigImg.height, 1);
+        const w = sigImg.width * ratio;
+        const h = sigImg.height * ratio;
+        checkPage(h + 8);
+        y += 2;
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(FONT_SMALL);
+        pdf.setTextColor(...MUTED_COLOR);
+        pdf.text('Assinatura utilizada no ato:', M + 2, y);
+        y += LINE_H;
+        pdf.addImage(sigImg, 'PNG', M + 2, y, w, h);
+        y += h + 2;
+        pdf.setDrawColor(...BORDER_COLOR);
+        pdf.line(M + 2, y, M + 2 + w, y);
+        y += 3;
+        pdf.setTextColor(...TEXT_COLOR);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(FONT_SMALL);
+        pdf.text(integrity.signer_name || '', M + 2, y);
+        y += LINE_H;
+      } catch { /* signature image optional */ }
+    }
+  }
+
   // ── Footer on last page ──
-  addFooter(pdf, snapshot);
+  addFooter(pdf, snapshot, integrity, hashesMatch);
 
   // ── Output ──
   const blob = pdf.output('blob');
@@ -383,37 +558,48 @@ export async function generateAttendancePDF(
   return blob;
 }
 
-function addFooter(pdf: jsPDF, snapshot: SnapshotData) {
+function addFooter(
+  pdf: jsPDF,
+  snapshot: SnapshotData,
+  integrity?: PdfIntegrityPayload,
+  hashesMatch?: boolean,
+) {
   const pageCount = pdf.getNumberOfPages();
   const currentPage = pdf.getCurrentPageInfo().pageNumber;
-  
+
   pdf.setFontSize(7);
   pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(...MUTED_COLOR);
-  
-  // Footer line
+
   pdf.setDrawColor(...BORDER_COLOR);
   pdf.setLineWidth(0.2);
   pdf.line(M, A4_H - 15, M + CW, A4_H - 15);
-  
-  // Left: clinic name
+
   pdf.text(snapshot.clinic?.name || '', M, A4_H - 11);
-  
-  // Center: generation date
-  const genDate = snapshot.generated_at ? `Gerado em ${fmtDateBR(snapshot.generated_at)} às ${fmtTimeBR(snapshot.generated_at)}` : '';
+
+  const genDate = snapshot.generated_at
+    ? `Gerado em ${fmtDateBR(snapshot.generated_at)} às ${fmtTimeBR(snapshot.generated_at)}`
+    : '';
   if (genDate) {
     const tw = pdf.getTextWidth(genDate);
     pdf.text(genDate, M + (CW - tw) / 2, A4_H - 11);
   }
-  
-  // Right: page number
+
   const pageText = `Página ${currentPage} de ${pageCount}`;
   const pw = pdf.getTextWidth(pageText);
   pdf.text(pageText, M + CW - pw, A4_H - 11);
-  
-  // Integrity note
+
   pdf.setFontSize(6);
-  pdf.text('Documento consolidado de atendimento — gerado automaticamente pelo sistema YesClin', M, A4_H - 7);
+  if (integrity?.is_signed && integrity?.document_hash) {
+    const status = hashesMatch ? 'íntegro' : 'verificar';
+    pdf.text(
+      `Assinado e travado • SHA-256: ${shortHash(integrity.document_hash)} • ${status} • YesClin`,
+      M,
+      A4_H - 7,
+    );
+  } else {
+    pdf.text('Documento consolidado de atendimento — gerado automaticamente pelo sistema YesClin', M, A4_H - 7);
+  }
 }
 
 async function loadImage(url: string): Promise<HTMLImageElement> {
@@ -430,10 +616,10 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
 /**
  * Wrapper hook-style function for use in components.
  */
-export async function handleDownloadPDF(snapshotJson: any) {
+export async function handleDownloadPDF(snapshotJson: any, integrity?: PdfIntegrityPayload) {
   try {
     toast.loading('Gerando PDF...', { id: 'pdf-gen' });
-    await generateAttendancePDF(snapshotJson, { download: true });
+    await generateAttendancePDF(snapshotJson, { download: true, integrity });
     toast.success('PDF gerado com sucesso!', { id: 'pdf-gen' });
   } catch (err) {
     console.error('PDF generation error:', err);
@@ -441,10 +627,10 @@ export async function handleDownloadPDF(snapshotJson: any) {
   }
 }
 
-export async function handlePrintAttendance(snapshotJson: any) {
+export async function handlePrintAttendance(snapshotJson: any, integrity?: PdfIntegrityPayload) {
   try {
     toast.loading('Preparando impressão...', { id: 'print-gen' });
-    await generateAttendancePDF(snapshotJson, { download: false, print: true });
+    await generateAttendancePDF(snapshotJson, { download: false, print: true, integrity });
     toast.success('Documento enviado para impressão.', { id: 'print-gen' });
   } catch (err) {
     console.error('Print error:', err);
