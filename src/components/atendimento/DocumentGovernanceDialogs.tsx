@@ -83,66 +83,295 @@ export function AddNoteDialog({ open, onOpenChange, documentId, clinicId, mode }
   );
 }
 
-// ─── Sign Document Dialog ────────────────────────────────
+// ─── Sign Document Dialog (Assinatura Avançada YesClin) ──
+// Mirrors the prontuário's AdvancedSignatureDialog UX:
+// Two-step flow (Review + Authenticate), password reauth, irreversibility checks.
 interface SignDialogProps {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   documentId: string;
   clinicId: string;
   alreadySigned: boolean;
+  patientName?: string;
+  professionalName?: string;
+  generatedAt?: string | null;
+  snapshot?: unknown;
 }
 
-export function SignDocumentDialog({ open, onOpenChange, documentId, clinicId, alreadySigned }: SignDialogProps) {
+export function SignDocumentDialog({
+  open,
+  onOpenChange,
+  documentId,
+  clinicId,
+  alreadySigned,
+  patientName,
+  professionalName,
+  generatedAt,
+  snapshot,
+}: SignDialogProps) {
   const signDoc = useSignDocument();
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [confirmIrreversible, setConfirmIrreversible] = useState(false);
+  const [confirmAccuracy, setConfirmAccuracy] = useState(false);
+  const [step, setStep] = useState<"review" | "authenticate">("review");
+
+  useEffect(() => {
+    if (!open) {
+      setPassword("");
+      setShowPassword(false);
+      setConfirmIrreversible(false);
+      setConfirmAccuracy(false);
+      setStep("review");
+    }
+  }, [open]);
+
+  const canProceedToAuth = confirmIrreversible && confirmAccuracy;
+  const canSign = password.trim().length >= 6;
+  const signing = signDoc.isPending;
 
   const handleSign = async () => {
-    await signDoc.mutateAsync({ documentId, clinicId });
-    onOpenChange(false);
+    if (!canSign) return;
+    try {
+      await signDoc.mutateAsync({ documentId, clinicId, password, snapshot });
+      onOpenChange(false);
+    } catch {
+      // toast already shown by hook
+    }
+  };
+
+  const formatDate = (dateStr?: string | null) => {
+    if (!dateStr) return "—";
+    try {
+      return new Date(dateStr).toLocaleDateString("pt-BR", {
+        day: "2-digit", month: "2-digit", year: "numeric",
+        hour: "2-digit", minute: "2-digit",
+      });
+    } catch { return dateStr; }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <PenTool className="h-4 w-4" />
-            Assinar Documento
+            <Shield className="h-5 w-5 text-primary" />
+            Assinatura Avançada YesClin
           </DialogTitle>
+          <DialogDescription>
+            Assinatura eletrônica avançada com reautenticação e integridade documental
+          </DialogDescription>
         </DialogHeader>
+
         {alreadySigned ? (
-          <div className="flex items-center gap-2 text-sm text-green-600 py-4">
-            <CheckCircle2 className="h-5 w-5" />
-            <span>Este documento já foi assinado.</span>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-3">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
-                <div className="text-xs text-amber-800 dark:text-amber-200">
-                  <p className="font-medium">Atenção</p>
-                  <p className="mt-1">
-                    Ao assinar, você confirma que revisou o conteúdo do documento consolidado e que as informações estão corretas.
-                    Esta ação é irreversível.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="rounded-lg border p-4 text-center space-y-2">
-              <Shield className="h-8 w-8 mx-auto text-muted-foreground/40" />
-              <p className="text-xs text-muted-foreground">
-                Assinatura via autenticação do sistema.<br />
-                Futuras integrações com certificado digital serão suportadas.
+          <div className="flex items-center gap-3 py-6">
+            <CheckCircle2 className="h-6 w-6 text-green-600" />
+            <div>
+              <p className="font-medium text-green-700">Documento já assinado</p>
+              <p className="text-sm text-muted-foreground">
+                Este documento consolidado já foi assinado e está bloqueado.
               </p>
             </div>
           </div>
+        ) : (
+          <div className="overflow-y-auto max-h-[65vh] pr-2">
+            <div className="space-y-6">
+              {/* Steps indicator */}
+              <div className="flex items-center gap-4 text-sm">
+                <div className={cn("flex items-center gap-2", step === "review" ? "text-primary font-medium" : "text-muted-foreground")}>
+                  <div className={cn("h-6 w-6 rounded-full flex items-center justify-center text-xs", step === "review" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>1</div>
+                  Revisão
+                </div>
+                <div className="h-px flex-1 bg-border" />
+                <div className={cn("flex items-center gap-2", step === "authenticate" ? "text-primary font-medium" : "text-muted-foreground")}>
+                  <div className={cn("h-6 w-6 rounded-full flex items-center justify-center text-xs", step === "authenticate" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>2</div>
+                  Autenticação
+                </div>
+              </div>
+
+              {step === "review" && (
+                <>
+                  {/* Document Summary */}
+                  <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                    <h4 className="font-medium flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Resumo do Documento
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Paciente:</span>
+                        <p className="font-medium">{patientName || "—"}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Profissional:</span>
+                        <p className="font-medium">{professionalName || "—"}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Tipo:</span>
+                        <p className="font-medium">Documento Consolidado</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Gerado em:</span>
+                        <p className="font-medium">{formatDate(generatedAt)}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Warning */}
+                  <Alert variant="destructive" className="border-destructive/50 bg-destructive/10">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Ação Irreversível</AlertTitle>
+                    <AlertDescription>
+                      Após a assinatura, este documento será bloqueado permanentemente.
+                      Não será possível editar, excluir ou modificar o conteúdo.
+                      Apenas visualização, exportação e adendos serão permitidos.
+                    </AlertDescription>
+                  </Alert>
+
+                  {/* Confirmations */}
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        id="confirmAccuracyAtt"
+                        checked={confirmAccuracy}
+                        onCheckedChange={(c) => setConfirmAccuracy(c === true)}
+                      />
+                      <label htmlFor="confirmAccuracyAtt" className="text-sm leading-relaxed cursor-pointer">
+                        Declaro que as informações contidas neste documento são verdadeiras e
+                        correspondem fielmente ao atendimento realizado.
+                      </label>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        id="confirmIrreversibleAtt"
+                        checked={confirmIrreversible}
+                        onCheckedChange={(c) => setConfirmIrreversible(c === true)}
+                      />
+                      <label htmlFor="confirmIrreversibleAtt" className="text-sm leading-relaxed cursor-pointer">
+                        Compreendo que esta ação é <strong>irreversível</strong> e que o documento
+                        será bloqueado permanentemente após a assinatura.
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Technical info */}
+                  <div className="rounded-lg bg-muted/50 p-4 space-y-2 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <KeyRound className="h-4 w-4" />
+                      <span>Reautenticação por senha obrigatória</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <FileCheck className="h-4 w-4" />
+                      <span>Hash SHA-256 de integridade</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Lock className="h-4 w-4" />
+                      <span>Snapshot imutável do conteúdo</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Clock className="h-4 w-4" />
+                      <span>Carimbo de tempo: {new Date().toLocaleString("pt-BR")}</span>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {step === "authenticate" && (
+                <>
+                  <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                    <h4 className="font-medium flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Validação de Identidade
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      Para garantir a autenticidade da assinatura, confirme sua identidade digitando sua senha atual.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="signPasswordAtt" className="flex items-center gap-2">
+                      <KeyRound className="h-4 w-4" />
+                      Senha Atual
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="signPasswordAtt"
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Digite sua senha para confirmar"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && canSign && !signing) handleSign();
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Método: Reautenticação por senha (password_reauth)
+                    </p>
+                  </div>
+
+                  <Alert className="border-primary/30 bg-primary/5">
+                    <Shield className="h-4 w-4" />
+                    <AlertTitle>Assinatura Avançada YesClin</AlertTitle>
+                    <AlertDescription className="text-xs space-y-1">
+                      <p>Ao confirmar, o sistema irá:</p>
+                      <ul className="list-disc pl-4 space-y-0.5">
+                        <li>Validar sua identidade pela senha</li>
+                        <li>Gerar hash SHA-256 do conteúdo final</li>
+                        <li>Criar snapshot imutável do documento</li>
+                        <li>Registrar IP, navegador e carimbo de tempo</li>
+                        <li>Bloquear permanentemente o documento</li>
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
+                </>
+              )}
+            </div>
+          </div>
         )}
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          {!alreadySigned && (
-            <Button onClick={handleSign} disabled={signDoc.isPending}>
-              {signDoc.isPending ? "Assinando..." : "Confirmar Assinatura"}
-            </Button>
+
+        <DialogFooter className="border-t pt-4">
+          {alreadySigned ? (
+            <Button onClick={() => onOpenChange(false)}>Fechar</Button>
+          ) : step === "review" ? (
+            <>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+              <Button onClick={() => setStep("authenticate")} disabled={!canProceedToAuth}>
+                <KeyRound className="h-4 w-4 mr-2" />
+                Validar Identidade
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => setStep("review")} disabled={signing}>
+                Voltar
+              </Button>
+              <Button onClick={handleSign} disabled={!canSign || signing}>
+                {signing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Assinando...
+                  </>
+                ) : (
+                  <>
+                    <Shield className="h-4 w-4 mr-2" />
+                    Assinar Documento
+                  </>
+                )}
+              </Button>
+            </>
           )}
         </DialogFooter>
       </DialogContent>
