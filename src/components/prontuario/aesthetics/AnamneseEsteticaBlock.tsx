@@ -873,6 +873,36 @@ export function AnamneseEsteticaBlock({
   return (
 
     <div className="space-y-4">
+      {/* Back to list — only when records exist (so there is a list to return to) */}
+      {v2Records.length > 0 && (selectedRecordId || isCreatingNew) && (
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9 w-9 shrink-0 px-0"
+            onClick={() => {
+              const goBack = () => {
+                setSelectedRecordId(null);
+                setIsCreatingNew(false);
+              };
+              if (currentHasChanges) {
+                pendingNavigationRef.current = goBack;
+                setShowUnsavedDialog(true);
+                return;
+              }
+              goBack();
+            }}
+            aria-label="Voltar para a lista de anamneses"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            Voltar para lista ({v2Records.length} {v2Records.length === 1 ? 'registro' : 'registros'})
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
