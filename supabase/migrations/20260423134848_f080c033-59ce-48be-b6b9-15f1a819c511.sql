@@ -1,0 +1,15 @@
+ALTER FUNCTION public.can_access_clinic_as_staff(uuid) SET search_path = public;
+ALTER FUNCTION public.can_access_teleconsultation_session_row(uuid, uuid) SET search_path = public;
+ALTER FUNCTION public.can_join_teleconsultation(uuid, text) SET search_path = public;
+ALTER FUNCTION public.current_professional_id_for_clinic(uuid) SET search_path = public;
+ALTER FUNCTION public.current_user_role_for_clinic(uuid) SET search_path = public;
+ALTER FUNCTION public.generate_secure_token(integer) SET search_path = public;
+ALTER FUNCTION public.generate_teleconsultation_token(uuid, text, text, integer) SET search_path = public;
+ALTER FUNCTION public.log_teleconsultation_event(uuid, uuid, text, text, uuid, text, uuid, uuid, jsonb) SET search_path = public;
+ALTER FUNCTION public.render_appointment_message(text, text, date, time, text, text) SET search_path = public;
+ALTER FUNCTION public.sync_appointment_teleconsultation_status(uuid) SET search_path = public;
+ALTER FUNCTION public.trg_sync_appointment_from_precheck() SET search_path = public;
+ALTER FUNCTION public.trg_sync_appointment_from_session() SET search_path = public;
+ALTER FUNCTION public.trg_update_appointment_from_event() SET search_path = public;
+ALTER FUNCTION public.validate_teleconsultation_session_appointment() SET search_path = public;
+ALTER FUNCTION public.validate_teleconsultation_token(text, text) SET search_path = public;
