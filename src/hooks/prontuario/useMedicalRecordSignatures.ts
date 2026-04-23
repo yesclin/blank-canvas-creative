@@ -1,11 +1,18 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useClinicData } from '@/hooks/useClinicData';
-import { toast } from 'sonner';
 
 /**
- * Maps to the real `medical_record_signatures` table.
- * Columns: id, clinic_id, record_id, record_type, signed_by, signature_hash, ip_address, user_agent, signed_at
+ * useMedicalRecordSignatures
+ *
+ * Read-only helpers over the `medical_record_signatures` table.
+ *
+ * NOTE: Signing is centralized in `useUnifiedDocumentSigning` +
+ * `UnifiedSignatureWizard` — this hook intentionally exposes only the
+ * lookup helpers used by the Prontuário UI to render badges/state.
+ *
+ * Columns: id, clinic_id, record_id, record_type, signed_by, signature_hash,
+ * ip_address, user_agent, signed_at
  */
 export interface MedicalRecordSignature {
   id: string;
@@ -19,33 +26,15 @@ export interface MedicalRecordSignature {
   signed_at: string;
 }
 
-interface SignatureInput {
-  record_id: string;
-  record_type: 'evolution' | 'anamnesis';
-  content: Record<string, unknown>;
-}
-
-async function generateDocumentHash(content: Record<string, unknown>): Promise<string> {
-  const jsonString = JSON.stringify(content);
-  const encoder = new TextEncoder();
-  const data = encoder.encode(jsonString);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
 export function useMedicalRecordSignatures() {
   const { clinic } = useClinicData();
   const [signatures, setSignatures] = useState<MedicalRecordSignature[]>([]);
   const [loading, setLoading] = useState(false);
-  const [signing, setSigning] = useState(false);
 
   const fetchSignaturesForPatient = useCallback(async (_patientId: string) => {
     if (!clinic?.id) return;
     setLoading(true);
     try {
-      // medical_record_signatures doesn't have patient_id — fetch all for clinic
-      // and filter client-side if needed, or fetch by known record_ids
       const { data, error } = await supabase
         .from('medical_record_signatures')
         .select('*')
@@ -69,101 +58,11 @@ export function useMedicalRecordSignatures() {
     return signatures.some(s => s.record_id === recordId);
   }, [signatures]);
 
-  const signRecord = async (input: SignatureInput): Promise<boolean> => {
-    if (!clinic?.id) return false;
-    setSigning(true);
-    try {
-      const existing = signatures.find(s => s.record_id === input.record_id);
-      if (existing) {
-        toast.error('Este registro já foi assinado');
-        return false;
-      }
-
-      const documentHash = await generateDocumentHash(input.content);
-      const userAgent = navigator.userAgent;
-      let ipAddress = 'unknown';
-      try {
-        const ipResponse = await fetch('https://api.ipify.org?format=json');
-        const ipData = await ipResponse.json();
-        ipAddress = ipData.ip;
-      } catch {
-        // Fallback
-      }
-
-      const { data: userData } = await supabase.auth.getUser();
-      const userId = userData?.user?.id;
-      if (!userId) {
-        toast.error('Usuário não autenticado');
-        return false;
-      }
-
-      // Insert signature record
-      const { error: sigError } = await supabase
-        .from('medical_record_signatures')
-        .insert({
-          clinic_id: clinic.id,
-          record_id: input.record_id,
-          record_type: input.record_type,
-          signed_by: userId,
-          signature_hash: documentHash,
-          ip_address: ipAddress,
-          user_agent: userAgent,
-        });
-
-      if (sigError) throw sigError;
-
-      // Update the source record status to 'assinado' with signed_at and signed_by
-      const table = input.record_type === 'anamnesis' ? 'anamnesis_records' : 'clinical_evolutions';
-      const now = new Date().toISOString();
-      console.log(`[SIGNATURE] Updating ${table} id=${input.record_id} → status=assinado, signed_at=${now}, signed_by=${userId}`);
-      
-      const { error: updateError } = await supabase
-        .from(table)
-        .update({ 
-          status: 'assinado',
-          signed_at: now,
-          signed_by: userId,
-        })
-        .eq('id', input.record_id);
-
-      if (updateError) {
-        console.error(`[SIGNATURE] Update ${table} failed:`, JSON.stringify(updateError));
-        if (updateError.code === '42501') {
-          throw new Error('Permissão negada: você não é o profissional responsável por este registro ou ele já foi assinado.');
-        }
-        throw updateError;
-      }
-
-      // Log the signature action
-      await supabase.from('access_logs').insert({
-        clinic_id: clinic.id,
-        user_id: userId,
-        action: 'sign_medical_record',
-        resource_type: 'medical_record',
-        resource_id: input.record_id,
-        ip_address: ipAddress,
-        user_agent: userAgent,
-      });
-
-      toast.success('Registro assinado digitalmente com sucesso');
-      return true;
-    } catch (err: any) {
-      console.error('[SIGNATURE] Error signing record:', err);
-      const msg = err?.message || 'Erro ao assinar registro';
-      toast.error(msg);
-      return false;
-    } finally {
-      setSigning(false);
-    }
-  };
-
   return {
     signatures,
     loading,
-    signing,
     fetchSignaturesForPatient,
     getSignatureForRecord,
     isRecordSigned,
-    signRecord,
   };
 }
