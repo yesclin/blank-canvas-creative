@@ -350,14 +350,9 @@ export function AnamneseBlock({
   // Override canEdit based on editability policy
   const effectiveCanEdit = canEdit && (!selectedRecord || anamnesisEditability.editability.canEdit);
 
-  // Auto-select first record when records load
-  useEffect(() => {
-    if (v2Records.length > 0 && !selectedRecordId) {
-      setSelectedRecordId(v2Records[0].id);
-    }
-  }, [v2Records, selectedRecordId]);
+  // NOTE: Removed auto-selection of v2Records[0]. The user must click a record to open it.
 
-  // Load selected record data into view (when not editing)
+  // Load selected record data into view (when not editing AND a record is explicitly selected)
   useEffect(() => {
     if (!isEditing && selectedRecord) {
       const responses = selectedRecord.responses as Record<string, unknown>;
