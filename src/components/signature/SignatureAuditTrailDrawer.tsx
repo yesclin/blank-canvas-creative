@@ -64,6 +64,8 @@ interface SignatureRow {
   signature_level: string | null;
   evidence_snapshot: any;
   handwritten_path: string | null;
+  selfie_path: string | null;
+  geolocation: any;
 }
 
 interface EventRow {
@@ -79,6 +81,9 @@ const EVENT_LABELS: Record<string, { label: string; icon: any; tone: string; dot
   reauth_passed: { label: "Identidade validada por senha", icon: KeyRound, tone: "text-blue-600", dot: "bg-blue-500" },
   reauth_failed: { label: "Falha na reautenticação", icon: AlertTriangle, tone: "text-destructive", dot: "bg-destructive" },
   document_hashed: { label: "Hash SHA-256 do documento gerado", icon: Hash, tone: "text-blue-600", dot: "bg-blue-500" },
+  selfie_captured: { label: "Selfie de verificação capturada", icon: Camera, tone: "text-blue-600", dot: "bg-blue-500" },
+  selfie_skipped: { label: "Selfie não capturada", icon: Camera, tone: "text-muted-foreground", dot: "bg-muted-foreground/40" },
+  geolocation_collected: { label: "Geolocalização coletada", icon: MapPin, tone: "text-blue-600", dot: "bg-blue-500" },
   document_signed: { label: "Assinatura confirmada", icon: CheckCircle2, tone: "text-green-600", dot: "bg-green-500" },
   document_locked: { label: "Documento travado (imutável)", icon: Lock, tone: "text-green-700", dot: "bg-green-600" },
   pdf_generated: { label: "PDF assinado gerado", icon: FileCheck, tone: "text-purple-600", dot: "bg-purple-500" },
