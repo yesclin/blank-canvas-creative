@@ -331,27 +331,66 @@ export function SignatureAuditTrailDrawer({
                   Nenhum evento registrado.
                 </p>
               ) : (
-                <ol className="relative border-l border-border ml-2 space-y-3">
+                <ol className="relative border-l border-border ml-2 space-y-4">
                   {events.map((evt) => {
                     const meta = EVENT_LABELS[evt.event_type] || {
                       label: evt.event_type,
                       icon: FileText,
                       tone: "text-muted-foreground",
+                      dot: "bg-muted-foreground/40",
                     };
                     const Icon = meta.icon;
+                    const entries = evt.metadata && typeof evt.metadata === "object"
+                      ? Object.entries(evt.metadata as Record<string, unknown>).filter(
+                          ([k, v]) =>
+                            !HIDDEN_METADATA_KEYS.has(k) &&
+                            v !== null &&
+                            v !== undefined &&
+                            v !== ""
+                        )
+                      : [];
+
                     return (
                       <li key={evt.id} className="ml-4">
-                        <span className="absolute -left-[7px] flex h-3.5 w-3.5 items-center justify-center rounded-full bg-background border">
-                          <Icon className={`h-2.5 w-2.5 ${meta.tone}`} />
+                        <span
+                          className={`absolute -left-[7px] flex h-3.5 w-3.5 items-center justify-center rounded-full ring-2 ring-background ${meta.dot}`}
+                        >
+                          <Icon className="h-2 w-2 text-white" />
                         </span>
-                        <p className="text-sm font-medium">{meta.label}</p>
+                        <p className={`text-sm font-medium ${meta.tone}`}>{meta.label}</p>
                         <p className="text-[11px] text-muted-foreground">
                           {fmtDate(evt.created_at)}
                         </p>
-                        {evt.metadata?.hash_preview && (
-                          <p className="text-[10px] text-muted-foreground font-mono">
-                            hash: {evt.metadata.hash_preview}…
-                          </p>
+
+                        {entries.length > 0 && (
+                          <div className="mt-1.5 rounded-md border bg-muted/30 px-2 py-1.5 space-y-0.5">
+                            {entries.map(([k, v]) => {
+                              const label = METADATA_LABELS[k] || k;
+                              const isLong =
+                                k === "user_agent" || k.includes("hash") || k.includes("id");
+                              const display =
+                                k === "method"
+                                  ? methodLabel(String(v))
+                                  : typeof v === "object"
+                                    ? JSON.stringify(v)
+                                    : String(v);
+                              return (
+                                <div
+                                  key={k}
+                                  className="flex items-baseline gap-2 text-[10.5px] leading-snug"
+                                >
+                                  <span className="text-muted-foreground/70 uppercase tracking-wider min-w-[60px] shrink-0">
+                                    {label}
+                                  </span>
+                                  <span
+                                    className={`text-foreground/80 break-all ${isLong ? "font-mono" : ""}`}
+                                  >
+                                    {display}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
                         )}
                       </li>
                     );
