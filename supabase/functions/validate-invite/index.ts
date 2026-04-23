@@ -129,10 +129,10 @@ const handler = async (req: Request): Promise<Response> => {
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
 
-  } catch (error: any) {
-    console.error("Error in validate-invite function:", error);
+  } catch (error) {
+    console.error("[validate-invite] Error:", error);
     return new Response(
-      JSON.stringify({ valid: false, error: error.message || "Erro interno" }),
+      JSON.stringify({ valid: false, error: "Erro interno do servidor" }),
       { status: 500, headers: { "Content-Type": "application/json", ...getCorsHeaders(req) } }
     );
   }
