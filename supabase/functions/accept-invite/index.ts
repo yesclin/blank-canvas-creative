@@ -333,9 +333,8 @@ const handler = async (req: Request): Promise<Response> => {
 
   } catch (error) {
     console.error("[accept-invite] Error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Erro interno";
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: "Erro interno do servidor" }),
       { status: 500, headers: { "Content-Type": "application/json", ...getCorsHeaders(req) } }
     );
   }
