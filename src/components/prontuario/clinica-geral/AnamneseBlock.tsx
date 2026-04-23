@@ -323,12 +323,10 @@ export function AnamneseBlock({
 
 
   // ─── Selected record from records list ────────────────────────────
+  // IMPORTANT: never auto-fallback to v2Records[0]. Selection must be explicit.
   const selectedRecord = useMemo(() => {
-    if (!v2Records.length) return null;
-    if (selectedRecordId) {
-      return v2Records.find(r => r.id === selectedRecordId) || v2Records[0];
-    }
-    return v2Records[0];
+    if (!v2Records.length || !selectedRecordId) return null;
+    return v2Records.find(r => r.id === selectedRecordId) || null;
   }, [v2Records, selectedRecordId]);
 
   // Backward compat alias
@@ -352,14 +350,9 @@ export function AnamneseBlock({
   // Override canEdit based on editability policy
   const effectiveCanEdit = canEdit && (!selectedRecord || anamnesisEditability.editability.canEdit);
 
-  // Auto-select first record when records load
-  useEffect(() => {
-    if (v2Records.length > 0 && !selectedRecordId) {
-      setSelectedRecordId(v2Records[0].id);
-    }
-  }, [v2Records, selectedRecordId]);
+  // NOTE: Removed auto-selection of v2Records[0]. The user must click a record to open it.
 
-  // Load selected record data into view (when not editing)
+  // Load selected record data into view (when not editing AND a record is explicitly selected)
   useEffect(() => {
     if (!isEditing && selectedRecord) {
       const responses = selectedRecord.responses as Record<string, unknown>;
@@ -1198,10 +1191,44 @@ export function AnamneseBlock({
 
   // viewTemplate is defined above early returns
 
+  // ─── LIST MODE: records exist but none selected → show ONLY the list ──
+  // Falls through to legacy view if there's a `currentAnamnese` (legacy single-record path) but no v2 records.
+  if (!selectedRecord && v2Records.length > 0) {
+    return (
+      <>
+        {renderSwitchConfirmDialog()}
+        <div className="space-y-3">
+          {renderRecordsList()}
+        </div>
+        <AnamnesisTemplateBuilderDialog
+          open={showTemplateEditor}
+          onOpenChange={setShowTemplateEditor}
+          template={editingV2Template}
+        />
+      </>
+    );
+  }
+
   return (
     <div className="space-y-3">
-      {/* Records list */}
-      {renderRecordsList()}
+      {/* Back-to-list button (only when a v2 record is open and there are records to return to) */}
+      {selectedRecord && v2Records.length > 0 && (
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9 w-9 shrink-0 px-0"
+            onClick={() => setSelectedRecordId(null)}
+            aria-label="Voltar para a lista de anamneses"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            Voltar para lista ({v2Records.length} {v2Records.length === 1 ? 'registro' : 'registros'})
+          </span>
+        </div>
+      )}
 
       {/* Compact header + actions for selected record */}
       <div className="flex items-center justify-between gap-3 flex-wrap">

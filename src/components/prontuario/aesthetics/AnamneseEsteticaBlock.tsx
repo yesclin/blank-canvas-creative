@@ -43,6 +43,7 @@ import {
   FilePlus,
   Trash2,
   Ban,
+  ArrowLeft,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -530,12 +531,7 @@ export function AnamneseEsteticaBlock({
     pendingNavigationRef.current = null;
   }, []);
 
-  // Auto-select first record
-  useEffect(() => {
-    if (v2Records.length > 0 && !selectedRecordId) {
-      setSelectedRecordId(v2Records[0].id);
-    }
-  }, [v2Records, selectedRecordId]);
+  // NOTE: Removed auto-selection of v2Records[0]. Explicit click required to open a record.
 
   // ─── Loading ──────────────────────────────────────────────────────
   if (loadingTemplates) {
@@ -798,9 +794,116 @@ export function AnamneseEsteticaBlock({
     );
   }
 
-  // ─── Main rendering ──────────────────────────────────────────────
+  // ─── LIST MODE: records exist, none selected, not creating ──
+  // Explicit click required to open a record. NEVER auto-open.
+  if (v2Records.length > 0 && !selectedRecordId && !isCreatingNew) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-3">
+            <FileText className="h-5 w-5 text-primary" />
+            <h3 className="font-semibold">
+              Anamneses registradas ({v2Records.length})
+            </h3>
+          </div>
+          {canEdit && (
+            <Button
+              size="sm"
+              onClick={() => {
+                setSelectedRecordId(null);
+                setIsCreatingNew(true);
+              }}
+            >
+              <Plus className="h-4 w-4 mr-1.5" />
+              Nova Anamnese
+            </Button>
+          )}
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {v2Records.map((record) => {
+            const r = record as any;
+            return (
+              <button
+                key={record.id}
+                type="button"
+                onClick={() => {
+                  setSelectedRecordId(record.id);
+                  if (record.template_id) setSelectedTemplateId(record.template_id);
+                }}
+                className={cn(
+                  "text-left p-3 rounded-lg border bg-card transition-all",
+                  "hover:bg-muted/50 hover:shadow-sm hover:border-primary/40",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                )}
+              >
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <FileText className="h-3.5 w-3.5 text-primary/70 flex-shrink-0" />
+                  <span className="text-sm font-medium truncate">
+                    {record.template_name || 'Anamnese'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  {format(parseISO(record.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                </div>
+                {r.signed_at && (
+                  <Badge variant="outline" className="mt-2 text-[10px] bg-emerald-500/10 text-emerald-700 border-emerald-200">
+                    Assinado
+                  </Badge>
+                )}
+                {!r.signed_at && r.locked_at && (
+                  <Badge variant="outline" className="mt-2 text-[10px]">
+                    Bloqueado
+                  </Badge>
+                )}
+                {!r.signed_at && !r.locked_at && (
+                  <Badge variant="outline" className="mt-2 text-[10px]">
+                    Rascunho
+                  </Badge>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Main rendering (DETAIL MODE) ────────────────────────────────
   return (
+
     <div className="space-y-4">
+      {/* Back to list — only when records exist (so there is a list to return to) */}
+      {v2Records.length > 0 && (selectedRecordId || isCreatingNew) && (
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9 w-9 shrink-0 px-0"
+            onClick={() => {
+              const goBack = () => {
+                setSelectedRecordId(null);
+                setIsCreatingNew(false);
+              };
+              if (currentHasChanges) {
+                pendingNavigationRef.current = goBack;
+                setShowUnsavedDialog(true);
+                return;
+              }
+              goBack();
+            }}
+            aria-label="Voltar para a lista de anamneses"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            Voltar para lista ({v2Records.length} {v2Records.length === 1 ? 'registro' : 'registros'})
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
@@ -856,46 +959,7 @@ export function AnamneseEsteticaBlock({
         <RecordEditLockBanner editability={anamnesisEditability.editability} />
       )}
 
-      {/* Records list */}
-      {v2Records.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {v2Records.map(record => (
-            <div
-              key={record.id}
-              onClick={() => {
-                if (currentHasChanges) {
-                  pendingNavigationRef.current = () => {
-                    setSelectedRecordId(record.id);
-                    if (record.template_id) setSelectedTemplateId(record.template_id);
-                  };
-                  setShowUnsavedDialog(true);
-                  return;
-                }
-                setSelectedRecordId(record.id);
-                if (record.template_id) setSelectedTemplateId(record.template_id);
-              }}
-              className={cn(
-                "flex-shrink-0 p-3 rounded-lg border cursor-pointer transition-all min-w-[200px] max-w-[280px]",
-                "hover:bg-muted/50 hover:shadow-sm",
-                record.id === selectedRecordId
-                  ? "border-primary bg-primary/5 shadow-sm"
-                  : "border-border"
-              )}
-            >
-              <div className="flex items-center gap-1.5 mb-1">
-                <FileText className="h-3.5 w-3.5 text-primary/70 flex-shrink-0" />
-                <span className="text-xs font-medium truncate">
-                  {record.template_name || 'Anamnese'}
-                </span>
-              </div>
-              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                <Clock className="h-2.5 w-2.5" />
-                {format(parseISO(record.created_at), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* NOTE: Inline records list removed — list/detail navigation handled by LIST MODE branch + back arrow above. */}
 
       {/* Form content — routed by template kind */}
       {currentLoading ? (
