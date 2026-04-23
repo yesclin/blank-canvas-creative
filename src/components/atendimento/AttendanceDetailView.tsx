@@ -374,12 +374,24 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
       {hasConsolidated && (
         <Card className="border-dashed">
           <CardContent className="py-3 px-6">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Shield className="h-3.5 w-3.5" />
-              <span>Documento consolidado gerado em {fmtTime(detail.consolidated_document!.generated_at)}</span>
-              {detail.consolidated_document!.is_locked && <Badge variant="outline" className="text-[9px]">Travado</Badge>}
-              {detail.consolidated_document!.signed_at && (
-                <Badge className="text-[9px] bg-green-100 text-green-800">Assinado</Badge>
+            <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Shield className="h-3.5 w-3.5" />
+                <span>Documento consolidado gerado em {fmtTime(detail.consolidated_document!.generated_at)}</span>
+                {detail.consolidated_document!.is_locked && <Badge variant="outline" className="text-[9px]">Travado</Badge>}
+                {detail.consolidated_document!.signed_at && (
+                  <Badge className="text-[9px] bg-green-100 text-green-800">Assinado</Badge>
+                )}
+              </div>
+              {isDocSigned && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1 text-xs"
+                  onClick={() => setAuditTrailOpen(true)}
+                >
+                  <Shield className="h-3 w-3" /> Ver trilha de auditoria
+                </Button>
               )}
             </div>
           </CardContent>
