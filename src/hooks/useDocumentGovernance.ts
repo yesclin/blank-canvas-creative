@@ -89,15 +89,56 @@ export function useAddDocumentNote() {
   });
 }
 
-// ─── Sign document ───────────────────────────────────────
+// ─── Sign document (Assinatura Avançada YesClin) ─────────
+// Same flow as prontuário: password reauth + SHA-256 hash + audit trail
+async function generateDocumentHash(content: unknown): Promise<string> {
+  const jsonString = JSON.stringify(
+    content,
+    content && typeof content === "object" ? Object.keys(content as object).sort() : undefined
+  );
+  const encoder = new TextEncoder();
+  const data = encoder.encode(jsonString);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 export function useSignDocument() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (params: { documentId: string; clinicId: string }) => {
+    mutationFn: async (params: { documentId: string; clinicId: string; password: string; snapshot?: unknown }) => {
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData?.user?.id;
-      if (!userId) throw new Error("Não autenticado");
+      const email = userData?.user?.email;
+      if (!userId || !email) throw new Error("Sessão expirada. Faça login novamente.");
 
+      // 1. Re-authenticate user with password
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password: params.password,
+      });
+      if (authError) {
+        throw new Error("Senha incorreta. Tente novamente.");
+      }
+
+      // 2. Generate SHA-256 hash of the snapshot for integrity
+      let documentHash: string | null = null;
+      try {
+        if (params.snapshot) documentHash = await generateDocumentHash(params.snapshot);
+      } catch (e) {
+        console.warn("[SIGN_DOC] Hash generation failed:", e);
+      }
+
+      // 3. Capture IP / user agent
+      const userAgent = navigator.userAgent;
+      let ipAddress: string | null = null;
+      try {
+        const r = await fetch("https://api.ipify.org?format=json");
+        const j = await r.json();
+        ipAddress = j.ip || null;
+      } catch { /* ignore */ }
+
+      // 4. Update the consolidated document with signature
       const now = new Date().toISOString();
       const { error } = await supabase
         .from("clinical_attendance_documents")
@@ -106,25 +147,43 @@ export function useSignDocument() {
           signed_by: userId,
           status: "signed",
           signature_metadata: {
-            method: "system_auth",
+            method: "password_reauth",
             signed_at: now,
             user_id: userId,
-            ip: null, // placeholder for future IP capture
+            ip_address: ipAddress,
+            user_agent: userAgent,
+            document_hash: documentHash,
+            sign_method_label: "Assinatura Avançada YesClin",
           } as any,
         })
         .eq("id", params.documentId);
       if (error) throw error;
 
+      // 5. Log access + governance history
+      await supabase.from("access_logs").insert({
+        clinic_id: params.clinicId,
+        user_id: userId,
+        action: "advanced_sign_attendance_document",
+        resource_type: "clinical_attendance_document",
+        resource_id: params.documentId,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+      });
+
       await logDocumentAction({
         documentId: params.documentId,
         clinicId: params.clinicId,
         actionType: "signed",
+        metadata: {
+          method: "password_reauth",
+          hash_preview: documentHash?.substring(0, 16) || null,
+        },
       });
     },
     onSuccess: (_, params) => {
       qc.invalidateQueries({ queryKey: ["attendance-detail"] });
       qc.invalidateQueries({ queryKey: ["doc-history", params.documentId] });
-      toast.success("Documento assinado com sucesso.");
+      toast.success("Documento assinado com Assinatura Avançada YesClin.");
     },
     onError: (err: Error) => {
       toast.error(err.message || "Erro ao assinar documento.");
