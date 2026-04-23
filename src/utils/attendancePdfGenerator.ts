@@ -89,10 +89,38 @@ function fmtCurrency(v: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 }
 
+/**
+ * SHA-256 of a value, computed exactly the same way as the signing engine
+ * (`useUnifiedDocumentSigning.sha256`) — sorted top-level keys when object.
+ * This guarantees the recomputed hash is comparable to the persisted one.
+ */
+async function sha256(content: unknown): Promise<string> {
+  const json = JSON.stringify(
+    content,
+    content && typeof content === 'object' ? Object.keys(content as object).sort() : undefined
+  );
+  const buf = new TextEncoder().encode(json);
+  const digest = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function shortHash(h?: string | null) {
+  if (!h) return '—';
+  return `${h.substring(0, 16)}…${h.substring(h.length - 8)}`;
+}
+
+function signMethodLabel(m?: string | null) {
+  if (m === 'saved_signature') return 'Assinatura salva (Avançada YesClin)';
+  if (m === 'handwritten') return 'Manuscrita (Avançada YesClin)';
+  return m || '—';
+}
+
 // ─── PDF Builder ─────────────────────────────────────────
 export async function generateAttendancePDF(
   snapshot: SnapshotData,
-  options?: { download?: boolean; print?: boolean }
+  options?: { download?: boolean; print?: boolean; integrity?: PdfIntegrityPayload }
 ): Promise<Blob> {
   const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
   let y = M;
