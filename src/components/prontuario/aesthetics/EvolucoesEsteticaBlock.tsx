@@ -47,8 +47,9 @@ import {
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useAdvancedSignature } from '@/hooks/prontuario/useAdvancedSignature';
-import { AdvancedSignatureDialog } from '@/components/prontuario/AdvancedSignatureDialog';
+import { UnifiedSignatureWizard } from '@/components/signature/UnifiedSignatureWizard';
+import type { SignableDocumentContext } from '@/hooks/useUnifiedDocumentSigning';
+import { useClinicData } from '@/hooks/useClinicData';
 import {
   useEvolucoesEsteticaData,
   SATISFACTION_LEVELS,
@@ -79,10 +80,11 @@ export function EvolucoesEsteticaBlock({
     isSigning,
   } = useEvolucoesEsteticaData({ patientId, appointmentId });
 
-  // Advanced signature
-  const { signRecord: advancedSignRecord, signing: advancedSigning } = useAdvancedSignature();
+  // Unified Advanced Signature
+  const { clinic } = useClinicData();
   const [signDialogOpen, setSignDialogOpen] = useState(false);
-  const [signEntry, setSignEntry] = useState<any>(null);
+  const [signatureContext, setSignatureContext] = useState<SignableDocumentContext | null>(null);
+  const [signatureGeneratedAt, setSignatureGeneratedAt] = useState<string | undefined>(undefined);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState<EvolucaoEsteticaFormData>({
