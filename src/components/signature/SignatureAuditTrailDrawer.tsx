@@ -149,6 +149,7 @@ export function SignatureAuditTrailDrawer({
   const [signature, setSignature] = useState<SignatureRow | null>(null);
   const [events, setEvents] = useState<EventRow[]>([]);
   const [evidenceUrl, setEvidenceUrl] = useState<string | null>(null);
+  const [selfieUrl, setSelfieUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -156,6 +157,7 @@ export function SignatureAuditTrailDrawer({
       setSignature(null);
       setEvents([]);
       setEvidenceUrl(null);
+      setSelfieUrl(null);
       return;
     }
     setLoading(true);
@@ -196,6 +198,18 @@ export function SignatureAuditTrailDrawer({
         } else if ((sig as SignatureRow)?.evidence_snapshot?.signature_data_url) {
           if (!cancelled)
             setEvidenceUrl((sig as SignatureRow).evidence_snapshot.signature_data_url);
+        }
+
+        // Resolve selfie image
+        const selfiePath =
+          (sig as SignatureRow)?.selfie_path ||
+          (sig as SignatureRow)?.evidence_snapshot?.selfie_path ||
+          null;
+        if (selfiePath) {
+          const { data: u } = await supabase.storage
+            .from("signature-evidence")
+            .createSignedUrl(selfiePath, 60 * 30);
+          if (!cancelled) setSelfieUrl(u?.signedUrl || null);
         }
       } finally {
         if (!cancelled) setLoading(false);
