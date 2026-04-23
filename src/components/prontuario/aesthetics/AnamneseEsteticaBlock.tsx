@@ -959,46 +959,7 @@ export function AnamneseEsteticaBlock({
         <RecordEditLockBanner editability={anamnesisEditability.editability} />
       )}
 
-      {/* Records list */}
-      {v2Records.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {v2Records.map(record => (
-            <div
-              key={record.id}
-              onClick={() => {
-                if (currentHasChanges) {
-                  pendingNavigationRef.current = () => {
-                    setSelectedRecordId(record.id);
-                    if (record.template_id) setSelectedTemplateId(record.template_id);
-                  };
-                  setShowUnsavedDialog(true);
-                  return;
-                }
-                setSelectedRecordId(record.id);
-                if (record.template_id) setSelectedTemplateId(record.template_id);
-              }}
-              className={cn(
-                "flex-shrink-0 p-3 rounded-lg border cursor-pointer transition-all min-w-[200px] max-w-[280px]",
-                "hover:bg-muted/50 hover:shadow-sm",
-                record.id === selectedRecordId
-                  ? "border-primary bg-primary/5 shadow-sm"
-                  : "border-border"
-              )}
-            >
-              <div className="flex items-center gap-1.5 mb-1">
-                <FileText className="h-3.5 w-3.5 text-primary/70 flex-shrink-0" />
-                <span className="text-xs font-medium truncate">
-                  {record.template_name || 'Anamnese'}
-                </span>
-              </div>
-              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                <Clock className="h-2.5 w-2.5" />
-                {format(parseISO(record.created_at), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* NOTE: Inline records list removed — list/detail navigation handled by LIST MODE branch + back arrow above. */}
 
       {/* Form content — routed by template kind */}
       {currentLoading ? (
