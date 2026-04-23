@@ -68,6 +68,7 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
   const [noteDialogMode, setNoteDialogMode] = useState<"note" | "addendum">("note");
   const [signDialogOpen, setSignDialogOpen] = useState(false);
   const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
+  const [auditTrailOpen, setAuditTrailOpen] = useState(false);
 
   const snapshotSource = detail.consolidated_document?.snapshot_json || null;
   const docId = detail.consolidated_document?.id || null;
