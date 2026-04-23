@@ -192,7 +192,15 @@ export function useUnifiedDocumentSigning() {
 
   const signDocument = useCallback(
     async (input: SignDocumentInput): Promise<SignDocumentResult> => {
-      const { context, password, method, handwrittenDataUrl, savedSignatureDataUrl } = input;
+      const {
+        context,
+        password,
+        method,
+        handwrittenDataUrl,
+        savedSignatureDataUrl,
+        selfieDataUrl,
+        geolocation,
+      } = input;
 
       if (!clinic?.id) {
         toast.error("Clínica não identificada.");
