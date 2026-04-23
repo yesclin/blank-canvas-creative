@@ -616,10 +616,10 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
 /**
  * Wrapper hook-style function for use in components.
  */
-export async function handleDownloadPDF(snapshotJson: any) {
+export async function handleDownloadPDF(snapshotJson: any, integrity?: PdfIntegrityPayload) {
   try {
     toast.loading('Gerando PDF...', { id: 'pdf-gen' });
-    await generateAttendancePDF(snapshotJson, { download: true });
+    await generateAttendancePDF(snapshotJson, { download: true, integrity });
     toast.success('PDF gerado com sucesso!', { id: 'pdf-gen' });
   } catch (err) {
     console.error('PDF generation error:', err);
@@ -627,10 +627,10 @@ export async function handleDownloadPDF(snapshotJson: any) {
   }
 }
 
-export async function handlePrintAttendance(snapshotJson: any) {
+export async function handlePrintAttendance(snapshotJson: any, integrity?: PdfIntegrityPayload) {
   try {
     toast.loading('Preparando impressão...', { id: 'print-gen' });
-    await generateAttendancePDF(snapshotJson, { download: false, print: true });
+    await generateAttendancePDF(snapshotJson, { download: false, print: true, integrity });
     toast.success('Documento enviado para impressão.', { id: 'print-gen' });
   } catch (err) {
     console.error('Print error:', err);
