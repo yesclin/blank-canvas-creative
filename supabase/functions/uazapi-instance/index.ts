@@ -541,7 +541,11 @@ Deno.serve(async (req) => {
 
     return jsonResponse({ error: "Ação desconhecida" }, 400);
   } catch (err: any) {
-    console.error("uazapi-instance error:", err);
-    return jsonResponse({ error: err.message || "Erro interno" }, 500);
+    const reqId = crypto.randomUUID();
+    console.error(`[uazapi-instance] [${reqId}] error:`, err);
+    return jsonResponse(
+      { error: "Erro interno. Tente novamente.", request_id: reqId },
+      500,
+    );
   }
 });

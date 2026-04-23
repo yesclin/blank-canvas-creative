@@ -158,9 +158,14 @@ Deno.serve(async (req) => {
     });
 
     if (rpcError) {
-      console.error("[cancel-sale] RPC error:", rpcError);
+      const reqId = crypto.randomUUID();
+      console.error(`[cancel-sale] [${reqId}] RPC error:`, rpcError);
       return new Response(
-        JSON.stringify({ success: false, error: rpcError.message }),
+        JSON.stringify({
+          success: false,
+          error: "Não foi possível cancelar a venda. Tente novamente.",
+          request_id: reqId,
+        }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -169,8 +174,9 @@ Deno.serve(async (req) => {
 
     if (!cancelResult.success) {
       console.error("[cancel-sale] Transaction failed:", cancelResult.error);
+      // cancelResult.error vem da RPC interna controlada (mensagens já são user-safe)
       return new Response(
-        JSON.stringify({ success: false, error: cancelResult.error }),
+        JSON.stringify({ success: false, error: cancelResult.error || "Não foi possível cancelar a venda." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -203,11 +209,13 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error("[cancel-sale] Error:", error);
+    const reqId = crypto.randomUUID();
+    console.error(`[cancel-sale] [${reqId}] Error:`, error);
     return new Response(
       JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : "Erro ao cancelar venda",
+        error: "Erro ao cancelar venda. Tente novamente.",
+        request_id: reqId,
       }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
