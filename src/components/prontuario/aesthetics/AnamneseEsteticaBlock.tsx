@@ -48,7 +48,7 @@ import {
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-import { useConsolidatedFillerPdf } from '@/hooks/aesthetics/useConsolidatedFillerPdf';
+import { useInstitutionalPdf } from '@/hooks/useInstitutionalPdf';
 import { DynamicAnamneseRenderer } from './DynamicAnamneseRenderer';
 import { StandardTemplateRenderer } from './StandardTemplateRenderer';
 import { useDynamicAnamneseEstetica } from '@/hooks/aesthetics/useDynamicAnamneseEstetica';
@@ -466,29 +466,68 @@ export function AnamneseEsteticaBlock({
     return () => window.removeEventListener('beforeunload', handler);
   }, [currentHasChanges]);
 
-  // ─── PDF export ──────────────────────────────────────────────────
-  const { generateConsolidatedPdf, exporting: exportingPdf } = useConsolidatedFillerPdf();
+  // ─── PDF export — anamnesis-only, no facial map / filler / evolution data ──
+  const { generateAnamnesisPdf, generating: exportingPdf } = useInstitutionalPdf();
 
-  const handlePrint = useCallback(() => {
-    if (!patientId) return;
-    const responses = isAdvanced
-      ? (dynamicRecord?.responses as Record<string, any> | null)
-      : standardValues;
-    generateConsolidatedPdf({
-      patientId,
-      appointmentId: appointmentId || undefined,
-      patient: {
-        full_name: patientName || 'Paciente',
-        birth_date: patientBirthDate,
-        phone: patientPhone,
-        cpf: patientCpf,
+  const handlePrint = useCallback(async () => {
+    // Strict guards — only the explicitly selected record is exported
+    if (!patientId || !selectedRecordId || !currentRecord) {
+      const { toast } = await import('sonner');
+      toast.error('Selecione uma anamnese para gerar o PDF.');
+      return;
+    }
+
+    const recordResponses = (currentRecord.responses ?? {}) as Record<string, unknown>;
+
+    // Field structure: prefer persisted snapshot (preserves the original template),
+    // otherwise fall back to current dynamic fields (advanced) or template structure (standard).
+    const snapshot = (currentRecord.structure_snapshot ?? null) as
+      | Array<{ id: string; label: string; section?: string; type?: string }>
+      | null;
+    const fallbackFields = isAdvanced
+      ? (dynamicFields as Array<{ id: string; label: string; section?: string; type?: string }>)
+      : ((activeTemplate?.structure ?? []) as Array<{ id: string; label: string; section?: string; type?: string }>);
+    const dynamicStructure = (snapshot && snapshot.length > 0) ? snapshot : fallbackFields;
+
+    await generateAnamnesisPdf(
+      {
+        name: patientName || 'Paciente',
+        cpf: patientCpf || undefined,
+        birth_date: patientBirthDate || undefined,
+        phone: patientPhone || undefined,
+        id: patientId,
       },
-      professionalName,
-      professionalRegistration,
-      recordResponses: responses,
-      recordData: responses,
-    });
-  }, [patientId, appointmentId, isAdvanced, dynamicRecord, standardValues, patientName, patientBirthDate, patientPhone, patientCpf, professionalName, professionalRegistration, generateConsolidatedPdf]);
+      {
+        id: currentRecord.id,
+        structured_data: recordResponses,
+        created_at: currentRecord.created_at,
+        created_by_name: professionalName || undefined,
+        template_id: currentRecord.template_id || activeTemplate?.id,
+        template_name: activeTemplate?.name,
+        signed_at: currentRecord.signed_at,
+      },
+      [], // no legacy SecaoAnamnese — sections are derived from dynamicStructure below
+      {
+        name: professionalName || undefined,
+        crm: professionalRegistration || undefined,
+      },
+      dynamicStructure,
+    );
+  }, [
+    patientId,
+    selectedRecordId,
+    currentRecord,
+    isAdvanced,
+    dynamicFields,
+    activeTemplate,
+    patientName,
+    patientBirthDate,
+    patientPhone,
+    patientCpf,
+    professionalName,
+    professionalRegistration,
+    generateAnamnesisPdf,
+  ]);
 
   // Template change with unsaved guard
   const handleTemplateChange = useCallback((templateId: string) => {
