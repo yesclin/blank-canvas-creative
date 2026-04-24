@@ -519,8 +519,16 @@ export function useInstitutionalPdf() {
         }
       }
 
+      // Fetch digital signature linked to this exact anamnesis record (if any)
+      const signatureBlock = await getAnamnesisSignature(anamnese.id);
+      // Keep header badge consistent with the actual signature lookup
+      const anamneseForRender: AnamneseForPdf = {
+        ...anamnese,
+        signed_at: signatureBlock.signed ? (signatureBlock.signed_at || anamnese.signed_at || null) : anamnese.signed_at || null,
+      };
+
       // Build HTML for hash (without QR)
-      const htmlForHash = buildPremiumHtml(clinicInfo, patient, profInfo, anamnese, resolvedSections, settings, docReference);
+      const htmlForHash = buildPremiumHtml(clinicInfo, patient, profInfo, anamneseForRender, resolvedSections, settings, docReference, undefined, undefined, signatureBlock);
       const documentHash = await generateHash(htmlForHash);
 
       // Register document to get UUID for QR code
@@ -555,8 +563,8 @@ export function useInstitutionalPdf() {
         }
       }
 
-      // Build final HTML with QR
-      const html = buildPremiumHtml(clinicInfo, patient, profInfo, anamnese, resolvedSections, settings, docReference, docId, qrCodeDataUrl);
+      // Build final HTML with QR + signature block
+      const html = buildPremiumHtml(clinicInfo, patient, profInfo, anamneseForRender, resolvedSections, settings, docReference, docId, qrCodeDataUrl, signatureBlock);
 
       // Render to canvas
       const container = document.createElement('div');
