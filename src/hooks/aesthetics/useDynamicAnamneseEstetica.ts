@@ -35,6 +35,13 @@ interface UseDynamicAnamneseParams {
   templateVersionId: string | null;
   templateType: string | null;
   specialtyId: string | null;
+  /**
+   * When true, skips fetching the most recent record for this template
+   * and starts with an empty draft. Used by the "Nova Anamnese" flow to
+   * prevent reopening an existing/signed record when the user wants to
+   * create a fresh one.
+   */
+  skipFetch?: boolean;
 }
 
 export function useDynamicAnamneseEstetica({
@@ -44,6 +51,7 @@ export function useDynamicAnamneseEstetica({
   templateVersionId,
   templateType,
   specialtyId,
+  skipFetch = false,
 }: UseDynamicAnamneseParams) {
   const { clinic } = useClinicData();
   const [record, setRecord] = useState<DynamicAnamneseRecord | null>(null);
@@ -54,7 +62,7 @@ export function useDynamicAnamneseEstetica({
   const fields: DynamicField[] = templateType ? (ADVANCED_TEMPLATE_MAP[templateType] || []) : [];
 
   const fetchRecord = useCallback(async () => {
-    if (!patientId || !clinic?.id || !templateId) {
+    if (!patientId || !clinic?.id || !templateId || skipFetch) {
       setRecord(null);
       return;
     }
@@ -96,7 +104,7 @@ export function useDynamicAnamneseEstetica({
     } finally {
       setLoading(false);
     }
-  }, [patientId, clinic?.id, templateId]);
+  }, [patientId, clinic?.id, templateId, skipFetch]);
 
   useEffect(() => {
     fetchRecord();

@@ -177,25 +177,24 @@ export function AnamneseEsteticaBlock({
       });
   }, [allTemplates]);
 
-  // Active template
+  // Active template:
+  // - In CREATE mode: ONLY use the explicitly selected template (no auto-pick).
+  //   This forces the user to choose a model before any record is created/loaded.
+  // - In VIEW mode (selectedRecordId set): use the template of the selected record.
+  // - In LIST mode (no record + no creation): no active template until user acts.
   const activeTemplate = useMemo(() => {
     if (!selectableTemplates.length) return null;
     if (selectedTemplateId) {
       const found = selectableTemplates.find(t => t.id === selectedTemplateId);
       if (found) return found;
     }
-    const defaultTpl = selectableTemplates.find(t => t.is_default);
-    return defaultTpl || selectableTemplates[0];
+    return null;
   }, [selectableTemplates, selectedTemplateId]);
 
   const activeKind = activeTemplate ? classifyTemplate(activeTemplate) : null;
 
-  // Auto-select first template
-  useEffect(() => {
-    if (activeTemplate && !selectedTemplateId) {
-      setSelectedTemplateId(activeTemplate.id);
-    }
-  }, [activeTemplate, selectedTemplateId]);
+  // NOTE: Removed auto-selection of first/default template. The user must
+  // explicitly pick a template via "Nova Anamnese" or by opening a record.
 
   // ─── Advanced dynamic pipeline ──────────────────────────────────
   const templateType = activeTemplate?.template_type || null;
@@ -216,6 +215,8 @@ export function AnamneseEsteticaBlock({
     templateVersionId: isAdvanced ? activeTemplate?.current_version_id || null : null,
     templateType,
     specialtyId,
+    // In CREATE mode, do NOT fetch the latest existing record — start from a clean draft.
+    skipFetch: isCreatingNew,
   });
 
   // ─── Standard template state (for legacy/standard templates) ────
@@ -225,9 +226,9 @@ export function AnamneseEsteticaBlock({
   const [standardRecord, setStandardRecord] = useState<any>(null);
   const [standardLoading, setStandardLoading] = useState(false);
 
-  // Load standard record when template changes
+  // Load standard record when template changes — but NOT when creating new (clean draft).
   useEffect(() => {
-    if (activeKind !== 'standard' || !patientId || !activeTemplate?.id || !clinicId) {
+    if (activeKind !== 'standard' || !patientId || !activeTemplate?.id || !clinicId || isCreatingNew) {
       setStandardRecord(null);
       setStandardValues({});
       return;
@@ -262,7 +263,7 @@ export function AnamneseEsteticaBlock({
     })();
 
     return () => { cancelled = true; };
-  }, [activeKind, patientId, clinicId, activeTemplate?.id]);
+  }, [activeKind, patientId, clinicId, activeTemplate?.id, isCreatingNew]);
 
   const handleStandardFieldChange = useCallback((fieldId: string, value: unknown) => {
     setStandardValues(prev => ({ ...prev, [fieldId]: value }));
@@ -529,27 +530,73 @@ export function AnamneseEsteticaBlock({
     generateAnamnesisPdf,
   ]);
 
-  // Template change with unsaved guard
+  // Template change with unsaved guard.
+  // IMPORTANT: when in CREATE mode, switching the template MUST keep
+  // `isCreatingNew=true` so we don't fall back into the records list nor
+  // open an existing record for the newly-picked template.
   const handleTemplateChange = useCallback((templateId: string) => {
+    const apply = () => {
+      setSelectedTemplateId(templateId);
+      setDynamicValues({});
+      setDynamicHasChanges(false);
+      setStandardValues({});
+      setStandardHasChanges(false);
+      // Preserve isCreatingNew if currently creating; otherwise clear it.
+      // (When viewing an existing record, the dropdown is disabled, so this
+      // path only triggers from the empty state or the create flow.)
+    };
     if (currentHasChanges) {
-      pendingNavigationRef.current = () => {
-        setSelectedTemplateId(templateId);
-        setDynamicValues({});
-        setDynamicHasChanges(false);
-        setStandardValues({});
-        setStandardHasChanges(false);
-        setIsCreatingNew(false);
-      };
+      pendingNavigationRef.current = apply;
       setShowUnsavedDialog(true);
       return;
     }
+    apply();
+  }, [currentHasChanges]);
+
+  // ─── Explicit-flow handlers (Nova Anamnese / open existing / back) ──
+  const handleNewAnamnesisClick = useCallback(() => {
+    // Reset all state so we start a clean draft. The user MUST pick a
+    // template via the selector before any record is created or loaded.
+    setSelectedRecordId(null);
+    setSelectedTemplateId(null);
+    setDynamicValues({});
+    setDynamicHasChanges(false);
+    setStandardValues({});
+    setStandardHasChanges(false);
+    setStandardRecord(null);
+    setIsCreatingNew(true);
+  }, []);
+
+  const handleTemplateSelectedForCreate = useCallback((templateId: string) => {
     setSelectedTemplateId(templateId);
     setDynamicValues({});
     setDynamicHasChanges(false);
     setStandardValues({});
     setStandardHasChanges(false);
+    setStandardRecord(null);
+    setIsCreatingNew(true);
+  }, []);
+
+  const handleOpenExistingAnamnesis = useCallback((recordId: string, templateId?: string | null) => {
     setIsCreatingNew(false);
-  }, [currentHasChanges]);
+    setSelectedRecordId(recordId);
+    if (templateId) setSelectedTemplateId(templateId);
+    setDynamicValues({});
+    setDynamicHasChanges(false);
+    setStandardValues({});
+    setStandardHasChanges(false);
+  }, []);
+
+  const handleBackToList = useCallback(() => {
+    setSelectedRecordId(null);
+    setSelectedTemplateId(null);
+    setIsCreatingNew(false);
+    setDynamicValues({});
+    setDynamicHasChanges(false);
+    setStandardValues({});
+    setStandardHasChanges(false);
+    setStandardRecord(null);
+  }, []);
 
   const handleUnsavedSaveAndLeave = useCallback(async () => {
     setShowUnsavedDialog(false);
@@ -608,8 +655,11 @@ export function AnamneseEsteticaBlock({
   }
 
   // ─── Template selector dropdown ──────────────────────────────────
+  // - Disabled when viewing/editing an existing record (record's template is fixed).
+  // - Active during CREATE mode and on the empty state.
   const renderTemplateSelector = () => {
     if (selectableTemplates.length <= 1) return null;
+    const isViewingExisting = !!selectedRecordId && !isCreatingNew;
 
     const baseTemplates = selectableTemplates.filter(t => getTemplateCategory(t) === 'avaliacao_base');
     const proceduralTemplates = selectableTemplates.filter(t => getTemplateCategory(t) === 'procedural');
@@ -637,7 +687,11 @@ export function AnamneseEsteticaBlock({
     };
 
     return (
-      <Select value={selectedTemplateId || ''} onValueChange={handleTemplateChange}>
+      <Select
+        value={selectedTemplateId || ''}
+        onValueChange={handleTemplateChange}
+        disabled={isViewingExisting}
+      >
         <SelectTrigger className="w-72 h-8 text-xs">
           <SelectValue placeholder="Selecionar modelo..." />
         </SelectTrigger>
@@ -804,31 +858,108 @@ export function AnamneseEsteticaBlock({
             <FileText className="h-5 w-5 text-primary" />
             <h3 className="font-semibold">Anamnese Estética</h3>
           </div>
-          {renderTemplateSelector()}
         </div>
 
         <Card className="border-dashed">
           <CardContent className="p-8 text-center">
             <FileText className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-50" />
             <h3 className="font-semibold mb-3">Nenhuma anamnese registrada</h3>
-            <p className="text-sm text-muted-foreground mb-1">
-              {activeTemplate ? `Modelo: ${activeTemplate.name}` : 'Selecione um modelo para começar'}
+            <p className="text-sm text-muted-foreground mb-4">
+              Clique em "Nova Anamnese" para escolher o modelo e iniciar o registro.
             </p>
-            {activeKind && (
-              <Badge variant="outline" className={cn('mb-4 text-[10px]', kindBadgeClass(activeKind))}>
-                {kindLabel(activeKind)}
-              </Badge>
-            )}
             {canEdit && (
               <div>
-                <Button onClick={() => setIsCreatingNew(true)}>
+                <Button onClick={handleNewAnamnesisClick}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Registrar Anamnese
+                  Nova Anamnese
                 </Button>
               </div>
             )}
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  // ─── CREATE MODE — TEMPLATE PICKER STEP ─────────────────────────
+  // Triggered by "Nova Anamnese". User must explicitly pick a template
+  // before any new draft is created. Existing/signed records are NEVER
+  // shown or reused here.
+  if (isCreatingNew && !selectedTemplateId) {
+    return (
+      <div className="space-y-4">
+        {v2Records.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9 w-9 shrink-0 px-0"
+              onClick={handleBackToList}
+              aria-label="Voltar para a lista de anamneses"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-xs text-muted-foreground">Voltar para lista</span>
+          </div>
+        )}
+
+        <div className="flex items-center gap-3">
+          <FilePlus className="h-5 w-5 text-primary" />
+          <div>
+            <h3 className="font-semibold">Nova Anamnese</h3>
+            <p className="text-xs text-muted-foreground">
+              Selecione o modelo de anamnese para iniciar um novo registro em rascunho.
+            </p>
+          </div>
+        </div>
+
+        {(() => {
+          const baseTemplates = selectableTemplates.filter(t => getTemplateCategory(t) === 'avaliacao_base');
+          const proceduralTemplates = selectableTemplates.filter(t => getTemplateCategory(t) === 'procedural');
+          const renderTemplateCards = (label: string, templates: AnamnesisTemplateV2[]) => {
+            if (!templates.length) return null;
+            return (
+              <div className="space-y-2">
+                <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  {label}
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {templates.map(t => {
+                    const kind = classifyTemplate(t);
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => handleTemplateSelectedForCreate(t.id)}
+                        className={cn(
+                          "text-left p-3 rounded-lg border bg-card transition-all",
+                          "hover:bg-muted/50 hover:shadow-sm hover:border-primary/40",
+                          "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        )}
+                      >
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <FileText className="h-3.5 w-3.5 text-primary/70 flex-shrink-0" />
+                          <span className="text-sm font-medium truncate">{t.name}</span>
+                          {t.is_system && <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
+                        </div>
+                        <Badge variant="outline" className={cn('text-[10px]', kindBadgeClass(kind))}>
+                          {kindLabel(kind)}
+                        </Badge>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          };
+          return (
+            <div className="space-y-4">
+              {renderTemplateCards(CATEGORY_LABELS.avaliacao_base, baseTemplates)}
+              {renderTemplateCards(CATEGORY_LABELS.procedural, proceduralTemplates)}
+            </div>
+          );
+        })()}
       </div>
     );
   }
@@ -846,13 +977,7 @@ export function AnamneseEsteticaBlock({
             </h3>
           </div>
           {canEdit && (
-            <Button
-              size="sm"
-              onClick={() => {
-                setSelectedRecordId(null);
-                setIsCreatingNew(true);
-              }}
-            >
+            <Button size="sm" onClick={handleNewAnamnesisClick}>
               <Plus className="h-4 w-4 mr-1.5" />
               Nova Anamnese
             </Button>
@@ -866,10 +991,7 @@ export function AnamneseEsteticaBlock({
               <button
                 key={record.id}
                 type="button"
-                onClick={() => {
-                  setSelectedRecordId(record.id);
-                  if (record.template_id) setSelectedTemplateId(record.template_id);
-                }}
+                onClick={() => handleOpenExistingAnamnesis(record.id, record.template_id)}
                 className={cn(
                   "text-left p-3 rounded-lg border bg-card transition-all",
                   "hover:bg-muted/50 hover:shadow-sm hover:border-primary/40",
@@ -922,16 +1044,12 @@ export function AnamneseEsteticaBlock({
             size="sm"
             className="h-9 w-9 shrink-0 px-0"
             onClick={() => {
-              const goBack = () => {
-                setSelectedRecordId(null);
-                setIsCreatingNew(false);
-              };
               if (currentHasChanges) {
-                pendingNavigationRef.current = goBack;
+                pendingNavigationRef.current = handleBackToList;
                 setShowUnsavedDialog(true);
                 return;
               }
-              goBack();
+              handleBackToList();
             }}
             aria-label="Voltar para a lista de anamneses"
           >
