@@ -858,31 +858,108 @@ export function AnamneseEsteticaBlock({
             <FileText className="h-5 w-5 text-primary" />
             <h3 className="font-semibold">Anamnese Estética</h3>
           </div>
-          {renderTemplateSelector()}
         </div>
 
         <Card className="border-dashed">
           <CardContent className="p-8 text-center">
             <FileText className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-50" />
             <h3 className="font-semibold mb-3">Nenhuma anamnese registrada</h3>
-            <p className="text-sm text-muted-foreground mb-1">
-              {activeTemplate ? `Modelo: ${activeTemplate.name}` : 'Selecione um modelo para começar'}
+            <p className="text-sm text-muted-foreground mb-4">
+              Clique em "Nova Anamnese" para escolher o modelo e iniciar o registro.
             </p>
-            {activeKind && (
-              <Badge variant="outline" className={cn('mb-4 text-[10px]', kindBadgeClass(activeKind))}>
-                {kindLabel(activeKind)}
-              </Badge>
-            )}
             {canEdit && (
               <div>
-                <Button onClick={() => setIsCreatingNew(true)}>
+                <Button onClick={handleNewAnamnesisClick}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Registrar Anamnese
+                  Nova Anamnese
                 </Button>
               </div>
             )}
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  // ─── CREATE MODE — TEMPLATE PICKER STEP ─────────────────────────
+  // Triggered by "Nova Anamnese". User must explicitly pick a template
+  // before any new draft is created. Existing/signed records are NEVER
+  // shown or reused here.
+  if (isCreatingNew && !selectedTemplateId) {
+    return (
+      <div className="space-y-4">
+        {v2Records.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9 w-9 shrink-0 px-0"
+              onClick={handleBackToList}
+              aria-label="Voltar para a lista de anamneses"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-xs text-muted-foreground">Voltar para lista</span>
+          </div>
+        )}
+
+        <div className="flex items-center gap-3">
+          <FilePlus className="h-5 w-5 text-primary" />
+          <div>
+            <h3 className="font-semibold">Nova Anamnese</h3>
+            <p className="text-xs text-muted-foreground">
+              Selecione o modelo de anamnese para iniciar um novo registro em rascunho.
+            </p>
+          </div>
+        </div>
+
+        {(() => {
+          const baseTemplates = selectableTemplates.filter(t => getTemplateCategory(t) === 'avaliacao_base');
+          const proceduralTemplates = selectableTemplates.filter(t => getTemplateCategory(t) === 'procedural');
+          const renderTemplateCards = (label: string, templates: AnamnesisTemplateV2[]) => {
+            if (!templates.length) return null;
+            return (
+              <div className="space-y-2">
+                <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  {label}
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {templates.map(t => {
+                    const kind = classifyTemplate(t);
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => handleTemplateSelectedForCreate(t.id)}
+                        className={cn(
+                          "text-left p-3 rounded-lg border bg-card transition-all",
+                          "hover:bg-muted/50 hover:shadow-sm hover:border-primary/40",
+                          "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        )}
+                      >
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <FileText className="h-3.5 w-3.5 text-primary/70 flex-shrink-0" />
+                          <span className="text-sm font-medium truncate">{t.name}</span>
+                          {t.is_system && <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
+                        </div>
+                        <Badge variant="outline" className={cn('text-[10px]', kindBadgeClass(kind))}>
+                          {kindLabel(kind)}
+                        </Badge>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          };
+          return (
+            <div className="space-y-4">
+              {renderTemplateCards(CATEGORY_LABELS.avaliacao_base, baseTemplates)}
+              {renderTemplateCards(CATEGORY_LABELS.procedural, proceduralTemplates)}
+            </div>
+          );
+        })()}
       </div>
     );
   }
@@ -900,13 +977,7 @@ export function AnamneseEsteticaBlock({
             </h3>
           </div>
           {canEdit && (
-            <Button
-              size="sm"
-              onClick={() => {
-                setSelectedRecordId(null);
-                setIsCreatingNew(true);
-              }}
-            >
+            <Button size="sm" onClick={handleNewAnamnesisClick}>
               <Plus className="h-4 w-4 mr-1.5" />
               Nova Anamnese
             </Button>
@@ -920,10 +991,7 @@ export function AnamneseEsteticaBlock({
               <button
                 key={record.id}
                 type="button"
-                onClick={() => {
-                  setSelectedRecordId(record.id);
-                  if (record.template_id) setSelectedTemplateId(record.template_id);
-                }}
+                onClick={() => handleOpenExistingAnamnesis(record.id, record.template_id)}
                 className={cn(
                   "text-left p-3 rounded-lg border bg-card transition-all",
                   "hover:bg-muted/50 hover:shadow-sm hover:border-primary/40",
