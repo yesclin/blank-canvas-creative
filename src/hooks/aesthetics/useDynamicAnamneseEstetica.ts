@@ -62,7 +62,7 @@ export function useDynamicAnamneseEstetica({
   const fields: DynamicField[] = templateType ? (ADVANCED_TEMPLATE_MAP[templateType] || []) : [];
 
   const fetchRecord = useCallback(async () => {
-    if (!patientId || !clinic?.id || !templateId) {
+    if (!patientId || !clinic?.id || !templateId || skipFetch) {
       setRecord(null);
       return;
     }
@@ -104,7 +104,7 @@ export function useDynamicAnamneseEstetica({
     } finally {
       setLoading(false);
     }
-  }, [patientId, clinic?.id, templateId]);
+  }, [patientId, clinic?.id, templateId, skipFetch]);
 
   useEffect(() => {
     fetchRecord();
