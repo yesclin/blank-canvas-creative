@@ -226,9 +226,9 @@ export function AnamneseEsteticaBlock({
   const [standardRecord, setStandardRecord] = useState<any>(null);
   const [standardLoading, setStandardLoading] = useState(false);
 
-  // Load standard record when template changes
+  // Load standard record when template changes — but NOT when creating new (clean draft).
   useEffect(() => {
-    if (activeKind !== 'standard' || !patientId || !activeTemplate?.id || !clinicId) {
+    if (activeKind !== 'standard' || !patientId || !activeTemplate?.id || !clinicId || isCreatingNew) {
       setStandardRecord(null);
       setStandardValues({});
       return;
@@ -263,7 +263,7 @@ export function AnamneseEsteticaBlock({
     })();
 
     return () => { cancelled = true; };
-  }, [activeKind, patientId, clinicId, activeTemplate?.id]);
+  }, [activeKind, patientId, clinicId, activeTemplate?.id, isCreatingNew]);
 
   const handleStandardFieldChange = useCallback((fieldId: string, value: unknown) => {
     setStandardValues(prev => ({ ...prev, [fieldId]: value }));
