@@ -921,10 +921,10 @@ export function AnamneseEsteticaBlock({
             if (!templates.length) return null;
             return (
               <div className="space-y-2">
-                <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
                   {label}
                 </div>
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="w-full rounded-lg border bg-card divide-y divide-border overflow-hidden">
                   {templates.map(t => {
                     const kind = classifyTemplate(t);
                     return (
@@ -932,20 +932,25 @@ export function AnamneseEsteticaBlock({
                         key={t.id}
                         type="button"
                         onClick={() => handleTemplateSelectedForCreate(t.id)}
+                        title={t.name}
                         className={cn(
-                          "text-left p-3 rounded-lg border bg-card transition-all",
-                          "hover:bg-muted/50 hover:shadow-sm hover:border-primary/40",
-                          "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          "w-full text-left px-4 py-3 transition-colors",
+                          "flex items-center gap-3",
+                          "hover:bg-muted/50",
+                          "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+                          "cursor-pointer"
                         )}
                       >
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <FileText className="h-3.5 w-3.5 text-primary/70 flex-shrink-0" />
-                          <span className="text-sm font-medium truncate">{t.name}</span>
-                          {t.is_system && <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
-                        </div>
-                        <Badge variant="outline" className={cn('text-[10px]', kindBadgeClass(kind))}>
+                        <FileText className="h-4 w-4 text-primary/70 flex-shrink-0" />
+                        <span className="text-sm font-medium flex-1 min-w-0 line-clamp-2 break-words">
+                          {t.name}
+                        </span>
+                        <Badge variant="outline" className={cn('text-[10px] flex-shrink-0', kindBadgeClass(kind))}>
                           {kindLabel(kind)}
                         </Badge>
+                        {t.is_system && (
+                          <Lock className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                        )}
                       </button>
                     );
                   })}
