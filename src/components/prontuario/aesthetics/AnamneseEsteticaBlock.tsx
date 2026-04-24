@@ -989,45 +989,47 @@ export function AnamneseEsteticaBlock({
           )}
         </div>
 
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="w-full rounded-lg border bg-card divide-y divide-border overflow-hidden">
           {v2Records.map((record) => {
             const r = record as any;
+            const statusBadge = r.signed_at ? (
+              <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-700 border-emerald-200 flex-shrink-0">
+                Assinado
+              </Badge>
+            ) : r.locked_at ? (
+              <Badge variant="outline" className="text-[10px] flex-shrink-0">
+                Bloqueado
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-[10px] flex-shrink-0">
+                Rascunho
+              </Badge>
+            );
             return (
               <button
                 key={record.id}
                 type="button"
                 onClick={() => handleOpenExistingAnamnesis(record.id, record.template_id)}
+                title={record.template_name || 'Anamnese'}
                 className={cn(
-                  "text-left p-3 rounded-lg border bg-card transition-all",
-                  "hover:bg-muted/50 hover:shadow-sm hover:border-primary/40",
-                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  "w-full text-left px-4 py-3 transition-colors",
+                  "flex items-center gap-3",
+                  "hover:bg-muted/50",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+                  "cursor-pointer"
                 )}
               >
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <FileText className="h-3.5 w-3.5 text-primary/70 flex-shrink-0" />
-                  <span className="text-sm font-medium truncate">
+                <FileText className="h-4 w-4 text-primary/70 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium line-clamp-2 break-words">
                     {record.template_name || 'Anamnese'}
-                  </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-0.5">
+                    <Clock className="h-3 w-3" />
+                    {format(parseISO(record.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                  <Clock className="h-3 w-3" />
-                  {format(parseISO(record.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                </div>
-                {r.signed_at && (
-                  <Badge variant="outline" className="mt-2 text-[10px] bg-emerald-500/10 text-emerald-700 border-emerald-200">
-                    Assinado
-                  </Badge>
-                )}
-                {!r.signed_at && r.locked_at && (
-                  <Badge variant="outline" className="mt-2 text-[10px]">
-                    Bloqueado
-                  </Badge>
-                )}
-                {!r.signed_at && !r.locked_at && (
-                  <Badge variant="outline" className="mt-2 text-[10px]">
-                    Rascunho
-                  </Badge>
-                )}
+                {statusBadge}
               </button>
             );
           })}
