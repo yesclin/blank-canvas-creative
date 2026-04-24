@@ -46,7 +46,7 @@ export function ProcedureProductsSection({
   onChange,
   disabled = false,
 }: ProcedureProductsSectionProps) {
-  const { data: products = [], isLoading: productsLoading } = useProductsUnified();
+  const { data: products = [], isLoading: productsLoading } = useProducts();
   const { data: kits = [], isLoading: kitsLoading } = useInventoryKits(false);
   
   const [selectedItemKey, setSelectedItemKey] = useState<string>(""); // format: "product:id" or "kit:id"
