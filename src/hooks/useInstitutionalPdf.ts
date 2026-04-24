@@ -309,7 +309,28 @@ export function useInstitutionalPdf() {
     anamnese: AnamneseForPdf,
     sections: SecaoAnamnese[],
     professional?: ProfessionalInfo,
+    dynamicFields?: DynamicFieldLite[],
   ) => {
+    // ── VALIDATIONS ─────────────────────────────────────────────────
+    if (!anamnese?.id) {
+      toast.error('Selecione uma anamnese para gerar o PDF.');
+      return;
+    }
+    const responses = anamnese.structured_data || {};
+    const hasResponses = Object.values(responses).some(v => {
+      if (Array.isArray(v)) return v.length > 0;
+      return v !== undefined && v !== null && v !== '';
+    });
+    // Resolve sections: prefer explicit sections, else build from dynamic fields
+    let resolvedSections: SecaoAnamnese[] = sections;
+    if ((!resolvedSections || resolvedSections.length === 0) && dynamicFields && dynamicFields.length > 0) {
+      resolvedSections = groupDynamicFieldsIntoSections(dynamicFields);
+    }
+    if (!hasResponses) {
+      toast.error('Nenhuma resposta preenchida para esta anamnese.');
+      return;
+    }
+
     setGenerating(true);
     try {
       // Build clinic info from clinic data
