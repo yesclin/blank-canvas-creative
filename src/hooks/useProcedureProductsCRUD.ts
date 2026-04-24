@@ -83,16 +83,12 @@ export function useCreateProcedureProduct() {
   
   return useMutation({
     mutationFn: async (formData: ProcedureProductFormData) => {
-      const clinicId = await getClinicId();
-      
       const { data, error } = await supabase
         .from('procedure_products')
         .insert({
-          clinic_id: clinicId,
           procedure_id: formData.procedure_id,
           product_id: formData.product_id,
           quantity: formData.quantity,
-          notes: formData.notes || null,
         })
         .select()
         .single();
@@ -100,6 +96,9 @@ export function useCreateProcedureProduct() {
       if (error) {
         if (error.code === '23505') {
           throw new Error('Este produto já está vinculado ao procedimento');
+        }
+        if (error.code === '23503') {
+          throw new Error('Produto inválido. Cadastre o item em Estoque → Produtos antes de vincular.');
         }
         throw error;
       }
@@ -127,8 +126,6 @@ export function useUpdateProcedureProduct() {
         .from('procedure_products')
         .update({
           quantity: formData.quantity,
-          notes: formData.notes,
-          updated_at: new Date().toISOString(),
         })
         .eq('id', id)
         .select()
