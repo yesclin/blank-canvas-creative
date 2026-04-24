@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { useProductsUnified } from "@/hooks/useProductsCompat";
+import { useProducts } from "@/hooks/useProducts";
 import { useInventoryKits, type InventoryKit } from "@/hooks/useProcedureConsumption";
 import type { Product } from "@/types/inventory";
 
