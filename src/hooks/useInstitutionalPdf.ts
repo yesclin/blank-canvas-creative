@@ -14,6 +14,154 @@ import {
   registerClinicalDocument,
 } from '@/utils/documentControl';
 import { logAudit } from '@/utils/auditLog';
+import { escapeHtml } from '@/lib/htmlEscape';
+
+// ─── Signature lookup ────────────────────────────────────────────
+
+interface AnamnesisSignatureBlock {
+  signed: boolean;
+  signed_at?: string | null;
+  signed_by_name?: string | null;
+  signed_by_registration?: string | null;
+  ip_address?: string | null;
+  geolocation?: { latitude?: number | null; longitude?: number | null; status?: string | null } | null;
+  signature_hash?: string | null;
+  signature_image_url?: string | null; // data URL or signed URL — directly embeddable
+  signature_id?: string | null;
+}
+
+/**
+ * Fetches the digital signature linked to a specific anamnesis record id.
+ * Looks ONLY at medical_record_signatures with record_type='anamnesis'
+ * and record_id = anamnesisRecordId. Never falls back to other records.
+ */
+export async function getAnamnesisSignature(
+  anamnesisRecordId: string,
+): Promise<AnamnesisSignatureBlock> {
+  if (!anamnesisRecordId) return { signed: false };
+  try {
+    const { data, error } = await supabase
+      .from('medical_record_signatures')
+      .select(
+        'id, signed_at, signed_by_name, signed_by_professional_id, ip_address, geolocation, signature_hash, evidence_snapshot, handwritten_path, is_revoked'
+      )
+      .eq('record_id', anamnesisRecordId)
+      .eq('record_type', 'anamnesis')
+      .eq('is_revoked', false)
+      .order('signed_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error || !data) return { signed: false };
+
+    // Prefer the immutable embedded data URL; fall back to a signed URL for the path.
+    let signatureImage: string | null =
+      (data.evidence_snapshot as any)?.signature_data_url || null;
+
+    if (!signatureImage && data.handwritten_path) {
+      const { data: signed } = await supabase.storage
+        .from('signature-evidence')
+        .createSignedUrl(data.handwritten_path, 60 * 30);
+      signatureImage = signed?.signedUrl || null;
+    }
+
+    // Resolve professional registration (CRM/CRP/etc.) if available.
+    let registration: string | null = null;
+    if (data.signed_by_professional_id) {
+      try {
+        const { data: prof } = await supabase
+          .from('professionals')
+          .select('council_number, council_type, council_state')
+          .eq('id', data.signed_by_professional_id)
+          .maybeSingle();
+        if (prof?.council_number) {
+          const parts = [prof.council_type, prof.council_number, prof.council_state]
+            .filter(Boolean)
+            .join(' ');
+          registration = parts || prof.council_number;
+        }
+      } catch { /* ignore */ }
+    }
+
+    return {
+      signed: true,
+      signed_at: data.signed_at,
+      signed_by_name: data.signed_by_name,
+      signed_by_registration: registration,
+      ip_address: data.ip_address,
+      geolocation: (data.geolocation as any) || null,
+      signature_hash: data.signature_hash,
+      signature_image_url: signatureImage,
+      signature_id: data.id,
+    };
+  } catch (e) {
+    console.warn('[PDF] getAnamnesisSignature failed:', e);
+    return { signed: false };
+  }
+}
+
+function buildSignatureBlockHtml(sig: AnamnesisSignatureBlock): string {
+  if (!sig.signed) {
+    return `
+      <div style="margin-top:24px;padding:14px 16px;border:1px dashed #d1d5db;border-radius:6px;background:#fafafa;">
+        <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:#6b7280;text-transform:uppercase;margin-bottom:4px;">Assinatura Digital</div>
+        <div style="font-size:10px;color:#6b7280;">Documento não assinado digitalmente.</div>
+      </div>`;
+  }
+
+  const dateStr = sig.signed_at
+    ? format(new Date(sig.signed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+    : '—';
+
+  const lines: string[] = [];
+  lines.push(
+    `<div style="font-size:10px;color:#1f2937;margin-bottom:4px;">Documento assinado digitalmente por:</div>`
+  );
+  lines.push(
+    `<div style="font-size:12px;font-weight:700;color:#111827;">${escapeHtml(sig.signed_by_name || '—')}</div>`
+  );
+  if (sig.signed_by_registration) {
+    lines.push(
+      `<div style="font-size:9px;color:#6b7280;margin-top:1px;">${escapeHtml(sig.signed_by_registration)}</div>`
+    );
+  }
+  lines.push(
+    `<div style="font-size:9px;color:#374151;margin-top:6px;">Assinado em: <strong>${dateStr}</strong></div>`
+  );
+  if (sig.ip_address) {
+    lines.push(
+      `<div style="font-size:9px;color:#6b7280;margin-top:1px;">IP: ${escapeHtml(sig.ip_address)}</div>`
+    );
+  }
+  if (sig.geolocation && (sig.geolocation.latitude != null || sig.geolocation.longitude != null)) {
+    const lat = sig.geolocation.latitude;
+    const lng = sig.geolocation.longitude;
+    lines.push(
+      `<div style="font-size:9px;color:#6b7280;margin-top:1px;">Localização: ${lat}, ${lng}</div>`
+    );
+  }
+  if (sig.signature_hash) {
+    lines.push(
+      `<div style="font-size:8px;color:#9ca3af;margin-top:4px;word-break:break-all;font-family:'Courier New',monospace;">Hash: ${escapeHtml(sig.signature_hash)}</div>`
+    );
+  }
+
+  const imageHtml = sig.signature_image_url
+    ? `<div style="margin-top:10px;">
+         <img src="${sig.signature_image_url}" crossorigin="anonymous" style="max-height:70px;max-width:240px;object-fit:contain;background:white;padding:4px;border:1px solid #e5e7eb;border-radius:4px;" />
+       </div>`
+    : '';
+
+  return `
+    <div style="margin-top:24px;padding:14px 16px;border:1px solid #bfdbfe;border-radius:6px;background:#eff6ff;page-break-inside:avoid;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:1.2px;color:#1d4ed8;text-transform:uppercase;">Assinatura Digital</div>
+        <span style="display:inline-block;padding:2px 8px;font-size:8px;font-weight:700;letter-spacing:1px;color:#065f46;background:#d1fae5;border:1px solid #a7f3d0;border-radius:999px;">VÁLIDA</span>
+      </div>
+      ${lines.join('')}
+      ${imageHtml}
+    </div>`;
+}
 
 export interface PatientInfo {
   name: string;
