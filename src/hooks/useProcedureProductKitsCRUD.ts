@@ -7,23 +7,6 @@ import type {
 } from '@/types/product-kits';
 
 // =============================================
-// HELPER: Get clinic_id from current user
-// =============================================
-async function getClinicId(): Promise<string> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Usuário não autenticado');
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('clinic_id')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile?.clinic_id) throw new Error('Clínica não encontrada');
-  return profile.clinic_id;
-}
-
-// =============================================
 // QUERIES
 // =============================================
 
@@ -37,7 +20,7 @@ export function useProcedureProductKitsByProcedure(procedureId: string | null) {
         .from('procedure_product_kits')
         .select(`
           *,
-          product_kits:kit_id (
+          product_kits:product_kit_id (
             name,
             product_kit_items (
               quantity,
@@ -59,6 +42,7 @@ export function useProcedureProductKitsByProcedure(procedureId: string | null) {
 
         return {
           ...item,
+          kit_id: item.product_kit_id, // backwards-compat alias for UI
           kit_name: item.product_kits?.name,
           kit_total_cost: kitTotalCost * item.quantity,
         } as ProcedureProductKit;
@@ -78,7 +62,7 @@ export function useKitUsageCount(kitId: string | null) {
       const { count, error } = await supabase
         .from('procedure_product_kits')
         .select('*', { count: 'exact', head: true })
-        .eq('kit_id', kitId);
+        .eq('product_kit_id', kitId);
 
       if (error) throw error;
       return count || 0;
@@ -94,13 +78,13 @@ export function useKitsUsageCount() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('procedure_product_kits')
-        .select('kit_id');
+        .select('product_kit_id');
 
       if (error) throw error;
 
       const counts: Record<string, number> = {};
       (data || []).forEach((item: any) => {
-        counts[item.kit_id] = (counts[item.kit_id] || 0) + 1;
+        counts[item.product_kit_id] = (counts[item.product_kit_id] || 0) + 1;
       });
 
       return counts;
@@ -117,16 +101,12 @@ export function useCreateProcedureProductKit() {
 
   return useMutation({
     mutationFn: async (formData: ProcedureProductKitFormData) => {
-      const clinicId = await getClinicId();
-
       const { data, error } = await supabase
         .from('procedure_product_kits')
         .insert({
-          clinic_id: clinicId,
           procedure_id: formData.procedure_id,
-          kit_id: formData.kit_id,
+          product_kit_id: formData.kit_id,
           quantity: formData.quantity,
-          is_required: formData.is_required,
         })
         .select()
         .single();
@@ -134,6 +114,9 @@ export function useCreateProcedureProductKit() {
       if (error) {
         if (error.code === '23505') {
           throw new Error('Este kit já está vinculado ao procedimento');
+        }
+        if (error.code === '23503') {
+          throw new Error('Kit inválido. Cadastre o kit em Estoque → Kits antes de vincular.');
         }
         throw error;
       }
@@ -156,16 +139,15 @@ export function useUpdateProcedureProductKit() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, procedureId, formData }: { 
-      id: string; 
-      procedureId: string; 
-      formData: Partial<ProcedureProductKitFormData> 
+    mutationFn: async ({ id, procedureId, formData }: {
+      id: string;
+      procedureId: string;
+      formData: Partial<ProcedureProductKitFormData>
     }) => {
       const { data, error } = await supabase
         .from('procedure_product_kits')
         .update({
           quantity: formData.quantity,
-          is_required: formData.is_required,
         })
         .eq('id', id)
         .select()
