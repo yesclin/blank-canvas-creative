@@ -364,7 +364,7 @@ export function useInstitutionalPdf() {
       }
 
       // Build HTML for hash (without QR)
-      const htmlForHash = buildPremiumHtml(clinicInfo, patient, profInfo, anamnese, sections, settings, docReference);
+      const htmlForHash = buildPremiumHtml(clinicInfo, patient, profInfo, anamnese, resolvedSections, settings, docReference);
       const documentHash = await generateHash(htmlForHash);
 
       // Register document to get UUID for QR code
@@ -400,7 +400,7 @@ export function useInstitutionalPdf() {
       }
 
       // Build final HTML with QR
-      const html = buildPremiumHtml(clinicInfo, patient, profInfo, anamnese, sections, settings, docReference, docId, qrCodeDataUrl);
+      const html = buildPremiumHtml(clinicInfo, patient, profInfo, anamnese, resolvedSections, settings, docReference, docId, qrCodeDataUrl);
 
       // Render to canvas
       const container = document.createElement('div');
