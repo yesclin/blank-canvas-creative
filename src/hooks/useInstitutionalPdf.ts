@@ -221,10 +221,16 @@ function buildPremiumHtml(
       </div>
     </div>`;
 
-  // ── Document Title ──
+  // ── Document Title (uses template name when available) ──
+  const titleText = (anamnese.template_name && anamnese.template_name.trim())
+    ? anamnese.template_name.toUpperCase()
+    : 'ANAMNESE CLÍNICA';
+  const signedBadge = anamnese.signed_at
+    ? `<span style="display:inline-block;margin-left:8px;padding:2px 8px;font-size:8px;font-weight:700;letter-spacing:1px;color:#1d4ed8;background:#dbeafe;border:1px solid #bfdbfe;border-radius:999px;vertical-align:middle;">ASSINADO</span>`
+    : '';
   const titleHtml = `
     <div style="margin:16px 20mm 0 20mm;text-align:center;">
-      <div style="font-size:13px;font-weight:700;color:${pc};letter-spacing:2px;text-transform:uppercase;">ANAMNESE CLÍNICA</div>
+      <div style="font-size:13px;font-weight:700;color:${pc};letter-spacing:1.5px;text-transform:uppercase;">${titleText}${signedBadge}</div>
       ${docReference ? `<div style="font-size:8px;color:#9ca3af;margin-top:3px;">${docReference}</div>` : ''}
     </div>`;
 
