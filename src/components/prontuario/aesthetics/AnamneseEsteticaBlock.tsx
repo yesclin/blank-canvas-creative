@@ -177,25 +177,24 @@ export function AnamneseEsteticaBlock({
       });
   }, [allTemplates]);
 
-  // Active template
+  // Active template:
+  // - In CREATE mode: ONLY use the explicitly selected template (no auto-pick).
+  //   This forces the user to choose a model before any record is created/loaded.
+  // - In VIEW mode (selectedRecordId set): use the template of the selected record.
+  // - In LIST mode (no record + no creation): no active template until user acts.
   const activeTemplate = useMemo(() => {
     if (!selectableTemplates.length) return null;
     if (selectedTemplateId) {
       const found = selectableTemplates.find(t => t.id === selectedTemplateId);
       if (found) return found;
     }
-    const defaultTpl = selectableTemplates.find(t => t.is_default);
-    return defaultTpl || selectableTemplates[0];
+    return null;
   }, [selectableTemplates, selectedTemplateId]);
 
   const activeKind = activeTemplate ? classifyTemplate(activeTemplate) : null;
 
-  // Auto-select first template
-  useEffect(() => {
-    if (activeTemplate && !selectedTemplateId) {
-      setSelectedTemplateId(activeTemplate.id);
-    }
-  }, [activeTemplate, selectedTemplateId]);
+  // NOTE: Removed auto-selection of first/default template. The user must
+  // explicitly pick a template via "Nova Anamnese" or by opening a record.
 
   // ─── Advanced dynamic pipeline ──────────────────────────────────
   const templateType = activeTemplate?.template_type || null;
