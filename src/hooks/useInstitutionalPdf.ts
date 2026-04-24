@@ -311,6 +311,7 @@ function buildPremiumHtml(
   docReference?: string,
   docId?: string,
   qrCodeDataUrl?: string,
+  signatureBlock?: AnamnesisSignatureBlock,
 ): string {
   const s = settings || (DOCUMENT_DEFAULTS as unknown as DocumentSettings);
   const pc = s.primary_color || '#2563eb';
