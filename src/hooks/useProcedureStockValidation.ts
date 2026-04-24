@@ -64,7 +64,7 @@ export function useProcedureStockValidation(procedureId: string | null | undefin
           products:product_id (
             id,
             name,
-            stock_quantity
+            current_stock
           )
         `)
         .eq("procedure_id", procedureId);
@@ -83,7 +83,7 @@ export function useProcedureStockValidation(procedureId: string | null | undefin
       const items: StockValidationItem[] = procedureProducts.map((pp: any) => {
         const product = pp.products;
         const requiredQuantity = pp.quantity;
-        const availableStock = product?.stock_quantity ?? 0;
+        const availableStock = product?.current_stock ?? 0;
         const hasEnoughStock = availableStock >= requiredQuantity;
         const deficit = hasEnoughStock ? 0 : requiredQuantity - availableStock;
 
@@ -136,7 +136,7 @@ export async function validateProcedureStock(
       products:product_id (
         id,
         name,
-        stock_quantity
+        current_stock
       )
     `)
     .eq("procedure_id", procedureId);
@@ -155,7 +155,7 @@ export async function validateProcedureStock(
   const items: StockValidationItem[] = procedureProducts.map((pp: any) => {
     const product = pp.products;
     const requiredQuantity = pp.quantity;
-    const availableStock = product?.stock_quantity ?? 0;
+    const availableStock = product?.current_stock ?? 0;
     const hasEnoughStock = availableStock >= requiredQuantity;
     const deficit = hasEnoughStock ? 0 : requiredQuantity - availableStock;
 
