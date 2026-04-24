@@ -199,12 +199,81 @@ export function AppointmentMaterialsDialog({
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
-          ) : materials.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Package className="h-12 w-12 mx-auto mb-2 opacity-30" />
-              <p>Nenhum material vinculado a este procedimento</p>
+          ) : materials.length === 0 && !addingExtra ? (
+            <div className="text-center py-8">
+              <Package className="h-12 w-12 mx-auto mb-3 text-muted-foreground/40" />
+              <p className="text-muted-foreground mb-4">
+                Nenhum material vinculado ao procedimento
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => setAddingExtra(true)}
+                className="border-dashed"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Material Manualmente
+              </Button>
             </div>
-          ) : (
+          ) : materials.length === 0 && addingExtra ? (
+            <div className="space-y-3">
+              <div className="p-3 border rounded-lg border-dashed bg-muted/20">
+                <div className="grid gap-3">
+                  <div className="grid gap-2">
+                    <Label>Material</Label>
+                    <Select value={extraMaterialId} onValueChange={setExtraMaterialId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o material" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableMaterials.map((mat) => (
+                          <SelectItem key={mat.id} value={mat.id}>
+                            {mat.name} {mat.unit_cost ? `(${formatCurrency(mat.unit_cost)})` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-2">
+                      <Label>Quantidade</Label>
+                      <Input
+                        type="number"
+                        value={extraQuantity}
+                        onChange={(e) => setExtraQuantity(parseFloat(e.target.value) || 1)}
+                        min={0.01}
+                        step={0.01}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Unidade</Label>
+                      <Select value={extraUnit} onValueChange={setExtraUnit}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {materialUnits.map((unit) => (
+                            <SelectItem key={unit.value} value={unit.value}>
+                              {unit.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={handleAddExtra} disabled={!extraMaterialId}>
+                      <Check className="h-4 w-4 mr-1" />
+                      Adicionar
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setAddingExtra(false)}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+          {materials.length > 0 && (
             <div className="space-y-3">
               {materials.map((material, index) => (
                 <div 
