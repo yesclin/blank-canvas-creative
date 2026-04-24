@@ -1261,18 +1261,8 @@ export function AnamneseBlock({
               {format(parseISO(selectedRecord?.created_at || currentAnamnese!.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
             </span>
           )}
-          {/* PDF only when an anamnesis is explicitly selected (modo detalhe).
-              Use the selected V2 record as the single source of truth — no
-              fallback to legacy currentAnamnese or to the first record. */}
-          {selectedRecord && (
+          {currentAnamnese && (
             <Button variant="ghost" size="sm" disabled={generating} onClick={() => {
-              const recordForPdf = {
-                id: selectedRecord.id,
-                structured_data: (selectedRecord.responses as Record<string, unknown>) || {},
-                created_at: selectedRecord.created_at,
-                created_by_name: (selectedRecord as any).created_by_name || (selectedRecord as any).professional_name,
-                template_id: selectedRecord.template_id || undefined,
-              };
               generateAnamnesisPdf(
                 {
                   name: patientName || 'Paciente',
@@ -1284,10 +1274,10 @@ export function AnamneseBlock({
                   insurance_name: patientData?.insurance_name || patientData?.convenio,
                   birth_date: patientData?.birth_date || patientData?.data_nascimento,
                 },
-                recordForPdf,
+                currentAnamnese,
                 viewTemplate?.secoes || [],
                 {
-                  name: recordForPdf.created_by_name,
+                  name: currentAnamnese.created_by_name,
                   specialty: specialtyName || undefined,
                 },
               );

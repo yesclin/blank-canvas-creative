@@ -55,6 +55,47 @@ interface AnamneseForPdf {
   created_at: string;
   created_by_name?: string;
   template_id?: string;
+  template_name?: string;
+  signed_at?: string | null;
+}
+
+/**
+ * Flat dynamic field shape — used by aesthetics dynamic templates.
+ * Compatible with DynamicField from anamnese-fields/types and with
+ * structure_snapshot rows persisted in anamnesis_records.
+ */
+interface DynamicFieldLite {
+  id: string;
+  label: string;
+  section?: string;
+  type?: string;
+}
+
+/**
+ * Groups a flat list of dynamic fields into SecaoAnamnese[] using `section`
+ * as the grouping key, preserving original field order.
+ */
+function groupDynamicFieldsIntoSections(fields: DynamicFieldLite[]): SecaoAnamnese[] {
+  const groups = new Map<string, SecaoAnamnese>();
+  const order: string[] = [];
+  for (const f of fields) {
+    const key = (f.section && f.section.trim()) || 'Anamnese';
+    if (!groups.has(key)) {
+      groups.set(key, {
+        id: key.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
+        titulo: key,
+        icon: 'FileText',
+        campos: [],
+      });
+      order.push(key);
+    }
+    groups.get(key)!.campos.push({
+      id: f.id,
+      label: f.label,
+      type: 'text',
+    });
+  }
+  return order.map(k => groups.get(k)!);
 }
 
 // ─── Content Builder ─────────────────────────────────────────────
@@ -180,10 +221,16 @@ function buildPremiumHtml(
       </div>
     </div>`;
 
-  // ── Document Title ──
+  // ── Document Title (uses template name when available) ──
+  const titleText = (anamnese.template_name && anamnese.template_name.trim())
+    ? anamnese.template_name.toUpperCase()
+    : 'ANAMNESE CLÍNICA';
+  const signedBadge = anamnese.signed_at
+    ? `<span style="display:inline-block;margin-left:8px;padding:2px 8px;font-size:8px;font-weight:700;letter-spacing:1px;color:#1d4ed8;background:#dbeafe;border:1px solid #bfdbfe;border-radius:999px;vertical-align:middle;">ASSINADO</span>`
+    : '';
   const titleHtml = `
     <div style="margin:16px 20mm 0 20mm;text-align:center;">
-      <div style="font-size:13px;font-weight:700;color:${pc};letter-spacing:2px;text-transform:uppercase;">ANAMNESE CLÍNICA</div>
+      <div style="font-size:13px;font-weight:700;color:${pc};letter-spacing:1.5px;text-transform:uppercase;">${titleText}${signedBadge}</div>
       ${docReference ? `<div style="font-size:8px;color:#9ca3af;margin-top:3px;">${docReference}</div>` : ''}
     </div>`;
 
@@ -262,7 +309,28 @@ export function useInstitutionalPdf() {
     anamnese: AnamneseForPdf,
     sections: SecaoAnamnese[],
     professional?: ProfessionalInfo,
+    dynamicFields?: DynamicFieldLite[],
   ) => {
+    // ── VALIDATIONS ─────────────────────────────────────────────────
+    if (!anamnese?.id) {
+      toast.error('Selecione uma anamnese para gerar o PDF.');
+      return;
+    }
+    const responses = anamnese.structured_data || {};
+    const hasResponses = Object.values(responses).some(v => {
+      if (Array.isArray(v)) return v.length > 0;
+      return v !== undefined && v !== null && v !== '';
+    });
+    // Resolve sections: prefer explicit sections, else build from dynamic fields
+    let resolvedSections: SecaoAnamnese[] = sections;
+    if ((!resolvedSections || resolvedSections.length === 0) && dynamicFields && dynamicFields.length > 0) {
+      resolvedSections = groupDynamicFieldsIntoSections(dynamicFields);
+    }
+    if (!hasResponses) {
+      toast.error('Nenhuma resposta preenchida para esta anamnese.');
+      return;
+    }
+
     setGenerating(true);
     try {
       // Build clinic info from clinic data
@@ -296,7 +364,7 @@ export function useInstitutionalPdf() {
       }
 
       // Build HTML for hash (without QR)
-      const htmlForHash = buildPremiumHtml(clinicInfo, patient, profInfo, anamnese, sections, settings, docReference);
+      const htmlForHash = buildPremiumHtml(clinicInfo, patient, profInfo, anamnese, resolvedSections, settings, docReference);
       const documentHash = await generateHash(htmlForHash);
 
       // Register document to get UUID for QR code
@@ -332,7 +400,7 @@ export function useInstitutionalPdf() {
       }
 
       // Build final HTML with QR
-      const html = buildPremiumHtml(clinicInfo, patient, profInfo, anamnese, sections, settings, docReference, docId, qrCodeDataUrl);
+      const html = buildPremiumHtml(clinicInfo, patient, profInfo, anamnese, resolvedSections, settings, docReference, docId, qrCodeDataUrl);
 
       // Render to canvas
       const container = document.createElement('div');
