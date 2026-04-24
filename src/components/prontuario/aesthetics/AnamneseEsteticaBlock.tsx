@@ -215,6 +215,8 @@ export function AnamneseEsteticaBlock({
     templateVersionId: isAdvanced ? activeTemplate?.current_version_id || null : null,
     templateType,
     specialtyId,
+    // In CREATE mode, do NOT fetch the latest existing record — start from a clean draft.
+    skipFetch: isCreatingNew,
   });
 
   // ─── Standard template state (for legacy/standard templates) ────
