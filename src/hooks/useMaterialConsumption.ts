@@ -128,39 +128,106 @@ export function useUpdateAutoConsumptionConfig() {
 // =============================================
 // BUSCAR MATERIAIS PARA CONSUMO DE UM ATENDIMENTO
 // =============================================
+// Lê de procedure_products + procedure_product_kits (modelo atual baseado em
+// `products`). Mantém fallback para procedure_materials/procedure_kits do
+// modelo antigo (caso ainda exista algum vínculo legado).
 
 export function useAppointmentMaterials(appointmentId: string | null) {
   return useQuery({
     queryKey: ['appointment-materials', appointmentId],
     queryFn: async (): Promise<MaterialConsumptionItem[]> => {
       if (!appointmentId) return [];
-      
+
       // Get appointment details
       const { data: appointment, error: appError } = await supabase
         .from('appointments')
         .select('procedure_id')
         .eq('id', appointmentId)
         .single();
-        
+
       if (appError || !appointment?.procedure_id) return [];
-      
+
       const procedureId = appointment.procedure_id;
       const items: MaterialConsumptionItem[] = [];
-      
-      // Get direct materials linked to procedure
-      const { data: materials, error: matError } = await supabase
-        .from('procedure_materials')
+
+      // === MODELO ATUAL: procedure_products → products ===
+      const { data: procedureProducts } = await supabase
+        .from('procedure_products')
         .select(`
           quantity,
-          unit,
-          is_required,
-          allow_manual_edit,
-          materials:material_id (id, name, unit_cost, is_active)
+          products:product_id (id, name, unit, cost_price, is_active)
         `)
         .eq('procedure_id', procedureId);
-        
-      if (!matError && materials) {
-        materials.forEach((pm: any) => {
+
+      (procedureProducts || []).forEach((pp: any) => {
+        const prod = pp.products;
+        if (prod && prod.is_active !== false) {
+          items.push({
+            material_id: prod.id,
+            material_name: prod.name,
+            quantity: Number(pp.quantity) || 0,
+            unit: prod.unit || 'un',
+            unit_cost: Number(prod.cost_price) || 0,
+            source: 'procedure',
+            is_required: false,
+            allow_manual_edit: true,
+          });
+        }
+      });
+
+      // === MODELO ATUAL: procedure_product_kits → product_kits → product_kit_items → products ===
+      const { data: procedureKits } = await supabase
+        .from('procedure_product_kits')
+        .select(`
+          quantity,
+          product_kits:product_kit_id (
+            id,
+            name,
+            is_active,
+            product_kit_items (
+              quantity,
+              products:product_id (id, name, unit, cost_price, is_active)
+            )
+          )
+        `)
+        .eq('procedure_id', procedureId);
+
+      (procedureKits || []).forEach((pk: any) => {
+        const kit = pk.product_kits;
+        if (!kit || kit.is_active === false) return;
+        (kit.product_kit_items || []).forEach((kitItem: any) => {
+          const prod = kitItem.products;
+          if (prod && prod.is_active !== false) {
+            items.push({
+              material_id: prod.id,
+              material_name: prod.name,
+              quantity: (Number(kitItem.quantity) || 0) * (Number(pk.quantity) || 1),
+              unit: prod.unit || 'un',
+              unit_cost: Number(prod.cost_price) || 0,
+              source: 'kit',
+              kit_id: kit.id,
+              kit_name: kit.name,
+              is_required: false,
+              allow_manual_edit: false,
+            });
+          }
+        });
+      });
+
+      // === LEGADO: procedure_materials (caso a tabela ainda exista) ===
+      try {
+        const { data: legacyMaterials } = await supabase
+          .from('procedure_materials')
+          .select(`
+            quantity,
+            unit,
+            is_required,
+            allow_manual_edit,
+            materials:material_id (id, name, unit_cost, is_active)
+          `)
+          .eq('procedure_id', procedureId);
+
+        (legacyMaterials || []).forEach((pm: any) => {
           if (pm.materials?.is_active) {
             items.push({
               material_id: pm.materials.id,
@@ -174,51 +241,10 @@ export function useAppointmentMaterials(appointmentId: string | null) {
             });
           }
         });
+      } catch {
+        // tabela legada ausente — ignorar
       }
-      
-      // Get kits linked to procedure
-      const { data: kits, error: kitError } = await supabase
-        .from('procedure_kits')
-        .select(`
-          quantity,
-          is_required,
-          material_kits:kit_id (
-            id,
-            name,
-            is_active,
-            material_kit_items (
-              quantity,
-              unit,
-              materials:material_id (id, name, unit_cost, is_active)
-            )
-          )
-        `)
-        .eq('procedure_id', procedureId);
-        
-      if (!kitError && kits) {
-        kits.forEach((pk: any) => {
-          if (pk.material_kits?.is_active) {
-            const kitItems = pk.material_kits.material_kit_items || [];
-            kitItems.forEach((item: any) => {
-              if (item.materials?.is_active) {
-                items.push({
-                  material_id: item.materials.id,
-                  material_name: item.materials.name,
-                  quantity: item.quantity * pk.quantity,
-                  unit: item.unit,
-                  unit_cost: item.materials.unit_cost || 0,
-                  source: 'kit',
-                  kit_id: pk.material_kits.id,
-                  kit_name: pk.material_kits.name,
-                  is_required: pk.is_required,
-                  allow_manual_edit: false,
-                });
-              }
-            });
-          }
-        });
-      }
-      
+
       return items;
     },
     enabled: !!appointmentId,
@@ -228,64 +254,129 @@ export function useAppointmentMaterials(appointmentId: string | null) {
 // =============================================
 // PROCESSAR CONSUMO DE MATERIAIS
 // =============================================
+// Registra cada item como saída em `stock_movements` (modelo atual). A baixa
+// do `current_stock` é feita pelo trigger do banco que recalcula a partir das
+// movimentações. Caso não haja trigger, fazemos update manual no produto.
 
 export function useProcessMaterialConsumption() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async ({ 
-      appointmentId, 
-      materials 
-    }: { 
-      appointmentId: string; 
+    mutationFn: async ({
+      appointmentId,
+      materials,
+    }: {
+      appointmentId: string;
       materials: MaterialConsumptionItem[];
     }) => {
-      const { data, error } = await supabase.rpc('process_material_consumption', {
-        p_appointment_id: appointmentId,
-        p_materials: materials.map(m => ({
-          material_id: m.material_id,
-          quantity: m.quantity,
-          unit: m.unit,
-          unit_cost: m.unit_cost,
-          kit_id: m.kit_id || null,
-          source: m.source,
-          consumption_type: 'automatic',
-        })),
-      });
-      
-      if (error) throw error;
-      
-      // Parse result as the expected type
-      const result = data as { 
-        success: boolean; 
-        consumed_count?: number; 
-        alerts_count?: number;
-        total_cost?: number;
-        message?: string;
-        error?: string;
-      } | null;
-      
-      return result;
+      const clinicId = await getClinicId();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Get appointment context for audit
+      const { data: appointment } = await supabase
+        .from('appointments')
+        .select('procedure_id, patient_id, professional_id')
+        .eq('id', appointmentId)
+        .single();
+
+      let consumedCount = 0;
+      let alertsCount = 0;
+      let totalCost = 0;
+      const insufficientStock: string[] = [];
+
+      for (const m of materials) {
+        if (!m.material_id || m.quantity <= 0) continue;
+
+        // Verificar estoque atual do produto
+        const { data: product } = await supabase
+          .from('products')
+          .select('id, name, current_stock, cost_price, min_stock')
+          .eq('id', m.material_id)
+          .single();
+
+        if (!product) continue;
+
+        const previous = Number(product.current_stock) || 0;
+        if (previous < m.quantity) {
+          insufficientStock.push(`${product.name} (disp: ${previous}, necessário: ${m.quantity})`);
+          continue;
+        }
+
+        const newQty = previous - m.quantity;
+        const unitCost = Number(m.unit_cost) || Number(product.cost_price) || 0;
+
+        // Registrar movimento de saída
+        const { error: movErr } = await supabase
+          .from('stock_movements')
+          .insert({
+            clinic_id: clinicId,
+            product_id: m.material_id,
+            movement_type: 'saida',
+            quantity: m.quantity,
+            unit_cost: unitCost,
+            reference_type: 'appointment',
+            reference_id: appointmentId,
+            notes: `Consumo em atendimento${m.source === 'kit' ? ` (kit: ${m.kit_name})` : ''}${m.source === 'extra' ? ' (extra)' : ''}`,
+            performed_by: user?.id || null,
+          });
+
+        if (movErr) throw movErr;
+
+        // Atualizar saldo do produto
+        const { error: updErr } = await supabase
+          .from('products')
+          .update({
+            current_stock: newQty,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', m.material_id);
+
+        if (updErr) throw updErr;
+
+        consumedCount++;
+        totalCost += m.quantity * unitCost;
+
+        // Detectar alerta de estoque mínimo
+        const minStock = Number(product.min_stock) || 0;
+        if (minStock > 0 && newQty <= minStock) {
+          alertsCount++;
+        }
+      }
+
+      if (insufficientStock.length > 0) {
+        throw new Error(`Estoque insuficiente para: ${insufficientStock.join('; ')}`);
+      }
+
+      return {
+        success: true,
+        consumed_count: consumedCount,
+        alerts_count: alertsCount,
+        total_cost: totalCost,
+      };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['material-consumption'] });
       queryClient.invalidateQueries({ queryKey: ['stock-alerts'] });
       queryClient.invalidateQueries({ queryKey: ['materials-list'] });
-      
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-products'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-stats'] });
+
       if (result?.consumed_count && result.consumed_count > 0) {
-        const totalCost = result.total_cost 
-          ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(result.total_cost) 
+        const totalCost = result.total_cost
+          ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(result.total_cost)
           : "";
-        
+
         toast.success(
-          `✅ Baixa realizada com sucesso!`, 
-          { 
+          `✅ Baixa realizada com sucesso!`,
+          {
             description: `${result.consumed_count} material(is) consumido(s)${totalCost ? ` • Custo total: ${totalCost}` : ""}`,
             duration: 5000,
           }
         );
       }
-      
+
       if (result?.alerts_count && result.alerts_count > 0) {
         toast.warning(
           `⚠️ Atenção: Estoque baixo detectado`,
@@ -298,34 +389,18 @@ export function useProcessMaterialConsumption() {
     },
     onError: (error: Error) => {
       console.error('Error processing material consumption:', error);
-      
-      // Parse specific error messages for better UX
       const errorMessage = error.message || '';
-      
-      if (errorMessage.includes('insufficient') || errorMessage.includes('estoque insuficiente')) {
-        toast.error(
-          '❌ Estoque insuficiente',
-          {
-            description: 'Um ou mais materiais não possuem quantidade suficiente em estoque. Verifique e reponha antes de continuar.',
-            duration: 8000,
-          }
-        );
-      } else if (errorMessage.includes('not found') || errorMessage.includes('não encontrado')) {
-        toast.error(
-          '❌ Material não encontrado',
-          {
-            description: 'Um ou mais materiais não foram encontrados no cadastro. Verifique a configuração do procedimento.',
-            duration: 6000,
-          }
-        );
+
+      if (errorMessage.toLowerCase().includes('insuficiente') || errorMessage.toLowerCase().includes('insufficient')) {
+        toast.error('❌ Estoque insuficiente', {
+          description: errorMessage.replace(/^Estoque insuficiente para:\s*/i, '').slice(0, 200),
+          duration: 8000,
+        });
       } else {
-        toast.error(
-          '❌ Erro ao processar baixa',
-          {
-            description: 'Não foi possível realizar a baixa de materiais. Tente novamente ou contate o suporte.',
-            duration: 6000,
-          }
-        );
+        toast.error('❌ Erro ao processar baixa', {
+          description: errorMessage || 'Não foi possível realizar a baixa de materiais.',
+          duration: 6000,
+        });
       }
     },
   });
