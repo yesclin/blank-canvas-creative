@@ -9,13 +9,10 @@ import { toast } from 'sonner';
 
 export interface ProcedureProduct {
   id: string;
-  clinic_id: string;
   procedure_id: string;
   product_id: string;
   quantity: number;
-  notes?: string | null;
   created_at: string;
-  updated_at: string;
   // Joined fields
   product_name?: string;
   product_unit?: string;
@@ -26,7 +23,6 @@ export interface ProcedureProductFormData {
   procedure_id: string;
   product_id: string;
   quantity: number;
-  notes?: string;
 }
 
 // =============================================
