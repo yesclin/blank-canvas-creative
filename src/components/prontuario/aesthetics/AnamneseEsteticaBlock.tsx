@@ -1044,16 +1044,12 @@ export function AnamneseEsteticaBlock({
             size="sm"
             className="h-9 w-9 shrink-0 px-0"
             onClick={() => {
-              const goBack = () => {
-                setSelectedRecordId(null);
-                setIsCreatingNew(false);
-              };
               if (currentHasChanges) {
-                pendingNavigationRef.current = goBack;
+                pendingNavigationRef.current = handleBackToList;
                 setShowUnsavedDialog(true);
                 return;
               }
-              goBack();
+              handleBackToList();
             }}
             aria-label="Voltar para a lista de anamneses"
           >
