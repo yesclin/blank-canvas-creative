@@ -36,17 +36,15 @@ export function useProcedureProductCosts() {
   return useQuery({
     queryKey: ['procedure-product-costs'],
     queryFn: async (): Promise<Record<string, ProcedureProductCost>> => {
-      const clinicId = await getClinicId();
-      
       // Buscar todos os vínculos procedimento-produto com custo
+      // (RLS garante isolamento por clinic_id via tabela procedures)
       const { data: procedureProducts, error: ppError } = await supabase
         .from('procedure_products')
         .select(`
           procedure_id,
           quantity,
           products:product_id (cost_price)
-        `)
-        .eq('clinic_id', clinicId);
+        `);
         
       if (ppError) throw ppError;
       
@@ -56,15 +54,14 @@ export function useProcedureProductCosts() {
         .select(`
           procedure_id,
           quantity,
-          product_kits:kit_id (
+          product_kits:product_kit_id (
             id,
             product_kit_items (
               quantity,
               products:product_id (cost_price)
             )
           )
-        `)
-        .eq('clinic_id', clinicId);
+        `);
         
       if (pkError) throw pkError;
       
