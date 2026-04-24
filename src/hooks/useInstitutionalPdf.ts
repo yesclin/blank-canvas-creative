@@ -113,42 +113,55 @@ function buildSignatureBlockHtml(sig: AnamnesisSignatureBlock): string {
     ? format(new Date(sig.signed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
     : '—';
 
-  const lines: string[] = [];
-  lines.push(
-    `<div style="font-size:10px;color:#1f2937;margin-bottom:4px;">Documento assinado digitalmente por:</div>`
+  const rows: string[] = [];
+  rows.push(
+    `<div style="font-size:10px;color:#1f2937;margin-bottom:6px;">Documento assinado digitalmente pelo sistema <strong>YesClin</strong>.</div>`
   );
-  lines.push(
-    `<div style="font-size:12px;font-weight:700;color:#111827;">${escapeHtml(sig.signed_by_name || '—')}</div>`
+  rows.push(
+    `<div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin-top:8px;">Profissional responsável</div>`
+  );
+  rows.push(
+    `<div style="font-size:12px;font-weight:700;color:#111827;margin-top:1px;">${escapeHtml(sig.signed_by_name || '—')}</div>`
   );
   if (sig.signed_by_registration) {
-    lines.push(
-      `<div style="font-size:9px;color:#6b7280;margin-top:1px;">${escapeHtml(sig.signed_by_registration)}</div>`
+    rows.push(
+      `<div style="font-size:9px;color:#374151;margin-top:1px;">Registro profissional: <strong>${escapeHtml(sig.signed_by_registration)}</strong></div>`
     );
   }
-  lines.push(
-    `<div style="font-size:9px;color:#374151;margin-top:6px;">Assinado em: <strong>${dateStr}</strong></div>`
+  rows.push(
+    `<div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin-top:8px;">Data e hora da assinatura</div>`
   );
+  rows.push(
+    `<div style="font-size:10px;color:#111827;margin-top:1px;"><strong>${dateStr}</strong></div>`
+  );
+
+  rows.push(
+    `<div style="font-size:9px;color:#374151;margin-top:10px;line-height:1.5;">
+       <strong>Validação:</strong> Este documento foi assinado digitalmente no sistema YesClin e está vinculado ao registro clínico desta anamnese.
+     </div>`
+  );
+
+  if (sig.signature_hash) {
+    rows.push(
+      `<div style="font-size:8px;color:#6b7280;margin-top:6px;word-break:break-all;font-family:'Courier New',monospace;">Código de validação: ${escapeHtml(sig.signature_hash)}</div>`
+    );
+  }
   if (sig.ip_address) {
-    lines.push(
-      `<div style="font-size:9px;color:#6b7280;margin-top:1px;">IP: ${escapeHtml(sig.ip_address)}</div>`
+    rows.push(
+      `<div style="font-size:8px;color:#6b7280;margin-top:2px;">IP: ${escapeHtml(sig.ip_address)}</div>`
     );
   }
   if (sig.geolocation && (sig.geolocation.latitude != null || sig.geolocation.longitude != null)) {
-    const lat = sig.geolocation.latitude;
-    const lng = sig.geolocation.longitude;
-    lines.push(
-      `<div style="font-size:9px;color:#6b7280;margin-top:1px;">Localização: ${lat}, ${lng}</div>`
-    );
-  }
-  if (sig.signature_hash) {
-    lines.push(
-      `<div style="font-size:8px;color:#9ca3af;margin-top:4px;word-break:break-all;font-family:'Courier New',monospace;">Hash: ${escapeHtml(sig.signature_hash)}</div>`
+    rows.push(
+      `<div style="font-size:8px;color:#6b7280;margin-top:2px;">Localização: ${sig.geolocation.latitude}, ${sig.geolocation.longitude}</div>`
     );
   }
 
+  // Optional complementary handwritten image — never required.
   const imageHtml = sig.signature_image_url
     ? `<div style="margin-top:10px;">
-         <img src="${sig.signature_image_url}" crossorigin="anonymous" style="max-height:70px;max-width:240px;object-fit:contain;background:white;padding:4px;border:1px solid #e5e7eb;border-radius:4px;" />
+         <div style="font-size:8px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin-bottom:3px;">Assinatura manuscrita (complementar)</div>
+         <img src="${sig.signature_image_url}" crossorigin="anonymous" style="max-height:60px;max-width:220px;object-fit:contain;background:white;padding:4px;border:1px solid #e5e7eb;border-radius:4px;" />
        </div>`
     : '';
 
@@ -156,9 +169,9 @@ function buildSignatureBlockHtml(sig: AnamnesisSignatureBlock): string {
     <div style="margin-top:24px;padding:14px 16px;border:1px solid #bfdbfe;border-radius:6px;background:#eff6ff;page-break-inside:avoid;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
         <div style="font-size:10px;font-weight:700;letter-spacing:1.2px;color:#1d4ed8;text-transform:uppercase;">Assinatura Digital</div>
-        <span style="display:inline-block;padding:2px 8px;font-size:8px;font-weight:700;letter-spacing:1px;color:#065f46;background:#d1fae5;border:1px solid #a7f3d0;border-radius:999px;">VÁLIDA</span>
+        <span style="display:inline-block;padding:2px 8px;font-size:8px;font-weight:700;letter-spacing:1px;color:#065f46;background:#d1fae5;border:1px solid #a7f3d0;border-radius:999px;">ASSINADO</span>
       </div>
-      ${lines.join('')}
+      ${rows.join('')}
       ${imageHtml}
     </div>`;
 }
