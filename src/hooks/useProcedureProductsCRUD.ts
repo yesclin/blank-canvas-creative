@@ -181,7 +181,6 @@ const defaultFormData: ProcedureProductFormData = {
   procedure_id: '',
   product_id: '',
   quantity: 1,
-  notes: '',
 };
 
 export function useProcedureProductForm() {
@@ -203,7 +202,6 @@ export function useProcedureProductForm() {
       procedure_id: item.procedure_id,
       product_id: item.product_id,
       quantity: item.quantity,
-      notes: item.notes || '',
     });
   };
 
