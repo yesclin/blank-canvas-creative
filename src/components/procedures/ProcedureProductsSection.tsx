@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { useProductsUnified } from "@/hooks/useProductsCompat";
+import { useProducts } from "@/hooks/useProducts";
 import { useInventoryKits, type InventoryKit } from "@/hooks/useProcedureConsumption";
 import type { Product } from "@/types/inventory";
 
@@ -46,7 +46,7 @@ export function ProcedureProductsSection({
   onChange,
   disabled = false,
 }: ProcedureProductsSectionProps) {
-  const { data: products = [], isLoading: productsLoading } = useProductsUnified();
+  const { data: products = [], isLoading: productsLoading } = useProducts();
   const { data: kits = [], isLoading: kitsLoading } = useInventoryKits(false);
   
   const [selectedItemKey, setSelectedItemKey] = useState<string>(""); // format: "product:id" or "kit:id"

@@ -9,13 +9,10 @@ import { toast } from 'sonner';
 
 export interface ProcedureProduct {
   id: string;
-  clinic_id: string;
   procedure_id: string;
   product_id: string;
   quantity: number;
-  notes?: string | null;
   created_at: string;
-  updated_at: string;
   // Joined fields
   product_name?: string;
   product_unit?: string;
@@ -26,7 +23,6 @@ export interface ProcedureProductFormData {
   procedure_id: string;
   product_id: string;
   quantity: number;
-  notes?: string;
 }
 
 // =============================================
@@ -87,16 +83,12 @@ export function useCreateProcedureProduct() {
   
   return useMutation({
     mutationFn: async (formData: ProcedureProductFormData) => {
-      const clinicId = await getClinicId();
-      
       const { data, error } = await supabase
         .from('procedure_products')
         .insert({
-          clinic_id: clinicId,
           procedure_id: formData.procedure_id,
           product_id: formData.product_id,
           quantity: formData.quantity,
-          notes: formData.notes || null,
         })
         .select()
         .single();
@@ -104,6 +96,9 @@ export function useCreateProcedureProduct() {
       if (error) {
         if (error.code === '23505') {
           throw new Error('Este produto já está vinculado ao procedimento');
+        }
+        if (error.code === '23503') {
+          throw new Error('Produto inválido. Cadastre o item em Estoque → Produtos antes de vincular.');
         }
         throw error;
       }
@@ -131,8 +126,6 @@ export function useUpdateProcedureProduct() {
         .from('procedure_products')
         .update({
           quantity: formData.quantity,
-          notes: formData.notes,
-          updated_at: new Date().toISOString(),
         })
         .eq('id', id)
         .select()
@@ -188,7 +181,6 @@ const defaultFormData: ProcedureProductFormData = {
   procedure_id: '',
   product_id: '',
   quantity: 1,
-  notes: '',
 };
 
 export function useProcedureProductForm() {
@@ -210,7 +202,6 @@ export function useProcedureProductForm() {
       procedure_id: item.procedure_id,
       product_id: item.product_id,
       quantity: item.quantity,
-      notes: item.notes || '',
     });
   };
 

@@ -41,12 +41,13 @@ export interface ProductKitItemFormData {
 
 export interface ProcedureProductKit {
   id: string;
-  clinic_id: string;
   procedure_id: string;
-  kit_id: string;
+  product_kit_id: string;
   quantity: number;
-  is_required: boolean;
   created_at: string;
+  // Backwards-compat alias used by UI code
+  kit_id?: string;
+  is_required?: boolean;
   // Joined fields
   kit_name?: string;
   kit_total_cost?: number;
@@ -55,7 +56,7 @@ export interface ProcedureProductKit {
 
 export interface ProcedureProductKitFormData {
   procedure_id: string;
-  kit_id: string;
+  kit_id: string; // UI continues to use kit_id; mapped to product_kit_id at DB layer
   quantity: number;
-  is_required: boolean;
+  is_required?: boolean;
 }
