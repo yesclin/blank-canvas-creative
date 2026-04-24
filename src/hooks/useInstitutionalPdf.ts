@@ -389,8 +389,8 @@ function buildPremiumHtml(
       ${contentHtml}
     </div>`;
 
-  // ── Professional Footer ──
-  const signatureBlock = s.show_digital_signature && s.signature_image_url
+  // ── Professional footer signature image (institutional, optional) ──
+  const profSigImageHtml = s.show_digital_signature && s.signature_image_url
     ? `<img src="${s.signature_image_url}" style="height:40px;object-fit:contain;margin-bottom:4px;" />`
     : '';
 
@@ -411,6 +411,12 @@ function buildPremiumHtml(
       </div>`
     : '';
 
+  // ── Digital Signature block (always rendered: signed or not) ──
+  const digitalSignatureHtml = `
+    <div style="margin:18px 20mm 0 20mm;">
+      ${buildSignatureBlockHtml(signatureBlock || { signed: false })}
+    </div>`;
+
   const footerHtml = `
     <div style="margin:auto 20mm 20mm 20mm;border-top:1px solid #e5e7eb;padding-top:16px;">
       <div style="display:flex;justify-content:space-between;align-items:flex-end;">
@@ -418,7 +424,7 @@ function buildPremiumHtml(
           ${qrBlock}
         </div>
         <div style="text-align:right;">
-          ${signatureBlock}
+          ${profSigImageHtml}
           <div style="font-size:10px;font-weight:600;color:#1f2937;">${professional.name || ''}</div>
           <div style="font-size:8px;color:#6b7280;margin-top:1px;">${professional.crm || ''}</div>
           ${professional.specialty ? `<div style="font-size:8px;color:#6b7280;">${professional.specialty}</div>` : ''}
@@ -441,6 +447,7 @@ function buildPremiumHtml(
       ${patientHtml}
       ${titleHtml}
       ${bodyHtml}
+      ${digitalSignatureHtml}
       ${footerHtml}
     </div>
   </body></html>`;
