@@ -655,8 +655,11 @@ export function AnamneseEsteticaBlock({
   }
 
   // ─── Template selector dropdown ──────────────────────────────────
+  // - Disabled when viewing/editing an existing record (record's template is fixed).
+  // - Active during CREATE mode and on the empty state.
   const renderTemplateSelector = () => {
     if (selectableTemplates.length <= 1) return null;
+    const isViewingExisting = !!selectedRecordId && !isCreatingNew;
 
     const baseTemplates = selectableTemplates.filter(t => getTemplateCategory(t) === 'avaliacao_base');
     const proceduralTemplates = selectableTemplates.filter(t => getTemplateCategory(t) === 'procedural');
@@ -684,7 +687,11 @@ export function AnamneseEsteticaBlock({
     };
 
     return (
-      <Select value={selectedTemplateId || ''} onValueChange={handleTemplateChange}>
+      <Select
+        value={selectedTemplateId || ''}
+        onValueChange={handleTemplateChange}
+        disabled={isViewingExisting}
+      >
         <SelectTrigger className="w-72 h-8 text-xs">
           <SelectValue placeholder="Selecionar modelo..." />
         </SelectTrigger>
