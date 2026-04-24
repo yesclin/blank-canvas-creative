@@ -530,27 +530,73 @@ export function AnamneseEsteticaBlock({
     generateAnamnesisPdf,
   ]);
 
-  // Template change with unsaved guard
+  // Template change with unsaved guard.
+  // IMPORTANT: when in CREATE mode, switching the template MUST keep
+  // `isCreatingNew=true` so we don't fall back into the records list nor
+  // open an existing record for the newly-picked template.
   const handleTemplateChange = useCallback((templateId: string) => {
+    const apply = () => {
+      setSelectedTemplateId(templateId);
+      setDynamicValues({});
+      setDynamicHasChanges(false);
+      setStandardValues({});
+      setStandardHasChanges(false);
+      // Preserve isCreatingNew if currently creating; otherwise clear it.
+      // (When viewing an existing record, the dropdown is disabled, so this
+      // path only triggers from the empty state or the create flow.)
+    };
     if (currentHasChanges) {
-      pendingNavigationRef.current = () => {
-        setSelectedTemplateId(templateId);
-        setDynamicValues({});
-        setDynamicHasChanges(false);
-        setStandardValues({});
-        setStandardHasChanges(false);
-        setIsCreatingNew(false);
-      };
+      pendingNavigationRef.current = apply;
       setShowUnsavedDialog(true);
       return;
     }
+    apply();
+  }, [currentHasChanges]);
+
+  // ─── Explicit-flow handlers (Nova Anamnese / open existing / back) ──
+  const handleNewAnamnesisClick = useCallback(() => {
+    // Reset all state so we start a clean draft. The user MUST pick a
+    // template via the selector before any record is created or loaded.
+    setSelectedRecordId(null);
+    setSelectedTemplateId(null);
+    setDynamicValues({});
+    setDynamicHasChanges(false);
+    setStandardValues({});
+    setStandardHasChanges(false);
+    setStandardRecord(null);
+    setIsCreatingNew(true);
+  }, []);
+
+  const handleTemplateSelectedForCreate = useCallback((templateId: string) => {
     setSelectedTemplateId(templateId);
     setDynamicValues({});
     setDynamicHasChanges(false);
     setStandardValues({});
     setStandardHasChanges(false);
+    setStandardRecord(null);
+    setIsCreatingNew(true);
+  }, []);
+
+  const handleOpenExistingAnamnesis = useCallback((recordId: string, templateId?: string | null) => {
     setIsCreatingNew(false);
-  }, [currentHasChanges]);
+    setSelectedRecordId(recordId);
+    if (templateId) setSelectedTemplateId(templateId);
+    setDynamicValues({});
+    setDynamicHasChanges(false);
+    setStandardValues({});
+    setStandardHasChanges(false);
+  }, []);
+
+  const handleBackToList = useCallback(() => {
+    setSelectedRecordId(null);
+    setSelectedTemplateId(null);
+    setIsCreatingNew(false);
+    setDynamicValues({});
+    setDynamicHasChanges(false);
+    setStandardValues({});
+    setStandardHasChanges(false);
+    setStandardRecord(null);
+  }, []);
 
   const handleUnsavedSaveAndLeave = useCallback(async () => {
     setShowUnsavedDialog(false);
