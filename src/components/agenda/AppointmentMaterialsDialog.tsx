@@ -33,7 +33,7 @@ import {
   useAutoConsumptionConfig,
   type MaterialConsumptionItem 
 } from "@/hooks/useMaterialConsumption";
-import { useMaterialsList } from "@/hooks/useMaterialsCRUD";
+import { useProducts } from "@/hooks/useProducts";
 import { materialUnits } from "@/types/cadastros-clinicos";
 import { usePermissions } from "@/hooks/usePermissions";
 import { MaterialConsumptionConfirmDialog } from "./MaterialConsumptionConfirmDialog";
@@ -63,7 +63,15 @@ export function AppointmentMaterialsDialog({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const { data: appointmentMaterials = [], isLoading } = useAppointmentMaterials(open ? appointmentId : null);
-  const { data: allMaterials = [] } = useMaterialsList();
+  const { data: allProducts = [] } = useProducts();
+  // Adapter para compat com a estrutura esperada pelo restante do componente
+  const allMaterials = allProducts.map((p: any) => ({
+    id: p.id,
+    name: p.name,
+    unit_cost: Number(p.cost_price) || 0,
+    unit: p.unit || 'unidade',
+    is_active: p.is_active !== false,
+  }));
   const { data: autoConsumptionEnabled } = useAutoConsumptionConfig();
   const processMutation = useProcessMaterialConsumption();
   
