@@ -55,6 +55,47 @@ interface AnamneseForPdf {
   created_at: string;
   created_by_name?: string;
   template_id?: string;
+  template_name?: string;
+  signed_at?: string | null;
+}
+
+/**
+ * Flat dynamic field shape — used by aesthetics dynamic templates.
+ * Compatible with DynamicField from anamnese-fields/types and with
+ * structure_snapshot rows persisted in anamnesis_records.
+ */
+interface DynamicFieldLite {
+  id: string;
+  label: string;
+  section?: string;
+  type?: string;
+}
+
+/**
+ * Groups a flat list of dynamic fields into SecaoAnamnese[] using `section`
+ * as the grouping key, preserving original field order.
+ */
+function groupDynamicFieldsIntoSections(fields: DynamicFieldLite[]): SecaoAnamnese[] {
+  const groups = new Map<string, SecaoAnamnese>();
+  const order: string[] = [];
+  for (const f of fields) {
+    const key = (f.section && f.section.trim()) || 'Anamnese';
+    if (!groups.has(key)) {
+      groups.set(key, {
+        id: key.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
+        titulo: key,
+        icon: 'FileText',
+        campos: [],
+      });
+      order.push(key);
+    }
+    groups.get(key)!.campos.push({
+      id: f.id,
+      label: f.label,
+      type: 'text',
+    });
+  }
+  return order.map(k => groups.get(k)!);
 }
 
 // ─── Content Builder ─────────────────────────────────────────────
