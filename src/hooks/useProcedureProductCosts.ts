@@ -152,7 +152,7 @@ export function useProcedureProductCost(procedureId: string | null) {
         .from('procedure_product_kits')
         .select(`
           quantity,
-          product_kits:kit_id (
+          product_kits:product_kit_id (
             id,
             product_kit_items (
               quantity,
