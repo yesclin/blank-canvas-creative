@@ -435,60 +435,115 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
         </Card>
       )}
 
-      {/* ── Procedimentos Realizados ── */}
-      {detail.procedures_performed.length > 0 && (
+      {/* ── Procedimentos Realizados (com materiais utilizados) ── */}
+      {(detail.procedures_performed.length > 0 ||
+        detail.aesthetic_products.length > 0 ||
+        detail.materials_consumed.length > 0) && (
         <SectionCard title="Procedimentos Realizados" icon={Activity}>
-          <div className="space-y-2">
-            {detail.procedures_performed.map((p) => (
-              <div key={p.id} className="rounded-lg border p-3 text-sm">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <span className="font-medium">{p.procedure_name}</span>
-                  <Badge variant="outline" className="text-[10px]">{p.status}</Badge>
-                </div>
-                <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
-                  {p.region && <span>Região: {p.region}</span>}
-                  {p.technique && <span>Técnica: {p.technique}</span>}
-                  <span>{fmtTime(p.performed_at)}</span>
-                </div>
-                {p.notes && <p className="text-xs text-foreground/80 mt-1.5">{p.notes}</p>}
-              </div>
-            ))}
-          </div>
-        </SectionCard>
-      )}
+          <div className="space-y-3">
+            {/* Lista de procedimentos. Quando não há registros estruturados,
+                ainda exibimos o procedimento principal do agendamento como
+                cabeçalho para agrupar os materiais consumidos. */}
+            {(detail.procedures_performed.length > 0
+              ? detail.procedures_performed.map((p) => ({
+                  id: p.id,
+                  name: p.procedure_name,
+                  status: p.status,
+                  region: p.region,
+                  technique: p.technique,
+                  performed_at: p.performed_at,
+                  notes: p.notes,
+                }))
+              : [{
+                  id: "main-procedure",
+                  name: detail.procedure_name || "Procedimento do atendimento",
+                  status: detail.status,
+                  region: null as string | null,
+                  technique: null as string | null,
+                  performed_at: detail.started_at || detail.scheduled_date,
+                  notes: null as string | null,
+                }]
+            ).map((p, idx, arr) => {
+              // Distribui produtos e materiais no primeiro procedimento (mais
+              // comum no fluxo atual: 1 atendimento = 1 procedimento principal).
+              const isFirst = idx === 0 && arr.length === 1;
+              const products = isFirst ? detail.aesthetic_products : [];
+              const materials = isFirst ? detail.materials_consumed : [];
+              return (
+                <div key={p.id} className="rounded-lg border p-3 text-sm">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span className="font-medium">{p.name}</span>
+                    <Badge variant="outline" className="text-[10px]">{statusLabel(p.status)}</Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
+                    {p.region && <span>Região: {p.region}</span>}
+                    {p.technique && <span>Técnica: {p.technique}</span>}
+                    <span>{fmtTime(p.performed_at)}</span>
+                  </div>
+                  {p.notes && <p className="text-xs text-foreground/80 mt-1.5">{p.notes}</p>}
 
-      {/* ── Produtos Estéticos Utilizados ── */}
-      {detail.aesthetic_products.length > 0 && (
-        <SectionCard title="Produtos Aplicados" icon={FileText}>
-          <div className="space-y-2">
-            {detail.aesthetic_products.map((p) => (
-              <div key={p.id} className="rounded-lg border p-3 text-sm">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <span className="font-medium">{p.product_name}</span>
-                  <span className="text-xs">{p.quantity} {p.unit}</span>
+                  {/* Materiais utilizados neste procedimento */}
+                  {(products.length > 0 || materials.length > 0) && (
+                    <div className="mt-3 pt-3 border-t border-dashed">
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2 flex items-center gap-1">
+                        <FileText className="h-3 w-3" /> Materiais utilizados
+                      </p>
+                      <div className="space-y-1.5">
+                        {products.map((pr) => (
+                          <div key={`prod-${pr.id}`} className="rounded-md bg-muted/40 px-2.5 py-1.5 text-xs">
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              <span className="font-medium">{pr.product_name}</span>
+                              <span className="text-foreground/80">{pr.quantity} {pr.unit}</span>
+                            </div>
+                            <div className="text-[10px] text-muted-foreground mt-0.5 flex flex-wrap gap-x-2">
+                              {pr.application_area && <span>Área: {pr.application_area}</span>}
+                              {pr.manufacturer && <span>Fabricante: {pr.manufacturer}</span>}
+                              {pr.batch_number && <span>Lote: {pr.batch_number}</span>}
+                              {pr.expiry_date && <span>Validade: {fmtDate(pr.expiry_date)}</span>}
+                            </div>
+                          </div>
+                        ))}
+                        {materials.map((m) => (
+                          <div key={`mat-${m.id}`} className="rounded-md bg-muted/40 px-2.5 py-1.5 text-xs flex items-center justify-between gap-2">
+                            <span className="font-medium">{m.product_name || "—"}</span>
+                            <span className="text-foreground/80">
+                              {m.quantity}{m.unit ? ` ${m.unit}` : ""}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
-                  {p.application_area && <span>Área: {p.application_area}</span>}
-                  {p.manufacturer && <span>Fabricante: {p.manufacturer}</span>}
-                  {p.batch_number && <span>Lote: {p.batch_number}</span>}
-                  {p.expiry_date && <span>Validade: {fmtDate(p.expiry_date)}</span>}
-                </div>
-              </div>
-            ))}
-          </div>
-        </SectionCard>
-      )}
+              );
+            })}
 
-      {/* ── Materiais consumidos (estoque) ── */}
-      {detail.materials_consumed.length > 0 && (
-        <SectionCard title="Materiais Consumidos" icon={FileText}>
-          <div className="space-y-2">
-            {detail.materials_consumed.map((m) => (
-              <div key={m.id} className="flex items-center justify-between rounded-lg border p-3 text-sm">
-                <span className="font-medium">{m.product_name || "—"}</span>
-                <span className="text-xs">{m.quantity}{m.unit ? ` ${m.unit}` : ""}</span>
+            {/* Caso haja vários procedimentos estruturados, listamos os
+                materiais/produtos globais abaixo para não esconder nada. */}
+            {detail.procedures_performed.length > 1 &&
+              (detail.aesthetic_products.length > 0 || detail.materials_consumed.length > 0) && (
+              <div className="rounded-lg border border-dashed p-3">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2 flex items-center gap-1">
+                  <FileText className="h-3 w-3" /> Materiais utilizados no atendimento
+                </p>
+                <div className="space-y-1.5">
+                  {detail.aesthetic_products.map((pr) => (
+                    <div key={`gprod-${pr.id}`} className="rounded-md bg-muted/40 px-2.5 py-1.5 text-xs flex items-center justify-between gap-2 flex-wrap">
+                      <span className="font-medium">{pr.product_name}</span>
+                      <span className="text-foreground/80">{pr.quantity} {pr.unit}</span>
+                    </div>
+                  ))}
+                  {detail.materials_consumed.map((m) => (
+                    <div key={`gmat-${m.id}`} className="rounded-md bg-muted/40 px-2.5 py-1.5 text-xs flex items-center justify-between gap-2">
+                      <span className="font-medium">{m.product_name || "—"}</span>
+                      <span className="text-foreground/80">
+                        {m.quantity}{m.unit ? ` ${m.unit}` : ""}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
+            )}
           </div>
         </SectionCard>
       )}
