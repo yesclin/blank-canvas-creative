@@ -423,7 +423,19 @@ export function useUnifiedDocumentSigning() {
           .update(updatePayload as any)
           .eq("id", context.document_id);
         if (updErr) {
-          console.error(`[SIGN] update ${targetTable} failed:`, updErr);
+          logAppError(updErr, {
+            ...baseLogContext,
+            action: "updateSourceDocument",
+            userId,
+            extra: {
+              ...baseLogContext.extra,
+              target_table: targetTable,
+              signature_id: sigRow.id,
+              supabase_code: (updErr as any)?.code,
+              supabase_details: (updErr as any)?.details,
+              supabase_hint: (updErr as any)?.hint,
+            },
+          });
           if ((updErr as any).code === "42501") {
             throw new Error(
               "Permissão negada: você não é o profissional responsável por este registro."
@@ -431,6 +443,12 @@ export function useUnifiedDocumentSigning() {
           }
           throw updErr;
         }
+
+        console.info("[useUnifiedDocumentSigning] document signed", {
+          signature_id: sigRow.id,
+          document_type: context.document_type,
+          target_table: targetTable,
+        });
 
         await logEvent(sigRow.id, clinic.id, "document_signed", {
           document_type: context.document_type,
