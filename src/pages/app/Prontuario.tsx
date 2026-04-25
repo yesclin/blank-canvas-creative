@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ClinicalAccessGuard } from "@/components/permissions/ClinicalAccessGuard";
+import { ErrorBoundary } from "@/components/app/ErrorBoundary";
 import {
   FileText, 
   ArrowLeft,
@@ -2307,6 +2308,34 @@ export default function Prontuario() {
     return <PatientSelector onSelectPatient={handleSelectPatient} />;
   }
 
+  // Patient ID provided in URL but not found in database
+  if (patientId && !patientLoading && !patient) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] p-6">
+        <div className="max-w-md w-full text-center space-y-4">
+          <div className="mx-auto h-14 w-14 rounded-full bg-muted flex items-center justify-center">
+            <FileText className="h-7 w-7 text-muted-foreground" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-xl font-semibold">Paciente não encontrado</h2>
+            <p className="text-sm text-muted-foreground">
+              O paciente solicitado não existe ou você não tem permissão para acessá-lo.
+            </p>
+          </div>
+          <div className="flex gap-2 justify-center">
+            <Button variant="outline" onClick={() => navigate("/app/prontuario")}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Selecionar paciente
+            </Button>
+            <Button onClick={() => navigate("/app")}>
+              Ir para o Dashboard
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Handler for consent collection
   const handleCollectConsent = () => {
     setConsentDialogOpen(true);
@@ -2515,7 +2544,9 @@ export default function Prontuario() {
               />
             )}
             {/* Standard alert banner removed - clinical summary in header is sufficient */}
-            {renderTabContent()}
+            <ErrorBoundary key={`tab-${activeTab}`} compact scope={`Prontuário · ${activeTab}`}>
+              {renderTabContent()}
+            </ErrorBoundary>
           </div>
         </main>
       </div>
