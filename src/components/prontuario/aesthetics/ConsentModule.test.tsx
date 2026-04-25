@@ -16,8 +16,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { forwardRef, useImperativeHandle } from 'react';
+import { toast } from 'sonner';
 import { ConsentModule } from './ConsentModule';
-import { MIN_SIGNATURE_LENGTH } from './signatureValidation';
+import { MIN_SIGNATURE_LENGTH, legacyReason } from './signatureValidation';
 
 // ─── Test double for SignatureCanvas ──────────────────────────────────────
 //
