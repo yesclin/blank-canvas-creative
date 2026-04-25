@@ -35,6 +35,15 @@ export async function generateConsolidatedAttendanceDocument(appointmentId: stri
   const clinicId = apt.clinic_id;
   const patientId = apt.patient_id;
 
+  // Helper: never throw if a specialty table doesn't exist or RLS blocks it.
+  const safe = async <T,>(p: PromiseLike<{ data: T | null; error: any }>): Promise<T | []> => {
+    try {
+      const { data, error } = await p;
+      if (error) return [] as any;
+      return (data ?? ([] as any)) as T;
+    } catch { return [] as any; }
+  };
+
   // 3. Fetch clinic info + all clinical data in parallel
   const [
     { data: clinic },
@@ -44,6 +53,13 @@ export async function generateConsolidatedAttendanceDocument(appointmentId: stri
     { data: alerts },
     { data: media },
     { data: session },
+    performedProcedures,
+    aestheticProducts,
+    aestheticBeforeAfter,
+    facialMaps,
+    odontogramRows,
+    stockMovements,
+    bodyMeasurements,
   ] = await Promise.all([
     supabase.from('clinics').select('name, logo_url, phone, email, cnpj, address').eq('id', clinicId).maybeSingle(),
     supabase.from('anamnesis_records')
@@ -64,6 +80,13 @@ export async function generateConsolidatedAttendanceDocument(appointmentId: stri
     supabase.from('appointment_sessions')
       .select('total_paused_seconds, session_summary, session_notes, pause_events')
       .eq('appointment_id', appointmentId).maybeSingle(),
+    safe<any[]>(supabase.from('clinical_performed_procedures').select('id, procedure_name, region, technique, notes, status, performed_at').eq('appointment_id', appointmentId).order('performed_at')),
+    safe<any[]>(supabase.from('aesthetic_products_used').select('id, product_name, quantity, unit, manufacturer, batch_number, expiry_date, application_area, procedure_type, registered_at').eq('appointment_id', appointmentId).order('registered_at')),
+    safe<any[]>(supabase.from('aesthetic_before_after').select('id, title, description, view_angle, procedure_type, before_image_url, after_image_url, before_image_date, after_image_date, created_at').eq('appointment_id', appointmentId).order('created_at')),
+    safe<any[]>(supabase.from('facial_maps').select('id, map_type, notes, created_at, facial_map_applications(id, region, product_name, units, notes, data)').eq('appointment_id', appointmentId).order('created_at')),
+    safe<any[]>(supabase.from('odontograms').select('id, data, created_at, updated_at, odontogram_records(id, tooth_number, surface, condition, notes, created_at)').eq('appointment_id', appointmentId).order('created_at', { ascending: false }).limit(1)),
+    safe<any[]>(supabase.from('stock_movements').select('id, product_id, quantity, unit_cost, notes, created_at, products:product_id(name, unit)').eq('reference_id', appointmentId).eq('reference_type', 'appointment').order('created_at')),
+    safe<any[]>(supabase.from('body_measurements').select('id, measurement_type, data, created_at').eq('appointment_id', appointmentId).order('created_at')),
   ]);
 
   const startedAt = apt.started_at || apt.created_at;
