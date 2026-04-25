@@ -289,6 +289,8 @@ export function useCreatePatient() {
       toast.success("Paciente cadastrado com sucesso!");
     },
     onError: (error: Error) => {
+      // Limite do plano: o gate já mostrou um toast claro — não duplicar.
+      if (error.message === 'PLAN_LIMIT_REACHED') return;
       console.error("Error creating patient:", error);
       toast.error("Erro ao cadastrar paciente: " + error.message);
     },
