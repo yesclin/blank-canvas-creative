@@ -27,7 +27,7 @@ interface SearchFocusContextValue {
   isFocused: (sourceTable: string, recordId: string) => boolean;
 }
 
-const SearchFocusContext = createContext<SearchFocusContextValue | null>(null);
+export const SearchFocusContext = createContext<SearchFocusContextValue | null>(null);
 
 export function SearchFocusProvider({ children }: { children: ReactNode }) {
   const [focus, setFocusState] = useState<SearchFocusTarget | null>(null);
