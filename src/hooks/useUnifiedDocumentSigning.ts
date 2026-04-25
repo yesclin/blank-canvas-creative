@@ -144,6 +144,8 @@ export async function logSignatureEvent(
     const userId = userData?.user?.id || null;
     const enriched = {
       ...metadata,
+      // Garante que `trace_id` sempre apareça no topo do metadata, se fornecido
+      trace_id: (metadata as any)?.trace_id ?? null,
       user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
       logged_at: new Date().toISOString(),
     };
