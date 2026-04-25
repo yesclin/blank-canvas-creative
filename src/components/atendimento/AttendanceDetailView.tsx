@@ -435,10 +435,180 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
         </Card>
       )}
 
+      {/* ── Procedimentos Realizados ── */}
+      {detail.procedures_performed.length > 0 && (
+        <SectionCard title="Procedimentos Realizados" icon={Activity}>
+          <div className="space-y-2">
+            {detail.procedures_performed.map((p) => (
+              <div key={p.id} className="rounded-lg border p-3 text-sm">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="font-medium">{p.procedure_name}</span>
+                  <Badge variant="outline" className="text-[10px]">{p.status}</Badge>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
+                  {p.region && <span>Região: {p.region}</span>}
+                  {p.technique && <span>Técnica: {p.technique}</span>}
+                  <span>{fmtTime(p.performed_at)}</span>
+                </div>
+                {p.notes && <p className="text-xs text-foreground/80 mt-1.5">{p.notes}</p>}
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+
+      {/* ── Produtos Estéticos Utilizados ── */}
+      {detail.aesthetic_products.length > 0 && (
+        <SectionCard title="Produtos Aplicados" icon={FileText}>
+          <div className="space-y-2">
+            {detail.aesthetic_products.map((p) => (
+              <div key={p.id} className="rounded-lg border p-3 text-sm">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="font-medium">{p.product_name}</span>
+                  <span className="text-xs">{p.quantity} {p.unit}</span>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
+                  {p.application_area && <span>Área: {p.application_area}</span>}
+                  {p.manufacturer && <span>Fabricante: {p.manufacturer}</span>}
+                  {p.batch_number && <span>Lote: {p.batch_number}</span>}
+                  {p.expiry_date && <span>Validade: {fmtDate(p.expiry_date)}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+
+      {/* ── Materiais consumidos (estoque) ── */}
+      {detail.materials_consumed.length > 0 && (
+        <SectionCard title="Materiais Consumidos" icon={FileText}>
+          <div className="space-y-2">
+            {detail.materials_consumed.map((m) => (
+              <div key={m.id} className="flex items-center justify-between rounded-lg border p-3 text-sm">
+                <span className="font-medium">{m.product_name || "—"}</span>
+                <span className="text-xs">{m.quantity}{m.unit ? ` ${m.unit}` : ""}</span>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+
+      {/* ── Antes / Depois ── */}
+      {detail.before_after.length > 0 && (
+        <SectionCard title="Antes e Depois" icon={Image}>
+          <div className="space-y-3">
+            {detail.before_after.map((b) => (
+              <div key={b.id} className="rounded-lg border p-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="text-center">
+                    <p className="text-[10px] text-muted-foreground mb-1">Antes</p>
+                    {b.before_image_url ? (
+                      <img src={b.before_image_url} alt="Antes" className="w-full h-32 object-cover rounded" loading="lazy" />
+                    ) : <div className="h-32 bg-muted/40 rounded flex items-center justify-center text-xs text-muted-foreground">—</div>}
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[10px] text-muted-foreground mb-1">Depois</p>
+                    {b.after_image_url ? (
+                      <img src={b.after_image_url} alt="Depois" className="w-full h-32 object-cover rounded" loading="lazy" />
+                    ) : <div className="h-32 bg-muted/40 rounded flex items-center justify-center text-xs text-muted-foreground">—</div>}
+                  </div>
+                </div>
+                {(b.title || b.description) && (
+                  <p className="text-xs text-foreground/80 mt-2">
+                    {b.title && <span className="font-medium">{b.title}: </span>}
+                    {b.description}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+
+      {/* ── Mapa Facial (Estética) ── */}
+      {detail.facial_maps.length > 0 && (
+        <SectionCard title="Mapa Facial" icon={Activity}>
+          <div className="space-y-3">
+            {detail.facial_maps.map((m) => (
+              <div key={m.id} className="rounded-lg border p-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <Badge variant="outline" className="text-[10px]">{m.map_type || "Mapa"}</Badge>
+                  <span className="text-[10px] text-muted-foreground">{fmtTime(m.created_at)}</span>
+                </div>
+                {m.applications.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {m.applications.map((a) => (
+                      <div key={a.id} className="text-xs flex flex-wrap gap-x-3">
+                        {a.region && <span className="font-medium">{a.region}</span>}
+                        {a.product_name && <span>• {a.product_name}</span>}
+                        {a.units != null && <span>• {a.units} U</span>}
+                        {a.notes && <span className="text-muted-foreground">— {a.notes}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {m.notes && <p className="text-xs text-foreground/80 mt-2">{m.notes}</p>}
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+
+      {/* ── Odontograma ── */}
+      {detail.odontogram && detail.odontogram.records.length > 0 && (
+        <SectionCard title="Odontograma" icon={Activity}>
+          <div className="space-y-1">
+            {detail.odontogram.records.map((r) => (
+              <div key={r.id} className="text-xs flex flex-wrap gap-x-3 border-b last:border-0 py-1.5">
+                <span className="font-medium">Dente {r.tooth_number}</span>
+                {r.surface && <span>Face: {r.surface}</span>}
+                <span>Condição: {r.condition}</span>
+                {r.notes && <span className="text-muted-foreground">— {r.notes}</span>}
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+
+      {/* ── Medidas Corporais ── */}
+      {detail.body_measurements.length > 0 && (
+        <SectionCard title="Medidas e Avaliações" icon={Activity}>
+          <div className="space-y-2">
+            {detail.body_measurements.map((b) => (
+              <div key={b.id} className="rounded-lg border p-3 text-xs">
+                <Badge variant="outline" className="text-[10px] mb-1">{b.measurement_type}</Badge>
+                <pre className="text-[11px] text-foreground/80 whitespace-pre-wrap font-sans">{JSON.stringify(b.data, null, 2)}</pre>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+
+      {/* ── Adendos ── */}
+      {detail.addendums.length > 0 && (
+        <SectionCard title="Adendos" icon={StickyNote}>
+          <div className="space-y-2">
+            {detail.addendums.map((a) => (
+              <div key={a.id} className="rounded-lg border p-3 text-sm">
+                <div className="flex items-center justify-between mb-1">
+                  <Badge variant="outline" className="text-[10px]">{a.record_type}</Badge>
+                  <span className="text-[10px] text-muted-foreground">{fmtTime(a.created_at)}</span>
+                </div>
+                {a.reason && <p className="text-[11px] text-muted-foreground italic mb-1">Motivo: {a.reason}</p>}
+                <p className="text-xs whitespace-pre-wrap">{a.content}</p>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+
       {/* ── Empty state if no clinical data ── */}
       {detail.anamnesis_records.length === 0 && detail.evolutions.length === 0 &&
        detail.clinical_documents.length === 0 && detail.clinical_media.length === 0 &&
-       detail.clinical_alerts.length === 0 && (
+       detail.clinical_alerts.length === 0 && detail.procedures_performed.length === 0 &&
+       detail.aesthetic_products.length === 0 && detail.materials_consumed.length === 0 &&
+       detail.before_after.length === 0 && detail.facial_maps.length === 0 &&
+       !detail.odontogram && detail.body_measurements.length === 0 && (
         <Card>
           <CardContent className="py-10">
             <div className="text-center text-muted-foreground">
