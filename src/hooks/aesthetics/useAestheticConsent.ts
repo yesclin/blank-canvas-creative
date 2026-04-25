@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useClinicData } from '@/hooks/useClinicData';
 import { toast } from 'sonner';
+import { logAppError } from '@/lib/logAppError';
 import type { AestheticConsentRecord, ConsentType } from '@/components/prontuario/aesthetics/types';
 
 // Default consent templates
