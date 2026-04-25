@@ -189,9 +189,15 @@ export function usePatient(id: string | null) {
 // Create patient
 export function useCreatePatient() {
   const queryClient = useQueryClient();
-  
+  const { ensureCanCreate } = usePlanLimitGate();
+
   return useMutation({
     mutationFn: async (data: PatientFormData) => {
+      // Bloqueio por limite do plano
+      const allowed = await ensureCanCreate('patients');
+      if (!allowed) {
+        throw new Error('PLAN_LIMIT_REACHED');
+      }
       const clinicId = await getClinicId();
       
       // Insert patient
