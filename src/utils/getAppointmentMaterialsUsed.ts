@@ -17,12 +17,16 @@ export type MaterialUsedSource =
   | "stock_movement"
   | "material_consumption"
   | "aesthetic_product"
-  | "fallback_temporal";
+  | "fallback_temporal"
+  | "procedure_predicted"
+  | "procedure_kit_predicted";
 
 export interface AppointmentMaterialUsed {
   id: string;
   source: MaterialUsedSource;
-  origin_label: string; // Ex: "Estoque", "Consumo manual", "Estética", "Vinculação por janela"
+  origin_label: string; // Ex: "Estoque", "Consumo manual", "Estética", "Previsto no procedimento"
+  /** true quando o item ainda não foi confirmado/consumido — apenas previsto pelo procedimento */
+  is_predicted?: boolean;
   product_id: string | null;
   material_id: string | null;
   procedure_id: string | null;
@@ -44,6 +48,7 @@ interface AppointmentWindow {
   clinic_id: string;
   patient_id: string;
   professional_id: string;
+  procedure_id?: string | null;
   started_at: string | null;
   finished_at: string | null;
 }
