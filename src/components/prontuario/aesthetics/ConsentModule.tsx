@@ -51,7 +51,7 @@ import { ptBR } from "date-fns/locale";
 import { useAestheticConsent, DEFAULT_CONSENT_TEMPLATES } from "@/hooks/aesthetics";
 import type { ConsentType, AestheticConsentRecord } from "./types";
 import { CONSENT_TYPE_LABELS } from "./types";
-import { SignatureCanvas } from "./SignatureCanvas";
+import { SignatureCanvas, type SignatureCanvasHandle } from "./SignatureCanvas";
 
 interface ConsentModuleProps {
   patientId: string;
