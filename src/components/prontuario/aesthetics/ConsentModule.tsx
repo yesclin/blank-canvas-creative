@@ -136,7 +136,7 @@ export function ConsentModule({
         reason,
         signature_length: length,
         min_required: MIN_SIGNATURE_LENGTH,
-        signature_source: fromState ? 'state' : (fromCanvas ? 'canvas_fallback' : 'none'),
+        signature_source: signatureSource,
         canvas_has_signature: canvasHasSignature,
         had_state: !!fromState,
         had_canvas_data: !!fromCanvas,
