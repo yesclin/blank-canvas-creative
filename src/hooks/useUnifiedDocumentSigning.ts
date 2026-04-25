@@ -478,7 +478,16 @@ export function useUnifiedDocumentSigning() {
         toast.success("Documento assinado com Assinatura Avançada YesClin.");
         return { success: true, signatureId: sigRow.id, documentHash };
       } catch (err: any) {
-        console.error("[SIGN] error:", err);
+        logAppError(err, {
+          ...baseLogContext,
+          action: "signDocument",
+          extra: {
+            ...baseLogContext.extra,
+            supabase_code: err?.code,
+            supabase_details: err?.details,
+            supabase_hint: err?.hint,
+          },
+        });
         toast.error(err?.message || "Erro ao assinar documento.");
         return { success: false };
       } finally {
