@@ -188,12 +188,12 @@ export const alertSeverityConfig: Record<AlertSeverity, { label: string; color: 
 
 export const alertTypeLabels: Record<AlertType, string> = {
   allergy: 'Alergia',
-  medication: 'Medicamento',
-  disease: 'Doença',
+  medication: 'Medicação',
+  disease: 'Condição / Doença',
   exam: 'Exame Pendente',
   return: 'Retorno em Atraso',
   contraindication: 'Contraindicação',
-  other: 'Outro',
+  other: 'Observação / Outro',
 };
 
 export const evolutionTypeLabels: Record<EvolutionType, string> = {

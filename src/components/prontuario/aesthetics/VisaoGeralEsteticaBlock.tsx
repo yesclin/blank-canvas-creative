@@ -34,6 +34,7 @@ import {
   type EsteticaSummaryData, 
   type EsteticaAlert 
 } from '@/hooks/aesthetics/useVisaoGeralEsteticaData';
+import { getAlertTypeLabel } from '@/utils/clinicalAlertLabels';
 
 interface VisaoGeralEsteticaBlockProps {
   patientId: string | null;
@@ -199,7 +200,7 @@ export function VisaoGeralEsteticaBlock({
                     variant={alert.severity === 'critical' ? 'destructive' : 'secondary'}
                     className="text-xs"
                   >
-                    {alert.alert_type}
+                    {getAlertTypeLabel(alert.alert_type)}
                   </Badge>
                 </div>
               </CardContent>

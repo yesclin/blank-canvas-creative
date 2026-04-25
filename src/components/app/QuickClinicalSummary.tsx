@@ -7,6 +7,7 @@ import { AlertTriangle, FileText, Activity, Clock, ChevronRight } from "lucide-r
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { getSeverityLabel } from "@/utils/clinicalAlertLabels";
 
 interface QuickClinicalSummaryProps {
   patientId: string;
@@ -138,7 +139,7 @@ export function QuickClinicalSummary({
                   variant="outline"
                   className="text-[9px] px-1 py-0 shrink-0 border-destructive/20 text-destructive/70"
                 >
-                  {alert.severity}
+                  {getSeverityLabel(alert.severity)}
                 </Badge>
               </div>
             ))}
