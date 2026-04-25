@@ -213,14 +213,18 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
   });
 
   // Buscar alertas clínicos ativos
+  // IMPORTANTE: queryKey compartilha o prefixo ['aesthetic-alerts', patientId]
+  // com useAestheticAlerts. As mutations do hook invalidam por prefixo, garantindo
+  // sincronização entre o card de Visão Geral, a aba Alertas Clínicos e os cards
+  // superiores em tempo real após criar/editar/desativar/reativar alertas.
   const alertsQuery = useQuery({
-    queryKey: ['estetica-alerts', patientId, clinicId],
+    queryKey: ['aesthetic-alerts', patientId, 'active-only'],
     queryFn: async () => {
       if (!patientId || !clinicId) return [];
 
       const { data, error } = await supabase
         .from('clinical_alerts')
-        .select('id, title, description, severity, alert_type, created_at')
+        .select('id, title, description, severity, alert_type, created_at, is_active')
         .eq('patient_id', patientId)
         .eq('clinic_id', clinicId)
         .eq('is_active', true)
@@ -243,10 +247,19 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
     enabled: !!patientId && !!clinicId,
   });
 
+  // Override total_alertas with the actual alerts list length so the
+  // "Alertas Clínicos" summary card always matches the rendered list.
+  const summaryData = summaryQuery.data || getEmptySummary();
+  const alertsData = alertsQuery.data || [];
+  const summaryWithLiveAlerts: EsteticaSummaryData = {
+    ...summaryData,
+    total_alertas: alertsData.length,
+  };
+
   return {
     patient: patientQuery.data || null,
-    summary: summaryQuery.data || getEmptySummary(),
-    alerts: alertsQuery.data || [],
+    summary: summaryWithLiveAlerts,
+    alerts: alertsData,
     loading: patientQuery.isLoading || summaryQuery.isLoading || alertsQuery.isLoading,
     error: patientQuery.error || summaryQuery.error || alertsQuery.error,
   };
