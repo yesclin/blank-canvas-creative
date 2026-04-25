@@ -52,6 +52,7 @@ import { useAestheticConsent, DEFAULT_CONSENT_TEMPLATES } from "@/hooks/aestheti
 import type { ConsentType, AestheticConsentRecord } from "./types";
 import { CONSENT_TYPE_LABELS } from "./types";
 import { SignatureCanvas, type SignatureCanvasHandle } from "./SignatureCanvas";
+import { newTraceId } from "@/lib/traceId";
 
 interface ConsentModuleProps {
   patientId: string;
@@ -92,15 +93,33 @@ export function ConsentModule({
   const handleCreateConsent = async () => {
     if (!selectedType || !agreed) return;
 
+    // Trace ID único para esta tentativa de aceite — propagado para o hook,
+    // logs do Supabase, console do componente e mensagem de erro.
+    const traceId = newTraceId('consent');
+
     // Captura a assinatura: usa o state atualizado ou faz fallback para o canvas
     const captured = signatureData ?? signatureRef.current?.getSignature() ?? null;
 
-    console.log("[ConsentModule] Signature Data length:", captured?.length ?? 0);
+    console.info("[ConsentModule] handleCreateConsent", {
+      trace_id: traceId,
+      patient_id: patientId,
+      appointment_id: appointmentId,
+      consent_type: selectedType,
+      procedure_id: selectedProcedureId,
+      signature_length: captured?.length ?? 0,
+      agreed,
+    });
 
     // Validação: assinatura precisa existir e ter conteúdo mínimo
     // (canvas em branco gera dataURL ~3-5KB; assinatura real fica acima de 6KB)
     const MIN_SIGNATURE_LENGTH = 6000;
     if (!captured || captured.length < MIN_SIGNATURE_LENGTH) {
+      console.warn("[ConsentModule] signature rejected", {
+        trace_id: traceId,
+        reason: !captured ? 'missing' : 'too_small',
+        signature_length: captured?.length ?? 0,
+        min_required: MIN_SIGNATURE_LENGTH,
+      });
       toast.error("Assinatura inválida. Por favor, assine novamente.");
       return;
     }
@@ -115,12 +134,19 @@ export function ConsentModule({
         procedure_id: selectedProcedureId || undefined,
         procedure_name: procedure?.name || undefined,
         signature_data: captured,
+        trace_id: traceId,
+      });
+
+      console.info("[ConsentModule] consent saved", {
+        trace_id: traceId,
+        consent_type: selectedType,
       });
 
       setCreateDialogOpen(false);
       resetForm();
     } catch (err: any) {
       console.error("[ConsentModule] Erro ao salvar assinatura:", {
+        trace_id: traceId,
         error: err,
         supabase_code: err?.code,
         supabase_details: err?.details,
@@ -138,7 +164,7 @@ export function ConsentModule({
           : err?.message
             ? `Erro ao salvar assinatura: ${err.message}`
             : 'Erro ao salvar assinatura. Tente novamente.';
-      toast.error(friendly);
+      toast.error(`${friendly} (ref: ${traceId})`);
     } finally {
       setIsSavingSignature(false);
     }
