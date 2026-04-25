@@ -164,22 +164,26 @@ describe('ConsentModule — signature validation gate', () => {
     // Force a too-short capture by patching the canvas DOM behaviour. The
     // real SignatureCanvas pulls its dataURL from the underlying <canvas>;
     // we override `toDataURL` to return a sub-threshold string and flip the
-    // hasSignature flag by simulating a stroke through onMouseDown/Move/Up.
+    // hasSignature flag by simulating two stroke cycles. Two cycles are
+    // needed because `stopDrawing` reads `hasSignature` from a stale closure
+    // on the first cycle (state update is async), so the second `mouseUp`
+    // is the one that actually emits onSave.
     const canvas = document.querySelector('canvas') as HTMLCanvasElement;
     expect(canvas).toBeTruthy();
 
-    // Simulate at least one stroke so SignatureCanvas marks hasSignature=true.
-    // jsdom doesn't compute layout, so getBoundingClientRect returns zeros —
-    // that's fine; the component only needs the events to flip its state.
+    const tooShort = 'data:image/png;base64,' + 'A'.repeat(100);
+    canvas.toDataURL = () => tooShort;
+
     act(() => {
       fireEvent.mouseDown(canvas, { clientX: 5, clientY: 5 });
       fireEvent.mouseMove(canvas, { clientX: 10, clientY: 10 });
       fireEvent.mouseUp(canvas);
     });
-
-    // Now stub toDataURL to return a too-short payload.
-    const tooShort = 'data:image/png;base64,' + 'A'.repeat(100);
-    canvas.toDataURL = () => tooShort;
+    act(() => {
+      fireEvent.mouseDown(canvas, { clientX: 12, clientY: 12 });
+      fireEvent.mouseMove(canvas, { clientX: 20, clientY: 20 });
+      fireEvent.mouseUp(canvas);
+    });
 
     fireEvent.click(getConfirmButton());
 
