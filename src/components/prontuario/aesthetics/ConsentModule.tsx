@@ -97,8 +97,12 @@ export function ConsentModule({
     // logs do Supabase, console do componente e mensagem de erro.
     const traceId = newTraceId('consent');
 
-    // Captura a assinatura: usa o state atualizado ou faz fallback para o canvas
-    const captured = signatureData ?? signatureRef.current?.getSignature() ?? null;
+    // Captura a assinatura: prefere o state (atualizado em tempo real pelo onSave)
+    // e faz fallback para getSignature() do canvas (que também loga internamente).
+    const fromState = signatureData ?? null;
+    const fromCanvas = signatureRef.current?.getSignature() ?? null;
+    const canvasHasSignature = signatureRef.current?.hasSignature() ?? false;
+    const captured = fromState ?? fromCanvas;
 
     console.info("[ConsentModule] handleCreateConsent", {
       trace_id: traceId,
@@ -107,6 +111,8 @@ export function ConsentModule({
       consent_type: selectedType,
       procedure_id: selectedProcedureId,
       signature_length: captured?.length ?? 0,
+      signature_source: fromState ? 'state' : (fromCanvas ? 'canvas_fallback' : 'none'),
+      canvas_has_signature: canvasHasSignature,
       agreed,
     });
 
@@ -114,13 +120,39 @@ export function ConsentModule({
     // (canvas em branco gera dataURL ~3-5KB; assinatura real fica acima de 6KB)
     const MIN_SIGNATURE_LENGTH = 6000;
     if (!captured || captured.length < MIN_SIGNATURE_LENGTH) {
+      // Diagnóstico granular: distingue cada causa para correlacionar com os logs
+      // emitidos pelo SignatureCanvas (mesmo trace_id no console permite reconstruir).
+      let reason: 'missing' | 'empty_data_url' | 'too_small' | 'canvas_not_drawn';
+      if (!captured) {
+        reason = canvasHasSignature ? 'empty_data_url' : 'canvas_not_drawn';
+      } else if (captured.length === 0) {
+        reason = 'empty_data_url';
+      } else {
+        reason = 'too_small';
+      }
+
       console.warn("[ConsentModule] signature rejected", {
         trace_id: traceId,
-        reason: !captured ? 'missing' : 'too_small',
+        reason,
         signature_length: captured?.length ?? 0,
         min_required: MIN_SIGNATURE_LENGTH,
+        signature_source: fromState ? 'state' : (fromCanvas ? 'canvas_fallback' : 'none'),
+        canvas_has_signature: canvasHasSignature,
+        had_state: !!fromState,
+        had_canvas_data: !!fromCanvas,
+        patient_id: patientId,
+        appointment_id: appointmentId,
+        consent_type: selectedType,
       });
-      toast.error("Assinatura inválida. Por favor, assine novamente.");
+
+      // Mensagem amigável diferenciada para ajudar o usuário a corrigir.
+      const friendly =
+        reason === 'canvas_not_drawn'
+          ? 'Por favor, assine no quadro antes de confirmar.'
+          : reason === 'empty_data_url'
+            ? 'Não foi possível capturar a assinatura. Tente assinar novamente.'
+            : 'Assinatura muito curta. Faça uma assinatura mais visível e tente novamente.';
+      toast.error(`${friendly} (ref: ${traceId})`);
       return;
     }
 
