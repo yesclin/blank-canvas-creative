@@ -133,15 +133,68 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
     onClear?.();
   };
 
+  // Tamanho mínimo (em chars do dataURL) para considerar uma assinatura válida.
+  // Canvas em branco (PNG vazio do tamanho atual) gera dataURL ~3-5KB; assinatura real
+  // costuma ficar acima de 6KB. Mantemos esse limiar consistente com o ConsentModule.
+  const MIN_SIGNATURE_LENGTH = 6000;
+
   useImperativeHandle(ref, () => ({
     getSignature: () => {
       const canvas = canvasRef.current;
-      if (!canvas || !hasSignature) return null;
-      return canvas.toDataURL('image/png');
+      if (!canvas) {
+        console.warn('[SignatureCanvas] getSignature called but canvas ref is null', {
+          has_canvas: false,
+          is_drawing: isDrawing,
+          has_signature: hasSignature,
+          min_required: MIN_SIGNATURE_LENGTH,
+        });
+        return null;
+      }
+      if (!hasSignature) {
+        console.warn('[SignatureCanvas] getSignature returned null — canvas has no strokes', {
+          reason: 'not_drawn',
+          has_canvas: true,
+          is_drawing: isDrawing,
+          has_signature: false,
+          canvas_width: canvas.width,
+          canvas_height: canvas.height,
+          min_required: MIN_SIGNATURE_LENGTH,
+        });
+        return null;
+      }
+      const dataUrl = canvas.toDataURL('image/png');
+      const length = dataUrl?.length ?? 0;
+      if (!dataUrl || length === 0) {
+        console.error('[SignatureCanvas] toDataURL returned empty', {
+          reason: 'empty_data_url',
+          has_canvas: true,
+          is_drawing: isDrawing,
+          has_signature: hasSignature,
+          canvas_width: canvas.width,
+          canvas_height: canvas.height,
+          signature_length: length,
+          min_required: MIN_SIGNATURE_LENGTH,
+        });
+        return null;
+      }
+      if (length < MIN_SIGNATURE_LENGTH) {
+        console.warn('[SignatureCanvas] toDataURL produced suspiciously short signature', {
+          reason: 'too_small',
+          has_canvas: true,
+          is_drawing: isDrawing,
+          has_signature: hasSignature,
+          canvas_width: canvas.width,
+          canvas_height: canvas.height,
+          signature_length: length,
+          min_required: MIN_SIGNATURE_LENGTH,
+        });
+        // Retornamos mesmo assim — quem chamou (ConsentModule / wizard) decide rejeitar.
+      }
+      return dataUrl;
     },
     clear: clearCanvas,
     hasSignature: () => hasSignature,
-  }), [hasSignature]);
+  }), [hasSignature, isDrawing]);
 
   return (
     <div className={cn('space-y-2', className)}>
