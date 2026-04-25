@@ -442,6 +442,7 @@ export function ConsentModule({
                     </div>
 
                     <SignatureCanvas
+                      ref={signatureRef}
                       onSave={setSignatureData}
                       onClear={() => setSignatureData(null)}
                     />
@@ -455,14 +456,18 @@ export function ConsentModule({
                   </div>
 
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setStep('read')}>
+                    <Button
+                      variant="outline"
+                      onClick={() => setStep('read')}
+                      disabled={isCreating || isSavingSignature}
+                    >
                       Voltar
                     </Button>
                     <Button 
                       onClick={handleCreateConsent} 
-                      disabled={!signatureData || isCreating}
+                      disabled={isCreating || isSavingSignature}
                     >
-                      {isCreating ? 'Registrando...' : 'Confirmar e Salvar'}
+                      {(isCreating || isSavingSignature) ? 'Salvando...' : 'Confirmar e Salvar'}
                     </Button>
                   </DialogFooter>
                 </>
