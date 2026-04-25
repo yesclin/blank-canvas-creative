@@ -1119,6 +1119,15 @@ export default function Prontuario() {
     }
   }, [navItems, activeTab]);
 
+  // Hydrate active tab from URL ?tab=... when navItems become available
+  const urlTab = searchParams.get("tab");
+  useEffect(() => {
+    if (urlTab && navItems.find((n) => n.id === urlTab) && urlTab !== activeTab) {
+      setActiveTab(urlTab);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlTab, navItems]);
+
   const shouldHoldProntuarioRendering = specialtyLoading || !isSpecialtyResolved;
   const resolvedSpecialtyName = activeSpecialty?.name ?? activeSpecialtyName ?? undefined;
   const resolvedSpecialtyId = activeSpecialty?.id ?? activeSpecialtyId;
