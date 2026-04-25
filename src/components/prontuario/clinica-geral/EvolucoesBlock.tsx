@@ -252,8 +252,15 @@ export function EvolucoesBlock({
           {/* Timeline line */}
           <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border" />
           
-          {sortedEvolucoes.map((evolucao) => (
-            <div key={evolucao.id} className="relative pl-10 pb-4 last:pb-0">
+          {focusedEvolucoes.map((evolucao) => {
+            const isMatch = isFocusActive && focus?.sourceRecordId === evolucao.id;
+            return (
+            <div
+              key={evolucao.id}
+              ref={isMatch ? focusedRef : undefined}
+              className="relative pl-10 pb-4 last:pb-0"
+              data-search-record-id={evolucao.id}
+            >
               {/* Timeline dot */}
               <div className={`absolute left-2.5 top-3 w-3 h-3 rounded-full border-2 ${
                 evolucao.status === 'assinada' 
@@ -262,7 +269,7 @@ export function EvolucoesBlock({
               }`} />
               
               <Card 
-                className="hover:shadow-md transition-shadow cursor-pointer" 
+                className={`hover:shadow-md transition-shadow cursor-pointer ${isMatch ? 'ring-2 ring-primary ring-offset-2' : ''}`} 
                 onClick={() => handleViewEvolucao(evolucao)}
               >
                 <CardContent className="p-4">
