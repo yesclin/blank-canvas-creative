@@ -281,6 +281,10 @@ export function SpecialtiesSection() {
       return;
     }
 
+    // Bloqueio por limite do plano antes de criar
+    const allowed = await ensureCanCreate('specialties');
+    if (!allowed) return;
+
     setIsSubmitting(true);
     try {
       const slug = newName.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
