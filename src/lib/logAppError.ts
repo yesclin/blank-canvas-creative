@@ -14,6 +14,8 @@ export interface AppErrorContext {
   component?: string;
   /** Ação executada (ex: "createConsent", "fetchTemplates"). */
   action?: string;
+  /** Identificador único de correlação para amarrar múltiplos logs do mesmo fluxo. */
+  traceId?: string | null;
   patientId?: string | null;
   appointmentId?: string | null;
   specialtyId?: string | null;
