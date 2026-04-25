@@ -36,6 +36,13 @@ interface SnapshotData {
   documents?: any[];
   alerts?: any[];
   media?: any[];
+  procedures_performed?: any[];
+  aesthetic_products?: any[];
+  materials_consumed?: any[];
+  before_after?: any[];
+  facial_maps?: any[];
+  odontogram?: any;
+  body_measurements?: any[];
   session_notes?: string | null;
   financial?: any;
 }
