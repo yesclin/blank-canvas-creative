@@ -138,6 +138,11 @@ export function SpecialtiesSection() {
   /** Activate a standard specialty using the provision_specialty RPC */
   const handleActivateStandard = async (slug: string, name: string) => {
     if (!clinic?.id || !isOwner) return;
+
+    // Bloqueio por limite do plano antes de provisionar
+    const allowed = await ensureCanCreate('specialties');
+    if (!allowed) return;
+
     setTogglingSlug(slug);
 
     try {
