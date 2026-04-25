@@ -223,6 +223,45 @@ export function useUnifiedDocumentSigning() {
         return { success: false };
       }
 
+      // Trace ID único por tentativa de assinatura — amarra todas as etapas
+      // (validação, reauth, hash, upload, insert, update, eventos, audit).
+      const traceId = newTraceId("sig");
+
+      const signatureLength =
+        method === "handwritten"
+          ? handwrittenDataUrl?.length ?? 0
+          : savedSignatureDataUrl?.length ?? 0;
+
+      const baseLogContext = {
+        screen: "Assinatura Avançada",
+        component: "useUnifiedDocumentSigning",
+        traceId,
+        clinicId: clinic.id,
+        patientId: context.patient_id,
+        extra: {
+          trace_id: traceId,
+          document_type: context.document_type,
+          document_id: context.document_id,
+          appointment_id: (context.snapshot as any)?.appointment_id ?? null,
+          method,
+          signature_length: signatureLength,
+          has_selfie: !!selfieDataUrl,
+          has_geolocation: !!geolocation,
+        },
+      };
+
+      console.info("[useUnifiedDocumentSigning] sign requested", {
+        trace_id: traceId,
+        document_type: context.document_type,
+        document_id: context.document_id,
+        patient_id: context.patient_id,
+        clinic_id: clinic.id,
+        method,
+        signature_length: signatureLength,
+        has_selfie: !!selfieDataUrl,
+        has_geolocation: !!geolocation,
+      });
+
       setSigning(true);
       try {
         const { data: userData } = await supabase.auth.getUser();
@@ -233,14 +272,23 @@ export function useUnifiedDocumentSigning() {
         }
 
         await logEvent(null, clinic.id, "signature_requested", {
+          trace_id: traceId,
           document_id: context.document_id,
           document_type: context.document_type,
+          signature_length: signatureLength,
         });
 
         // Re-auth
         const ok = await reAuthenticate(password);
-        if (!ok) return { success: false };
+        if (!ok) {
+          await logEvent(null, clinic.id, "reauth_failed", {
+            trace_id: traceId,
+            document_id: context.document_id,
+          });
+          return { success: false };
+        }
         await logEvent(null, clinic.id, "reauth_passed", {
+          trace_id: traceId,
           document_id: context.document_id,
         });
 
