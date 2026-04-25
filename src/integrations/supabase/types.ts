@@ -2183,6 +2183,8 @@ export type Database = {
           patient_cpf_snapshot: string | null
           patient_id: string
           patient_name_snapshot: string | null
+          procedure_id: string | null
+          procedure_name: string | null
           professional_id: string | null
           revoke_reason: string | null
           revoked_at: string | null
@@ -2209,6 +2211,8 @@ export type Database = {
           patient_cpf_snapshot?: string | null
           patient_id: string
           patient_name_snapshot?: string | null
+          procedure_id?: string | null
+          procedure_name?: string | null
           professional_id?: string | null
           revoke_reason?: string | null
           revoked_at?: string | null
@@ -2235,6 +2239,8 @@ export type Database = {
           patient_cpf_snapshot?: string | null
           patient_id?: string
           patient_name_snapshot?: string | null
+          procedure_id?: string | null
+          procedure_name?: string | null
           professional_id?: string | null
           revoke_reason?: string | null
           revoked_at?: string | null
@@ -2274,6 +2280,13 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_consent_acceptances_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
             referencedColumns: ["id"]
           },
           {
