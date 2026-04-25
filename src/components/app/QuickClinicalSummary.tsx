@@ -7,6 +7,7 @@ import { AlertTriangle, FileText, Activity, Clock, ChevronRight } from "lucide-r
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { getSeverityLabel } from "@/utils/clinicalAlertLabels";
 
 interface QuickClinicalSummaryProps {
   patientId: string;
