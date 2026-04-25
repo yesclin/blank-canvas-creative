@@ -75,7 +75,7 @@ async function openSignStep() {
 /** Locates the "Confirmar e Assinar" button on the sign step. */
 function getConfirmButton() {
   // Match the actual label used in ConsentModule's signature step.
-  return screen.getByRole('button', { name: /confirmar/i });
+  return screen.getByRole('button', { name: /confirmar e salvar/i });
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────
