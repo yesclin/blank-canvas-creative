@@ -2,28 +2,38 @@
  * ESTÉTICA - Canvas de Assinatura Digital
  * 
  * Componente para captura de assinatura do paciente.
+ * Emite os dados da assinatura automaticamente conforme o usuário desenha,
+ * sem necessidade de botão intermediário de confirmação.
  */
 
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 'react';
 import { Button } from '@/components/ui/button';
-import { Eraser, Check } from 'lucide-react';
+import { Eraser } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface SignatureCanvasProps {
-  onSave: (signatureData: string) => void;
+  /** Recebe o dataURL atualizado a cada traço (ou null quando limpo). */
+  onSave: (signatureData: string | null) => void;
   onClear?: () => void;
   className?: string;
   width?: number;
   height?: number;
 }
 
-export function SignatureCanvas({
+export interface SignatureCanvasHandle {
+  /** Retorna o dataURL atual ou null se não houver assinatura. */
+  getSignature: () => string | null;
+  clear: () => void;
+  hasSignature: () => boolean;
+}
+
+export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvasProps>(({
   onSave,
   onClear,
   className,
   width = 400,
   height = 150,
-}: SignatureCanvasProps) {
+}, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
@@ -35,17 +45,14 @@ export function SignatureCanvas({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Set canvas size
     canvas.width = width;
     canvas.height = height;
 
-    // Style
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    // Background
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, width, height);
   }, [width, height]);
@@ -73,6 +80,7 @@ export function SignatureCanvas({
   };
 
   const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!ctx) return;
@@ -87,6 +95,7 @@ export function SignatureCanvas({
 
   const draw = (e: React.MouseEvent | React.TouchEvent) => {
     if (!isDrawing) return;
+    e.preventDefault();
 
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
@@ -97,11 +106,19 @@ export function SignatureCanvas({
 
     ctx.lineTo(coords.x, coords.y);
     ctx.stroke();
-    setHasSignature(true);
+    if (!hasSignature) setHasSignature(true);
   };
 
   const stopDrawing = () => {
+    if (!isDrawing) return;
     setIsDrawing(false);
+
+    // Emite a assinatura automaticamente ao final de cada traço
+    const canvas = canvasRef.current;
+    if (canvas && hasSignature) {
+      const dataUrl = canvas.toDataURL('image/png');
+      onSave(dataUrl);
+    }
   };
 
   const clearCanvas = () => {
@@ -112,16 +129,19 @@ export function SignatureCanvas({
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     setHasSignature(false);
+    onSave(null);
     onClear?.();
   };
 
-  const saveSignature = () => {
-    const canvas = canvasRef.current;
-    if (!canvas || !hasSignature) return;
-
-    const dataUrl = canvas.toDataURL('image/png');
-    onSave(dataUrl);
-  };
+  useImperativeHandle(ref, () => ({
+    getSignature: () => {
+      const canvas = canvasRef.current;
+      if (!canvas || !hasSignature) return null;
+      return canvas.toDataURL('image/png');
+    },
+    clear: clearCanvas,
+    hasSignature: () => hasSignature,
+  }), [hasSignature]);
 
   return (
     <div className={cn('space-y-2', className)}>
@@ -139,10 +159,10 @@ export function SignatureCanvas({
           onTouchEnd={stopDrawing}
         />
       </div>
-      <p className="text-xs text-muted-foreground text-center">
-        Assine acima usando o mouse ou toque
-      </p>
-      <div className="flex justify-between gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">
+          Assine acima usando o mouse ou toque
+        </p>
         <Button
           type="button"
           variant="outline"
@@ -153,16 +173,9 @@ export function SignatureCanvas({
           <Eraser className="h-4 w-4 mr-1.5" />
           Limpar
         </Button>
-        <Button
-          type="button"
-          size="sm"
-          onClick={saveSignature}
-          disabled={!hasSignature}
-        >
-          <Check className="h-4 w-4 mr-1.5" />
-          Confirmar Assinatura
-        </Button>
       </div>
     </div>
   );
-}
+});
+
+SignatureCanvas.displayName = 'SignatureCanvas';
