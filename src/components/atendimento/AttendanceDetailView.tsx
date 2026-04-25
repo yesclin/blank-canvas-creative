@@ -537,13 +537,13 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
 
             {/* Caso haja vários procedimentos estruturados, listamos os
                 materiais globais abaixo para não esconder nada. */}
-            {detail.procedures_performed.length > 1 && detail.materials_used.length > 0 && (
+            {(detail.procedures_performed?.length ?? 0) > 1 && (detail.materials_used?.length ?? 0) > 0 && (
               <div className="rounded-lg border border-dashed p-3">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2 flex items-center gap-1">
                   <FileText className="h-3 w-3" /> Materiais registrados no atendimento
                 </p>
                 <div className="space-y-1.5">
-                  {detail.materials_used.map((m) => (
+                  {(detail.materials_used ?? []).map((m) => (
                     <div key={`gmat-${m.id}`} className="rounded-md bg-muted/40 px-2.5 py-1.5 text-xs">
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <span className="font-medium">{m.name}</span>
