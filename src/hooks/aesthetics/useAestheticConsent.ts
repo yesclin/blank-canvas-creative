@@ -166,18 +166,25 @@ export function useAestheticConsent(patientId: string | null) {
       if (!patientId || !clinic?.id) return [];
 
       const { data, error } = await supabase
-        .from('aesthetic_consent_records')
+        .from(CONSENT_TABLE)
         .select('*')
         .eq('clinic_id', clinic.id)
         .eq('patient_id', patientId)
         .order('accepted_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching consents:', error);
+        logAppError(error, {
+          screen: 'Prontuário',
+          component: 'useAestheticConsent',
+          action: 'fetchConsents',
+          patientId,
+          clinicId: clinic.id,
+          extra: { table: CONSENT_TABLE },
+        });
         throw error;
       }
 
-      return data as (AestheticConsentRecord & { procedure_id?: string; procedure_name?: string })[];
+      return (data || []).map(mapRowToRecord);
     },
     enabled: !!patientId && !!clinic?.id,
   });
