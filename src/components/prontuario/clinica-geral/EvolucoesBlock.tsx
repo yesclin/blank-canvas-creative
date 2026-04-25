@@ -140,9 +140,28 @@ export function EvolucoesBlock({
   });
 
   // Sort by date descending (most recent first)
-  const sortedEvolucoes = [...evolucoes].sort((a, b) => 
-    new Date(b.data_hora).getTime() - new Date(a.data_hora).getTime()
+  const sortedEvolucoes = useMemo(
+    () => [...evolucoes].sort((a, b) => new Date(b.data_hora).getTime() - new Date(a.data_hora).getTime()),
+    [evolucoes]
   );
+
+  // Search focus support — when a result is clicked from global search,
+  // we filter the list to the focused record only and scroll/highlight it.
+  const { focus } = useSearchFocus();
+  const isFocusActive = !!focus && focus.sourceTable === "clinical_evolutions";
+  const focusedEvolucoes = useMemo(() => {
+    if (!isFocusActive) return sortedEvolucoes;
+    const match = sortedEvolucoes.filter((e) => e.id === focus!.sourceRecordId);
+    return match.length > 0 ? match : sortedEvolucoes;
+  }, [isFocusActive, focus, sortedEvolucoes]);
+  const focusedRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!isFocusActive) return;
+    const t = setTimeout(() => {
+      focusedRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 120);
+    return () => clearTimeout(t);
+  }, [isFocusActive, focus?.sourceRecordId]);
 
   const handleOpenForm = () => {
     setFormData({
