@@ -449,8 +449,8 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
 
       {/* ── Procedimentos Realizados (com materiais utilizados) ── */}
       {(detail.procedures_performed.length > 0 ||
-        detail.aesthetic_products.length > 0 ||
-        detail.materials_consumed.length > 0) && (
+        detail.materials_used.length > 0 ||
+        detail.aesthetic_products.length > 0) && (
         <SectionCard title="Procedimentos Realizados" icon={Activity}>
           <div className="space-y-3">
             {/* Lista de procedimentos. Quando não há registros estruturados,
@@ -476,11 +476,13 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
                   notes: null as string | null,
                 }]
             ).map((p, idx, arr) => {
-              // Distribui produtos e materiais no primeiro procedimento (mais
-              // comum no fluxo atual: 1 atendimento = 1 procedimento principal).
+              // Como hoje cada atendimento normalmente tem 1 procedimento,
+              // agrupamos todos os materiais utilizados sob ele. Se houver
+              // múltiplos procedimentos estruturados, o primeiro recebe os
+              // materiais (e listamos abaixo um bloco "global" para garantir
+              // que nada seja escondido).
               const isFirst = idx === 0 && arr.length === 1;
-              const products = isFirst ? detail.aesthetic_products : [];
-              const materials = isFirst ? detail.materials_consumed : [];
+              const matsForProc = isFirst ? detail.materials_used : [];
               return (
                 <div key={p.id} className="rounded-lg border p-3 text-sm">
                   <div className="flex items-center justify-between flex-wrap gap-2">
@@ -495,62 +497,66 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
                   {p.notes && <p className="text-xs text-foreground/80 mt-1.5">{p.notes}</p>}
 
                   {/* Materiais utilizados neste procedimento */}
-                  {(products.length > 0 || materials.length > 0) && (
-                    <div className="mt-3 pt-3 border-t border-dashed">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2 flex items-center gap-1">
-                        <FileText className="h-3 w-3" /> Materiais utilizados
+                  <div className="mt-3 pt-3 border-t border-dashed">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2 flex items-center gap-1">
+                      <FileText className="h-3 w-3" /> Materiais utilizados
+                    </p>
+                    {matsForProc.length === 0 ? (
+                      <p className="text-xs text-muted-foreground italic">
+                        Nenhum material registrado neste procedimento.
                       </p>
+                    ) : (
                       <div className="space-y-1.5">
-                        {products.map((pr) => (
-                          <div key={`prod-${pr.id}`} className="rounded-md bg-muted/40 px-2.5 py-1.5 text-xs">
+                        {matsForProc.map((m) => (
+                          <div key={`mat-${m.id}`} className="rounded-md bg-muted/40 px-2.5 py-1.5 text-xs">
                             <div className="flex items-center justify-between gap-2 flex-wrap">
-                              <span className="font-medium">{pr.product_name}</span>
-                              <span className="text-foreground/80">{pr.quantity} {pr.unit}</span>
+                              <span className="font-medium">{m.name}</span>
+                              <span className="text-foreground/80">
+                                {m.quantity}{m.unit ? ` ${m.unit}` : ""}
+                              </span>
                             </div>
-                            <div className="text-[10px] text-muted-foreground mt-0.5 flex flex-wrap gap-x-2">
-                              {pr.application_area && <span>Área: {pr.application_area}</span>}
-                              {pr.manufacturer && <span>Fabricante: {pr.manufacturer}</span>}
-                              {pr.batch_number && <span>Lote: {pr.batch_number}</span>}
-                              {pr.expiry_date && <span>Validade: {fmtDate(pr.expiry_date)}</span>}
-                            </div>
-                          </div>
-                        ))}
-                        {materials.map((m) => (
-                          <div key={`mat-${m.id}`} className="rounded-md bg-muted/40 px-2.5 py-1.5 text-xs flex items-center justify-between gap-2">
-                            <span className="font-medium">{m.product_name || "—"}</span>
-                            <span className="text-foreground/80">
-                              {m.quantity}{m.unit ? ` ${m.unit}` : ""}
-                            </span>
+                            {(m.batch_number || m.expiry_date || m.manufacturer || m.unit_cost != null || m.origin_label) && (
+                              <div className="text-[10px] text-muted-foreground mt-0.5 flex flex-wrap gap-x-2">
+                                {m.batch_number && <span>Lote: {m.batch_number}</span>}
+                                {m.expiry_date && <span>Validade: {fmtDate(m.expiry_date)}</span>}
+                                {m.manufacturer && <span>Fabricante: {m.manufacturer}</span>}
+                                {m.unit_cost != null && <span>Custo: {fmtCurrency(m.unit_cost)}</span>}
+                                {m.total_cost != null && m.total_cost > 0 && <span>Total: {fmtCurrency(m.total_cost)}</span>}
+                                <span>Origem: {m.origin_label}</span>
+                              </div>
+                            )}
+                            {m.notes && <p className="text-[10px] text-foreground/70 mt-0.5">{m.notes}</p>}
                           </div>
                         ))}
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               );
             })}
 
             {/* Caso haja vários procedimentos estruturados, listamos os
-                materiais/produtos globais abaixo para não esconder nada. */}
-            {detail.procedures_performed.length > 1 &&
-              (detail.aesthetic_products.length > 0 || detail.materials_consumed.length > 0) && (
+                materiais globais abaixo para não esconder nada. */}
+            {detail.procedures_performed.length > 1 && detail.materials_used.length > 0 && (
               <div className="rounded-lg border border-dashed p-3">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2 flex items-center gap-1">
-                  <FileText className="h-3 w-3" /> Materiais utilizados no atendimento
+                  <FileText className="h-3 w-3" /> Materiais registrados no atendimento
                 </p>
                 <div className="space-y-1.5">
-                  {detail.aesthetic_products.map((pr) => (
-                    <div key={`gprod-${pr.id}`} className="rounded-md bg-muted/40 px-2.5 py-1.5 text-xs flex items-center justify-between gap-2 flex-wrap">
-                      <span className="font-medium">{pr.product_name}</span>
-                      <span className="text-foreground/80">{pr.quantity} {pr.unit}</span>
-                    </div>
-                  ))}
-                  {detail.materials_consumed.map((m) => (
-                    <div key={`gmat-${m.id}`} className="rounded-md bg-muted/40 px-2.5 py-1.5 text-xs flex items-center justify-between gap-2">
-                      <span className="font-medium">{m.product_name || "—"}</span>
-                      <span className="text-foreground/80">
-                        {m.quantity}{m.unit ? ` ${m.unit}` : ""}
-                      </span>
+                  {detail.materials_used.map((m) => (
+                    <div key={`gmat-${m.id}`} className="rounded-md bg-muted/40 px-2.5 py-1.5 text-xs">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="font-medium">{m.name}</span>
+                        <span className="text-foreground/80">
+                          {m.quantity}{m.unit ? ` ${m.unit}` : ""}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5 flex flex-wrap gap-x-2">
+                        {m.batch_number && <span>Lote: {m.batch_number}</span>}
+                        {m.expiry_date && <span>Validade: {fmtDate(m.expiry_date)}</span>}
+                        {m.manufacturer && <span>Fabricante: {m.manufacturer}</span>}
+                        <span>Origem: {m.origin_label}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
