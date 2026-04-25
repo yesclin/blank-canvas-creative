@@ -93,12 +93,12 @@ export default function SuperAdminDashboard() {
         const planMap = new Map((plans.data ?? []).map((p: any) => [p.id, p.name as string]));
         const counters = subsData.reduce(
           (acc: any, s: any) => {
-            acc[s.status] = (acc[s.status] ?? 0) + 1;
+            acc[s.status as string] = (acc[s.status as string] ?? 0) + 1;
             if (['active', 'trial', 'overdue'].includes(s.status) && s.contracted_amount) {
               acc.mrr += Number(s.contracted_amount);
             }
             const planName = planMap.get(s.plan_id);
-            if (planName) acc.byPlan[planName] = (acc.byPlan[planName] ?? 0) + 1;
+            if (planName) acc.byPlan[planName as string] = (acc.byPlan[planName as string] ?? 0) + 1;
             return acc;
           },
           { active: 0, trial: 0, overdue: 0, blocked: 0, canceled: 0, mrr: 0, byPlan: {} as Record<string, number> }
