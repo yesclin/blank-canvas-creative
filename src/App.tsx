@@ -137,19 +137,19 @@ const App = () => (
             <Route path="prontuario" element={<ProtectedRoute module="prontuario"><Prontuario /></ProtectedRoute>} />
             <Route path="prontuario/:patientId" element={<ProtectedRoute module="prontuario"><Prontuario /></ProtectedRoute>} />
             <Route path="pacientes" element={<ProtectedRoute module="pacientes"><Pacientes /></ProtectedRoute>} />
-            <Route path="gestao/convenios" element={<ProtectedRoute module="convenios"><Convenios /></ProtectedRoute>} />
+            <Route path="gestao/convenios" element={<ProtectedRoute module="convenios"><ProtectedFeatureRoute feature="feature_insurances"><Convenios /></ProtectedFeatureRoute></ProtectedRoute>} />
             <Route path="meu-financeiro" element={<ProtectedRoute module="meu_financeiro"><MeuFinanceiro /></ProtectedRoute>} />
             <Route path="atendimento" element={<ProtectedRoute module="prontuario"><Atendimento /></ProtectedRoute>} />
             <Route path="atendimento/:appointmentId" element={<ProtectedRoute module="prontuario"><VerAtendimento /></ProtectedRoute>} />
             
             {/* Marketing - Página única com abas */}
-            <Route path="marketing" element={<ProtectedRoute module="comunicacao"><MarketingLayout /></ProtectedRoute>} />
+            <Route path="marketing" element={<ProtectedRoute module="comunicacao"><ProtectedFeatureRoute feature="feature_marketing"><MarketingLayout /></ProtectedFeatureRoute></ProtectedRoute>} />
             
             {/* Gestão */}
             <Route path="gestao/financas" element={<ProtectedRoute module="financeiro"><Financas /></ProtectedRoute>} />
-            <Route path="gestao/estoque" element={<ProtectedRoute module="estoque"><Estoque /></ProtectedRoute>} />
-            <Route path="gestao/relatorios" element={<ProtectedRoute module="relatorios"><Relatorios /></ProtectedRoute>} />
-            <Route path="gestao/auditoria" element={<ProtectedRoute module="configuracoes"><Auditoria /></ProtectedRoute>} />
+            <Route path="gestao/estoque" element={<ProtectedRoute module="estoque"><ProtectedFeatureRoute feature="feature_inventory"><Estoque /></ProtectedFeatureRoute></ProtectedRoute>} />
+            <Route path="gestao/relatorios" element={<ProtectedRoute module="relatorios"><ProtectedFeatureRoute feature="feature_advanced_reports"><Relatorios /></ProtectedFeatureRoute></ProtectedRoute>} />
+            <Route path="gestao/auditoria" element={<ProtectedRoute module="configuracoes"><ProtectedFeatureRoute feature="feature_audit"><Auditoria /></ProtectedFeatureRoute></ProtectedRoute>} />
             
             {/* Configurações */}
             <Route path="config/procedimentos" element={<ProtectedRoute module="configuracoes"><ConfigProcedimentos /></ProtectedRoute>} />
@@ -167,14 +167,15 @@ const App = () => (
             <Route path="config/formas-recebimento" element={<ProtectedRoute module="configuracoes"><FormasRecebimento /></ProtectedRoute>} />
             
             {/* Comercial */}
-            <Route path="comercial" element={<ProtectedRoute module="comercial"><ComercialDashboard /></ProtectedRoute>} />
-            <Route path="comercial/leads" element={<ProtectedRoute module="comercial"><LeadsPage /></ProtectedRoute>} />
-            <Route path="comercial/oportunidades" element={<ProtectedRoute module="comercial"><OpportunitiesPage /></ProtectedRoute>} />
-            <Route path="comercial/orcamentos" element={<ProtectedRoute module="comercial"><QuotesPage /></ProtectedRoute>} />
-            <Route path="comercial/pacotes" element={<ProtectedRoute module="comercial"><PackagesCommercialPage /></ProtectedRoute>} />
-            <Route path="comercial/conversoes" element={<ProtectedRoute module="comercial"><ConversionsPage /></ProtectedRoute>} />
-            <Route path="comercial/follow-ups" element={<ProtectedRoute module="comercial"><FollowupsPage /></ProtectedRoute>} />
-            <Route path="comercial/metas" element={<ProtectedRoute module="comercial"><GoalsPage /></ProtectedRoute>} />
+            <Route path="comercial" element={<ProtectedRoute module="comercial"><ProtectedFeatureRoute feature="feature_crm"><ComercialDashboard /></ProtectedFeatureRoute></ProtectedRoute>} />
+            <Route path="comercial/leads" element={<ProtectedRoute module="comercial"><ProtectedFeatureRoute feature="feature_crm"><LeadsPage /></ProtectedFeatureRoute></ProtectedRoute>} />
+            <Route path="comercial/oportunidades" element={<ProtectedRoute module="comercial"><ProtectedFeatureRoute feature="feature_crm"><OpportunitiesPage /></ProtectedFeatureRoute></ProtectedRoute>} />
+            <Route path="comercial/orcamentos" element={<ProtectedRoute module="comercial"><ProtectedFeatureRoute feature="feature_crm"><QuotesPage /></ProtectedFeatureRoute></ProtectedRoute>} />
+            <Route path="comercial/pacotes" element={<ProtectedRoute module="comercial"><ProtectedFeatureRoute feature="feature_crm"><PackagesCommercialPage /></ProtectedFeatureRoute></ProtectedRoute>} />
+            <Route path="comercial/conversoes" element={<ProtectedRoute module="comercial"><ProtectedFeatureRoute feature="feature_crm"><ConversionsPage /></ProtectedFeatureRoute></ProtectedRoute>} />
+            <Route path="comercial/follow-ups" element={<ProtectedRoute module="comercial"><ProtectedFeatureRoute feature="feature_crm"><FollowupsPage /></ProtectedFeatureRoute></ProtectedRoute>} />
+            <Route path="comercial/metas" element={<ProtectedRoute module="comercial"><ProtectedFeatureRoute feature="feature_crm"><GoalsPage /></ProtectedFeatureRoute></ProtectedRoute>} />
+            <Route path="comercial/relatorios" element={<ProtectedRoute module="comercial"><ProtectedFeatureRoute feature="feature_crm"><CommercialReportsPage /></ProtectedFeatureRoute></ProtectedRoute>} />
             <Route path="comercial/relatorios" element={<ProtectedRoute module="comercial"><CommercialReportsPage /></ProtectedRoute>} />
             
             {/* Teleconsulta - Sala do Profissional */}
