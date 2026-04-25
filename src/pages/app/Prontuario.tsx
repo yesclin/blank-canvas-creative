@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ClinicalAccessGuard } from "@/components/permissions/ClinicalAccessGuard";
+import { ErrorBoundary } from "@/components/app/ErrorBoundary";
 import {
   FileText, 
   ArrowLeft,
