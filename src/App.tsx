@@ -176,9 +176,12 @@ const App = () => (
             
             {/* Teleconsulta - Sala do Profissional */}
             <Route path="teleconsulta/:appointmentId/sala" element={<ProtectedRoute module="agenda"><TeleconsultaSala /></ProtectedRoute>} />
+
+            {/* Fallback dentro do /app: redireciona ao Dashboard mantendo o layout autenticado */}
+            <Route path="*" element={<Navigate to="/app" replace />} />
           </Route>
           
-          {/* Catch-all */}
+          {/* Catch-all global: NotFound decide entre /app e /login conforme auth */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
