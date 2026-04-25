@@ -12,7 +12,6 @@ import { GlobalActiveAppointmentProvider } from "@/contexts/GlobalActiveAppointm
 import { FloatingActiveAppointmentButton } from "./FloatingActiveAppointmentButton";
 import { ActiveAppointmentDrawer } from "./ActiveAppointmentDrawer";
 import { ErrorBoundary } from "./ErrorBoundary";
-import { useLocation as useRouteLocation } from "react-router-dom";
 
 function getModuleScope(pathname: string): string {
   if (pathname.startsWith("/app/prontuario")) return "Prontuário";
