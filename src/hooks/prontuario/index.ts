@@ -102,3 +102,13 @@ export { useAnamnesisEditability, type AnamnesisEditabilityResult, type Anamnesi
 
 // Clinical Addendums
 export { useClinicalAddendums, type ClinicalAddendum, type AddendumInput } from './useClinicalAddendums';
+
+// Global Search across all clinical/cadastral data of a patient
+export {
+  useProntuarioGlobalSearch,
+  normalizeText,
+  jsonbToSearchableText,
+  type GlobalSearchResult,
+  type GlobalSearchResultType,
+  type UseProntuarioGlobalSearchResult,
+} from './useProntuarioGlobalSearch';
