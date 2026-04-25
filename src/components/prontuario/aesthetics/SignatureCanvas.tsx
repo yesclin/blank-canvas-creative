@@ -10,6 +10,11 @@ import { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 're
 import { Button } from '@/components/ui/button';
 import { Eraser } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  buildSignatureThumbnail,
+  type SignatureThumbnail,
+  type ThumbnailMode,
+} from './signatureThumbnail';
 
 interface SignatureCanvasProps {
   /** Recebe o dataURL atualizado a cada traço (ou null quando limpo). */
@@ -25,6 +30,11 @@ export interface SignatureCanvasHandle {
   getSignature: () => string | null;
   clear: () => void;
   hasSignature: () => boolean;
+  /**
+   * Retorna um thumbnail privacy-safe da assinatura atual para anexar a logs
+   * de rejeição/erro. Por padrão usa modo 'placeholder' (sem pixel data).
+   */
+  getDebugThumbnail: (mode?: ThumbnailMode) => SignatureThumbnail | null;
 }
 
 export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvasProps>(({
@@ -147,6 +157,8 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
           is_drawing: isDrawing,
           has_signature: hasSignature,
           min_required: MIN_SIGNATURE_LENGTH,
+          // Sem canvas, ainda assim emitimos um placeholder para correlação visual.
+          debug_thumbnail: buildSignatureThumbnail({ canvas: null, hasSignature, mode: 'placeholder' })?.dataUrl ?? null,
         });
         return null;
       }
@@ -159,6 +171,7 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
           canvas_width: canvas.width,
           canvas_height: canvas.height,
           min_required: MIN_SIGNATURE_LENGTH,
+          debug_thumbnail: buildSignatureThumbnail({ canvas, hasSignature: false, mode: 'placeholder' })?.dataUrl ?? null,
         });
         return null;
       }
@@ -174,6 +187,9 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
           canvas_height: canvas.height,
           signature_length: length,
           min_required: MIN_SIGNATURE_LENGTH,
+          // Aqui usamos downscale: se o toDataURL principal falhou mas o canvas
+          // ainda renderiza, o thumbnail pode revelar o estado real dos pixels.
+          debug_thumbnail: buildSignatureThumbnail({ canvas, hasSignature, mode: 'downscale' })?.dataUrl ?? null,
         });
         return null;
       }
@@ -187,6 +203,7 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
           canvas_height: canvas.height,
           signature_length: length,
           min_required: MIN_SIGNATURE_LENGTH,
+          debug_thumbnail: buildSignatureThumbnail({ canvas, hasSignature, mode: 'downscale' })?.dataUrl ?? null,
         });
         // Retornamos mesmo assim — quem chamou (ConsentModule / wizard) decide rejeitar.
       }
@@ -194,6 +211,8 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
     },
     clear: clearCanvas,
     hasSignature: () => hasSignature,
+    getDebugThumbnail: (mode: ThumbnailMode = 'placeholder') =>
+      buildSignatureThumbnail({ canvas: canvasRef.current, hasSignature, mode }),
   }), [hasSignature, isDrawing]);
 
   return (
