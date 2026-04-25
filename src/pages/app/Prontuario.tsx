@@ -2343,6 +2343,7 @@ export default function Prontuario() {
 
   return (
     <ClinicalAccessGuard>
+    <SearchFocusContext.Provider value={searchFocusContextValue}>
     <div className="flex flex-col h-full min-h-0 relative">
       {/* LGPD Blocking Overlay - shown when consent is required but not granted */}
       {!lgpdLoading && isEnforcementEnabled && !hasValidConsent && patient && (
