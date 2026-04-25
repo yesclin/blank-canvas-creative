@@ -674,9 +674,15 @@ export function ConsentModule({
               )}
 
               <DialogFooter>
-                <Button variant="outline" size="sm">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportConsentPdf}
+                  disabled={isExportingPdf || !canEdit}
+                  title={!canEdit ? "Sem permissão para exportar" : undefined}
+                >
                   <Download className="h-4 w-4 mr-1" />
-                  Exportar PDF
+                  {isExportingPdf ? "Gerando PDF..." : "Exportar PDF"}
                 </Button>
                 <Button onClick={() => setViewDialogOpen(false)}>
                   Fechar
