@@ -30,6 +30,11 @@ export interface SignatureCanvasHandle {
   getSignature: () => string | null;
   clear: () => void;
   hasSignature: () => boolean;
+  /**
+   * Retorna um thumbnail privacy-safe da assinatura atual para anexar a logs
+   * de rejeição/erro. Por padrão usa modo 'placeholder' (sem pixel data).
+   */
+  getDebugThumbnail: (mode?: ThumbnailMode) => SignatureThumbnail | null;
 }
 
 export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvasProps>(({
