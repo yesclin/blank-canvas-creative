@@ -1,5 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  getAppointmentMaterialsUsed,
+  type AppointmentMaterialUsed,
+} from "@/utils/getAppointmentMaterialsUsed";
 
 export interface AttendanceDetail {
   // Appointment
