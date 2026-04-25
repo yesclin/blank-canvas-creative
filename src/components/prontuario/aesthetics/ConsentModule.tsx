@@ -90,20 +90,41 @@ export function ConsentModule({
   } = useAestheticConsent(patientId);
 
   const handleCreateConsent = async () => {
-    if (!selectedType || !agreed || !signatureData) return;
+    if (!selectedType || !agreed) return;
+
+    // Captura a assinatura: usa o state atualizado ou faz fallback para o canvas
+    const captured = signatureData ?? signatureRef.current?.getSignature() ?? null;
+
+    console.log("[ConsentModule] Signature Data length:", captured?.length ?? 0);
+
+    // Validação: assinatura precisa existir e ter conteúdo mínimo
+    // (canvas em branco gera dataURL ~3-5KB; assinatura real fica acima de 6KB)
+    const MIN_SIGNATURE_LENGTH = 6000;
+    if (!captured || captured.length < MIN_SIGNATURE_LENGTH) {
+      toast.error("Assinatura inválida. Por favor, assine novamente.");
+      return;
+    }
 
     const procedure = procedures.find(p => p.id === selectedProcedureId);
 
-    await createConsent({
-      consent_type: selectedType,
-      appointment_id: appointmentId || undefined,
-      procedure_id: selectedProcedureId || undefined,
-      procedure_name: procedure?.name || undefined,
-      signature_data: signatureData,
-    });
+    setIsSavingSignature(true);
+    try {
+      await createConsent({
+        consent_type: selectedType,
+        appointment_id: appointmentId || undefined,
+        procedure_id: selectedProcedureId || undefined,
+        procedure_name: procedure?.name || undefined,
+        signature_data: captured,
+      });
 
-    setCreateDialogOpen(false);
-    resetForm();
+      setCreateDialogOpen(false);
+      resetForm();
+    } catch (err) {
+      console.error("[ConsentModule] Erro ao salvar assinatura:", err);
+      toast.error("Erro ao salvar assinatura. Tente novamente.");
+    } finally {
+      setIsSavingSignature(false);
+    }
   };
 
   const resetForm = () => {
