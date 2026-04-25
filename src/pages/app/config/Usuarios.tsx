@@ -114,6 +114,7 @@ export default function ConfigUsuarios() {
   } = useUserInvitations(clinicId);
 
   const { data: specialties = [], isLoading: loadingSpecialties } = useSpecialties();
+  const { ensureCanCreate } = usePlanLimitGate();
 
   // Fetch invitations when clinicId is available
   useEffect(() => {
@@ -223,6 +224,12 @@ export default function ConfigUsuarios() {
         toast.error("Selecione pelo menos uma especialidade para o profissional");
         return;
       }
+    }
+
+    // Bloqueio por limite do plano (apenas para profissionais)
+    if (isProfessional) {
+      const allowed = await ensureCanCreate('professionals');
+      if (!allowed) return;
     }
 
     // Convert granular permissions to simple array for the API
