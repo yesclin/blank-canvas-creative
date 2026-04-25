@@ -676,12 +676,12 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
       )}
 
       {/* ── Empty state if no clinical data ── */}
-      {detail.anamnesis_records.length === 0 && detail.evolutions.length === 0 &&
-       detail.clinical_documents.length === 0 && detail.clinical_media.length === 0 &&
-       detail.clinical_alerts.length === 0 && detail.procedures_performed.length === 0 &&
-       detail.aesthetic_products.length === 0 && detail.materials_used.length === 0 &&
-       detail.before_after.length === 0 && detail.facial_maps.length === 0 &&
-       !detail.odontogram && detail.body_measurements.length === 0 && (
+      {(detail.anamnesis_records?.length ?? 0) === 0 && (detail.evolutions?.length ?? 0) === 0 &&
+       (detail.clinical_documents?.length ?? 0) === 0 && (detail.clinical_media?.length ?? 0) === 0 &&
+       (detail.clinical_alerts?.length ?? 0) === 0 && (detail.procedures_performed?.length ?? 0) === 0 &&
+       (detail.aesthetic_products?.length ?? 0) === 0 && (detail.materials_used?.length ?? 0) === 0 &&
+       (detail.before_after?.length ?? 0) === 0 && (detail.facial_maps?.length ?? 0) === 0 &&
+       !detail.odontogram && (detail.body_measurements?.length ?? 0) === 0 && (
         <Card>
           <CardContent className="py-10">
             <div className="text-center text-muted-foreground">
