@@ -52,7 +52,6 @@ import { useAestheticConsent, DEFAULT_CONSENT_TEMPLATES } from "@/hooks/aestheti
 import type { ConsentType, AestheticConsentRecord } from "./types";
 import { CONSENT_TYPE_LABELS } from "./types";
 import { SignatureCanvas, type SignatureCanvasHandle } from "./SignatureCanvas";
-import { logAppError } from "@/lib/logAppError";
 
 interface ConsentModuleProps {
   patientId: string;
@@ -95,26 +94,13 @@ export function ConsentModule({
 
     // Captura a assinatura: usa o state atualizado ou faz fallback para o canvas
     const captured = signatureData ?? signatureRef.current?.getSignature() ?? null;
-    const signatureLength = captured?.length ?? 0;
 
-    console.info("[ConsentModule] handleCreateConsent →", {
-      patient_id: patientId,
-      appointment_id: appointmentId ?? null,
-      consent_type: selectedType,
-      procedure_id: selectedProcedureId || null,
-      signature_length: signatureLength,
-      agreed,
-    });
+    console.log("[ConsentModule] Signature Data length:", captured?.length ?? 0);
 
     // Validação: assinatura precisa existir e ter conteúdo mínimo
     // (canvas em branco gera dataURL ~3-5KB; assinatura real fica acima de 6KB)
     const MIN_SIGNATURE_LENGTH = 6000;
-    if (!captured || signatureLength < MIN_SIGNATURE_LENGTH) {
-      console.warn("[ConsentModule] Assinatura rejeitada", {
-        reason: !captured ? "missing" : "too_small",
-        signature_length: signatureLength,
-        min_required: MIN_SIGNATURE_LENGTH,
-      });
+    if (!captured || captured.length < MIN_SIGNATURE_LENGTH) {
       toast.error("Assinatura inválida. Por favor, assine novamente.");
       return;
     }
@@ -133,21 +119,26 @@ export function ConsentModule({
 
       setCreateDialogOpen(false);
       resetForm();
-    } catch (err) {
-      logAppError(err, {
-        screen: "Prontuário",
-        component: "ConsentModule",
-        action: "handleCreateConsent",
+    } catch (err: any) {
+      console.error("[ConsentModule] Erro ao salvar assinatura:", {
+        error: err,
+        supabase_code: err?.code,
+        supabase_details: err?.details,
+        supabase_hint: err?.hint,
         patientId,
-        appointmentId: appointmentId ?? null,
-        extra: {
-          consent_type: selectedType,
-          procedure_id: selectedProcedureId || null,
-          procedure_name: procedure?.name ?? null,
-          signature_length: signatureLength,
-        },
+        appointmentId,
+        consent_type: selectedType,
+        procedure_id: selectedProcedureId,
+        signature_length: captured?.length ?? 0,
       });
-      toast.error("Erro ao salvar assinatura. Tente novamente.");
+      // Mensagem real (vinda do hook ou do Supabase) — modal permanece aberto.
+      const friendly =
+        err?.message?.startsWith('Campo obrigatório')
+          ? err.message
+          : err?.message
+            ? `Erro ao salvar assinatura: ${err.message}`
+            : 'Erro ao salvar assinatura. Tente novamente.';
+      toast.error(friendly);
     } finally {
       setIsSavingSignature(false);
     }

@@ -5,6 +5,40 @@ import { toast } from 'sonner';
 import { logAppError } from '@/lib/logAppError';
 import type { AestheticConsentRecord, ConsentType } from '@/components/prontuario/aesthetics/types';
 
+/**
+ * Tabela canônica de aceites de termos clínicos: `clinical_consent_acceptances`.
+ * Este hook mapeia o shape histórico `AestheticConsentRecord` (term_content, term_version string)
+ * para os campos reais (term_content_snapshot, term_version integer).
+ */
+const CONSENT_TABLE = 'clinical_consent_acceptances';
+
+function parseTermVersion(v: string | number): number {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 1;
+  // Aceita "1", "1.2", "v2" etc. Pega o primeiro inteiro encontrado.
+  const match = String(v).match(/\d+/);
+  return match ? parseInt(match[0], 10) : 1;
+}
+
+function mapRowToRecord(row: any): AestheticConsentRecord & { procedure_id?: string; procedure_name?: string } {
+  return {
+    id: row.id,
+    clinic_id: row.clinic_id,
+    patient_id: row.patient_id,
+    appointment_id: row.appointment_id ?? null,
+    consent_type: row.consent_type as ConsentType,
+    term_title: row.term_title,
+    term_content: row.term_content_snapshot ?? '',
+    term_version: row.term_version,
+    accepted_at: row.accepted_at,
+    ip_address: row.ip_address ?? null,
+    user_agent: row.user_agent ?? null,
+    signature_data: row.signature_data ?? null,
+    created_by: row.created_by ?? null,
+    procedure_id: row.procedure_id ?? undefined,
+    procedure_name: row.procedure_name ?? undefined,
+  };
+}
+
 // Default consent templates
 export const DEFAULT_CONSENT_TEMPLATES: Record<ConsentType, { title: string; content: string; version: string }> = {
   toxin: {
@@ -132,18 +166,25 @@ export function useAestheticConsent(patientId: string | null) {
       if (!patientId || !clinic?.id) return [];
 
       const { data, error } = await supabase
-        .from('aesthetic_consent_records')
+        .from(CONSENT_TABLE)
         .select('*')
         .eq('clinic_id', clinic.id)
         .eq('patient_id', patientId)
         .order('accepted_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching consents:', error);
+        logAppError(error, {
+          screen: 'Prontuário',
+          component: 'useAestheticConsent',
+          action: 'fetchConsents',
+          patientId,
+          clinicId: clinic.id,
+          extra: { table: CONSENT_TABLE },
+        });
         throw error;
       }
 
-      return data as (AestheticConsentRecord & { procedure_id?: string; procedure_name?: string })[];
+      return (data || []).map(mapRowToRecord);
     },
     enabled: !!patientId && !!clinic?.id,
   });
@@ -196,41 +237,61 @@ export function useAestheticConsent(patientId: string | null) {
       signature_data?: string;
       custom_content?: string;
     }) => {
-      if (!patientId || !clinic?.id) throw new Error('Missing required data');
+      // Validações de campos obrigatórios — falham com mensagem específica antes do insert.
+      const missing: string[] = [];
+      if (!clinic?.id) missing.push('clinic_id');
+      if (!patientId) missing.push('patient_id');
+      if (!data.consent_type) missing.push('consent_type');
+      if (!data.signature_data) missing.push('signature_data');
+
+      const template = DEFAULT_CONSENT_TEMPLATES[data.consent_type];
+      const termContent = data.custom_content || template?.content;
+      if (!template?.title) missing.push('term_title');
+      if (!termContent) missing.push('term_content');
+
+      if (missing.length > 0) {
+        const msg = `Campo obrigatório ausente: ${missing.join(', ')}`;
+        toast.error(msg);
+        throw new Error(msg);
+      }
 
       const { data: userData } = await supabase.auth.getUser();
-      const template = DEFAULT_CONSENT_TEMPLATES[data.consent_type];
-      const signatureLength = data.signature_data?.length ?? 0;
+      const termVersion = parseTermVersion(template.version);
 
-      console.info('[useAestheticConsent] createConsent →', {
-        clinic_id: clinic.id,
-        patient_id: patientId,
-        appointment_id: data.appointment_id ?? null,
+      const payload = {
+        clinic_id: clinic!.id,
+        patient_id: patientId!,
+        appointment_id: data.appointment_id || null,
         consent_type: data.consent_type,
-        procedure_id: data.procedure_id ?? null,
-        term_version: template.version,
-        signature_length: signatureLength,
-        has_signature: signatureLength > 0,
-        user_id: userData.user?.id ?? null,
+        term_title: template.title,
+        term_content_snapshot: termContent,
+        term_version: termVersion,
+        signature_data: data.signature_data || null,
+        procedure_id: data.procedure_id || null,
+        procedure_name: data.procedure_name || null,
+        ip_address: null,
+        user_agent: navigator.userAgent,
+        status: 'accepted',
+        accepted_at: new Date().toISOString(),
+        created_by: userData.user?.id ?? null,
+      };
+
+      console.info('[useAestheticConsent] insert payload', {
+        table: CONSENT_TABLE,
+        clinic_id: payload.clinic_id,
+        patient_id: payload.patient_id,
+        appointment_id: payload.appointment_id,
+        consent_type: payload.consent_type,
+        procedure_id: payload.procedure_id,
+        term_version: payload.term_version,
+        signature_length: payload.signature_data?.length ?? 0,
+        has_signature: !!payload.signature_data,
+        user_id: payload.created_by,
       });
 
       const { data: result, error } = await supabase
-        .from('aesthetic_consent_records')
-        .insert({
-          clinic_id: clinic.id,
-          patient_id: patientId,
-          appointment_id: data.appointment_id || null,
-          consent_type: data.consent_type,
-          term_title: template.title,
-          term_content: data.custom_content || template.content,
-          term_version: template.version,
-          signature_data: data.signature_data || null,
-          procedure_id: data.procedure_id || null,
-          procedure_name: data.procedure_name || null,
-          ip_address: null,
-          user_agent: navigator.userAgent,
-          created_by: userData.user?.id,
-        })
+        .from(CONSENT_TABLE)
+        .insert(payload)
         .select()
         .single();
 
@@ -238,38 +299,44 @@ export function useAestheticConsent(patientId: string | null) {
         logAppError(error, {
           screen: 'Prontuário',
           component: 'useAestheticConsent',
-          action: 'createConsent.insert',
-          clinicId: clinic.id,
+          action: 'createConsent',
           patientId,
           appointmentId: data.appointment_id ?? null,
+          clinicId: clinic?.id ?? null,
           userId: userData.user?.id ?? null,
           extra: {
+            table: CONSENT_TABLE,
             consent_type: data.consent_type,
-            procedure_id: data.procedure_id ?? null,
-            term_version: template.version,
-            signature_length: signatureLength,
-            supabase_code: (error as { code?: string }).code ?? null,
-            supabase_details: (error as { details?: string }).details ?? null,
-            supabase_hint: (error as { hint?: string }).hint ?? null,
+            procedure_id: data.procedure_id,
+            term_version: termVersion,
+            signature_length: payload.signature_data?.length ?? 0,
+            supabase_code: (error as any)?.code,
+            supabase_details: (error as any)?.details,
+            supabase_hint: (error as any)?.hint,
           },
         });
         throw error;
       }
 
-      console.info('[useAestheticConsent] createConsent ✓', {
-        consent_id: (result as { id?: string })?.id,
+      console.info('[useAestheticConsent] consent created', {
+        consent_id: result?.id,
         consent_type: data.consent_type,
       });
+
       return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
       toast.success('Termo aceito e assinado com sucesso');
     },
-    onError: (error) => {
-      // Erro já logado em detalhe acima; aqui só feedback ao usuário.
-      console.error('[useAestheticConsent] createConsent failed:', error);
-      toast.error('Erro ao registrar consentimento');
+    onError: (error: any) => {
+      const friendly = error?.message?.startsWith('Campo obrigatório')
+        ? error.message
+        : error?.message || 'Erro ao registrar consentimento';
+      // Evita duplicar toast quando a validação já mostrou.
+      if (!error?.message?.startsWith('Campo obrigatório')) {
+        toast.error(friendly);
+      }
     },
   });
 

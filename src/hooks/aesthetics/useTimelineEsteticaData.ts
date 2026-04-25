@@ -131,7 +131,7 @@ export function useTimelineEsteticaData(patientId: string | null) {
       if (!patientId || !clinic?.id) return [];
 
       const { data, error } = await supabase
-        .from('aesthetic_consent_records')
+        .from('clinical_consent_acceptances')
         .select('*')
         .eq('clinic_id', clinic.id)
         .eq('patient_id', patientId)

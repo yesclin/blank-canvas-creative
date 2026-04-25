@@ -161,7 +161,7 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
 
       // Buscar termos assinados
       const { count: totalTermos } = await supabase
-        .from('aesthetic_consent_records')
+        .from('clinical_consent_acceptances')
         .select('id', { count: 'exact', head: true })
         .eq('patient_id', patientId)
         .eq('clinic_id', clinicId);
