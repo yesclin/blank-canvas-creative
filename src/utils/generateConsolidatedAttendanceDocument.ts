@@ -201,6 +201,99 @@ export async function generateConsolidatedAttendanceDocument(appointmentId: stri
       created_at: r.created_at,
     })),
 
+    // ─ Procedures performed (structured) ─
+    procedures_performed: ((performedProcedures as any[]) || []).map((r: any) => ({
+      id: r.id,
+      procedure_name: r.procedure_name,
+      region: r.region,
+      technique: r.technique,
+      notes: r.notes,
+      status: r.status,
+      performed_at: r.performed_at,
+    })),
+
+    // ─ Aesthetic products used (lote, validade, fabricante, área) ─
+    aesthetic_products: ((aestheticProducts as any[]) || []).map((r: any) => ({
+      id: r.id,
+      product_name: r.product_name,
+      quantity: Number(r.quantity || 0),
+      unit: r.unit || 'un',
+      manufacturer: r.manufacturer || null,
+      batch_number: r.batch_number || null,
+      expiry_date: r.expiry_date || null,
+      application_area: r.application_area || null,
+      procedure_type: r.procedure_type || null,
+      registered_at: r.registered_at,
+    })),
+
+    // ─ Materials consumed (stock movements with product info) ─
+    materials_consumed: ((stockMovements as any[]) || []).map((r: any) => ({
+      id: r.id,
+      product_id: r.product_id,
+      product_name: r.products?.name || null,
+      quantity: Number(r.quantity || 0),
+      unit: r.products?.unit || null,
+      unit_cost: r.unit_cost != null ? Number(r.unit_cost) : null,
+      notes: r.notes,
+      created_at: r.created_at,
+    })),
+
+    // ─ Aesthetic before/after ─
+    before_after: ((aestheticBeforeAfter as any[]) || []).map((r: any) => ({
+      id: r.id,
+      title: r.title || null,
+      description: r.description || null,
+      view_angle: r.view_angle || null,
+      procedure_type: r.procedure_type || null,
+      before_image_url: r.before_image_url || null,
+      after_image_url: r.after_image_url || null,
+      before_image_date: r.before_image_date || null,
+      after_image_date: r.after_image_date || null,
+      created_at: r.created_at,
+    })),
+
+    // ─ Facial maps (with applications) ─
+    facial_maps: ((facialMaps as any[]) || []).map((r: any) => ({
+      id: r.id,
+      map_type: r.map_type || null,
+      notes: r.notes || null,
+      created_at: r.created_at,
+      applications: (r.facial_map_applications || []).map((a: any) => ({
+        id: a.id,
+        region: a.region,
+        product_name: a.product_name,
+        units: a.units != null ? Number(a.units) : null,
+        notes: a.notes,
+        data: a.data,
+      })),
+    })),
+
+    // ─ Odontogram (latest) ─
+    odontogram: ((odontogramRows as any[]) || [])[0]
+      ? {
+          id: ((odontogramRows as any[]) || [])[0].id,
+          data: ((odontogramRows as any[]) || [])[0].data,
+          created_at: ((odontogramRows as any[]) || [])[0].created_at,
+          updated_at: ((odontogramRows as any[]) || [])[0].updated_at,
+          records: (((odontogramRows as any[]) || [])[0].odontogram_records || []).map((r: any) => ({
+            id: r.id,
+            tooth_number: r.tooth_number,
+            surface: r.surface,
+            condition: r.condition,
+            notes: r.notes,
+            created_at: r.created_at,
+          })),
+        }
+      : null,
+
+    // ─ Body measurements ─
+    body_measurements: ((bodyMeasurements as any[]) || []).map((r: any) => ({
+      id: r.id,
+      measurement_type: r.measurement_type,
+      data: r.data,
+      created_at: r.created_at,
+    })),
+
     // ─ Session notes ─
     session_notes: session?.session_notes || null,
 
