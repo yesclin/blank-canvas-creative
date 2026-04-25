@@ -345,6 +345,11 @@ export function SpecialtiesSection() {
 
   const handleReactivateCustom = async (specialty: ClinicSpecialty) => {
     if (!clinic?.id) return;
+
+    // Reativar conta como uma nova ativação para o limite do plano
+    const allowed = await ensureCanCreate('specialties');
+    if (!allowed) return;
+
     setTogglingSlug(specialty.id);
     try {
       await supabase.from("specialties").update({ is_active: true }).eq("id", specialty.id);
