@@ -11,6 +11,20 @@ import { GlobalSpecialtyProvider } from "@/hooks/useGlobalSpecialty";
 import { GlobalActiveAppointmentProvider } from "@/contexts/GlobalActiveAppointmentContext";
 import { FloatingActiveAppointmentButton } from "./FloatingActiveAppointmentButton";
 import { ActiveAppointmentDrawer } from "./ActiveAppointmentDrawer";
+import { ErrorBoundary } from "./ErrorBoundary";
+
+function getModuleScope(pathname: string): string {
+  if (pathname.startsWith("/app/prontuario")) return "Prontuário";
+  if (pathname.startsWith("/app/atendimento")) return "Atendimento";
+  if (pathname.startsWith("/app/agenda")) return "Agenda";
+  if (pathname.startsWith("/app/marketing")) return "Marketing";
+  if (pathname.startsWith("/app/gestao/financas") || pathname.startsWith("/app/meu-financeiro")) return "Financeiro";
+  if (pathname.startsWith("/app/gestao/estoque")) return "Estoque";
+  if (pathname.startsWith("/app/config")) return "Configurações";
+  if (pathname.startsWith("/app/comercial")) return "Comercial";
+  if (pathname.startsWith("/app/teleconsulta")) return "Teleconsulta";
+  return "App";
+}
 
 export function AppLayout() {
   const location = useLocation();
@@ -48,7 +62,9 @@ export function AppLayout() {
             <ActiveSpecialtiesBadge />
           </header>
           <div className="flex-1 p-6 overflow-auto">
-            <Outlet />
+            <ErrorBoundary key={location.pathname} scope={getModuleScope(location.pathname)}>
+              <Outlet />
+            </ErrorBoundary>
           </div>
         </main>
       </div>
