@@ -52,6 +52,7 @@ import { useAestheticConsent, DEFAULT_CONSENT_TEMPLATES } from "@/hooks/aestheti
 import type { ConsentType, AestheticConsentRecord } from "./types";
 import { CONSENT_TYPE_LABELS } from "./types";
 import { SignatureCanvas, type SignatureCanvasHandle } from "./SignatureCanvas";
+import { logAppError } from "@/lib/logAppError";
 
 interface ConsentModuleProps {
   patientId: string;
