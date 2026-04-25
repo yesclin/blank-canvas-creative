@@ -4,23 +4,92 @@
  * promise that the structured rejection log fires *exactly once* per
  * invalid attempt.
  *
- * We mock `useAestheticConsent` to keep the test focused on the component's
- * orchestration logic (capture → validate → log → toast → no-op) without
- * touching Supabase. `sonner` is mocked too so toast errors don't render.
- *
- * The signature canvas itself is not driven by real pointer events here —
- * jsdom doesn't render pixels, so we instead rely on the canvas reporting
- * `hasSignature() === false` (its real default) to exercise the
- * `canvas_not_drawn` path, and we monkey-patch the ref for the `too_small`
- * path. Both flows go through the exact same `validateSignature` gate that
- * production uses.
+ * We mock:
+ *   - `useAestheticConsent` so we don't touch Supabase.
+ *   - `sonner` so toasts don't noise the console.
+ *   - `SignatureCanvas` with a controllable test double. jsdom doesn't render
+ *     pixels and SignatureCanvas's `hasSignature` flag depends on async React
+ *     state set during real pointer events — neither of which is reliable in
+ *     jsdom. The double exposes deterministic seams that mirror the real
+ *     SignatureCanvasHandle contract used by ConsentModule.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { forwardRef, useImperativeHandle } from 'react';
 import { ConsentModule } from './ConsentModule';
 import { MIN_SIGNATURE_LENGTH } from './signatureValidation';
 
-// ─── Mocks ────────────────────────────────────────────────────────────────
+// ─── Test double for SignatureCanvas ──────────────────────────────────────
+//
+// State lives at module scope so each test can configure what the next render
+// of SignatureCanvas should report. This mirrors the exact surface of the
+// real component that ConsentModule consumes (onSave prop + the imperative
+// handle methods getSignature / hasSignature / getDebugThumbnail).
+
+const canvasState: {
+  signature: string | null;
+  hasSig: boolean;
+  /** When set, calling getSignature on the handle invokes onSave with this value. */
+  emitOnGet: boolean;
+} = {
+  signature: null,
+  hasSig: false,
+  emitOnGet: false,
+};
+
+function resetCanvasState() {
+  canvasState.signature = null;
+  canvasState.hasSig = false;
+  canvasState.emitOnGet = false;
+}
+
+vi.mock('./SignatureCanvas', () => {
+  const SignatureCanvas = forwardRef<any, any>((props, ref) => {
+    useImperativeHandle(
+      ref,
+      () => ({
+        getSignature: () => {
+          if (canvasState.emitOnGet && canvasState.signature) {
+            // Mirror real behaviour where getSignature returns the dataURL
+            // computed from the canvas at call time — independent from state.
+          }
+          return canvasState.signature;
+        },
+        hasSignature: () => canvasState.hasSig,
+        clear: () => {
+          canvasState.signature = null;
+          canvasState.hasSig = false;
+        },
+        getDebugThumbnail: () => ({
+          dataUrl: 'data:image/svg+xml;utf8,<svg/>',
+          length: 26,
+          mode: 'placeholder',
+          width: 80,
+          height: 30,
+        }),
+      }),
+      []
+    );
+    // Expose a hook so tests can push a value through onSave just like the
+    // real canvas does on stopDrawing — this populates ConsentModule's
+    // signatureData state and exercises the `state` capture path.
+    return (
+      <div data-testid="signature-canvas-mock">
+        <button
+          type="button"
+          data-testid="emit-onsave"
+          onClick={() => props.onSave(canvasState.signature)}
+        >
+          emit
+        </button>
+      </div>
+    );
+  });
+  SignatureCanvas.displayName = 'SignatureCanvas';
+  return { SignatureCanvas };
+});
+
+// ─── Mocks for hook + toast ───────────────────────────────────────────────
 
 const createConsentMock = vi.fn();
 
@@ -54,28 +123,29 @@ vi.mock('sonner', () => ({
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
-/** Opens the consent dialog for the "general" consent type and advances to the signing step. */
+/** Opens the consent dialog for the first consent card and advances to the signing step. */
 async function openSignStep() {
-  // Each consent card renders a "Coletar" button (since hasConsent === false in this mock).
   const collectButtons = screen.getAllByRole('button', { name: /coletar/i });
-  // 4 consent types are rendered — pick the first (toxin).
-  fireEvent.click(collectButtons[0]);
+  fireEvent.click(collectButtons[0]); // first card → "toxin"
 
-  // Step 1: tick the agreement checkbox, then click "Continuar".
   const checkbox = await screen.findByRole('checkbox');
   fireEvent.click(checkbox);
 
   const continueBtn = await screen.findByRole('button', { name: /prosseguir/i });
   fireEvent.click(continueBtn);
 
-  // Wait for the sign step to render — confirms the canvas is mounted.
-  await screen.findByText(/assine acima/i);
+  await screen.findByTestId('signature-canvas-mock');
 }
 
-/** Locates the "Confirmar e Assinar" button on the sign step. */
 function getConfirmButton() {
-  // Match the actual label used in ConsentModule's signature step.
   return screen.getByRole('button', { name: /confirmar e salvar/i });
+}
+
+/** Pushes `dataUrl` through the SignatureCanvas onSave prop into ConsentModule state. */
+function emitOnSave(dataUrl: string | null, hasSig = dataUrl !== null) {
+  canvasState.signature = dataUrl;
+  canvasState.hasSig = hasSig;
+  fireEvent.click(screen.getByTestId('emit-onsave'));
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────
@@ -87,6 +157,7 @@ describe('ConsentModule — signature validation gate', () => {
 
   beforeEach(() => {
     createConsentMock.mockReset();
+    resetCanvasState();
     warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
     errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -98,7 +169,7 @@ describe('ConsentModule — signature validation gate', () => {
     errorSpy.mockRestore();
   });
 
-  /** Filters console.warn calls down to the structured rejection log. */
+  /** All structured rejection logs emitted so far. */
   function getRejectionLogs() {
     return warnSpy.mock.calls.filter(
       (args) => args[0] === '[ConsentModule] signature rejected'
@@ -109,18 +180,16 @@ describe('ConsentModule — signature validation gate', () => {
     render(<ConsentModule patientId="patient-123" appointmentId="appt-456" canEdit />);
     await openSignStep();
 
-    // No interaction with the canvas → hasSignature() is false → captured is null.
+    // No state, no canvas signature → captured null, hasSig false.
     fireEvent.click(getConfirmButton());
 
     await waitFor(() => {
       expect(getRejectionLogs().length).toBe(1);
     });
 
-    // Validation gate must block the persistence call entirely.
     expect(createConsentMock).not.toHaveBeenCalled();
 
-    // Inspect the log payload — must carry the canonical fields and reason.
-    const [, payload] = getRejectionLogs()[0];
+    const [, payload] = getRejectionLogs()[0] as [string, Record<string, unknown>];
     expect(payload).toMatchObject({
       reason: 'canvas_not_drawn',
       signature_length: 0,
@@ -130,77 +199,53 @@ describe('ConsentModule — signature validation gate', () => {
       consent_type: 'toxin',
       had_state: false,
       had_canvas_data: false,
+      signature_source: 'none',
     });
-    // trace_id must be present and namespaced for correlation with the toast.
-    expect(typeof (payload as any).trace_id).toBe('string');
-    expect((payload as any).trace_id.length).toBeGreaterThan(0);
+    expect(typeof payload.trace_id).toBe('string');
+    expect(String(payload.trace_id).length).toBeGreaterThan(0);
   });
 
-  it('does not double-log when the user clicks Confirm twice on the same invalid attempt', async () => {
+  it('does not double-log on a single click; produces distinct trace_ids on separate clicks', async () => {
     render(<ConsentModule patientId="patient-123" canEdit />);
     await openSignStep();
 
-    const btn = getConfirmButton();
-    fireEvent.click(btn);
-    fireEvent.click(btn);
+    fireEvent.click(getConfirmButton());
+    await waitFor(() => expect(getRejectionLogs().length).toBe(1));
 
-    await waitFor(() => {
-      // Two clicks ⇒ two attempts ⇒ two structured logs (one per attempt).
-      // Critically, neither attempt fires the log more than once.
-      expect(getRejectionLogs().length).toBe(2);
-    });
+    fireEvent.click(getConfirmButton());
+    await waitFor(() => expect(getRejectionLogs().length).toBe(2));
 
-    // Each rejected attempt must yield distinct trace_ids — no log is reused.
-    const traceIds = getRejectionLogs().map((c) => (c[1] as any).trace_id);
+    // Each rejected attempt must yield a distinct trace_id — no log is reused.
+    const traceIds = getRejectionLogs().map(
+      (c) => (c[1] as Record<string, unknown>).trace_id
+    );
     expect(new Set(traceIds).size).toBe(2);
-
     expect(createConsentMock).not.toHaveBeenCalled();
   });
 
-  it('blocks createConsent and logs reason="too_small" when capture is below MIN_SIGNATURE_LENGTH', async () => {
+  it('blocks createConsent with reason="too_small" when capture is below MIN_SIGNATURE_LENGTH', async () => {
     render(<ConsentModule patientId="patient-123" canEdit />);
     await openSignStep();
 
-    // Force a too-short capture by patching the canvas DOM behaviour. The
-    // real SignatureCanvas pulls its dataURL from the underlying <canvas>;
-    // we override `toDataURL` to return a sub-threshold string and flip the
-    // hasSignature flag by simulating two stroke cycles. Two cycles are
-    // needed because `stopDrawing` reads `hasSignature` from a stale closure
-    // on the first cycle (state update is async), so the second `mouseUp`
-    // is the one that actually emits onSave.
-    const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-    expect(canvas).toBeTruthy();
-
+    // Push a too-short capture through onSave (the `state` path).
     const tooShort = 'data:image/png;base64,' + 'A'.repeat(100);
-    canvas.toDataURL = () => tooShort;
-
-    act(() => {
-      fireEvent.mouseDown(canvas, { clientX: 5, clientY: 5 });
-      fireEvent.mouseMove(canvas, { clientX: 10, clientY: 10 });
-      fireEvent.mouseUp(canvas);
-    });
-    act(() => {
-      fireEvent.mouseDown(canvas, { clientX: 12, clientY: 12 });
-      fireEvent.mouseMove(canvas, { clientX: 20, clientY: 20 });
-      fireEvent.mouseUp(canvas);
-    });
+    emitOnSave(tooShort);
 
     fireEvent.click(getConfirmButton());
 
-    await waitFor(() => {
-      expect(getRejectionLogs().length).toBe(1);
-    });
-
+    await waitFor(() => expect(getRejectionLogs().length).toBe(1));
     expect(createConsentMock).not.toHaveBeenCalled();
 
-    const [, payload] = getRejectionLogs()[0];
+    const [, payload] = getRejectionLogs()[0] as [string, Record<string, unknown>];
     expect(payload).toMatchObject({
       reason: 'too_small',
       min_required: MIN_SIGNATURE_LENGTH,
+      signature_source: 'state',
+      had_state: true,
+      canvas_has_signature: true,
     });
-    expect((payload as any).signature_length).toBeLessThan(MIN_SIGNATURE_LENGTH);
-    expect((payload as any).signature_length).toBeGreaterThan(0);
-    expect((payload as any).canvas_has_signature).toBe(true);
+    expect(payload.signature_length).toBe(tooShort.length);
+    expect(Number(payload.signature_length)).toBeLessThan(MIN_SIGNATURE_LENGTH);
   });
 
   it('allows createConsent when capture is at or above MIN_SIGNATURE_LENGTH (no rejection log)', async () => {
@@ -208,20 +253,8 @@ describe('ConsentModule — signature validation gate', () => {
     render(<ConsentModule patientId="patient-123" canEdit />);
     await openSignStep();
 
-    const canvas = document.querySelector('canvas') as HTMLCanvasElement;
     const validUrl = 'data:image/png;base64,' + 'A'.repeat(MIN_SIGNATURE_LENGTH);
-    canvas.toDataURL = () => validUrl;
-
-    act(() => {
-      fireEvent.mouseDown(canvas, { clientX: 5, clientY: 5 });
-      fireEvent.mouseMove(canvas, { clientX: 10, clientY: 10 });
-      fireEvent.mouseUp(canvas);
-    });
-    act(() => {
-      fireEvent.mouseDown(canvas, { clientX: 12, clientY: 12 });
-      fireEvent.mouseMove(canvas, { clientX: 20, clientY: 20 });
-      fireEvent.mouseUp(canvas);
-    });
+    emitOnSave(validUrl);
 
     fireEvent.click(getConfirmButton());
 
@@ -229,7 +262,6 @@ describe('ConsentModule — signature validation gate', () => {
       expect(createConsentMock).toHaveBeenCalledTimes(1);
     });
 
-    // No rejection log should fire on the happy path.
     expect(getRejectionLogs().length).toBe(0);
 
     const callArg = createConsentMock.mock.calls[0][0];
@@ -238,5 +270,34 @@ describe('ConsentModule — signature validation gate', () => {
       signature_data: validUrl,
     });
     expect(typeof callArg.trace_id).toBe('string');
+  });
+
+  it('uses canvas_fallback when state is empty but the canvas ref returns a valid value', async () => {
+    createConsentMock.mockResolvedValue(undefined);
+    render(<ConsentModule patientId="patient-123" canEdit />);
+    await openSignStep();
+
+    // No emit → state stays null. Configure the canvas handle to return a value.
+    const validUrl = 'data:image/png;base64,' + 'A'.repeat(MIN_SIGNATURE_LENGTH);
+    canvasState.signature = validUrl;
+    canvasState.hasSig = true;
+
+    fireEvent.click(getConfirmButton());
+
+    await waitFor(() => {
+      expect(createConsentMock).toHaveBeenCalledTimes(1);
+    });
+    expect(getRejectionLogs().length).toBe(0);
+
+    // The info log shape is also worth pinning for observability — it's the
+    // attempt log that downstream tools key off of.
+    const attemptLogs = infoSpy.mock.calls.filter(
+      (a) => a[0] === '[ConsentModule] handleCreateConsent'
+    );
+    expect(attemptLogs.length).toBe(1);
+    expect(attemptLogs[0][1]).toMatchObject({
+      signature_source: 'canvas_fallback',
+      signature_length: validUrl.length,
+    });
   });
 });
