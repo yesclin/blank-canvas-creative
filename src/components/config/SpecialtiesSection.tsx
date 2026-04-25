@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useClinicData } from "@/hooks/useClinicData";
 import { usePermissions } from "@/hooks/usePermissions";
+import { usePlanLimitGate } from "@/hooks/usePlanLimitGate";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { OFFICIAL_SPECIALTIES } from "@/constants/officialSpecialties";
@@ -74,6 +75,7 @@ interface ClinicSpecialty {
 export function SpecialtiesSection() {
   const { clinic } = useClinicData();
   const { isOwner } = usePermissions();
+  const { ensureCanCreate } = usePlanLimitGate();
   const queryClient = useQueryClient();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -136,6 +138,11 @@ export function SpecialtiesSection() {
   /** Activate a standard specialty using the provision_specialty RPC */
   const handleActivateStandard = async (slug: string, name: string) => {
     if (!clinic?.id || !isOwner) return;
+
+    // Bloqueio por limite do plano antes de provisionar
+    const allowed = await ensureCanCreate('specialties');
+    if (!allowed) return;
+
     setTogglingSlug(slug);
 
     try {
@@ -274,6 +281,10 @@ export function SpecialtiesSection() {
       return;
     }
 
+    // Bloqueio por limite do plano antes de criar
+    const allowed = await ensureCanCreate('specialties');
+    if (!allowed) return;
+
     setIsSubmitting(true);
     try {
       const slug = newName.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
@@ -334,6 +345,11 @@ export function SpecialtiesSection() {
 
   const handleReactivateCustom = async (specialty: ClinicSpecialty) => {
     if (!clinic?.id) return;
+
+    // Reativar conta como uma nova ativação para o limite do plano
+    const allowed = await ensureCanCreate('specialties');
+    if (!allowed) return;
+
     setTogglingSlug(specialty.id);
     try {
       await supabase.from("specialties").update({ is_active: true }).eq("id", specialty.id);

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { usePlanLimitGate } from "@/hooks/usePlanLimitGate";
 
 export interface PatientInsurance {
   id: string;
@@ -189,9 +190,15 @@ export function usePatient(id: string | null) {
 // Create patient
 export function useCreatePatient() {
   const queryClient = useQueryClient();
-  
+  const { ensureCanCreate } = usePlanLimitGate();
+
   return useMutation({
     mutationFn: async (data: PatientFormData) => {
+      // Bloqueio por limite do plano
+      const allowed = await ensureCanCreate('patients');
+      if (!allowed) {
+        throw new Error('PLAN_LIMIT_REACHED');
+      }
       const clinicId = await getClinicId();
       
       // Insert patient
@@ -282,6 +289,8 @@ export function useCreatePatient() {
       toast.success("Paciente cadastrado com sucesso!");
     },
     onError: (error: Error) => {
+      // Limite do plano: o gate já mostrou um toast claro — não duplicar.
+      if (error.message === 'PLAN_LIMIT_REACHED') return;
       console.error("Error creating patient:", error);
       toast.error("Erro ao cadastrar paciente: " + error.message);
     },
