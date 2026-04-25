@@ -448,16 +448,16 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
       )}
 
       {/* ── Procedimentos Realizados (com materiais utilizados) ── */}
-      {(detail.procedures_performed.length > 0 ||
-        detail.materials_used.length > 0 ||
-        detail.aesthetic_products.length > 0) && (
+      {((detail.procedures_performed?.length ?? 0) > 0 ||
+        (detail.materials_used?.length ?? 0) > 0 ||
+        (detail.aesthetic_products?.length ?? 0) > 0) && (
         <SectionCard title="Procedimentos Realizados" icon={Activity}>
           <div className="space-y-3">
             {/* Lista de procedimentos. Quando não há registros estruturados,
                 ainda exibimos o procedimento principal do agendamento como
                 cabeçalho para agrupar os materiais consumidos. */}
-            {(detail.procedures_performed.length > 0
-              ? detail.procedures_performed.map((p) => ({
+            {((detail.procedures_performed?.length ?? 0) > 0
+              ? (detail.procedures_performed ?? []).map((p) => ({
                   id: p.id,
                   name: p.procedure_name,
                   status: p.status,
