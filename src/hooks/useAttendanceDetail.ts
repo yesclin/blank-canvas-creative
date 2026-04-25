@@ -60,6 +60,13 @@ export interface AttendanceDetail {
   facial_maps: FacialMapRecord[];
   odontogram: OdontogramRecord | null;
   materials_consumed: MaterialConsumedRecord[];
+  /**
+   * Lista unificada de materiais/produtos efetivamente utilizados no
+   * atendimento. Reúne stock_movements, material_consumption,
+   * aesthetic_products_used e fallback temporal. É a fonte recomendada
+   * para exibir os materiais dentro de "Procedimentos Realizados".
+   */
+  materials_used: AppointmentMaterialUsed[];
   body_measurements: BodyMeasurementRecord[];
   addendums: AddendumRecord[];
   // Consolidated document
