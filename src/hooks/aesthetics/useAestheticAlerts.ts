@@ -111,92 +111,125 @@ export function useAestheticAlerts(patientId: string | null) {
     enabled: !!patientId && !!clinic?.id,
   });
 
+  // Allowed enum values defensively (DB column is TEXT, but FE must stay consistent)
+  const ALLOWED_TYPES: AlertType[] = ['allergy', 'medication', 'disease', 'exam', 'return', 'contraindication', 'other'];
+  const ALLOWED_SEVERITIES: AlertSeverity[] = ['critical', 'warning', 'info'];
+
   // Create alert
   const createMutation = useMutation({
     mutationFn: async (input: AlertInput) => {
-      if (!patientId || !clinic?.id) throw new Error('Missing required data');
+      // Pre-flight validations with explicit messages
+      if (!patientId) throw new Error('Paciente não identificado.');
+      if (!clinic?.id) throw new Error('Clínica não identificada.');
+      const title = input.title?.trim();
+      if (!title) throw new Error('Informe o título do alerta.');
+
+      const alert_type = ALLOWED_TYPES.includes(input.alert_type) ? input.alert_type : 'other';
+      const severity = ALLOWED_SEVERITIES.includes(input.severity) ? input.severity : 'info';
 
       const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user?.id) throw new Error('Usuário não autenticado.');
+
+      // Insert ONLY columns that exist in clinical_alerts:
+      // id, clinic_id, patient_id, alert_type, title, description, severity,
+      // is_active, created_by, created_at, updated_at, appointment_id
+      const payload = {
+        clinic_id: clinic.id,
+        patient_id: patientId,
+        created_by: userData.user.id,
+        alert_type,
+        severity,
+        title,
+        description: input.description?.trim() ? input.description.trim() : null,
+        is_active: true,
+      };
 
       const { data, error } = await supabase
         .from('clinical_alerts')
-        .insert({
-          clinic_id: clinic.id,
-          patient_id: patientId,
-          created_by: userData.user?.id,
-          alert_type: input.alert_type,
-          severity: input.severity,
-          title: input.title,
-          description: input.description || null,
-          expires_at: input.expires_at || null,
-          is_active: true,
-        })
+        .insert(payload)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // Surface the full Supabase error object for technical debugging
+        console.error('[clinical_alerts.insert] Supabase error:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+          payload,
+        });
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
       toast.success('Alerta adicionado com sucesso');
     },
-    onError: (error) => {
-      console.error('Error creating alert:', error);
-      toast.error('Erro ao adicionar alerta');
+    onError: (error: any) => {
+      // User-friendly message; technical details already in console
+      const friendly =
+        error?.message && typeof error.message === 'string' && !error.message.startsWith('column ') && !error.code
+          ? error.message
+          : 'Erro ao adicionar alerta. Verifique o console para detalhes.';
+      toast.error(friendly);
     },
   });
 
-  // Update alert
+  // Update alert (only persists known columns)
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...input }: Partial<AlertInput> & { id: string }) => {
+      const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      if (input.alert_type && ALLOWED_TYPES.includes(input.alert_type)) updates.alert_type = input.alert_type;
+      if (input.severity && ALLOWED_SEVERITIES.includes(input.severity)) updates.severity = input.severity;
+      if (typeof input.title === 'string') updates.title = input.title.trim();
+      if (typeof input.description === 'string') updates.description = input.description.trim() || null;
+
       const { data, error } = await supabase
         .from('clinical_alerts')
-        .update({
-          ...input,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updates)
         .eq('id', id)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[clinical_alerts.update] Supabase error:', error);
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
       toast.success('Alerta atualizado');
     },
-    onError: (error) => {
-      console.error('Error updating alert:', error);
-      toast.error('Erro ao atualizar alerta');
+    onError: () => {
+      toast.error('Erro ao atualizar alerta. Verifique o console para detalhes.');
     },
   });
 
-  // Dismiss/deactivate alert
+  // Dismiss/deactivate alert (column acknowledged_* não existe na tabela; só altera is_active)
   const dismissMutation = useMutation({
     mutationFn: async (alertId: string) => {
-      const { data: userData } = await supabase.auth.getUser();
-
       const { error } = await supabase
         .from('clinical_alerts')
         .update({
           is_active: false,
-          acknowledged_at: new Date().toISOString(),
-          acknowledged_by: userData.user?.id,
           updated_at: new Date().toISOString(),
         })
         .eq('id', alertId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('[clinical_alerts.dismiss] Supabase error:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
       toast.success('Alerta desativado');
     },
-    onError: (error) => {
-      console.error('Error dismissing alert:', error);
-      toast.error('Erro ao desativar alerta');
+    onError: () => {
+      toast.error('Erro ao desativar alerta. Verifique o console para detalhes.');
     },
   });
 
@@ -207,21 +240,21 @@ export function useAestheticAlerts(patientId: string | null) {
         .from('clinical_alerts')
         .update({
           is_active: true,
-          acknowledged_at: null,
-          acknowledged_by: null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', alertId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('[clinical_alerts.reactivate] Supabase error:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
       toast.success('Alerta reativado');
     },
-    onError: (error) => {
-      console.error('Error reactivating alert:', error);
-      toast.error('Erro ao reativar alerta');
+    onError: () => {
+      toast.error('Erro ao reativar alerta. Verifique o console para detalhes.');
     },
   });
 
