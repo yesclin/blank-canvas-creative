@@ -185,7 +185,7 @@ export function useAestheticAlerts(patientId: string | null) {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
+      invalidateAllAlertCaches();
       toast.success('Alerta adicionado com sucesso');
     },
     onError: (error: any) => {
@@ -221,7 +221,7 @@ export function useAestheticAlerts(patientId: string | null) {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
+      invalidateAllAlertCaches();
       toast.success('Alerta atualizado');
     },
     onError: () => {
@@ -246,7 +246,7 @@ export function useAestheticAlerts(patientId: string | null) {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
+      invalidateAllAlertCaches();
       toast.success('Alerta desativado');
     },
     onError: () => {
@@ -271,7 +271,7 @@ export function useAestheticAlerts(patientId: string | null) {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
+      invalidateAllAlertCaches();
       toast.success('Alerta reativado');
     },
     onError: () => {
@@ -290,7 +290,7 @@ export function useAestheticAlerts(patientId: string | null) {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
+      invalidateAllAlertCaches();
       toast.success('Alerta removido');
     },
     onError: (error) => {
