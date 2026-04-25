@@ -17,12 +17,16 @@ export type MaterialUsedSource =
   | "stock_movement"
   | "material_consumption"
   | "aesthetic_product"
-  | "fallback_temporal";
+  | "fallback_temporal"
+  | "procedure_predicted"
+  | "procedure_kit_predicted";
 
 export interface AppointmentMaterialUsed {
   id: string;
   source: MaterialUsedSource;
-  origin_label: string; // Ex: "Estoque", "Consumo manual", "Estética", "Vinculação por janela"
+  origin_label: string; // Ex: "Estoque", "Consumo manual", "Estética", "Previsto no procedimento"
+  /** true quando o item ainda não foi confirmado/consumido — apenas previsto pelo procedimento */
+  is_predicted?: boolean;
   product_id: string | null;
   material_id: string | null;
   procedure_id: string | null;
@@ -44,6 +48,7 @@ interface AppointmentWindow {
   clinic_id: string;
   patient_id: string;
   professional_id: string;
+  procedure_id?: string | null;
   started_at: string | null;
   finished_at: string | null;
 }
@@ -64,6 +69,8 @@ function originLabel(src: MaterialUsedSource): string {
     case "material_consumption": return "Consumo manual";
     case "aesthetic_product": return "Estética";
     case "fallback_temporal": return "Vinculação por janela";
+    case "procedure_predicted": return "Previsto no procedimento";
+    case "procedure_kit_predicted": return "Previsto (kit)";
   }
 }
 
@@ -228,6 +235,147 @@ export async function getAppointmentMaterialsUsed(
         movement_type: r.movement_type ?? null,
         notes: r.notes ?? null,
         created_at: r.created_at,
+      });
+    }
+  }
+
+  // 5. Fallback visual — materiais previstos no procedimento.
+  // Só é exibido quando NÃO houver consumo real (nem stock_movement, nem
+  // material_consumption, nem aesthetic_product). Nunca substitui registros
+  // reais; apenas evita a tela vazia quando o procedimento tem materiais
+  // vinculados mas o consumo não foi confirmado.
+  const hasRealConsumption = items.some(
+    (i) =>
+      i.source === "stock_movement" ||
+      i.source === "material_consumption" ||
+      i.source === "aesthetic_product",
+  );
+  if (!hasRealConsumption && appointmentWindow?.procedure_id) {
+    const procedureId = appointmentWindow.procedure_id;
+    const baseDate = appointmentWindow.started_at ?? new Date().toISOString();
+
+    // 5a. procedure_products → products (modelo atual)
+    const predictedProducts = await safe<any[]>(
+      supabase
+        .from("procedure_products")
+        .select(`
+          id, quantity, procedure_id,
+          products:product_id (id, name, unit, cost_price, is_active)
+        `)
+        .eq("procedure_id", procedureId),
+    );
+
+    for (const r of predictedProducts as any[]) {
+      const prod = r.products;
+      if (!prod || prod.is_active === false) continue;
+      const qty = Number(r.quantity ?? 0);
+      const unitCost = prod.cost_price != null ? Number(prod.cost_price) : null;
+      items.push({
+        id: `predicted-${r.id}`,
+        source: "procedure_predicted",
+        origin_label: originLabel("procedure_predicted"),
+        is_predicted: true,
+        product_id: prod.id,
+        material_id: null,
+        procedure_id: procedureId,
+        name: prod.name ?? "Material previsto",
+        quantity: qty,
+        unit: prod.unit ?? null,
+        batch_number: null,
+        expiry_date: null,
+        manufacturer: null,
+        unit_cost: unitCost,
+        total_cost: unitCost != null ? unitCost * qty : null,
+        movement_type: null,
+        notes: "Previsto pelo procedimento — consumo não confirmado.",
+        created_at: baseDate,
+      });
+    }
+
+    // 5b. procedure_product_kits (kits clínicos previstos)
+    const predictedKits = await safe<any[]>(
+      supabase
+        .from("procedure_product_kits")
+        .select(`
+          id, quantity, procedure_id,
+          product_kits:product_kit_id (
+            id, name, is_active,
+            product_kit_items (
+              quantity,
+              products:product_id (id, name, unit, cost_price, is_active)
+            )
+          )
+        `)
+        .eq("procedure_id", procedureId),
+    );
+
+    for (const pk of predictedKits as any[]) {
+      const kit = pk.product_kits;
+      if (!kit || kit.is_active === false) continue;
+      const kitMultiplier = Number(pk.quantity ?? 1);
+      for (const ki of kit.product_kit_items ?? []) {
+        const prod = ki.products;
+        if (!prod || prod.is_active === false) continue;
+        const qty = Number(ki.quantity ?? 0) * kitMultiplier;
+        const unitCost = prod.cost_price != null ? Number(prod.cost_price) : null;
+        items.push({
+          id: `predicted-kit-${pk.id}-${prod.id}`,
+          source: "procedure_kit_predicted",
+          origin_label: `${originLabel("procedure_kit_predicted")}: ${kit.name}`,
+          is_predicted: true,
+          product_id: prod.id,
+          material_id: null,
+          procedure_id: procedureId,
+          name: prod.name ?? "Material previsto",
+          quantity: qty,
+          unit: prod.unit ?? null,
+          batch_number: null,
+          expiry_date: null,
+          manufacturer: null,
+          unit_cost: unitCost,
+          total_cost: unitCost != null ? unitCost * qty : null,
+          movement_type: null,
+          notes: `Previsto pelo kit "${kit.name}" — consumo não confirmado.`,
+          created_at: baseDate,
+        });
+      }
+    }
+
+    // 5c. procedure_materials (modelo legado)
+    const predictedLegacy = await safe<any[]>(
+      supabase
+        .from("procedure_materials")
+        .select(`
+          id, quantity, unit, procedure_id,
+          materials:material_id (id, name, unit_cost, is_active)
+        `)
+        .eq("procedure_id", procedureId),
+    );
+
+    for (const r of predictedLegacy as any[]) {
+      const mat = r.materials;
+      if (!mat || mat.is_active === false) continue;
+      const qty = Number(r.quantity ?? 0);
+      const unitCost = mat.unit_cost != null ? Number(mat.unit_cost) : null;
+      items.push({
+        id: `predicted-legacy-${r.id}`,
+        source: "procedure_predicted",
+        origin_label: originLabel("procedure_predicted"),
+        is_predicted: true,
+        product_id: null,
+        material_id: mat.id,
+        procedure_id: procedureId,
+        name: mat.name ?? "Material previsto",
+        quantity: qty,
+        unit: r.unit ?? null,
+        batch_number: null,
+        expiry_date: null,
+        manufacturer: null,
+        unit_cost: unitCost,
+        total_cost: unitCost != null ? unitCost * qty : null,
+        movement_type: null,
+        notes: "Previsto pelo procedimento — consumo não confirmado.",
+        created_at: baseDate,
       });
     }
   }

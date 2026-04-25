@@ -356,6 +356,7 @@ export function useAttendanceDetail(appointmentId: string | null) {
         clinic_id: clinicId,
         patient_id: patientId,
         professional_id: apt.professional_id,
+        procedure_id: apt.procedure_id,
         started_at: apt.started_at,
         finished_at: apt.finished_at,
       });
