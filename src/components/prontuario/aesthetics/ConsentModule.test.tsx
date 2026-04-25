@@ -209,14 +209,19 @@ describe('ConsentModule — signature validation gate', () => {
     await openSignStep();
 
     const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+    const validUrl = 'data:image/png;base64,' + 'A'.repeat(MIN_SIGNATURE_LENGTH);
+    canvas.toDataURL = () => validUrl;
+
     act(() => {
       fireEvent.mouseDown(canvas, { clientX: 5, clientY: 5 });
       fireEvent.mouseMove(canvas, { clientX: 10, clientY: 10 });
       fireEvent.mouseUp(canvas);
     });
-
-    const validUrl = 'data:image/png;base64,' + 'A'.repeat(MIN_SIGNATURE_LENGTH);
-    canvas.toDataURL = () => validUrl;
+    act(() => {
+      fireEvent.mouseDown(canvas, { clientX: 12, clientY: 12 });
+      fireEvent.mouseMove(canvas, { clientX: 20, clientY: 20 });
+      fireEvent.mouseUp(canvas);
+    });
 
     fireEvent.click(getConfirmButton());
 
