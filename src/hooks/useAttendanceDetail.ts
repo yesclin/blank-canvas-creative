@@ -523,6 +523,7 @@ export function useAttendanceDetail(appointmentId: string | null) {
           notes: r.notes,
           created_at: r.created_at,
         })),
+        materials_used: materialsUsed,
         body_measurements: (bodyMeasurementsData as any[]).map((r: any) => ({
           id: r.id,
           measurement_type: r.measurement_type,
