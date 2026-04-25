@@ -1035,6 +1035,7 @@ export default function Prontuario() {
 
   const [activeTab, setActiveTab] = useState("resumo");
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const [searchFocus, setSearchFocus] = useState<SearchFocusTarget | null>(null);
   const [consentDialogOpen, setConsentDialogOpen] = useState(false);
   const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
   const [selectedEntryForSignature, setSelectedEntryForSignature] = useState<MedicalRecordEntry | null>(null);
