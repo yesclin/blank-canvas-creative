@@ -74,6 +74,8 @@ export function ConsentModule({
   const [agreed, setAgreed] = useState(false);
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [step, setStep] = useState<'read' | 'sign'>('read');
+  const [isSavingSignature, setIsSavingSignature] = useState(false);
+  const signatureRef = useRef<SignatureCanvasHandle>(null);
 
   const { 
     consents, 
