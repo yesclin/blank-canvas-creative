@@ -69,6 +69,8 @@ function originLabel(src: MaterialUsedSource): string {
     case "material_consumption": return "Consumo manual";
     case "aesthetic_product": return "Estética";
     case "fallback_temporal": return "Vinculação por janela";
+    case "procedure_predicted": return "Previsto no procedimento";
+    case "procedure_kit_predicted": return "Previsto (kit)";
   }
 }
 
