@@ -177,56 +177,59 @@ export function useAestheticAlerts(patientId: string | null) {
     },
   });
 
-  // Update alert
+  // Update alert (only persists known columns)
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...input }: Partial<AlertInput> & { id: string }) => {
+      const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      if (input.alert_type && ALLOWED_TYPES.includes(input.alert_type)) updates.alert_type = input.alert_type;
+      if (input.severity && ALLOWED_SEVERITIES.includes(input.severity)) updates.severity = input.severity;
+      if (typeof input.title === 'string') updates.title = input.title.trim();
+      if (typeof input.description === 'string') updates.description = input.description.trim() || null;
+
       const { data, error } = await supabase
         .from('clinical_alerts')
-        .update({
-          ...input,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updates)
         .eq('id', id)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[clinical_alerts.update] Supabase error:', error);
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
       toast.success('Alerta atualizado');
     },
-    onError: (error) => {
-      console.error('Error updating alert:', error);
-      toast.error('Erro ao atualizar alerta');
+    onError: () => {
+      toast.error('Erro ao atualizar alerta. Verifique o console para detalhes.');
     },
   });
 
-  // Dismiss/deactivate alert
+  // Dismiss/deactivate alert (column acknowledged_* não existe na tabela; só altera is_active)
   const dismissMutation = useMutation({
     mutationFn: async (alertId: string) => {
-      const { data: userData } = await supabase.auth.getUser();
-
       const { error } = await supabase
         .from('clinical_alerts')
         .update({
           is_active: false,
-          acknowledged_at: new Date().toISOString(),
-          acknowledged_by: userData.user?.id,
           updated_at: new Date().toISOString(),
         })
         .eq('id', alertId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('[clinical_alerts.dismiss] Supabase error:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
       toast.success('Alerta desativado');
     },
-    onError: (error) => {
-      console.error('Error dismissing alert:', error);
-      toast.error('Erro ao desativar alerta');
+    onError: () => {
+      toast.error('Erro ao desativar alerta. Verifique o console para detalhes.');
     },
   });
 
@@ -237,21 +240,21 @@ export function useAestheticAlerts(patientId: string | null) {
         .from('clinical_alerts')
         .update({
           is_active: true,
-          acknowledged_at: null,
-          acknowledged_by: null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', alertId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('[clinical_alerts.reactivate] Supabase error:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
       toast.success('Alerta reativado');
     },
-    onError: (error) => {
-      console.error('Error reactivating alert:', error);
-      toast.error('Erro ao reativar alerta');
+    onError: () => {
+      toast.error('Erro ao reativar alerta. Verifique o console para detalhes.');
     },
   });
 
