@@ -176,10 +176,9 @@ const App = () => (
             <Route path="comercial/follow-ups" element={<ProtectedRoute module="comercial"><ProtectedFeatureRoute feature="feature_crm"><FollowupsPage /></ProtectedFeatureRoute></ProtectedRoute>} />
             <Route path="comercial/metas" element={<ProtectedRoute module="comercial"><ProtectedFeatureRoute feature="feature_crm"><GoalsPage /></ProtectedFeatureRoute></ProtectedRoute>} />
             <Route path="comercial/relatorios" element={<ProtectedRoute module="comercial"><ProtectedFeatureRoute feature="feature_crm"><CommercialReportsPage /></ProtectedFeatureRoute></ProtectedRoute>} />
-            <Route path="comercial/relatorios" element={<ProtectedRoute module="comercial"><CommercialReportsPage /></ProtectedRoute>} />
             
             {/* Teleconsulta - Sala do Profissional */}
-            <Route path="teleconsulta/:appointmentId/sala" element={<ProtectedRoute module="agenda"><TeleconsultaSala /></ProtectedRoute>} />
+            <Route path="teleconsulta/:appointmentId/sala" element={<ProtectedRoute module="agenda"><ProtectedFeatureRoute feature="feature_teleconsulta"><TeleconsultaSala /></ProtectedFeatureRoute></ProtectedRoute>} />
 
             {/* Fallback dentro do /app: redireciona ao Dashboard mantendo o layout autenticado */}
             <Route path="*" element={<Navigate to="/app" replace />} />
