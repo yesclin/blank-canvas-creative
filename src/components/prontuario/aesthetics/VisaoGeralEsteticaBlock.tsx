@@ -200,7 +200,7 @@ export function VisaoGeralEsteticaBlock({
                     variant={alert.severity === 'critical' ? 'destructive' : 'secondary'}
                     className="text-xs"
                   >
-                    {alert.alert_type}
+                    {getAlertTypeLabel(alert.alert_type)}
                   </Badge>
                 </div>
               </CardContent>
