@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useClinicData } from '@/hooks/useClinicData';
 import { toast } from 'sonner';
 import { logAppError } from '@/lib/logAppError';
+import { newTraceId } from '@/lib/traceId';
 import type { AestheticConsentRecord, ConsentType } from '@/components/prontuario/aesthetics/types';
 
 /**
