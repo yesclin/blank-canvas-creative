@@ -213,11 +213,12 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
   });
 
   // Buscar alertas clínicos ativos
-  // IMPORTANTE: usa a MESMA queryKey de useAestheticAlerts para garantir
-  // sincronização total entre o card de Visão Geral, a aba Alertas Clínicos
-  // e os cards superiores. Qualquer create/update/dismiss invalida ambos.
+  // IMPORTANTE: queryKey compartilha o prefixo ['aesthetic-alerts', patientId]
+  // com useAestheticAlerts. As mutations do hook invalidam por prefixo, garantindo
+  // sincronização entre o card de Visão Geral, a aba Alertas Clínicos e os cards
+  // superiores em tempo real após criar/editar/desativar/reativar alertas.
   const alertsQuery = useQuery({
-    queryKey: ['aesthetic-alerts', patientId],
+    queryKey: ['aesthetic-alerts', patientId, 'active-only'],
     queryFn: async () => {
       if (!patientId || !clinicId) return [];
 
