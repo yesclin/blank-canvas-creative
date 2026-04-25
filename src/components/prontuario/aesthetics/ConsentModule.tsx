@@ -121,6 +121,13 @@ export function ConsentModule({
     const validation = validateSignature({ captured, canvasHasSignature });
     if (validation.ok === false) {
       const { reason, length } = validation;
+      // Anexa um thumbnail privacy-safe ao log de rejeição:
+      //  - 'placeholder' (default) quando nada foi desenhado — apenas dimensões + flag.
+      //  - 'downscale' quando algo foi desenhado mas a captura falhou — ajuda a
+      //    visualizar o que o canvas tinha sem expor a assinatura completa.
+      const thumbnailMode = canvasHasSignature ? 'downscale' : 'placeholder';
+      const thumbnail = signatureRef.current?.getDebugThumbnail(thumbnailMode) ?? null;
+
       console.warn("[ConsentModule] signature rejected", {
         trace_id: traceId,
         reason,
@@ -133,6 +140,12 @@ export function ConsentModule({
         patient_id: patientId,
         appointment_id: appointmentId,
         consent_type: selectedType,
+        debug_thumbnail: thumbnail?.dataUrl ?? null,
+        debug_thumbnail_mode: thumbnail?.mode ?? null,
+        debug_thumbnail_size: thumbnail
+          ? `${thumbnail.width}x${thumbnail.height}`
+          : null,
+        debug_thumbnail_length: thumbnail?.length ?? 0,
       });
 
       // Mensagem amigável diferenciada para ajudar o usuário a corrigir.
