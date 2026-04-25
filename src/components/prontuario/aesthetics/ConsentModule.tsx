@@ -49,12 +49,15 @@ import {
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAestheticConsent, DEFAULT_CONSENT_TEMPLATES } from "@/hooks/aesthetics";
+import { useClinicData } from "@/hooks/useClinicData";
+import { supabase } from "@/integrations/supabase/client";
 import type { ConsentType, AestheticConsentRecord } from "./types";
 import { CONSENT_TYPE_LABELS } from "./types";
 import { SignatureCanvas, type SignatureCanvasHandle } from "./SignatureCanvas";
 import { newTraceId } from "@/lib/traceId";
 import { validateSignature, MIN_SIGNATURE_LENGTH } from "./signatureValidation";
 import { resolveSignatureSource } from "./signatureSource";
+import { exportConsentPdf } from "./exportConsentPdf";
 
 interface ConsentModuleProps {
   patientId: string;
