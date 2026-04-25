@@ -65,7 +65,7 @@ async function openSignStep() {
   const checkbox = await screen.findByRole('checkbox');
   fireEvent.click(checkbox);
 
-  const continueBtn = await screen.findByRole('button', { name: /continuar/i });
+  const continueBtn = await screen.findByRole('button', { name: /prosseguir/i });
   fireEvent.click(continueBtn);
 
   // Wait for the sign step to render — confirms the canvas is mounted.
