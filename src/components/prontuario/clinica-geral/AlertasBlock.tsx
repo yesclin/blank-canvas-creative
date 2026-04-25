@@ -232,17 +232,7 @@ export function AlertasBlock({
     );
   }
 
-  // Search focus support
-  const { focus } = useSearchFocus();
-  const isFocusActive = !!focus && focus.sourceTable === "clinical_alerts";
-  const focusedRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (!isFocusActive) return;
-    const t = setTimeout(() => {
-      focusedRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 120);
-    return () => clearTimeout(t);
-  }, [isFocusActive, focus?.sourceRecordId]);
+  // (Search focus state declared earlier; use it here)
 
   const renderAlertCard = (alerta: AlertaClinico, showActions = true) => {
     const config = severidadeConfig[alerta.severity];
