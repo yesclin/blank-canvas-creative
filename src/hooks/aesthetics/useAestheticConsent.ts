@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useClinicData } from '@/hooks/useClinicData';
 import { toast } from 'sonner';
+import { logAppError } from '@/lib/logAppError';
 import type { AestheticConsentRecord, ConsentType } from '@/components/prontuario/aesthetics/types';
 
 // Default consent templates
@@ -199,6 +200,19 @@ export function useAestheticConsent(patientId: string | null) {
 
       const { data: userData } = await supabase.auth.getUser();
       const template = DEFAULT_CONSENT_TEMPLATES[data.consent_type];
+      const signatureLength = data.signature_data?.length ?? 0;
+
+      console.info('[useAestheticConsent] createConsent →', {
+        clinic_id: clinic.id,
+        patient_id: patientId,
+        appointment_id: data.appointment_id ?? null,
+        consent_type: data.consent_type,
+        procedure_id: data.procedure_id ?? null,
+        term_version: template.version,
+        signature_length: signatureLength,
+        has_signature: signatureLength > 0,
+        user_id: userData.user?.id ?? null,
+      });
 
       const { data: result, error } = await supabase
         .from('aesthetic_consent_records')
@@ -220,7 +234,32 @@ export function useAestheticConsent(patientId: string | null) {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        logAppError(error, {
+          screen: 'Prontuário',
+          component: 'useAestheticConsent',
+          action: 'createConsent.insert',
+          clinicId: clinic.id,
+          patientId,
+          appointmentId: data.appointment_id ?? null,
+          userId: userData.user?.id ?? null,
+          extra: {
+            consent_type: data.consent_type,
+            procedure_id: data.procedure_id ?? null,
+            term_version: template.version,
+            signature_length: signatureLength,
+            supabase_code: (error as { code?: string }).code ?? null,
+            supabase_details: (error as { details?: string }).details ?? null,
+            supabase_hint: (error as { hint?: string }).hint ?? null,
+          },
+        });
+        throw error;
+      }
+
+      console.info('[useAestheticConsent] createConsent ✓', {
+        consent_id: (result as { id?: string })?.id,
+        consent_type: data.consent_type,
+      });
       return result;
     },
     onSuccess: () => {
@@ -228,7 +267,8 @@ export function useAestheticConsent(patientId: string | null) {
       toast.success('Termo aceito e assinado com sucesso');
     },
     onError: (error) => {
-      console.error('Error creating consent:', error);
+      // Erro já logado em detalhe acima; aqui só feedback ao usuário.
+      console.error('[useAestheticConsent] createConsent failed:', error);
       toast.error('Erro ao registrar consentimento');
     },
   });
