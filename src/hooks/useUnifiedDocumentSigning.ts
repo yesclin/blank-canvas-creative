@@ -23,6 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useClinicData } from "@/hooks/useClinicData";
 import { usePermissions } from "@/hooks/usePermissions";
 import { toast } from "sonner";
+import { logAppError } from "@/lib/logAppError";
 
 export type SignableDocumentType =
   | "consolidated_document"
