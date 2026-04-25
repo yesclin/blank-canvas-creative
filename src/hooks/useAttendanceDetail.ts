@@ -350,6 +350,16 @@ export function useAttendanceDetail(appointmentId: string | null) {
       ]);
       const filteredAddendums = (addendumsData as any[]).filter((a: any) => recordIdsInAppointment.has(a.record_id));
 
+      // Lista unificada de materiais utilizados (todas as fontes + fallback)
+      const materialsUsed = await getAppointmentMaterialsUsed(appointmentId, {
+        appointment_id: appointmentId,
+        clinic_id: clinicId,
+        patient_id: patientId,
+        professional_id: apt.professional_id,
+        started_at: apt.started_at,
+        finished_at: apt.finished_at,
+      });
+
       // Merge before/after sources
       const mergedBeforeAfter: BeforeAfterRecord[] = [
         ...(aestheticBeforeAfterData as any[]).map((r: any) => ({
