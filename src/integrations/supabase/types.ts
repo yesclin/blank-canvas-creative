@@ -2168,6 +2168,250 @@ export type Database = {
           },
         ]
       }
+      clinical_consent_acceptances: {
+        Row: {
+          accepted_at: string
+          appointment_id: string | null
+          clinic_id: string
+          consent_term_id: string | null
+          consent_type: string
+          created_at: string
+          created_by: string | null
+          geo_location: Json | null
+          id: string
+          ip_address: string | null
+          patient_cpf_snapshot: string | null
+          patient_id: string
+          patient_name_snapshot: string | null
+          professional_id: string | null
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          signature_data: string | null
+          specialty_id: string | null
+          status: string
+          term_content_snapshot: string
+          term_title: string
+          term_version: number
+          user_agent: string | null
+        }
+        Insert: {
+          accepted_at?: string
+          appointment_id?: string | null
+          clinic_id: string
+          consent_term_id?: string | null
+          consent_type?: string
+          created_at?: string
+          created_by?: string | null
+          geo_location?: Json | null
+          id?: string
+          ip_address?: string | null
+          patient_cpf_snapshot?: string | null
+          patient_id: string
+          patient_name_snapshot?: string | null
+          professional_id?: string | null
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          signature_data?: string | null
+          specialty_id?: string | null
+          status?: string
+          term_content_snapshot: string
+          term_title: string
+          term_version: number
+          user_agent?: string | null
+        }
+        Update: {
+          accepted_at?: string
+          appointment_id?: string | null
+          clinic_id?: string
+          consent_term_id?: string | null
+          consent_type?: string
+          created_at?: string
+          created_by?: string | null
+          geo_location?: Json | null
+          id?: string
+          ip_address?: string | null
+          patient_cpf_snapshot?: string | null
+          patient_id?: string
+          patient_name_snapshot?: string | null
+          professional_id?: string | null
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          signature_data?: string | null
+          specialty_id?: string | null
+          status?: string
+          term_content_snapshot?: string
+          term_title?: string
+          term_version?: number
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_consent_acceptances_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_consent_acceptances_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_consent_acceptances_consent_term_id_fkey"
+            columns: ["consent_term_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_consent_terms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_consent_acceptances_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_consent_acceptances_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_consent_acceptances_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clinical_consent_terms: {
+        Row: {
+          based_on_system_term_id: string | null
+          clinic_id: string | null
+          consent_type: string
+          content: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          is_archived: boolean
+          is_default: boolean
+          is_system: boolean
+          parent_term_id: string | null
+          professional_id: string | null
+          requires_cpf: boolean
+          requires_geolocation: boolean
+          requires_ip: boolean
+          requires_patient_name: boolean
+          requires_signature: boolean
+          specialty_id: string | null
+          specialty_slug: string | null
+          title: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          based_on_system_term_id?: string | null
+          clinic_id?: string | null
+          consent_type?: string
+          content: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_archived?: boolean
+          is_default?: boolean
+          is_system?: boolean
+          parent_term_id?: string | null
+          professional_id?: string | null
+          requires_cpf?: boolean
+          requires_geolocation?: boolean
+          requires_ip?: boolean
+          requires_patient_name?: boolean
+          requires_signature?: boolean
+          specialty_id?: string | null
+          specialty_slug?: string | null
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          based_on_system_term_id?: string | null
+          clinic_id?: string | null
+          consent_type?: string
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_archived?: boolean
+          is_default?: boolean
+          is_system?: boolean
+          parent_term_id?: string | null
+          professional_id?: string | null
+          requires_cpf?: boolean
+          requires_geolocation?: boolean
+          requires_ip?: boolean
+          requires_patient_name?: boolean
+          requires_signature?: boolean
+          specialty_id?: string | null
+          specialty_slug?: string | null
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_consent_terms_based_on_system_term_id_fkey"
+            columns: ["based_on_system_term_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_consent_terms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_consent_terms_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_consent_terms_parent_term_id_fkey"
+            columns: ["parent_term_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_consent_terms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_consent_terms_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_consent_terms_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinical_documents: {
         Row: {
           appointment_id: string | null
