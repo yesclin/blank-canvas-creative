@@ -49,12 +49,15 @@ import {
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAestheticConsent, DEFAULT_CONSENT_TEMPLATES } from "@/hooks/aesthetics";
+import { useClinicData } from "@/hooks/useClinicData";
+import { supabase } from "@/integrations/supabase/client";
 import type { ConsentType, AestheticConsentRecord } from "./types";
 import { CONSENT_TYPE_LABELS } from "./types";
 import { SignatureCanvas, type SignatureCanvasHandle } from "./SignatureCanvas";
 import { newTraceId } from "@/lib/traceId";
 import { validateSignature, MIN_SIGNATURE_LENGTH } from "./signatureValidation";
 import { resolveSignatureSource } from "./signatureSource";
+import { exportConsentPdf } from "./exportConsentPdf";
 
 interface ConsentModuleProps {
   patientId: string;
@@ -78,7 +81,9 @@ export function ConsentModule({
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [step, setStep] = useState<'read' | 'sign'>('read');
   const [isSavingSignature, setIsSavingSignature] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const signatureRef = useRef<SignatureCanvasHandle>(null);
+  const { clinic } = useClinicData();
 
   const { 
     consents, 
@@ -227,6 +232,71 @@ export function ConsentModule({
   const viewConsent = (consent: AestheticConsentRecord) => {
     setSelectedConsent(consent);
     setViewDialogOpen(true);
+  };
+
+  const handleExportConsentPdf = async () => {
+    if (!selectedConsent || isExportingPdf) return;
+
+    // Permission gate: only users with clinical/edit access can export.
+    if (!canEdit) {
+      toast.error("Você não tem permissão para exportar este documento.");
+      return;
+    }
+
+    const traceId = newTraceId("consent_export");
+    setIsExportingPdf(true);
+    try {
+      // Fetch patient + professional names on demand (best-effort).
+      const [patientRes, professionalRes] = await Promise.all([
+        supabase
+          .from("patients")
+          .select("full_name")
+          .eq("id", selectedConsent.patient_id)
+          .maybeSingle(),
+        selectedConsent.created_by
+          ? supabase
+              .from("profiles")
+              .select("full_name")
+              .eq("id", selectedConsent.created_by)
+              .maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+      ]);
+
+      const patientName =
+        (patientRes.data as { full_name?: string } | null)?.full_name ?? null;
+      const professionalName =
+        (professionalRes.data as { full_name?: string } | null)?.full_name ?? null;
+
+      console.info("[ConsentModule] export consent pdf", {
+        trace_id: traceId,
+        consent_id: selectedConsent.id,
+        consent_type: selectedConsent.consent_type,
+        has_signature: !!selectedConsent.signature_data,
+        has_clinic: !!clinic?.name,
+        has_patient_name: !!patientName,
+        has_professional_name: !!professionalName,
+      });
+
+      await exportConsentPdf({
+        consent: selectedConsent as AestheticConsentRecord & {
+          procedure_name?: string | null;
+        },
+        clinicName: clinic?.name ?? null,
+        patientName,
+        professionalName,
+      });
+
+      toast.success("PDF exportado com sucesso");
+    } catch (err) {
+      console.error("[ConsentModule] failed to export consent pdf", {
+        trace_id: traceId,
+        error: err,
+        consent_id: selectedConsent?.id,
+      });
+      toast.error(`Falha ao exportar PDF (ref: ${traceId})`);
+    } finally {
+      setIsExportingPdf(false);
+    }
   };
 
   const openHistory = (type: ConsentType) => {
@@ -604,9 +674,15 @@ export function ConsentModule({
               )}
 
               <DialogFooter>
-                <Button variant="outline" size="sm">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportConsentPdf}
+                  disabled={isExportingPdf || !canEdit}
+                  title={!canEdit ? "Sem permissão para exportar" : undefined}
+                >
                   <Download className="h-4 w-4 mr-1" />
-                  Exportar PDF
+                  {isExportingPdf ? "Gerando PDF..." : "Exportar PDF"}
                 </Button>
                 <Button onClick={() => setViewDialogOpen(false)}>
                   Fechar
