@@ -53,6 +53,7 @@ import type { ConsentType, AestheticConsentRecord } from "./types";
 import { CONSENT_TYPE_LABELS } from "./types";
 import { SignatureCanvas, type SignatureCanvasHandle } from "./SignatureCanvas";
 import { newTraceId } from "@/lib/traceId";
+import { validateSignature, MIN_SIGNATURE_LENGTH } from "./signatureValidation";
 
 interface ConsentModuleProps {
   patientId: string;
