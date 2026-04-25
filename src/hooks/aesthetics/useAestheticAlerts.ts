@@ -87,6 +87,27 @@ export function useAestheticAlerts(patientId: string | null) {
 
   const queryKey = ['aesthetic-alerts', patientId];
 
+  /**
+   * Invalida TODAS as queries relacionadas a alertas do paciente para garantir
+   * que o card "Alertas Clínicos" da Visão Geral, a aba dedicada, os badges
+   * superiores e os contadores fiquem 100% sincronizados após qualquer mutação.
+   *
+   * - 'aesthetic-alerts' (prefixo) → cobre ['aesthetic-alerts', patientId] e
+   *   ['aesthetic-alerts', patientId, 'active-only'] usados pela Visão Geral.
+   * - 'estetica-summary' → recalcula o resumo agregado.
+   */
+  const invalidateAllAlertCaches = () => {
+    queryClient.invalidateQueries({
+      predicate: (q) => {
+        const k = q.queryKey;
+        return (
+          (Array.isArray(k) && k[0] === 'aesthetic-alerts' && k[1] === patientId) ||
+          (Array.isArray(k) && k[0] === 'estetica-summary' && k[1] === patientId)
+        );
+      },
+    });
+  };
+
   // Fetch alerts
   const { data: alerts = [], isLoading } = useQuery({
     queryKey,
