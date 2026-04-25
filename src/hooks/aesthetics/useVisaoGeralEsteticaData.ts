@@ -246,10 +246,19 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
     enabled: !!patientId && !!clinicId,
   });
 
+  // Override total_alertas with the actual alerts list length so the
+  // "Alertas Clínicos" summary card always matches the rendered list.
+  const summaryData = summaryQuery.data || getEmptySummary();
+  const alertsData = alertsQuery.data || [];
+  const summaryWithLiveAlerts: EsteticaSummaryData = {
+    ...summaryData,
+    total_alertas: alertsData.length,
+  };
+
   return {
     patient: patientQuery.data || null,
-    summary: summaryQuery.data || getEmptySummary(),
-    alerts: alertsQuery.data || [],
+    summary: summaryWithLiveAlerts,
+    alerts: alertsData,
     loading: patientQuery.isLoading || summaryQuery.isLoading || alertsQuery.isLoading,
     error: patientQuery.error || summaryQuery.error || alertsQuery.error,
   };
