@@ -100,7 +100,7 @@ export function useClinicData() {
             address_state,
             address_zip
           `)
-          .eq("id", profile.clinic_id)
+          .eq("id", resolvedClinicId)
           .maybeSingle();
 
         if (cancelled) return;
