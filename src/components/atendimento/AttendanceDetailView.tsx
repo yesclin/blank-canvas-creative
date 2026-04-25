@@ -499,7 +499,10 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
                   {/* Materiais utilizados neste procedimento */}
                   <div className="mt-3 pt-3 border-t border-dashed">
                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2 flex items-center gap-1">
-                      <FileText className="h-3 w-3" /> Materiais utilizados
+                      <FileText className="h-3 w-3" />
+                      {matsForProc.some((m) => m.is_predicted) && !matsForProc.some((m) => !m.is_predicted)
+                        ? "Materiais previstos no procedimento"
+                        : "Materiais utilizados"}
                     </p>
                     {matsForProc.length === 0 ? (
                       <p className="text-xs text-muted-foreground italic">
@@ -508,9 +511,24 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
                     ) : (
                       <div className="space-y-1.5">
                         {matsForProc.map((m) => (
-                          <div key={`mat-${m.id}`} className="rounded-md bg-muted/40 px-2.5 py-1.5 text-xs">
+                          <div
+                            key={`mat-${m.id}`}
+                            className={cn(
+                              "rounded-md px-2.5 py-1.5 text-xs",
+                              m.is_predicted
+                                ? "bg-amber-500/10 border border-dashed border-amber-500/40"
+                                : "bg-muted/40",
+                            )}
+                          >
                             <div className="flex items-center justify-between gap-2 flex-wrap">
-                              <span className="font-medium">{m.name}</span>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-medium">{m.name}</span>
+                                {m.is_predicted && (
+                                  <Badge variant="outline" className="text-[9px] border-amber-500/60 text-amber-700 dark:text-amber-400">
+                                    Não confirmado
+                                  </Badge>
+                                )}
+                              </div>
                               <span className="text-foreground/80">
                                 {m.quantity}{m.unit ? ` ${m.unit}` : ""}
                               </span>
