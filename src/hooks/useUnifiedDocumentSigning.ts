@@ -423,6 +423,7 @@ export function useUnifiedDocumentSigning() {
                 locked_at: now,
                 hash_sha256: documentHash,
                 signature_metadata: {
+                  trace_id: traceId,
                   method,
                   signed_at: now,
                   user_id: userId,
@@ -447,7 +448,19 @@ export function useUnifiedDocumentSigning() {
           .update(updatePayload as any)
           .eq("id", context.document_id);
         if (updErr) {
-          console.error(`[SIGN] update ${targetTable} failed:`, updErr);
+          logAppError(updErr, {
+            ...baseLogContext,
+            action: "updateSourceDocument",
+            userId,
+            extra: {
+              ...baseLogContext.extra,
+              target_table: targetTable,
+              signature_id: sigRow.id,
+              supabase_code: (updErr as any)?.code,
+              supabase_details: (updErr as any)?.details,
+              supabase_hint: (updErr as any)?.hint,
+            },
+          });
           if ((updErr as any).code === "42501") {
             throw new Error(
               "Permissão negada: você não é o profissional responsável por este registro."
@@ -456,7 +469,15 @@ export function useUnifiedDocumentSigning() {
           throw updErr;
         }
 
+        console.info("[useUnifiedDocumentSigning] document signed", {
+          trace_id: traceId,
+          signature_id: sigRow.id,
+          document_type: context.document_type,
+          target_table: targetTable,
+        });
+
         await logEvent(sigRow.id, clinic.id, "document_signed", {
+          trace_id: traceId,
           document_type: context.document_type,
           method,
           signer_name: context.professional_name || null,
@@ -464,6 +485,7 @@ export function useUnifiedDocumentSigning() {
         });
 
         await logEvent(sigRow.id, clinic.id, "document_locked", {
+          trace_id: traceId,
           document_type: context.document_type,
           target_table: targetTable,
           locked_at: now,
@@ -478,13 +500,22 @@ export function useUnifiedDocumentSigning() {
           resource_id: context.document_id,
           ip_address: ipAddress,
           user_agent: userAgent,
-          details: { method, signature_id: sigRow.id } as any,
+          details: { trace_id: traceId, method, signature_id: sigRow.id } as any,
         });
 
         toast.success("Documento assinado com Assinatura Avançada YesClin.");
         return { success: true, signatureId: sigRow.id, documentHash };
       } catch (err: any) {
-        console.error("[SIGN] error:", err);
+        logAppError(err, {
+          ...baseLogContext,
+          action: "signDocument",
+          extra: {
+            ...baseLogContext.extra,
+            supabase_code: err?.code,
+            supabase_details: err?.details,
+            supabase_hint: err?.hint,
+          },
+        });
         toast.error(err?.message || "Erro ao assinar documento.");
         return { success: false };
       } finally {
