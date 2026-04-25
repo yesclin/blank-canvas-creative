@@ -2490,7 +2490,7 @@ export default function Prontuario() {
             } as TabNavItem;
           })}
           activeTab={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={handleTabChange}
           criticalAlerts={criticalAlerts.length}
         />
 
