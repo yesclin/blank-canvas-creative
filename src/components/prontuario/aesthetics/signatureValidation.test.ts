@@ -216,3 +216,214 @@ describe('rejection log shape (integration-style)', () => {
     expect(warnSpy).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * Edge cases for the `signature_length` rule:
+ *  - Very large dataURLs (multi-MB) must still be accepted; the validator has
+ *    no upper bound and `length` reported in logs must match `captured.length`
+ *    exactly (no truncation, no summarisation).
+ *  - Whitespace-only / partially-whitespace strings are NOT trimmed by the
+ *    validator — `length` is the raw `.length` of the string, mirroring how
+ *    the rejection log will read in production. This pins down that we
+ *    classify by raw string size, not by visual content.
+ *  - Multibyte / unicode payloads count by JS string length (UTF-16 code
+ *    units), which is also what gets serialised into the log payload.
+ */
+describe('signature_length edge cases', () => {
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
+
+  function emitRejectionLog(input: SignatureValidationInput) {
+    const result = validateSignature(input);
+    if (result.ok === false) {
+      console.warn('[ConsentModule] signature rejected', {
+        trace_id: 'consent_test_edge',
+        reason: result.reason,
+        signature_length: result.length,
+        min_required: MIN_SIGNATURE_LENGTH,
+      });
+    }
+    return result;
+  }
+
+  describe('very large dataURLs', () => {
+    it('accepts a ~1MB dataURL and reports the exact length', () => {
+      const big = fakeDataUrl(1_000_000);
+      const result = validateSignature({ captured: big, canvasHasSignature: true });
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.length).toBe(big.length);
+        expect(result.length).toBe(1_000_000);
+        expect(result.signature).toBe(big);
+      }
+    });
+
+    it('accepts a ~10MB dataURL without truncating signature or length', () => {
+      const huge = fakeDataUrl(10_000_000);
+      const result = validateSignature({ captured: huge, canvasHasSignature: true });
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.length).toBe(10_000_000);
+        // Signature is returned by reference — no copy/truncation.
+        expect(result.signature).toBe(huge);
+        expect(result.signature.length).toBe(huge.length);
+      }
+    });
+
+    it('logs no rejection for an oversized but valid dataURL', () => {
+      const big = fakeDataUrl(2_000_000);
+      const result = emitRejectionLog({ captured: big, canvasHasSignature: true });
+      expect(result.ok).toBe(true);
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it('exactly MIN_SIGNATURE_LENGTH chars is accepted (boundary)', () => {
+      const boundary = fakeDataUrl(MIN_SIGNATURE_LENGTH);
+      const result = validateSignature({ captured: boundary, canvasHasSignature: true });
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.length).toBe(MIN_SIGNATURE_LENGTH);
+      }
+    });
+
+    it('exactly MIN_SIGNATURE_LENGTH - 1 chars is rejected as too_small', () => {
+      const justBelow = fakeDataUrl(MIN_SIGNATURE_LENGTH - 1);
+      const result = emitRejectionLog({ captured: justBelow, canvasHasSignature: true });
+      expect(result.ok).toBe(false);
+      if (result.ok === false) {
+        expect(result.reason).toBe('too_small');
+        expect(result.length).toBe(MIN_SIGNATURE_LENGTH - 1);
+      }
+      expect(warnSpy).toHaveBeenCalledWith(
+        '[ConsentModule] signature rejected',
+        expect.objectContaining({
+          reason: 'too_small',
+          signature_length: MIN_SIGNATURE_LENGTH - 1,
+          min_required: MIN_SIGNATURE_LENGTH,
+        })
+      );
+    });
+  });
+
+  describe('whitespace and weird strings', () => {
+    it('rejects whitespace-only string of 100 chars as too_small (raw length, no trim)', () => {
+      const spaces = ' '.repeat(100);
+      const result = emitRejectionLog({ captured: spaces, canvasHasSignature: true });
+      expect(result.ok).toBe(false);
+      if (result.ok === false) {
+        expect(result.reason).toBe('too_small');
+        // Critical: length is the RAW string length, not after trim().
+        expect(result.length).toBe(100);
+      }
+    });
+
+    it('accepts a whitespace-only string at the boundary length (length rule is purely numeric)', () => {
+      // Documents the current contract: validateSignature has no semantic
+      // check on dataURL shape. If a future iteration adds shape validation,
+      // this test will fail and force an intentional update.
+      const longSpaces = ' '.repeat(MIN_SIGNATURE_LENGTH);
+      const result = validateSignature({ captured: longSpaces, canvasHasSignature: true });
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.length).toBe(MIN_SIGNATURE_LENGTH);
+      }
+    });
+
+    it('counts leading/trailing whitespace toward signature_length', () => {
+      const padded = '   ' + fakeDataUrl(MIN_SIGNATURE_LENGTH - 6) + '   ';
+      // Total length: 3 + (MIN_SIGNATURE_LENGTH - 6) + 3 = MIN_SIGNATURE_LENGTH.
+      const result = validateSignature({ captured: padded, canvasHasSignature: true });
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.length).toBe(MIN_SIGNATURE_LENGTH);
+        expect(result.length).toBe(padded.length);
+      }
+    });
+
+    it('rejects newline-padded short string as too_small with raw length in log', () => {
+      const captured = '\n\n\n' + fakeDataUrl(50) + '\n\n\n';
+      const result = emitRejectionLog({ captured, canvasHasSignature: true });
+      expect(result.ok).toBe(false);
+      if (result.ok === false) {
+        expect(result.reason).toBe('too_small');
+        expect(result.length).toBe(captured.length);
+      }
+      expect(warnSpy).toHaveBeenCalledWith(
+        '[ConsentModule] signature rejected',
+        expect.objectContaining({
+          reason: 'too_small',
+          signature_length: captured.length,
+        })
+      );
+    });
+  });
+
+  describe('multibyte / unicode payloads', () => {
+    it('counts unicode chars by JS string length (UTF-16 code units)', () => {
+      // Each 😀 emoji is 2 UTF-16 code units in JS string length.
+      const emojiCount = MIN_SIGNATURE_LENGTH; // → 2 * MIN_SIGNATURE_LENGTH code units
+      const captured = '😀'.repeat(emojiCount);
+      expect(captured.length).toBe(2 * MIN_SIGNATURE_LENGTH);
+
+      const result = validateSignature({ captured, canvasHasSignature: true });
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.length).toBe(captured.length);
+      }
+    });
+
+    it('rejects a small unicode payload as too_small using string length', () => {
+      const captured = '✏️'.repeat(10); // tiny string regardless of unicode width
+      const result = emitRejectionLog({ captured, canvasHasSignature: true });
+      expect(result.ok).toBe(false);
+      if (result.ok === false) {
+        expect(result.reason).toBe('too_small');
+        expect(result.length).toBe(captured.length);
+      }
+    });
+  });
+
+  describe('log/length consistency invariant', () => {
+    // Property-style sanity: across a spread of sizes and whitespace mixes,
+    // the `signature_length` field in the log payload MUST equal the
+    // captured.length, and the reason MUST be derivable from that length.
+    const sizes = [
+      0,
+      1,
+      100,
+      MIN_SIGNATURE_LENGTH - 1,
+      MIN_SIGNATURE_LENGTH,
+      MIN_SIGNATURE_LENGTH + 1,
+      50_000,
+      500_000,
+    ];
+
+    for (const size of sizes) {
+      it(`size=${size}: log signature_length === captured.length and reason matches threshold`, () => {
+        const captured = size === 0 ? '' : fakeDataUrl(size);
+        const result = emitRejectionLog({ captured, canvasHasSignature: true });
+
+        if (size >= MIN_SIGNATURE_LENGTH) {
+          expect(result.ok).toBe(true);
+          expect(warnSpy).not.toHaveBeenCalled();
+        } else {
+          expect(result.ok).toBe(false);
+          if (result.ok === false) {
+            expect(result.length).toBe(captured.length);
+            expect(result.reason).toBe(size === 0 ? 'empty_data_url' : 'too_small');
+          }
+          expect(warnSpy).toHaveBeenCalledTimes(1);
+          const [, payload] = warnSpy.mock.calls[0] as [string, Record<string, unknown>];
+          expect(payload.signature_length).toBe(captured.length);
+          expect(payload.min_required).toBe(MIN_SIGNATURE_LENGTH);
+        }
+      });
+    }
+  });
+});
