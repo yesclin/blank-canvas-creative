@@ -147,6 +147,15 @@ describe('legacyReason', () => {
   it('returns "too_small" when below threshold', () => {
     expect(legacyReason(fakeDataUrl(MIN_SIGNATURE_LENGTH - 1))).toBe('too_small');
   });
+
+  it('falls back to "missing" for valid-length input (defensive branch)', () => {
+    // Documents the legacy fallback: callers should not invoke legacyReason
+    // when the signature is valid, but if they do, we return "missing"
+    // rather than throw. Pinning this branch keeps coverage at 100% and
+    // prevents accidental behaviour drift.
+    expect(legacyReason(fakeDataUrl(MIN_SIGNATURE_LENGTH))).toBe('missing');
+    expect(legacyReason(fakeDataUrl(MIN_SIGNATURE_LENGTH * 2))).toBe('missing');
+  });
 });
 
 /**
