@@ -180,6 +180,18 @@ export function AlertasBlock({
   const warningAlertas = activeAlertas.filter(a => a.severity === 'warning');
   const infoAlertas = activeAlertas.filter(a => a.severity === 'info');
 
+  // Search focus support — must be declared before any early-return
+  const { focus } = useSearchFocus();
+  const isFocusActive = !!focus && focus.sourceTable === "clinical_alerts";
+  const focusedRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!isFocusActive) return;
+    const t = setTimeout(() => {
+      focusedRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 120);
+    return () => clearTimeout(t);
+  }, [isFocusActive, focus?.sourceRecordId]);
+
   const handleOpenForm = () => {
     setFormData({
       alert_type: 'allergy',
