@@ -105,6 +105,8 @@ import { useClinicData } from "@/hooks/useClinicData";
 import { PatientHeader } from "@/components/prontuario/PatientHeader";
 import { ProntuarioHeader } from "@/components/prontuario/ProntuarioHeader";
 import { ProntuarioSearchBar, type SearchResult } from "@/components/prontuario/ProntuarioSearchBar";
+import { SearchFocusContext, type SearchFocusTarget } from "@/contexts/SearchFocusContext";
+import { SearchFocusBanner } from "@/components/prontuario/SearchFocusBanner";
 import { LgpdBlockingOverlay } from "@/components/prontuario/LgpdBlockingOverlay";
 import { TeleconsultaContextBar } from "@/components/prontuario/TeleconsultaContextBar";
 import { RemoteAttendanceBlock } from "@/components/prontuario/RemoteAttendanceBlock";
