@@ -120,6 +120,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   const { isAdmin, isOwner, isRecepcionista, role, isLoading: permissionsLoading } = usePermissions();
+  const { hasFeature, loading: featuresLoading } = useClinicFeatures();
 
   const isActive = (path: string) => {
     if (path === "/app") return currentPath === path;
@@ -141,11 +142,20 @@ export function AppSidebar() {
 
   // Determine menus based on user type
   const { mainItems, gestaoItems, configItems } = useMemo(() => {
+    // Helper: enquanto features carregam, NÃO escondemos itens (evita flicker).
+    // Quando carregadas, ocultamos itens cuja feature está desabilitada.
+    const filterByFeature = (items: MenuItem[]) =>
+      items.filter((item) => {
+        if (!item.feature) return true;
+        if (featuresLoading) return true;
+        return hasFeature(item.feature);
+      });
+
     // Owner/Admin - full access
     if (isOwner || isAdmin) {
       return {
-        mainItems: ownerAdminMainMenu,
-        gestaoItems: ownerAdminGestaoMenu,
+        mainItems: filterByFeature(ownerAdminMainMenu),
+        gestaoItems: filterByFeature(ownerAdminGestaoMenu),
         configItems: ownerAdminConfigMenu,
       };
     }
@@ -153,8 +163,8 @@ export function AppSidebar() {
     // Receptionist - limited access, no clinical, no config
     if (isRecepcionista) {
       return {
-        mainItems: receptionistMainMenu,
-        gestaoItems: receptionistGestaoMenu,
+        mainItems: filterByFeature(receptionistMainMenu),
+        gestaoItems: filterByFeature(receptionistGestaoMenu),
         configItems: [],
       };
     }
@@ -162,7 +172,7 @@ export function AppSidebar() {
     // Professional - clinical access, own data, no config
     if (role === 'profissional') {
       return {
-        mainItems: professionalMainMenu,
+        mainItems: filterByFeature(professionalMainMenu),
         gestaoItems: [],
         configItems: [],
       };
@@ -174,7 +184,7 @@ export function AppSidebar() {
       gestaoItems: [],
       configItems: [],
     };
-  }, [isOwner, isAdmin, isRecepcionista, role]);
+  }, [isOwner, isAdmin, isRecepcionista, role, hasFeature, featuresLoading]);
 
   const isGestaoActive = gestaoItems.some((item) => isActive(item.url));
   const isConfigActive = configItems.some((item) => isActive(item.url));
