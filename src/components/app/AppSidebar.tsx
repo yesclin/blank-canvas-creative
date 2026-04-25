@@ -45,6 +45,7 @@ import {
 import { UserProfileFooter } from "./UserProfileFooter";
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useClinicFeatures, type FeatureKey } from "@/hooks/useClinicFeatures";
 import { useMemo } from "react";
 import logoIcon from "@/assets/logo-icon.png";
 import logoFull from "@/assets/logo-full.png";
@@ -54,6 +55,8 @@ interface MenuItem {
   url: string;
   icon: LucideIcon;
   tourId?: string;
+  /** Quando definido, item só aparece se a clínica tiver essa feature ativa. */
+  feature?: FeatureKey;
 }
 
 // =====================================================
@@ -66,16 +69,16 @@ const ownerAdminMainMenu: MenuItem[] = [
   { title: "Agenda", url: "/app/agenda", icon: Calendar, tourId: "agenda" },
   { title: "Pacientes", url: "/app/pacientes", icon: Users, tourId: "patients" },
   { title: "Atendimento", url: "/app/atendimento", icon: Activity, tourId: "atendimento" },
-  { title: "Comercial", url: "/app/comercial", icon: Briefcase, tourId: "commercial" },
-  { title: "Marketing", url: "/app/marketing", icon: Megaphone, tourId: "communication" },
+  { title: "Comercial", url: "/app/comercial", icon: Briefcase, tourId: "commercial", feature: "feature_crm" },
+  { title: "Marketing", url: "/app/marketing", icon: Megaphone, tourId: "communication", feature: "feature_marketing" },
 ];
 
 const ownerAdminGestaoMenu: MenuItem[] = [
-  { title: "Estoque", url: "/app/gestao/estoque", icon: Package },
+  { title: "Estoque", url: "/app/gestao/estoque", icon: Package, feature: "feature_inventory" },
   { title: "Finanças", url: "/app/gestao/financas", icon: DollarSign },
-  { title: "Convênios", url: "/app/gestao/convenios", icon: Building2 },
-  { title: "Relatórios", url: "/app/gestao/relatorios", icon: BarChart3 },
-  { title: "Auditoria", url: "/app/gestao/auditoria", icon: ShieldAlert },
+  { title: "Convênios", url: "/app/gestao/convenios", icon: Building2, feature: "feature_insurances" },
+  { title: "Relatórios", url: "/app/gestao/relatorios", icon: BarChart3, feature: "feature_advanced_reports" },
+  { title: "Auditoria", url: "/app/gestao/auditoria", icon: ShieldAlert, feature: "feature_audit" },
 ];
 
 const ownerAdminConfigMenu: MenuItem[] = [
@@ -93,22 +96,22 @@ const ownerAdminConfigMenu: MenuItem[] = [
 
 // Profissional de Saúde - Limited menus (own data only)
 const professionalMainMenu: MenuItem[] = [
-  { title: "Dashboard", url: "/app", icon: LayoutDashboard, tourId: "dashboard" }, // Own data
-  { title: "Agenda", url: "/app/agenda", icon: Calendar, tourId: "agenda" }, // Own schedule
-  { title: "Pacientes", url: "/app/pacientes", icon: Users, tourId: "patients" }, // Own patients
+  { title: "Dashboard", url: "/app", icon: LayoutDashboard, tourId: "dashboard" },
+  { title: "Agenda", url: "/app/agenda", icon: Calendar, tourId: "agenda" },
+  { title: "Pacientes", url: "/app/pacientes", icon: Users, tourId: "patients" },
   { title: "Atendimento", url: "/app/atendimento", icon: Activity, tourId: "atendimento" },
-  { title: "Meu Financeiro", url: "/app/meu-financeiro", icon: Wallet }, // Own financial
+  { title: "Meu Financeiro", url: "/app/meu-financeiro", icon: Wallet },
 ];
 
 // Recepcionista - No clinical content, no configurations
 const receptionistMainMenu: MenuItem[] = [
   { title: "Agenda", url: "/app/agenda", icon: Calendar, tourId: "agenda" },
   { title: "Pacientes", url: "/app/pacientes", icon: Users, tourId: "patients" },
-  { title: "Comercial", url: "/app/comercial", icon: Briefcase, tourId: "commercial" },
+  { title: "Comercial", url: "/app/comercial", icon: Briefcase, tourId: "commercial", feature: "feature_crm" },
 ];
 
 const receptionistGestaoMenu: MenuItem[] = [
-  { title: "Convênios", url: "/app/gestao/convenios", icon: Building2 },
+  { title: "Convênios", url: "/app/gestao/convenios", icon: Building2, feature: "feature_insurances" },
 ];
 
 export function AppSidebar() {
@@ -117,6 +120,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   const { isAdmin, isOwner, isRecepcionista, role, isLoading: permissionsLoading } = usePermissions();
+  const { hasFeature, loading: featuresLoading } = useClinicFeatures();
 
   const isActive = (path: string) => {
     if (path === "/app") return currentPath === path;
@@ -138,11 +142,20 @@ export function AppSidebar() {
 
   // Determine menus based on user type
   const { mainItems, gestaoItems, configItems } = useMemo(() => {
+    // Helper: enquanto features carregam, NÃO escondemos itens (evita flicker).
+    // Quando carregadas, ocultamos itens cuja feature está desabilitada.
+    const filterByFeature = (items: MenuItem[]) =>
+      items.filter((item) => {
+        if (!item.feature) return true;
+        if (featuresLoading) return true;
+        return hasFeature(item.feature);
+      });
+
     // Owner/Admin - full access
     if (isOwner || isAdmin) {
       return {
-        mainItems: ownerAdminMainMenu,
-        gestaoItems: ownerAdminGestaoMenu,
+        mainItems: filterByFeature(ownerAdminMainMenu),
+        gestaoItems: filterByFeature(ownerAdminGestaoMenu),
         configItems: ownerAdminConfigMenu,
       };
     }
@@ -150,8 +163,8 @@ export function AppSidebar() {
     // Receptionist - limited access, no clinical, no config
     if (isRecepcionista) {
       return {
-        mainItems: receptionistMainMenu,
-        gestaoItems: receptionistGestaoMenu,
+        mainItems: filterByFeature(receptionistMainMenu),
+        gestaoItems: filterByFeature(receptionistGestaoMenu),
         configItems: [],
       };
     }
@@ -159,7 +172,7 @@ export function AppSidebar() {
     // Professional - clinical access, own data, no config
     if (role === 'profissional') {
       return {
-        mainItems: professionalMainMenu,
+        mainItems: filterByFeature(professionalMainMenu),
         gestaoItems: [],
         configItems: [],
       };
@@ -171,7 +184,7 @@ export function AppSidebar() {
       gestaoItems: [],
       configItems: [],
     };
-  }, [isOwner, isAdmin, isRecepcionista, role]);
+  }, [isOwner, isAdmin, isRecepcionista, role, hasFeature, featuresLoading]);
 
   const isGestaoActive = gestaoItems.some((item) => isActive(item.url));
   const isConfigActive = configItems.some((item) => isActive(item.url));
