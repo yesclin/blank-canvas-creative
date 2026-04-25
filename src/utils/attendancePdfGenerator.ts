@@ -387,6 +387,199 @@ export async function generateAttendancePDF(
     }
   }
 
+  // ── 5b. Procedimentos Realizados (com materiais utilizados aninhados) ──
+  const performed = snapshot.procedures_performed || [];
+  const aestheticProducts = snapshot.aesthetic_products || [];
+  const materialsConsumed = snapshot.materials_consumed || [];
+
+  if (performed.length > 0 || aestheticProducts.length > 0 || materialsConsumed.length > 0) {
+    addSectionTitle('Procedimentos Realizados');
+
+    // Cabeçalhos: ou os procedimentos estruturados ou o procedimento principal do agendamento
+    const procList = performed.length > 0
+      ? performed.map((p: any) => ({
+          name: p.procedure_name,
+          status: p.status,
+          region: p.region,
+          technique: p.technique,
+          performed_at: p.performed_at,
+          notes: p.notes,
+        }))
+      : [{
+          name: proc.name || 'Procedimento do atendimento',
+          status: 'realizado',
+          region: null,
+          technique: null,
+          performed_at: apt.started_at || apt.scheduled_date,
+          notes: null,
+        }];
+
+    procList.forEach((p: any, idx: number) => {
+      const isFirst = idx === 0 && procList.length === 1;
+      const products = isFirst ? aestheticProducts : [];
+      const materials = isFirst ? materialsConsumed : [];
+
+      checkPage(LINE_H * 3);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(FONT_BODY);
+      pdf.setTextColor(...TEXT_COLOR);
+      pdf.text(`• ${p.name}`, M + 2, y);
+      y += LINE_H;
+
+      // Meta line (região, técnica, hora)
+      const meta: string[] = [];
+      if (p.region) meta.push(`Região: ${p.region}`);
+      if (p.technique) meta.push(`Técnica: ${p.technique}`);
+      if (p.performed_at) meta.push(`Hora: ${fmtTimeBR(p.performed_at)}`);
+      if (meta.length > 0) {
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(FONT_SMALL);
+        pdf.setTextColor(...MUTED_COLOR);
+        pdf.text(meta.join('  •  '), M + 4, y);
+        y += LINE_H - 0.5;
+      }
+      if (p.notes) {
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(FONT_SMALL);
+        pdf.setTextColor(...TEXT_COLOR);
+        addText(p.notes, 4);
+      }
+
+      // Materials block
+      if (products.length > 0 || materials.length > 0) {
+        checkPage(LINE_H * 2);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(FONT_SMALL);
+        pdf.setTextColor(...MUTED_COLOR);
+        pdf.text('Materiais utilizados:', M + 4, y);
+        y += LINE_H - 0.5;
+
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(FONT_SMALL);
+        pdf.setTextColor(...TEXT_COLOR);
+
+        for (const pr of products) {
+          checkPage(LINE_H * 2);
+          const head = `${pr.product_name} — ${pr.quantity} ${pr.unit || 'un'}`;
+          pdf.text(`  • ${head}`, M + 6, y);
+          y += LINE_H - 0.5;
+          const details: string[] = [];
+          if (pr.application_area) details.push(`Área: ${pr.application_area}`);
+          if (pr.manufacturer) details.push(`Fabricante: ${pr.manufacturer}`);
+          if (pr.batch_number) details.push(`Lote: ${pr.batch_number}`);
+          if (pr.expiry_date) details.push(`Validade: ${fmtDateBR(pr.expiry_date)}`);
+          if (details.length > 0) {
+            pdf.setTextColor(...MUTED_COLOR);
+            pdf.text(details.join('  •  '), M + 10, y);
+            y += LINE_H - 0.5;
+            pdf.setTextColor(...TEXT_COLOR);
+          }
+        }
+
+        for (const m of materials) {
+          checkPage(LINE_H);
+          const txt = `  • ${m.product_name || '—'} — ${m.quantity}${m.unit ? ' ' + m.unit : ''}`;
+          pdf.text(txt, M + 6, y);
+          y += LINE_H - 0.5;
+        }
+      }
+      y += 1;
+    });
+
+    // Caso haja múltiplos procedimentos estruturados, lista materiais globais
+    if (performed.length > 1 && (aestheticProducts.length > 0 || materialsConsumed.length > 0)) {
+      checkPage(LINE_H * 2);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(FONT_SMALL);
+      pdf.setTextColor(...MUTED_COLOR);
+      pdf.text('Materiais utilizados no atendimento:', M + 2, y);
+      y += LINE_H - 0.5;
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(...TEXT_COLOR);
+      for (const pr of aestheticProducts) {
+        checkPage(LINE_H);
+        pdf.text(`  • ${pr.product_name} — ${pr.quantity} ${pr.unit || 'un'}`, M + 4, y);
+        y += LINE_H - 0.5;
+      }
+      for (const m of materialsConsumed) {
+        checkPage(LINE_H);
+        pdf.text(`  • ${m.product_name || '—'} — ${m.quantity}${m.unit ? ' ' + m.unit : ''}`, M + 4, y);
+        y += LINE_H - 0.5;
+      }
+    }
+  }
+
+  // ── 5c. Mapa Facial ──
+  const facialMaps = snapshot.facial_maps || [];
+  if (facialMaps.length > 0) {
+    addSectionTitle('Mapa Facial');
+    for (const m of facialMaps) {
+      checkPage(LINE_H * 2);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(FONT_BODY);
+      pdf.text(`• ${m.map_type || 'Mapa'}`, M + 2, y);
+      y += LINE_H;
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(FONT_SMALL);
+      for (const a of (m.applications || [])) {
+        checkPage(LINE_H);
+        const parts: string[] = [];
+        if (a.region) parts.push(a.region);
+        if (a.product_name) parts.push(a.product_name);
+        if (a.units != null) parts.push(`${a.units} U`);
+        if (a.notes) parts.push(a.notes);
+        pdf.text(`  - ${parts.join(' • ')}`, M + 4, y);
+        y += LINE_H - 0.5;
+      }
+      if (m.notes) addText(m.notes, 4);
+      y += 1;
+    }
+  }
+
+  // ── 5d. Odontograma ──
+  if (snapshot.odontogram?.records?.length > 0) {
+    addSectionTitle('Odontograma');
+    for (const r of snapshot.odontogram.records) {
+      checkPage(LINE_H);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(FONT_SMALL);
+      const parts = [`Dente ${r.tooth_number}`];
+      if (r.surface) parts.push(`Face: ${r.surface}`);
+      parts.push(`Cond.: ${r.condition}`);
+      if (r.notes) parts.push(r.notes);
+      pdf.text(`• ${parts.join('  •  ')}`, M + 2, y);
+      y += LINE_H - 0.5;
+    }
+  }
+
+  // ── 5e. Antes / Depois ──
+  const beforeAfter = snapshot.before_after || [];
+  if (beforeAfter.length > 0) {
+    addSectionTitle('Antes e Depois');
+    for (const b of beforeAfter) {
+      checkPage(LINE_H * 2);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(FONT_SMALL);
+      const head = [b.title, b.procedure_type, b.view_angle].filter(Boolean).join(' — ') || 'Comparativo';
+      pdf.text(`• ${head}`, M + 2, y);
+      y += LINE_H - 0.5;
+      if (b.description) addText(b.description, 4);
+    }
+  }
+
+  // ── 5f. Medidas Corporais ──
+  const bodyMeas = snapshot.body_measurements || [];
+  if (bodyMeas.length > 0) {
+    addSectionTitle('Medidas e Avaliações');
+    for (const bm of bodyMeas) {
+      checkPage(LINE_H);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(FONT_SMALL);
+      pdf.text(`• ${bm.measurement_type}`, M + 2, y);
+      y += LINE_H - 0.5;
+    }
+  }
+
   // ── 6. Clinical Documents ──
   const docs = snapshot.documents || [];
   if (docs.length > 0) {
