@@ -284,7 +284,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: true, integration: { ...updated, instance_token: undefined } });
     }
 
-    if (!existing?.instance_token && action !== "create") {
+    if (!existing?.instance_token) {
       return jsonResponse({ error: "Instância não criada ainda. Use action=create primeiro." }, 422);
     }
 
