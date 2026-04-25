@@ -2516,7 +2516,9 @@ export default function Prontuario() {
               />
             )}
             {/* Standard alert banner removed - clinical summary in header is sufficient */}
-            {renderTabContent()}
+            <ErrorBoundary key={`tab-${activeTab}`} compact scope={`Prontuário · ${activeTab}`}>
+              {renderTabContent()}
+            </ErrorBoundary>
           </div>
         </main>
       </div>
