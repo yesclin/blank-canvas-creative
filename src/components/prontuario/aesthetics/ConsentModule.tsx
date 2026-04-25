@@ -54,6 +54,7 @@ import { CONSENT_TYPE_LABELS } from "./types";
 import { SignatureCanvas, type SignatureCanvasHandle } from "./SignatureCanvas";
 import { newTraceId } from "@/lib/traceId";
 import { validateSignature, MIN_SIGNATURE_LENGTH } from "./signatureValidation";
+import { resolveSignatureSource } from "./signatureSource";
 
 interface ConsentModuleProps {
   patientId: string;
