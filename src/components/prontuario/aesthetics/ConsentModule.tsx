@@ -119,11 +119,12 @@ export function ConsentModule({
 
     // Validação centralizada (testada em signatureValidation.test.ts).
     const validation = validateSignature({ captured, canvasHasSignature });
-    if (!validation.ok) {
+    if (validation.ok === false) {
+      const { reason, length } = validation;
       console.warn("[ConsentModule] signature rejected", {
         trace_id: traceId,
-        reason: validation.reason,
-        signature_length: validation.length,
+        reason,
+        signature_length: length,
         min_required: MIN_SIGNATURE_LENGTH,
         signature_source: fromState ? 'state' : (fromCanvas ? 'canvas_fallback' : 'none'),
         canvas_has_signature: canvasHasSignature,
@@ -136,9 +137,9 @@ export function ConsentModule({
 
       // Mensagem amigável diferenciada para ajudar o usuário a corrigir.
       const friendly =
-        validation.reason === 'canvas_not_drawn'
+        reason === 'canvas_not_drawn'
           ? 'Por favor, assine no quadro antes de confirmar.'
-          : validation.reason === 'empty_data_url'
+          : reason === 'empty_data_url'
             ? 'Não foi possível capturar a assinatura. Tente assinar novamente.'
             : 'Assinatura muito curta. Faça uma assinatura mais visível e tente novamente.';
       toast.error(`${friendly} (ref: ${traceId})`);
