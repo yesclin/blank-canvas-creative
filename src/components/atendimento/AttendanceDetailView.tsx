@@ -482,7 +482,7 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
               // materiais (e listamos abaixo um bloco "global" para garantir
               // que nada seja escondido).
               const isFirst = idx === 0 && arr.length === 1;
-              const matsForProc = isFirst ? detail.materials_used : [];
+              const matsForProc = isFirst ? (detail.materials_used ?? []) : [];
               return (
                 <div key={p.id} className="rounded-lg border p-3 text-sm">
                   <div className="flex items-center justify-between flex-wrap gap-2">
