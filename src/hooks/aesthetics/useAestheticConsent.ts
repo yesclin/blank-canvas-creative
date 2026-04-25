@@ -2,7 +2,42 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useClinicData } from '@/hooks/useClinicData';
 import { toast } from 'sonner';
+import { logAppError } from '@/lib/logAppError';
 import type { AestheticConsentRecord, ConsentType } from '@/components/prontuario/aesthetics/types';
+
+/**
+ * Tabela canônica de aceites de termos clínicos: `clinical_consent_acceptances`.
+ * Este hook mapeia o shape histórico `AestheticConsentRecord` (term_content, term_version string)
+ * para os campos reais (term_content_snapshot, term_version integer).
+ */
+const CONSENT_TABLE = 'clinical_consent_acceptances';
+
+function parseTermVersion(v: string | number): number {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 1;
+  // Aceita "1", "1.2", "v2" etc. Pega o primeiro inteiro encontrado.
+  const match = String(v).match(/\d+/);
+  return match ? parseInt(match[0], 10) : 1;
+}
+
+function mapRowToRecord(row: any): AestheticConsentRecord & { procedure_id?: string; procedure_name?: string } {
+  return {
+    id: row.id,
+    clinic_id: row.clinic_id,
+    patient_id: row.patient_id,
+    appointment_id: row.appointment_id ?? null,
+    consent_type: row.consent_type as ConsentType,
+    term_title: row.term_title,
+    term_content: row.term_content_snapshot ?? '',
+    term_version: row.term_version,
+    accepted_at: row.accepted_at,
+    ip_address: row.ip_address ?? null,
+    user_agent: row.user_agent ?? null,
+    signature_data: row.signature_data ?? null,
+    created_by: row.created_by ?? null,
+    procedure_id: row.procedure_id ?? undefined,
+    procedure_name: row.procedure_name ?? undefined,
+  };
+}
 
 // Default consent templates
 export const DEFAULT_CONSENT_TEMPLATES: Record<ConsentType, { title: string; content: string; version: string }> = {
