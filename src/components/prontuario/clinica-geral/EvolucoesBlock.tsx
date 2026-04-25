@@ -313,7 +313,8 @@ export function EvolucoesBlock({
                 </CardContent>
               </Card>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
