@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useClinicData } from "@/hooks/useClinicData";
 import { usePermissions } from "@/hooks/usePermissions";
+import { usePlanLimitGate } from "@/hooks/usePlanLimitGate";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { OFFICIAL_SPECIALTIES } from "@/constants/officialSpecialties";
@@ -74,6 +75,7 @@ interface ClinicSpecialty {
 export function SpecialtiesSection() {
   const { clinic } = useClinicData();
   const { isOwner } = usePermissions();
+  const { ensureCanCreate } = usePlanLimitGate();
   const queryClient = useQueryClient();
 
   const [searchTerm, setSearchTerm] = useState("");
