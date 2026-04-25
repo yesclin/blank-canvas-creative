@@ -119,9 +119,26 @@ export function ConsentModule({
 
       setCreateDialogOpen(false);
       resetForm();
-    } catch (err) {
-      console.error("[ConsentModule] Erro ao salvar assinatura:", err);
-      toast.error("Erro ao salvar assinatura. Tente novamente.");
+    } catch (err: any) {
+      console.error("[ConsentModule] Erro ao salvar assinatura:", {
+        error: err,
+        supabase_code: err?.code,
+        supabase_details: err?.details,
+        supabase_hint: err?.hint,
+        patientId,
+        appointmentId,
+        consent_type: selectedType,
+        procedure_id: selectedProcedureId,
+        signature_length: captured?.length ?? 0,
+      });
+      // Mensagem real (vinda do hook ou do Supabase) — modal permanece aberto.
+      const friendly =
+        err?.message?.startsWith('Campo obrigatório')
+          ? err.message
+          : err?.message
+            ? `Erro ao salvar assinatura: ${err.message}`
+            : 'Erro ao salvar assinatura. Tente novamente.';
+      toast.error(friendly);
     } finally {
       setIsSavingSignature(false);
     }
