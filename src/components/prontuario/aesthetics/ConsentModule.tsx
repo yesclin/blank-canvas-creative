@@ -94,13 +94,26 @@ export function ConsentModule({
 
     // Captura a assinatura: usa o state atualizado ou faz fallback para o canvas
     const captured = signatureData ?? signatureRef.current?.getSignature() ?? null;
+    const signatureLength = captured?.length ?? 0;
 
-    console.log("[ConsentModule] Signature Data length:", captured?.length ?? 0);
+    console.info("[ConsentModule] handleCreateConsent →", {
+      patient_id: patientId,
+      appointment_id: appointmentId ?? null,
+      consent_type: selectedType,
+      procedure_id: selectedProcedureId || null,
+      signature_length: signatureLength,
+      agreed,
+    });
 
     // Validação: assinatura precisa existir e ter conteúdo mínimo
     // (canvas em branco gera dataURL ~3-5KB; assinatura real fica acima de 6KB)
     const MIN_SIGNATURE_LENGTH = 6000;
-    if (!captured || captured.length < MIN_SIGNATURE_LENGTH) {
+    if (!captured || signatureLength < MIN_SIGNATURE_LENGTH) {
+      console.warn("[ConsentModule] Assinatura rejeitada", {
+        reason: !captured ? "missing" : "too_small",
+        signature_length: signatureLength,
+        min_required: MIN_SIGNATURE_LENGTH,
+      });
       toast.error("Assinatura inválida. Por favor, assine novamente.");
       return;
     }
@@ -120,7 +133,19 @@ export function ConsentModule({
       setCreateDialogOpen(false);
       resetForm();
     } catch (err) {
-      console.error("[ConsentModule] Erro ao salvar assinatura:", err);
+      logAppError(err, {
+        screen: "Prontuário",
+        component: "ConsentModule",
+        action: "handleCreateConsent",
+        patientId,
+        appointmentId: appointmentId ?? null,
+        extra: {
+          consent_type: selectedType,
+          procedure_id: selectedProcedureId || null,
+          procedure_name: procedure?.name ?? null,
+          signature_length: signatureLength,
+        },
+      });
       toast.error("Erro ao salvar assinatura. Tente novamente.");
     } finally {
       setIsSavingSignature(false);
