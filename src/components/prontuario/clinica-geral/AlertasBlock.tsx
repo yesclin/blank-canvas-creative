@@ -220,14 +220,29 @@ export function AlertasBlock({
     );
   }
 
+  // Search focus support
+  const { focus } = useSearchFocus();
+  const isFocusActive = !!focus && focus.sourceTable === "clinical_alerts";
+  const focusedRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!isFocusActive) return;
+    const t = setTimeout(() => {
+      focusedRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 120);
+    return () => clearTimeout(t);
+  }, [isFocusActive, focus?.sourceRecordId]);
+
   const renderAlertCard = (alerta: AlertaClinico, showActions = true) => {
     const config = severidadeConfig[alerta.severity];
     const typeIcon = tipoAlertaIcons[alerta.alert_type];
-    
+    const isMatch = isFocusActive && focus?.sourceRecordId === alerta.id;
+
     return (
       <div
         key={alerta.id}
-        className={`p-3 rounded-lg border ${config.bgColor} ${config.borderColor} ${!alerta.is_active ? 'opacity-60' : ''}`}
+        ref={isMatch ? focusedRef : undefined}
+        data-search-record-id={alerta.id}
+        className={`p-3 rounded-lg border ${config.bgColor} ${config.borderColor} ${!alerta.is_active ? 'opacity-60' : ''} ${isMatch ? 'ring-2 ring-primary ring-offset-2' : ''}`}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
