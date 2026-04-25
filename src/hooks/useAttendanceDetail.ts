@@ -150,17 +150,16 @@ export interface BeforeAfterRecord {
 
 export interface FacialMapRecord {
   id: string;
-  modality: string | null;
+  map_type: string | null;
   notes: string | null;
   created_at: string;
   applications: Array<{
     id: string;
     region: string | null;
-    side: string | null;
     product_name: string | null;
-    quantity: number | null;
-    unit: string | null;
+    units: number | null;
     notes: string | null;
+    data: any;
   }>;
 }
 
