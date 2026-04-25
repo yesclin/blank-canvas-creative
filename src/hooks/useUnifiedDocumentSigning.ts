@@ -343,7 +343,26 @@ export function useUnifiedDocumentSigning() {
           })
           .select("id")
           .single();
-        if (sigErr) throw sigErr;
+        if (sigErr) {
+          logAppError(sigErr, {
+            ...baseLogContext,
+            action: "insertSignatureRow",
+            userId,
+            extra: {
+              ...baseLogContext.extra,
+              table: "medical_record_signatures",
+              supabase_code: (sigErr as any)?.code,
+              supabase_details: (sigErr as any)?.details,
+              supabase_hint: (sigErr as any)?.hint,
+            },
+          });
+          throw sigErr;
+        }
+
+        console.info("[useUnifiedDocumentSigning] signature row inserted", {
+          signature_id: sigRow.id,
+          document_type: context.document_type,
+        });
 
         await logEvent(sigRow.id, clinic.id, "document_hashed", {
           hash_preview: documentHash.substring(0, 16),
