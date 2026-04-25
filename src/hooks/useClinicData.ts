@@ -147,9 +147,21 @@ export function useClinicData() {
       }
     });
 
+    // Reagir ao toggle do modo suporte (Super Admin)
+    const onSupportToggle = () => fetchClinicData();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('yesclin:support-session-changed', onSupportToggle);
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'yesclin_support_clinic_id') fetchClinicData();
+      });
+    }
+
     return () => {
       cancelled = true;
       subscription.unsubscribe();
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('yesclin:support-session-changed', onSupportToggle);
+      }
     };
   }, []);
 
