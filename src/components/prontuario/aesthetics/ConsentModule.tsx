@@ -81,7 +81,9 @@ export function ConsentModule({
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [step, setStep] = useState<'read' | 'sign'>('read');
   const [isSavingSignature, setIsSavingSignature] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const signatureRef = useRef<SignatureCanvasHandle>(null);
+  const { clinic } = useClinicData();
 
   const { 
     consents, 
