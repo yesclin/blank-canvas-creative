@@ -34,6 +34,7 @@ import {
   type EsteticaSummaryData, 
   type EsteticaAlert 
 } from '@/hooks/aesthetics/useVisaoGeralEsteticaData';
+import { getAlertTypeLabel } from '@/utils/clinicalAlertLabels';
 
 interface VisaoGeralEsteticaBlockProps {
   patientId: string | null;
