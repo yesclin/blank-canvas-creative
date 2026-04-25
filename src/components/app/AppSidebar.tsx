@@ -45,6 +45,7 @@ import {
 import { UserProfileFooter } from "./UserProfileFooter";
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useClinicFeatures, type FeatureKey } from "@/hooks/useClinicFeatures";
 import { useMemo } from "react";
 import logoIcon from "@/assets/logo-icon.png";
 import logoFull from "@/assets/logo-full.png";
@@ -54,6 +55,8 @@ interface MenuItem {
   url: string;
   icon: LucideIcon;
   tourId?: string;
+  /** Quando definido, item só aparece se a clínica tiver essa feature ativa. */
+  feature?: FeatureKey;
 }
 
 // =====================================================
@@ -66,16 +69,16 @@ const ownerAdminMainMenu: MenuItem[] = [
   { title: "Agenda", url: "/app/agenda", icon: Calendar, tourId: "agenda" },
   { title: "Pacientes", url: "/app/pacientes", icon: Users, tourId: "patients" },
   { title: "Atendimento", url: "/app/atendimento", icon: Activity, tourId: "atendimento" },
-  { title: "Comercial", url: "/app/comercial", icon: Briefcase, tourId: "commercial" },
-  { title: "Marketing", url: "/app/marketing", icon: Megaphone, tourId: "communication" },
+  { title: "Comercial", url: "/app/comercial", icon: Briefcase, tourId: "commercial", feature: "feature_crm" },
+  { title: "Marketing", url: "/app/marketing", icon: Megaphone, tourId: "communication", feature: "feature_marketing" },
 ];
 
 const ownerAdminGestaoMenu: MenuItem[] = [
-  { title: "Estoque", url: "/app/gestao/estoque", icon: Package },
+  { title: "Estoque", url: "/app/gestao/estoque", icon: Package, feature: "feature_inventory" },
   { title: "Finanças", url: "/app/gestao/financas", icon: DollarSign },
-  { title: "Convênios", url: "/app/gestao/convenios", icon: Building2 },
-  { title: "Relatórios", url: "/app/gestao/relatorios", icon: BarChart3 },
-  { title: "Auditoria", url: "/app/gestao/auditoria", icon: ShieldAlert },
+  { title: "Convênios", url: "/app/gestao/convenios", icon: Building2, feature: "feature_insurances" },
+  { title: "Relatórios", url: "/app/gestao/relatorios", icon: BarChart3, feature: "feature_advanced_reports" },
+  { title: "Auditoria", url: "/app/gestao/auditoria", icon: ShieldAlert, feature: "feature_audit" },
 ];
 
 const ownerAdminConfigMenu: MenuItem[] = [
@@ -93,22 +96,22 @@ const ownerAdminConfigMenu: MenuItem[] = [
 
 // Profissional de Saúde - Limited menus (own data only)
 const professionalMainMenu: MenuItem[] = [
-  { title: "Dashboard", url: "/app", icon: LayoutDashboard, tourId: "dashboard" }, // Own data
-  { title: "Agenda", url: "/app/agenda", icon: Calendar, tourId: "agenda" }, // Own schedule
-  { title: "Pacientes", url: "/app/pacientes", icon: Users, tourId: "patients" }, // Own patients
+  { title: "Dashboard", url: "/app", icon: LayoutDashboard, tourId: "dashboard" },
+  { title: "Agenda", url: "/app/agenda", icon: Calendar, tourId: "agenda" },
+  { title: "Pacientes", url: "/app/pacientes", icon: Users, tourId: "patients" },
   { title: "Atendimento", url: "/app/atendimento", icon: Activity, tourId: "atendimento" },
-  { title: "Meu Financeiro", url: "/app/meu-financeiro", icon: Wallet }, // Own financial
+  { title: "Meu Financeiro", url: "/app/meu-financeiro", icon: Wallet },
 ];
 
 // Recepcionista - No clinical content, no configurations
 const receptionistMainMenu: MenuItem[] = [
   { title: "Agenda", url: "/app/agenda", icon: Calendar, tourId: "agenda" },
   { title: "Pacientes", url: "/app/pacientes", icon: Users, tourId: "patients" },
-  { title: "Comercial", url: "/app/comercial", icon: Briefcase, tourId: "commercial" },
+  { title: "Comercial", url: "/app/comercial", icon: Briefcase, tourId: "commercial", feature: "feature_crm" },
 ];
 
 const receptionistGestaoMenu: MenuItem[] = [
-  { title: "Convênios", url: "/app/gestao/convenios", icon: Building2 },
+  { title: "Convênios", url: "/app/gestao/convenios", icon: Building2, feature: "feature_insurances" },
 ];
 
 export function AppSidebar() {
