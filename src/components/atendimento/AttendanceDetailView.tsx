@@ -448,16 +448,16 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
       )}
 
       {/* ── Procedimentos Realizados (com materiais utilizados) ── */}
-      {(detail.procedures_performed.length > 0 ||
-        detail.materials_used.length > 0 ||
-        detail.aesthetic_products.length > 0) && (
+      {((detail.procedures_performed?.length ?? 0) > 0 ||
+        (detail.materials_used?.length ?? 0) > 0 ||
+        (detail.aesthetic_products?.length ?? 0) > 0) && (
         <SectionCard title="Procedimentos Realizados" icon={Activity}>
           <div className="space-y-3">
             {/* Lista de procedimentos. Quando não há registros estruturados,
                 ainda exibimos o procedimento principal do agendamento como
                 cabeçalho para agrupar os materiais consumidos. */}
-            {(detail.procedures_performed.length > 0
-              ? detail.procedures_performed.map((p) => ({
+            {((detail.procedures_performed?.length ?? 0) > 0
+              ? (detail.procedures_performed ?? []).map((p) => ({
                   id: p.id,
                   name: p.procedure_name,
                   status: p.status,
@@ -482,7 +482,7 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
               // materiais (e listamos abaixo um bloco "global" para garantir
               // que nada seja escondido).
               const isFirst = idx === 0 && arr.length === 1;
-              const matsForProc = isFirst ? detail.materials_used : [];
+              const matsForProc = isFirst ? (detail.materials_used ?? []) : [];
               return (
                 <div key={p.id} className="rounded-lg border p-3 text-sm">
                   <div className="flex items-center justify-between flex-wrap gap-2">
@@ -537,13 +537,13 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
 
             {/* Caso haja vários procedimentos estruturados, listamos os
                 materiais globais abaixo para não esconder nada. */}
-            {detail.procedures_performed.length > 1 && detail.materials_used.length > 0 && (
+            {(detail.procedures_performed?.length ?? 0) > 1 && (detail.materials_used?.length ?? 0) > 0 && (
               <div className="rounded-lg border border-dashed p-3">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2 flex items-center gap-1">
                   <FileText className="h-3 w-3" /> Materiais registrados no atendimento
                 </p>
                 <div className="space-y-1.5">
-                  {detail.materials_used.map((m) => (
+                  {(detail.materials_used ?? []).map((m) => (
                     <div key={`gmat-${m.id}`} className="rounded-md bg-muted/40 px-2.5 py-1.5 text-xs">
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <span className="font-medium">{m.name}</span>
@@ -676,12 +676,12 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
       )}
 
       {/* ── Empty state if no clinical data ── */}
-      {detail.anamnesis_records.length === 0 && detail.evolutions.length === 0 &&
-       detail.clinical_documents.length === 0 && detail.clinical_media.length === 0 &&
-       detail.clinical_alerts.length === 0 && detail.procedures_performed.length === 0 &&
-       detail.aesthetic_products.length === 0 && detail.materials_used.length === 0 &&
-       detail.before_after.length === 0 && detail.facial_maps.length === 0 &&
-       !detail.odontogram && detail.body_measurements.length === 0 && (
+      {(detail.anamnesis_records?.length ?? 0) === 0 && (detail.evolutions?.length ?? 0) === 0 &&
+       (detail.clinical_documents?.length ?? 0) === 0 && (detail.clinical_media?.length ?? 0) === 0 &&
+       (detail.clinical_alerts?.length ?? 0) === 0 && (detail.procedures_performed?.length ?? 0) === 0 &&
+       (detail.aesthetic_products?.length ?? 0) === 0 && (detail.materials_used?.length ?? 0) === 0 &&
+       (detail.before_after?.length ?? 0) === 0 && (detail.facial_maps?.length ?? 0) === 0 &&
+       !detail.odontogram && (detail.body_measurements?.length ?? 0) === 0 && (
         <Card>
           <CardContent className="py-10">
             <div className="text-center text-muted-foreground">
