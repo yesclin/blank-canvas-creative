@@ -508,7 +508,7 @@ export function AnamneseFuncionalPilatesBlock({
           canManageTemplates={canEdit}
           onRegister={() => setIsFormOpen(true)}
           onOpenTemplateEditor={() => navigate(`/app/config/prontuario?especialidade_id=${specialtyId}&tipo=anamnese`)}
-          onConfigureTemplate={() => navigate('/configuracoes/modelos-anamnese')}
+          onConfigureTemplate={() => navigate('/app/config/modelos-anamnese')}
           specialtyLabel="Pilates"
         />
       ) : (

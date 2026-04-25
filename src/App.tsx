@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { PermissionsProvider } from "@/hooks/usePermissions";
 import { RequireAuth } from "@/components/app/RequireAuth";
 import { ProtectedRoute } from "@/components/app/ProtectedRoute";
@@ -176,9 +176,12 @@ const App = () => (
             
             {/* Teleconsulta - Sala do Profissional */}
             <Route path="teleconsulta/:appointmentId/sala" element={<ProtectedRoute module="agenda"><TeleconsultaSala /></ProtectedRoute>} />
+
+            {/* Fallback dentro do /app: redireciona ao Dashboard mantendo o layout autenticado */}
+            <Route path="*" element={<Navigate to="/app" replace />} />
           </Route>
           
-          {/* Catch-all */}
+          {/* Catch-all global: NotFound decide entre /app e /login conforme auth */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
