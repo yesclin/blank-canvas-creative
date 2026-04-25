@@ -779,7 +779,7 @@ export function AnamneseNutricionalBlock({
           canManageTemplates={canEdit}
           onRegister={() => setShowForm(true)}
           onOpenTemplateEditor={() => setShowTemplateEditor(true)}
-          onConfigureTemplate={() => navigate('/configuracoes/modelos-anamnese')}
+          onConfigureTemplate={() => navigate('/app/config/modelos-anamnese')}
           specialtyLabel="Nutrição"
         />
       )}

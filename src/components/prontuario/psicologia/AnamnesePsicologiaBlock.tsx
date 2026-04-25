@@ -301,7 +301,7 @@ export function AnamnesePsicologiaBlock({
             }
           }}
           onOpenTemplateEditor={() => setShowTemplateEditor(true)}
-          onConfigureTemplate={() => navigate('/configuracoes/modelos-anamnese')}
+          onConfigureTemplate={() => navigate('/app/config/modelos-anamnese')}
           specialtyLabel="Psicologia"
         />
         <AnamnesisModelEditorDialog
