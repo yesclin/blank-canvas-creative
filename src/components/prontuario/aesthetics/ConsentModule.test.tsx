@@ -16,8 +16,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { forwardRef, useImperativeHandle } from 'react';
+import { toast } from 'sonner';
 import { ConsentModule } from './ConsentModule';
-import { MIN_SIGNATURE_LENGTH } from './signatureValidation';
+import { MIN_SIGNATURE_LENGTH, legacyReason } from './signatureValidation';
 
 // ─── Test double for SignatureCanvas ──────────────────────────────────────
 //
@@ -298,6 +299,154 @@ describe('ConsentModule — signature validation gate', () => {
     expect(attemptLogs[0][1]).toMatchObject({
       signature_source: 'canvas_fallback',
       signature_length: validUrl.length,
-    });
   });
+});
+
+// ─── Toast messages per rejection reason ──────────────────────────────────
+//
+// These tests pin down the exact user-facing copy shown by `toast.error`
+// for each validation `reason`. The mapping lives inside ConsentModule's
+// `handleCreateConsent`; if the copy changes, these tests must be updated
+// intentionally so we never silently regress accessibility/clarity.
+//
+// Note on `missing`: the production `validateSignature` function never
+// returns `missing` — that reason is reserved for the legacy `legacyReason`
+// helper used by older callers. We assert (a) that ConsentModule does NOT
+// emit it, and (b) that `legacyReason` itself maps null/undefined inputs
+// to `missing` as documented.
+describe('ConsentModule — toast messages per validation reason', () => {
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+  let infoSpy: ReturnType<typeof vi.spyOn>;
+  let errorSpy: ReturnType<typeof vi.spyOn>;
+  const toastError = toast.error as unknown as ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    createConsentMock.mockReset();
+    resetCanvasState();
+    toastError.mockReset();
+    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+    errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
+    infoSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  /** Reads the trace_id from the structured rejection log so we can assert it
+   *  appears in the toast as the correlation reference (`ref: <traceId>`). */
+  function lastTraceId(): string {
+    const log = warnSpy.mock.calls
+      .filter((c) => c[0] === '[ConsentModule] signature rejected')
+      .at(-1);
+    return String((log?.[1] as Record<string, unknown>)?.trace_id ?? '');
+  }
+
+  it('reason="canvas_not_drawn" → toast asks the user to sign on the pad', async () => {
+    render(<ConsentModule patientId="patient-123" canEdit />);
+    await openSignStep();
+
+    fireEvent.click(getConfirmButton()); // nothing drawn
+
+    await waitFor(() => expect(toastError).toHaveBeenCalledTimes(1));
+
+    const message = String(toastError.mock.calls[0][0]);
+    expect(message).toMatch(/assine no quadro antes de confirmar/i);
+    // Trace ID is appended for support/correlation.
+    expect(message).toContain(`(ref: ${lastTraceId()})`);
+    expect(createConsentMock).not.toHaveBeenCalled();
+  });
+
+  it('reason="too_small" → toast asks for a more visible signature', async () => {
+    render(<ConsentModule patientId="patient-123" canEdit />);
+    await openSignStep();
+
+    const tooShort = 'data:image/png;base64,' + 'A'.repeat(100);
+    emitOnSave(tooShort);
+
+    fireEvent.click(getConfirmButton());
+
+    await waitFor(() => expect(toastError).toHaveBeenCalledTimes(1));
+
+    const message = String(toastError.mock.calls[0][0]);
+    expect(message).toMatch(/assinatura muito curta/i);
+    expect(message).toMatch(/mais visível/i);
+    expect(message).toContain(`(ref: ${lastTraceId()})`);
+    expect(createConsentMock).not.toHaveBeenCalled();
+  });
+
+  it('reason="empty_data_url" → toast asks the user to sign again', async () => {
+    render(<ConsentModule patientId="patient-123" canEdit />);
+    await openSignStep();
+
+    // hasSignature=true but the captured value is null → triggers the
+    // empty_data_url branch in validateSignature (canvas reports strokes
+    // but the dataURL extraction failed).
+    canvasState.signature = null;
+    canvasState.hasSig = true;
+
+    fireEvent.click(getConfirmButton());
+
+    await waitFor(() => expect(toastError).toHaveBeenCalledTimes(1));
+
+    const message = String(toastError.mock.calls[0][0]);
+    expect(message).toMatch(/não foi possível capturar a assinatura/i);
+    expect(message).toMatch(/tente assinar novamente/i);
+    expect(message).toContain(`(ref: ${lastTraceId()})`);
+
+    // And the structured log carries the matching reason.
+    const rejectionLog = warnSpy.mock.calls.find(
+      (c) => c[0] === '[ConsentModule] signature rejected'
+    );
+    expect((rejectionLog?.[1] as Record<string, unknown>)?.reason).toBe('empty_data_url');
+    expect(createConsentMock).not.toHaveBeenCalled();
+  });
+
+  it('does NOT emit reason="missing" — that reason is reserved for the legacy helper', async () => {
+    render(<ConsentModule patientId="patient-123" canEdit />);
+    await openSignStep();
+
+    fireEvent.click(getConfirmButton());
+    await waitFor(() => expect(toastError).toHaveBeenCalledTimes(1));
+
+    const reasons = warnSpy.mock.calls
+      .filter((c) => c[0] === '[ConsentModule] signature rejected')
+      .map((c) => (c[1] as Record<string, unknown>).reason);
+    expect(reasons).not.toContain('missing');
+
+    // The toast must never use the generic "missing" copy either.
+    const message = String(toastError.mock.calls[0][0]);
+    expect(message).not.toMatch(/assinatura ausente/i);
+  });
+
+  it('legacy helper: legacyReason() maps null/undefined to "missing"', () => {
+    // Documents the contract for the legacy reason that ConsentModule
+    // intentionally never produces. Tested at the helper level since no
+    // production component currently emits it through a toast.
+    expect(legacyReason(null)).toBe('missing');
+    expect(legacyReason(undefined)).toBe('missing');
+    expect(legacyReason('')).toBe('empty_data_url');
+    expect(legacyReason('data:image/png;base64,short')).toBe('too_small');
+  });
+
+  it('toast fires exactly once per invalid attempt (no duplicate toasts)', async () => {
+    render(<ConsentModule patientId="patient-123" canEdit />);
+    await openSignStep();
+
+    fireEvent.click(getConfirmButton());
+    await waitFor(() => expect(toastError).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(getConfirmButton());
+    await waitFor(() => expect(toastError).toHaveBeenCalledTimes(2));
+
+    // Each toast must carry its own correlation ref — no shared trace_id.
+    const refs = toastError.mock.calls
+      .map((c) => String(c[0]).match(/\(ref: ([^)]+)\)/)?.[1])
+      .filter(Boolean);
+    expect(refs.length).toBe(2);
+    expect(new Set(refs).size).toBe(2);
+  });
+});
 });
