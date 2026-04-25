@@ -4,8 +4,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { PermissionsProvider } from "@/hooks/usePermissions";
+import { ClinicFeaturesProvider } from "@/hooks/useClinicFeatures";
 import { RequireAuth } from "@/components/app/RequireAuth";
 import { ProtectedRoute } from "@/components/app/ProtectedRoute";
+import { ProtectedFeatureRoute } from "@/components/app/ProtectedFeatureRoute";
 import { PasswordRecoveryHandler } from "@/components/app/PasswordRecoveryHandler";
 
 // Páginas Públicas
@@ -90,6 +92,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <PermissionsProvider>
+        <ClinicFeaturesProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
@@ -185,6 +188,7 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
+        </ClinicFeaturesProvider>
       </PermissionsProvider>
     </TooltipProvider>
   </QueryClientProvider>
