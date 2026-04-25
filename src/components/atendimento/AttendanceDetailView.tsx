@@ -409,10 +409,13 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
 
       {/* ── Document integrity ── */}
       {hasConsolidated && (
-        <Card className="border-dashed">
+        <Card className={cn(
+          "border-dashed",
+          isDocSigned && "border-green-300 bg-green-50/40 dark:bg-green-950/20"
+        )}>
           <CardContent className="py-3 px-6">
-            <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground flex-wrap">
-              <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center justify-between gap-2 text-xs flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap text-muted-foreground">
                 <Shield className="h-3.5 w-3.5" />
                 <span>Documento consolidado gerado em {fmtTime(detail.consolidated_document!.generated_at)}</span>
                 {detail.consolidated_document!.is_locked && <Badge variant="outline" className="text-[9px]">Travado</Badge>}
@@ -431,6 +434,15 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
                 </Button>
               )}
             </div>
+            {isDocSigned && (
+              <div className="mt-2 pt-2 border-t border-green-200 dark:border-green-900 flex items-start gap-2 text-xs text-green-800 dark:text-green-300">
+                <Lock className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <span>
+                  Este atendimento foi assinado e está bloqueado. Nenhum registro vinculado pode mais ser alterado.
+                  Para complementar informações, utilize um <strong>adendo</strong>.
+                </span>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
