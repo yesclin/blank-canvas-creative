@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchFocus } from "@/contexts/SearchFocusContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -179,6 +180,18 @@ export function AlertasBlock({
   const warningAlertas = activeAlertas.filter(a => a.severity === 'warning');
   const infoAlertas = activeAlertas.filter(a => a.severity === 'info');
 
+  // Search focus support — must be declared before any early-return
+  const { focus } = useSearchFocus();
+  const isFocusActive = !!focus && focus.sourceTable === "clinical_alerts";
+  const focusedRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!isFocusActive) return;
+    const t = setTimeout(() => {
+      focusedRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 120);
+    return () => clearTimeout(t);
+  }, [isFocusActive, focus?.sourceRecordId]);
+
   const handleOpenForm = () => {
     setFormData({
       alert_type: 'allergy',
@@ -219,14 +232,19 @@ export function AlertasBlock({
     );
   }
 
+  // (Search focus state declared earlier; use it here)
+
   const renderAlertCard = (alerta: AlertaClinico, showActions = true) => {
     const config = severidadeConfig[alerta.severity];
     const typeIcon = tipoAlertaIcons[alerta.alert_type];
-    
+    const isMatch = isFocusActive && focus?.sourceRecordId === alerta.id;
+
     return (
       <div
         key={alerta.id}
-        className={`p-3 rounded-lg border ${config.bgColor} ${config.borderColor} ${!alerta.is_active ? 'opacity-60' : ''}`}
+        ref={isMatch ? focusedRef : undefined}
+        data-search-record-id={alerta.id}
+        className={`p-3 rounded-lg border ${config.bgColor} ${config.borderColor} ${!alerta.is_active ? 'opacity-60' : ''} ${isMatch ? 'ring-2 ring-primary ring-offset-2' : ''}`}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">

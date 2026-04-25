@@ -105,6 +105,8 @@ import { useClinicData } from "@/hooks/useClinicData";
 import { PatientHeader } from "@/components/prontuario/PatientHeader";
 import { ProntuarioHeader } from "@/components/prontuario/ProntuarioHeader";
 import { ProntuarioSearchBar, type SearchResult } from "@/components/prontuario/ProntuarioSearchBar";
+import { SearchFocusContext, type SearchFocusTarget } from "@/contexts/SearchFocusContext";
+import { SearchFocusBanner } from "@/components/prontuario/SearchFocusBanner";
 import { LgpdBlockingOverlay } from "@/components/prontuario/LgpdBlockingOverlay";
 import { TeleconsultaContextBar } from "@/components/prontuario/TeleconsultaContextBar";
 import { RemoteAttendanceBlock } from "@/components/prontuario/RemoteAttendanceBlock";
@@ -1033,6 +1035,7 @@ export default function Prontuario() {
 
   const [activeTab, setActiveTab] = useState("resumo");
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const [searchFocus, setSearchFocus] = useState<SearchFocusTarget | null>(null);
   const [consentDialogOpen, setConsentDialogOpen] = useState(false);
   const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
   const [selectedEntryForSignature, setSelectedEntryForSignature] = useState<MedicalRecordEntry | null>(null);
@@ -1116,27 +1119,93 @@ export default function Prontuario() {
     }
   }, [navItems, activeTab]);
 
+  // Hydrate active tab from URL ?tab=... when navItems become available
+  const urlTab = searchParams.get("tab");
+  useEffect(() => {
+    if (urlTab && navItems.find((n) => n.id === urlTab) && urlTab !== activeTab) {
+      setActiveTab(urlTab);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlTab, navItems]);
+
   const shouldHoldProntuarioRendering = specialtyLoading || !isSpecialtyResolved;
   const resolvedSpecialtyName = activeSpecialty?.name ?? activeSpecialtyName ?? undefined;
   const resolvedSpecialtyId = activeSpecialty?.id ?? activeSpecialtyId;
 
-  // Handle search result click
+  // Handle search result click — focus on the specific record + navigate to its tab
   const handleSearchResultClick = useCallback((result: SearchResult) => {
-    setHighlightedId(result.id);
-    
-    // Clear highlight after 3 seconds
-    if (highlightTimeoutRef.current) {
-      clearTimeout(highlightTimeoutRef.current);
-    }
-    highlightTimeoutRef.current = setTimeout(() => {
-      setHighlightedId(null);
-    }, 3000);
-  }, []);
+    const target: SearchFocusTarget = {
+      type: result.type,
+      tabKey: result.navigationTarget,
+      sourceTable: result.sourceTable,
+      sourceRecordId: result.sourceRecordId,
+      appointmentId: result.appointmentId ?? null,
+      highlightId: result.sourceRecordId,
+      openMode: result.type === "anamnesis" ? "detail" : "focus",
+    };
+    setSearchFocus(target);
+    setHighlightedId(result.sourceRecordId);
+
+    // Reflect record selection in the URL for deep-linking
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("tab", result.navigationTarget);
+        next.set("recordId", result.sourceRecordId);
+        return next;
+      },
+      { replace: true }
+    );
+
+    if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
+    highlightTimeoutRef.current = setTimeout(() => setHighlightedId(null), 4000);
+  }, [setSearchParams]);
 
   // Navigate to tab from search
   const handleNavigateToTab = useCallback((tabKey: string) => {
     setActiveTab(tabKey);
   }, []);
+
+  // Clear search focus + clean up URL params
+  const clearSearchFocus = useCallback(() => {
+    setSearchFocus(null);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("recordId");
+        return next;
+      },
+      { replace: true }
+    );
+  }, [setSearchParams]);
+
+  // When user manually changes tabs, clear the focus (user wants the full list)
+  const handleTabChange = useCallback((tabKey: string) => {
+    setActiveTab(tabKey);
+    if (searchFocus && searchFocus.tabKey !== tabKey) {
+      setSearchFocus(null);
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete("recordId");
+          return next;
+        },
+        { replace: true }
+      );
+    }
+  }, [searchFocus, setSearchParams]);
+
+  // Build the SearchFocus context value
+  const searchFocusContextValue = useMemo(
+    () => ({
+      focus: searchFocus,
+      setFocus: setSearchFocus,
+      clearFocus: clearSearchFocus,
+      isFocused: (sourceTable: string, recordId: string) =>
+        !!searchFocus && searchFocus.sourceTable === sourceTable && searchFocus.sourceRecordId === recordId,
+    }),
+    [searchFocus, clearSearchFocus]
+  );
 
   // Render tab content dynamically (wrapped in clinical access guard)
   const renderTabContent = () => {
@@ -2274,6 +2343,7 @@ export default function Prontuario() {
 
   return (
     <ClinicalAccessGuard>
+    <SearchFocusContext.Provider value={searchFocusContextValue}>
     <div className="flex flex-col h-full min-h-0 relative">
       {/* LGPD Blocking Overlay - shown when consent is required but not granted */}
       {!lgpdLoading && isEnforcementEnabled && !hasValidConsent && patient && (
@@ -2420,13 +2490,15 @@ export default function Prontuario() {
             } as TabNavItem;
           })}
           activeTab={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={handleTabChange}
           criticalAlerts={criticalAlerts.length}
         />
 
         {/* Content Area */}
         <main className="flex-1 min-h-0 overflow-auto">
-          <div className="p-4 md:p-6">
+          <div className="p-4 md:p-6 space-y-3">
+            {/* Search Focus Banner — shown when a record was opened from global search */}
+            <SearchFocusBanner />
             {/* Alerts Banner - shown at top when there are active alerts */}
             {/* Psychology specialty uses specialized banner with risk indicators */}
             {activeSpecialtyKey === 'psicologia' && activeAlertasPsico.length > 0 && activeTab !== 'alertas' && (
@@ -2452,6 +2524,7 @@ export default function Prontuario() {
 
       {/* Active session bar removed — global floating widget handles timer */}
     </div>
+    </SearchFocusContext.Provider>
     </ClinicalAccessGuard>
   );
 }
