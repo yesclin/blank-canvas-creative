@@ -101,10 +101,12 @@ export function ConsentModule({
 
     // Captura a assinatura: prefere o state (atualizado em tempo real pelo onSave)
     // e faz fallback para getSignature() do canvas (que também loga internamente).
+    // O `signature_source` é resolvido pelo helper testado em signatureSource.test.ts
+    // para garantir que o label do log sempre reflete o caminho de captura usado.
     const fromState = signatureData ?? null;
     const fromCanvas = signatureRef.current?.getSignature() ?? null;
     const canvasHasSignature = signatureRef.current?.hasSignature() ?? false;
-    const captured = fromState ?? fromCanvas;
+    const { captured, source: signatureSource } = resolveSignatureSource({ fromState, fromCanvas });
 
     console.info("[ConsentModule] handleCreateConsent", {
       trace_id: traceId,
@@ -113,7 +115,7 @@ export function ConsentModule({
       consent_type: selectedType,
       procedure_id: selectedProcedureId,
       signature_length: captured?.length ?? 0,
-      signature_source: fromState ? 'state' : (fromCanvas ? 'canvas_fallback' : 'none'),
+      signature_source: signatureSource,
       canvas_has_signature: canvasHasSignature,
       agreed,
     });
