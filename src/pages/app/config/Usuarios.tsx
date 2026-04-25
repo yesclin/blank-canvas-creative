@@ -29,6 +29,7 @@ import { UserAuditLog } from "@/components/config/UserAuditLog";
 import { useClinicUsers, ClinicUser } from "@/hooks/useClinicUsers";
 import { useUserInvitations } from "@/hooks/useUserInvitations";
 import { useSpecialties } from "@/hooks/useSpecialties";
+import { usePlanLimitGate } from "@/hooks/usePlanLimitGate";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
