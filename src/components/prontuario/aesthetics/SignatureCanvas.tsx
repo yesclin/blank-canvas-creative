@@ -157,6 +157,8 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
           is_drawing: isDrawing,
           has_signature: hasSignature,
           min_required: MIN_SIGNATURE_LENGTH,
+          // Sem canvas, ainda assim emitimos um placeholder para correlação visual.
+          debug_thumbnail: buildSignatureThumbnail({ canvas: null, hasSignature, mode: 'placeholder' })?.dataUrl ?? null,
         });
         return null;
       }
@@ -169,6 +171,7 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
           canvas_width: canvas.width,
           canvas_height: canvas.height,
           min_required: MIN_SIGNATURE_LENGTH,
+          debug_thumbnail: buildSignatureThumbnail({ canvas, hasSignature: false, mode: 'placeholder' })?.dataUrl ?? null,
         });
         return null;
       }
@@ -184,6 +187,9 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
           canvas_height: canvas.height,
           signature_length: length,
           min_required: MIN_SIGNATURE_LENGTH,
+          // Aqui usamos downscale: se o toDataURL principal falhou mas o canvas
+          // ainda renderiza, o thumbnail pode revelar o estado real dos pixels.
+          debug_thumbnail: buildSignatureThumbnail({ canvas, hasSignature, mode: 'downscale' })?.dataUrl ?? null,
         });
         return null;
       }
@@ -197,6 +203,7 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
           canvas_height: canvas.height,
           signature_length: length,
           min_required: MIN_SIGNATURE_LENGTH,
+          debug_thumbnail: buildSignatureThumbnail({ canvas, hasSignature, mode: 'downscale' })?.dataUrl ?? null,
         });
         // Retornamos mesmo assim — quem chamou (ConsentModule / wizard) decide rejeitar.
       }
@@ -204,6 +211,8 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
     },
     clear: clearCanvas,
     hasSignature: () => hasSignature,
+    getDebugThumbnail: (mode: ThumbnailMode = 'placeholder') =>
+      buildSignatureThumbnail({ canvas: canvasRef.current, hasSignature, mode }),
   }), [hasSignature, isDrawing]);
 
   return (
