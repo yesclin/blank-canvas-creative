@@ -2522,6 +2522,7 @@ export default function Prontuario() {
 
       {/* Active session bar removed — global floating widget handles timer */}
     </div>
+    </SearchFocusContext.Provider>
     </ClinicalAccessGuard>
   );
 }
