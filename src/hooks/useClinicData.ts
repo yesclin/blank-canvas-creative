@@ -40,17 +40,42 @@ export function useClinicData() {
           return;
         }
 
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("clinic_id")
-          .eq("user_id", userId)
-          .maybeSingle();
+        // SUPER ADMIN IMPERSONATION:
+        // Se houver uma sessão de suporte ativa em localStorage e o usuário
+        // logado for um Platform Admin, usamos a clinic_id alvo no lugar da
+        // clínica natural do usuário. A identidade Auth real NÃO muda — RLS
+        // continua respeitando auth.uid() (super admins têm policies próprias).
+        let resolvedClinicId: string | null = null;
 
-        if (cancelled) return;
+        try {
+          const supportClinicId = typeof window !== 'undefined'
+            ? window.localStorage.getItem('yesclin_support_clinic_id')
+            : null;
 
-        if (!profile?.clinic_id) {
-          setIsLoading(false);
-          return;
+          if (supportClinicId) {
+            const { data: isAdmin } = await supabase.rpc('is_platform_admin', { _user_id: userId });
+            if (isAdmin === true) {
+              resolvedClinicId = supportClinicId;
+            }
+          }
+        } catch {
+          // Ignora — segue com fluxo normal
+        }
+
+        if (!resolvedClinicId) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("clinic_id")
+            .eq("user_id", userId)
+            .maybeSingle();
+
+          if (cancelled) return;
+
+          if (!profile?.clinic_id) {
+            setIsLoading(false);
+            return;
+          }
+          resolvedClinicId = profile.clinic_id;
         }
 
         const { data: clinicData } = await supabase
@@ -75,7 +100,7 @@ export function useClinicData() {
             address_state,
             address_zip
           `)
-          .eq("id", profile.clinic_id)
+          .eq("id", resolvedClinicId)
           .maybeSingle();
 
         if (cancelled) return;
@@ -122,9 +147,21 @@ export function useClinicData() {
       }
     });
 
+    // Reagir ao toggle do modo suporte (Super Admin)
+    const onSupportToggle = () => fetchClinicData();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('yesclin:support-session-changed', onSupportToggle);
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'yesclin_support_clinic_id') fetchClinicData();
+      });
+    }
+
     return () => {
       cancelled = true;
       subscription.unsubscribe();
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('yesclin:support-session-changed', onSupportToggle);
+      }
     };
   }, []);
 
