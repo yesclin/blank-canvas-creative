@@ -327,6 +327,7 @@ export function useUnifiedDocumentSigning() {
 
         const evidenceSnapshot = {
           method,
+          trace_id: traceId,
           has_saved_signature: method === "saved_signature",
           handwritten_path: evidencePath,
           signature_data_url: evidenceDataUrl, // immutable copy embedded in row
@@ -361,24 +362,48 @@ export function useUnifiedDocumentSigning() {
           })
           .select("id")
           .single();
-        if (sigErr) throw sigErr;
+        if (sigErr) {
+          logAppError(sigErr, {
+            ...baseLogContext,
+            action: "insertSignatureRow",
+            userId,
+            extra: {
+              ...baseLogContext.extra,
+              table: "medical_record_signatures",
+              supabase_code: (sigErr as any)?.code,
+              supabase_details: (sigErr as any)?.details,
+              supabase_hint: (sigErr as any)?.hint,
+            },
+          });
+          throw sigErr;
+        }
+
+        console.info("[useUnifiedDocumentSigning] signature row inserted", {
+          trace_id: traceId,
+          signature_id: sigRow.id,
+          document_type: context.document_type,
+        });
 
         await logEvent(sigRow.id, clinic.id, "document_hashed", {
+          trace_id: traceId,
           hash_preview: documentHash.substring(0, 16),
         });
 
         if (selfiePath) {
           await logEvent(sigRow.id, clinic.id, "selfie_captured", {
+            trace_id: traceId,
             selfie_path: selfiePath,
           });
         } else {
           await logEvent(sigRow.id, clinic.id, "selfie_skipped", {
+            trace_id: traceId,
             reason: "Selfie não capturada (indisponível ou não exigida).",
           });
         }
 
         if (geolocation) {
           await logEvent(sigRow.id, clinic.id, "geolocation_collected", {
+            trace_id: traceId,
             status: geolocation.status,
             latitude: geolocation.latitude ?? null,
             longitude: geolocation.longitude ?? null,
