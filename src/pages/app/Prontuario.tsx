@@ -1123,23 +1123,80 @@ export default function Prontuario() {
   const resolvedSpecialtyName = activeSpecialty?.name ?? activeSpecialtyName ?? undefined;
   const resolvedSpecialtyId = activeSpecialty?.id ?? activeSpecialtyId;
 
-  // Handle search result click
+  // Handle search result click — focus on the specific record + navigate to its tab
   const handleSearchResultClick = useCallback((result: SearchResult) => {
-    setHighlightedId(result.id);
-    
-    // Clear highlight after 3 seconds
-    if (highlightTimeoutRef.current) {
-      clearTimeout(highlightTimeoutRef.current);
-    }
-    highlightTimeoutRef.current = setTimeout(() => {
-      setHighlightedId(null);
-    }, 3000);
-  }, []);
+    const target: SearchFocusTarget = {
+      type: result.type,
+      tabKey: result.navigationTarget,
+      sourceTable: result.sourceTable,
+      sourceRecordId: result.sourceRecordId,
+      appointmentId: result.appointmentId ?? null,
+      highlightId: result.sourceRecordId,
+      openMode: result.type === "anamnesis" ? "detail" : "focus",
+    };
+    setSearchFocus(target);
+    setHighlightedId(result.sourceRecordId);
+
+    // Reflect record selection in the URL for deep-linking
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("tab", result.navigationTarget);
+        next.set("recordId", result.sourceRecordId);
+        return next;
+      },
+      { replace: true }
+    );
+
+    if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
+    highlightTimeoutRef.current = setTimeout(() => setHighlightedId(null), 4000);
+  }, [setSearchParams]);
 
   // Navigate to tab from search
   const handleNavigateToTab = useCallback((tabKey: string) => {
     setActiveTab(tabKey);
   }, []);
+
+  // Clear search focus + clean up URL params
+  const clearSearchFocus = useCallback(() => {
+    setSearchFocus(null);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("recordId");
+        return next;
+      },
+      { replace: true }
+    );
+  }, [setSearchParams]);
+
+  // When user manually changes tabs, clear the focus (user wants the full list)
+  const handleTabChange = useCallback((tabKey: string) => {
+    setActiveTab(tabKey);
+    if (searchFocus && searchFocus.tabKey !== tabKey) {
+      setSearchFocus(null);
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete("recordId");
+          return next;
+        },
+        { replace: true }
+      );
+    }
+  }, [searchFocus, setSearchParams]);
+
+  // Build the SearchFocus context value
+  const searchFocusContextValue = useMemo(
+    () => ({
+      focus: searchFocus,
+      setFocus: setSearchFocus,
+      clearFocus: clearSearchFocus,
+      isFocused: (sourceTable: string, recordId: string) =>
+        !!searchFocus && searchFocus.sourceTable === sourceTable && searchFocus.sourceRecordId === recordId,
+    }),
+    [searchFocus, clearSearchFocus]
+  );
 
   // Render tab content dynamically (wrapped in clinical access guard)
   const renderTabContent = () => {
