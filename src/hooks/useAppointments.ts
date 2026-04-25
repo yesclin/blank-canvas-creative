@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { usePlanLimitGate } from "@/hooks/usePlanLimitGate";
 
 export type AppointmentStatus = 
   | "nao_confirmado"
@@ -154,9 +155,16 @@ export function useTodayAppointments() {
 // Create appointment
 export function useCreateAppointment() {
   const queryClient = useQueryClient();
-  
+  const { ensureCanCreate } = usePlanLimitGate();
+
   return useMutation({
     mutationFn: async (data: AppointmentFormData) => {
+      // Bloqueio por limite mensal do plano
+      const allowed = await ensureCanCreate('appointments_monthly');
+      if (!allowed) {
+        throw new Error('PLAN_LIMIT_REACHED');
+      }
+
       const clinicId = await getClinicId();
       const endTime = calculateEndTime(data.start_time, data.duration_minutes);
       
@@ -195,6 +203,8 @@ export function useCreateAppointment() {
       toast.success("Agendamento criado com sucesso!");
     },
     onError: (error: Error) => {
+      // Limite do plano: o gate já mostrou um toast claro — não duplicar.
+      if (error.message === 'PLAN_LIMIT_REACHED') return;
       console.error("Error creating appointment:", error);
       toast.error("Erro ao criar agendamento: " + error.message);
     },
