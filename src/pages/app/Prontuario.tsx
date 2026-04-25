@@ -2496,7 +2496,9 @@ export default function Prontuario() {
 
         {/* Content Area */}
         <main className="flex-1 min-h-0 overflow-auto">
-          <div className="p-4 md:p-6">
+          <div className="p-4 md:p-6 space-y-3">
+            {/* Search Focus Banner — shown when a record was opened from global search */}
+            <SearchFocusBanner />
             {/* Alerts Banner - shown at top when there are active alerts */}
             {/* Psychology specialty uses specialized banner with risk indicators */}
             {activeSpecialtyKey === 'psicologia' && activeAlertasPsico.length > 0 && activeTab !== 'alertas' && (
