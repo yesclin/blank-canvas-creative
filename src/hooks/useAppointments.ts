@@ -203,8 +203,12 @@ export function useCreateAppointment() {
       toast.success("Agendamento criado com sucesso!");
     },
     onError: (error: Error) => {
-      // Limite do plano: o gate já mostrou um toast claro — não duplicar.
+      // Limite do plano: o gate (frontend) ou o trigger (backend) já bloqueou.
       if (error.message === 'PLAN_LIMIT_REACHED') return;
+      if (error.message?.includes('PLAN_LIMIT_REACHED')) {
+        toast.error('Limite do plano atingido. Faça upgrade para continuar.');
+        return;
+      }
       console.error("Error creating appointment:", error);
       toast.error("Erro ao criar agendamento: " + error.message);
     },
