@@ -466,17 +466,16 @@ export function useAttendanceDetail(appointmentId: string | null) {
         before_after: mergedBeforeAfter,
         facial_maps: (facialMapsData as any[]).map((r: any) => ({
           id: r.id,
-          modality: r.modality,
+          map_type: r.map_type,
           notes: r.notes,
           created_at: r.created_at,
           applications: (r.facial_map_applications || []).map((a: any) => ({
             id: a.id,
             region: a.region,
-            side: a.side,
             product_name: a.product_name,
-            quantity: a.quantity != null ? Number(a.quantity) : null,
-            unit: a.unit,
+            units: a.units != null ? Number(a.units) : null,
             notes: a.notes,
+            data: a.data,
           })),
         })),
         odontogram: odontogramRow ? {
