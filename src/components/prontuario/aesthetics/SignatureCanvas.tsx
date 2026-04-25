@@ -10,6 +10,11 @@ import { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 're
 import { Button } from '@/components/ui/button';
 import { Eraser } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  buildSignatureThumbnail,
+  type SignatureThumbnail,
+  type ThumbnailMode,
+} from './signatureThumbnail';
 
 interface SignatureCanvasProps {
   /** Recebe o dataURL atualizado a cada traço (ou null quando limpo). */
