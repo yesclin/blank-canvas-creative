@@ -237,7 +237,12 @@ export function useAestheticConsent(patientId: string | null) {
       procedure_name?: string;
       signature_data?: string;
       custom_content?: string;
+      /** Trace ID opcional vindo do componente para correlação ponta-a-ponta. */
+      trace_id?: string;
     }) => {
+      // Trace ID único do aceite — reusa o do componente se fornecido.
+      const traceId = data.trace_id || newTraceId('consent');
+
       // Validações de campos obrigatórios — falham com mensagem específica antes do insert.
       const missing: string[] = [];
       if (!clinic?.id) missing.push('clinic_id');
@@ -252,6 +257,12 @@ export function useAestheticConsent(patientId: string | null) {
 
       if (missing.length > 0) {
         const msg = `Campo obrigatório ausente: ${missing.join(', ')}`;
+        console.warn('[useAestheticConsent] validation failed', {
+          trace_id: traceId,
+          missing,
+          patient_id: patientId,
+          clinic_id: clinic?.id,
+        });
         toast.error(msg);
         throw new Error(msg);
       }
@@ -278,6 +289,7 @@ export function useAestheticConsent(patientId: string | null) {
       };
 
       console.info('[useAestheticConsent] insert payload', {
+        trace_id: traceId,
         table: CONSENT_TABLE,
         clinic_id: payload.clinic_id,
         patient_id: payload.patient_id,
@@ -301,11 +313,13 @@ export function useAestheticConsent(patientId: string | null) {
           screen: 'Prontuário',
           component: 'useAestheticConsent',
           action: 'createConsent',
+          traceId,
           patientId,
           appointmentId: data.appointment_id ?? null,
           clinicId: clinic?.id ?? null,
           userId: userData.user?.id ?? null,
           extra: {
+            trace_id: traceId,
             table: CONSENT_TABLE,
             consent_type: data.consent_type,
             procedure_id: data.procedure_id,
@@ -316,10 +330,13 @@ export function useAestheticConsent(patientId: string | null) {
             supabase_hint: (error as any)?.hint,
           },
         });
+        // Anexa trace_id ao erro propagado para o componente registrar/exibir
+        (error as any).traceId = traceId;
         throw error;
       }
 
       console.info('[useAestheticConsent] consent created', {
+        trace_id: traceId,
         consent_id: result?.id,
         consent_type: data.consent_type,
       });
