@@ -1,101 +1,89 @@
 /**
- * Analytics module — PostHog with LGPD-friendly consent gating.
+ * Analytics module — LGPD-friendly consent registry.
  *
- * Rules:
- * - PostHog is ONLY loaded after explicit user consent.
- * - Consent decision is persisted in localStorage under CONSENT_KEY.
- * - Revoking consent disables PostHog and clears its identifiers.
- * - If the env vars are missing, all calls are no-ops (safe in dev).
+ * PostHog is intentionally disabled at runtime for now. The app must never
+ * import or initialize third-party analytics during boot, because a failing
+ * analytics bundle can leave React in a blank-screen state before an
+ * ErrorBoundary can recover.
+ *
+ * Consent is still stored so analytics can be re-enabled later behind a safe
+ * feature flag/server-side configuration without changing the UI contract.
  */
 
 export const CONSENT_KEY = "yc_analytics_consent_v1";
 export type ConsentValue = "granted" | "denied" | null;
 
-const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY as string | undefined;
-const POSTHOG_HOST =
-  (import.meta.env.VITE_POSTHOG_HOST as string | undefined) ??
-  "https://us.i.posthog.com";
+type AnalyticsEventDetail = {
+  type: "consent" | "track" | "bootstrap" | "disable";
+  value?: ConsentValue;
+  event?: string;
+};
 
-let initPromise: Promise<void> | null = null;
-let posthogRef: typeof import("posthog-js").default | null = null;
+function emitAnalyticsEvent(detail: AnalyticsEventDetail): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("yc-analytics-event", { detail }));
+}
 
 export function getConsent(): ConsentValue {
   if (typeof window === "undefined") return null;
-  const v = window.localStorage.getItem(CONSENT_KEY);
-  if (v === "granted" || v === "denied") return v;
+
+  try {
+    const value = window.localStorage?.getItem(CONSENT_KEY);
+    if (value === "granted" || value === "denied") return value;
+  } catch {
+    return null;
+  }
+
   return null;
 }
 
-export function setConsent(value: Exclude<ConsentValue, null>) {
+export function setConsent(value: Exclude<ConsentValue, null>): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(CONSENT_KEY, value);
-  window.dispatchEvent(new CustomEvent("yc-consent-change", { detail: value }));
 
-  if (value === "granted") {
-    void enableAnalytics();
-  } else {
+  try {
+    window.localStorage?.setItem(CONSENT_KEY, value);
+  } catch {
+    // Consent storage is best-effort; never block the application.
+  }
+
+  window.dispatchEvent(new CustomEvent("yc-consent-change", { detail: value }));
+  emitAnalyticsEvent({ type: "consent", value });
+
+  if (value === "denied") {
     disableAnalytics();
   }
 }
 
 export async function enableAnalytics(): Promise<void> {
-  if (typeof window === "undefined") return;
-  if (!POSTHOG_KEY) return; // No key configured — silently skip.
-  if (initPromise) return initPromise;
-
-  initPromise = (async () => {
-    const mod = await import("posthog-js");
-    const posthog = mod.default;
-    posthog.init(POSTHOG_KEY, {
-      api_host: POSTHOG_HOST,
-      capture_pageview: true,
-      capture_pageleave: true,
-      persistence: "localStorage+cookie",
-      autocapture: false,
-    });
-    posthogRef = posthog;
-  })();
-
-  return initPromise;
+  emitAnalyticsEvent({ type: "bootstrap" });
+  // PostHog disabled by design until the integration is verified safe.
+  return;
 }
 
 export function disableAnalytics(): void {
-  if (posthogRef) {
-    try {
-      posthogRef.opt_out_capturing();
-      posthogRef.reset();
-    } catch {
-      // ignore
-    }
-  }
-  // Best-effort: drop posthog cookies if they were created
-  if (typeof document !== "undefined") {
+  emitAnalyticsEvent({ type: "disable" });
+
+  if (typeof document === "undefined") return;
+
+  try {
     document.cookie
       .split(";")
-      .map((c) => c.trim().split("=")[0])
+      .map((cookie) => cookie.trim().split("=")[0])
       .filter((name) => name.startsWith("ph_") || name.startsWith("__ph"))
       .forEach((name) => {
         document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
       });
-  }
-}
-
-export function track(event: string, props?: Record<string, unknown>): void {
-  if (getConsent() !== "granted") return;
-  if (!posthogRef) return;
-  try {
-    posthogRef.capture(event, props);
   } catch {
-    // ignore
+    // Cookie cleanup is best-effort.
   }
 }
 
-/**
- * Bootstraps analytics on app start: only loads PostHog if the user
- * already granted consent in a previous session.
- */
+export function track(event: string, _props?: Record<string, unknown>): void {
+  emitAnalyticsEvent({ type: "track", event });
+  // No-op while PostHog is disabled.
+}
+
 export function bootstrapAnalytics(): void {
-  if (getConsent() === "granted") {
-    void enableAnalytics();
-  }
+  emitAnalyticsEvent({ type: "bootstrap" });
+  // No-op while PostHog is disabled.
 }

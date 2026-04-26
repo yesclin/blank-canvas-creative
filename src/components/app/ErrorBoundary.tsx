@@ -18,27 +18,49 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+  route: string;
+  lastEvent: string | null;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false, error: null };
+  state: State = {
+    hasError: false,
+    error: null,
+    route: typeof window !== "undefined" ? window.location.pathname : "unknown",
+    lastEvent: typeof window !== "undefined" ? window.__ycLastEvent ?? null : null,
+  };
 
-  static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+  static getDerivedStateFromError(error: Error): Partial<State> {
+    return {
+      hasError: true,
+      error,
+      route: typeof window !== "undefined" ? window.location.pathname : "unknown",
+      lastEvent: typeof window !== "undefined" ? window.__ycLastEvent ?? null : null,
+    };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    // Log estruturado
-    console.error("[ErrorBoundary]", {
-      scope: this.props.scope || "global",
-      message: error.message,
-      stack: error.stack,
-      componentStack: info.componentStack,
-    });
+    const route = typeof window !== "undefined" ? window.location.pathname : "unknown";
+    const lastEvent = typeof window !== "undefined" ? window.__ycLastEvent ?? null : null;
+    const componentName = info.componentStack?.split("\n").find(Boolean)?.trim() ?? this.props.scope ?? "unknown";
+
+    console.groupCollapsed(`[ErrorBoundary] ${this.props.scope || "global"}: ${error.message}`);
+    console.error("Error", error);
+    console.error("Stack trace", error.stack);
+    console.error("Component", componentName);
+    console.error("Route", route);
+    console.error("Last event", lastEvent);
+    console.error("Component stack", info.componentStack);
+    console.groupEnd();
   }
 
   reset = () => {
-    this.setState({ hasError: false, error: null });
+    this.setState({
+      hasError: false,
+      error: null,
+      route: typeof window !== "undefined" ? window.location.pathname : "unknown",
+      lastEvent: typeof window !== "undefined" ? window.__ycLastEvent ?? null : null,
+    });
   };
 
   goHome = () => {
@@ -52,7 +74,7 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (!this.state.hasError) return this.props.children;
 
-    const { error } = this.state;
+    const { error, route, lastEvent } = this.state;
     const { fallback, compact, scope, showHome = true } = this.props;
 
     if (fallback && error) return fallback(error, this.reset);
@@ -103,9 +125,11 @@ export class ErrorBoundary extends Component<Props, State> {
                   : "Ocorreu um erro inesperado. Você pode tentar novamente."}
               </p>
               {error?.message && (
-                <p className="text-xs text-muted-foreground/80 font-mono mt-2 p-2 bg-muted rounded break-words">
-                  {error.message}
-                </p>
+                <div className="text-xs text-muted-foreground/80 font-mono mt-2 p-2 bg-muted rounded break-words text-left space-y-1">
+                  <p>{error.message}</p>
+                  <p>Rota: {route}</p>
+                  <p>Último evento: {lastEvent ?? "indisponível"}</p>
+                </div>
               )}
             </div>
             <div className="flex flex-col sm:flex-row gap-2 pt-2">
