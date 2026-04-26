@@ -2,6 +2,14 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+export type InvitationDeliveryStatus =
+  | "pending"
+  | "sent"
+  | "email_failed"
+  | "accepted"
+  | "expired"
+  | "cancelled";
+
 export interface UserInvitation {
   id: string;
   email: string;
@@ -10,6 +18,10 @@ export interface UserInvitation {
   status: string;
   created_at: string;
   expires_at: string;
+  /** UI-only: derived delivery state (sent / email_failed) tracked in memory. */
+  delivery_status?: InvitationDeliveryStatus;
+  /** UI-only: accept URL kept locally so the admin can copy when email fails. */
+  accept_url?: string;
 }
 
 export interface SendInviteData {
