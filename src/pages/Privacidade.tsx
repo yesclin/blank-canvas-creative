@@ -1,5 +1,6 @@
 import LegalPage from "@/components/landing/LegalPage";
 import { Link } from "react-router-dom";
+import ConsentManager from "@/components/ConsentManager";
 
 const Privacidade = () => {
   return (

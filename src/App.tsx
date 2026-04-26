@@ -9,6 +9,7 @@ import { RequireAuth } from "@/components/app/RequireAuth";
 import { ProtectedRoute } from "@/components/app/ProtectedRoute";
 import { ProtectedFeatureRoute } from "@/components/app/ProtectedFeatureRoute";
 import { PasswordRecoveryHandler } from "@/components/app/PasswordRecoveryHandler";
+import CookieConsent from "@/components/CookieConsent";
 
 // Páginas Públicas
 import Index from "./pages/Index";
@@ -237,6 +238,7 @@ const App = () => (
           {/* Catch-all global: NotFound decide entre /app e /login conforme auth */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <CookieConsent />
       </BrowserRouter>
         </ClinicFeaturesProvider>
       </PermissionsProvider>
