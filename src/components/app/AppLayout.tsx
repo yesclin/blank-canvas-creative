@@ -4,7 +4,7 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 import { GuidedTour } from "./GuidedTour";
 import { useClinicData } from "@/hooks/useClinicData";
-import { Building2, ChevronDown, Settings, Users, CreditCard, Image as ImageIcon, ExternalLink } from "lucide-react";
+import { Building2, ChevronDown, Settings, Users, CreditCard, Image as ImageIcon } from "lucide-react";
 import logoFull from "@/assets/logo-full.png";
 import {
   DropdownMenu,
