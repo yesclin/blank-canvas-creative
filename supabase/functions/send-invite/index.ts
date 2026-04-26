@@ -300,7 +300,10 @@ const handler = async (req: Request): Promise<Response> => {
       expiresInDays: INVITATION_EXPIRATION_DAYS,
     });
 
-    const emailResult = await emailService.sendWithRetry({
+    // Single attempt (no retries) to keep total response time well under
+    // the frontend's 15s timeout. If delivery fails the invitation is still
+    // created and the admin gets a copyable accept_url back.
+    const emailResult = await emailService.send({
       to: sanitizedEmail,
       subject: `Convite para participar de ${clinic?.name || "clínica"} no YESCLIN`,
       html: emailHtml,
