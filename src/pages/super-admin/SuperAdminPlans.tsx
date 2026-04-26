@@ -12,6 +12,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { logPlatformAction } from '@/lib/superAdminAudit';
 
+// Recursos administrativos/comerciais controlados pelo plano.
+// Recursos clínicos próprios de uma especialidade (odontograma, mapa facial)
+// NÃO entram aqui — são liberados pela especialidade ativa da clínica.
 const FEATURES: Array<{ key: string; label: string }> = [
   { key: 'feature_whatsapp', label: 'WhatsApp' },
   { key: 'feature_teleconsulta', label: 'Teleconsulta' },
@@ -22,8 +25,6 @@ const FEATURES: Array<{ key: string; label: string }> = [
   { key: 'feature_insurances', label: 'Convênios' },
   { key: 'feature_advanced_reports', label: 'Relatórios avançados' },
   { key: 'feature_audit', label: 'Auditoria' },
-  { key: 'feature_odontogram', label: 'Odontograma' },
-  { key: 'feature_facial_map', label: 'Mapa facial' },
   { key: 'feature_priority_support', label: 'Suporte prioritário' },
 ];
 
