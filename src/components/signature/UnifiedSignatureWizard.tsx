@@ -434,7 +434,20 @@ export function UnifiedSignatureWizard({
   const currentStepIdx = STEPS.findIndex((s) => s.key === step);
 
   if (!open) return null;
-  if (!context) return null;
+
+  // Identify missing required context fields so we can render an in-wizard
+  // diagnostic instead of silently failing or only showing a toast.
+  const missingFields: string[] = [];
+  if (!context?.document_id) missingFields.push("document_id");
+  if (!context?.clinic_id) missingFields.push("clinic_id");
+  if (!context?.patient_id) missingFields.push("patient_id");
+  const hasMissingContext = missingFields.length > 0;
+
+  const fieldLabels: Record<string, string> = {
+    document_id: "Documento (document_id)",
+    clinic_id: "Clínica (clinic_id)",
+    patient_id: "Paciente (patient_id)",
+  };
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) stopCamera(); onOpenChange(o); }}>
@@ -448,6 +461,45 @@ export function UnifiedSignatureWizard({
             Reautenticação, integridade, selfie de verificação, geolocalização e trilha de auditoria.
           </DialogDescription>
         </DialogHeader>
+
+        {hasMissingContext && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Contexto do documento incompleto</AlertTitle>
+            <AlertDescription className="space-y-2">
+              <p>
+                Não é possível iniciar a assinatura porque os seguintes campos
+                obrigatórios não foram fornecidos:
+              </p>
+              <ul className="list-disc pl-5 space-y-1">
+                {missingFields.map((f) => (
+                  <li key={f} className="font-medium">
+                    {fieldLabels[f] ?? f}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs opacity-90">
+                Feche este diálogo, recarregue o documento e tente novamente.
+                Se o problema persistir, contate o suporte informando os campos
+                acima.
+              </p>
+              <div className="pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onOpenChange(false)}
+                >
+                  Fechar
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {!hasMissingContext && (
+          <></>
+        )}
 
         {/* Steps indicator */}
         <div className="flex items-center gap-2 text-xs">
