@@ -50,7 +50,11 @@ import {
   MapPin,
   Globe,
   XCircle,
+  Bug,
+  Copy,
+  ChevronDown,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   useUnifiedDocumentSigning,
@@ -496,6 +500,64 @@ export function UnifiedSignatureWizard({
             </AlertDescription>
           </Alert>
         )}
+
+        {/* Context diagnostics — useful when missing fields, also available
+            on demand to inspect what was passed in. */}
+        <details
+          open={hasMissingContext}
+          className="rounded-md border bg-muted/30 text-xs"
+        >
+          <summary className="flex items-center justify-between gap-2 px-3 py-2 cursor-pointer select-none">
+            <span className="flex items-center gap-2 font-medium text-foreground">
+              <Bug className="h-3.5 w-3.5" />
+              Diagnóstico do contexto
+              {hasMissingContext && (
+                <Badge variant="destructive" className="text-[10px] h-4 px-1.5">
+                  {missingFields.length} campo{missingFields.length > 1 ? "s" : ""} ausente{missingFields.length > 1 ? "s" : ""}
+                </Badge>
+              )}
+            </span>
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform [details[open]_&]:rotate-180" />
+          </summary>
+          <div className="px-3 pb-3 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-muted-foreground">
+                JSON do contexto recebido pelo wizard. Inclua isto ao reportar
+                problemas para o suporte.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 shrink-0"
+                onClick={async () => {
+                  const payload = JSON.stringify(context ?? {}, null, 2);
+                  try {
+                    if (navigator.clipboard?.writeText) {
+                      await navigator.clipboard.writeText(payload);
+                    } else {
+                      const ta = document.createElement("textarea");
+                      ta.value = payload;
+                      document.body.appendChild(ta);
+                      ta.select();
+                      document.execCommand("copy");
+                      document.body.removeChild(ta);
+                    }
+                    toast.success("Contexto copiado para a área de transferência");
+                  } catch {
+                    toast.error("Não foi possível copiar o contexto");
+                  }
+                }}
+              >
+                <Copy className="h-3.5 w-3.5 mr-1.5" />
+                Copiar JSON
+              </Button>
+            </div>
+            <pre className="max-h-48 overflow-auto rounded bg-background border p-2 font-mono text-[11px] leading-relaxed whitespace-pre-wrap break-all">
+{JSON.stringify(context ?? {}, null, 2)}
+            </pre>
+          </div>
+        </details>
 
         {!hasMissingContext && (
         <>
