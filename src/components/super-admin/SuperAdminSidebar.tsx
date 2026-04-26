@@ -32,6 +32,7 @@ const items = [
   { title: 'Clínicas', url: '/super-admin/clinicas', icon: Building2 },
   { title: 'Planos', url: '/super-admin/planos', icon: Package },
   { title: 'Assinaturas', url: '/super-admin/assinaturas', icon: CreditCard },
+  { title: 'Recursos da Clínica', url: '/super-admin/recursos', icon: ToggleRight },
   { title: 'Usuários', url: '/super-admin/usuarios', icon: Users },
   { title: 'Ocorrências', url: '/super-admin/ocorrencias', icon: Bug },
   { title: 'Logs e Auditoria', url: '/super-admin/logs', icon: ScrollText },
