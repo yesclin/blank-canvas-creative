@@ -7,25 +7,25 @@
     "@types/bun": "latest"
   },
   "peerDependencies": {
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.3"
   },
   "dependencies": {
     "@react-three/drei": "9.122.0",
     "@react-three/fiber": "8.18.0",
-    "@remotion/bundler": "4.0.242",
-    "@remotion/cli": "4.0.242",
-    "@remotion/compositor-linux-x64-musl": "4.0.242",
+    "@remotion/bundler": "^4.0.452",
+    "@remotion/cli": "^4.0.452",
+    "@remotion/compositor-linux-x64-musl": "^4.0.452",
     "@remotion/fonts": "4.0.242",
-    "@remotion/google-fonts": "4.0.242",
+    "@remotion/google-fonts": "^4.0.452",
     "@remotion/player": "4.0.242",
-    "@remotion/renderer": "4.0.242",
+    "@remotion/renderer": "^4.0.452",
     "@remotion/three": "4.0.242",
-    "@remotion/transitions": "4.0.242",
+    "@remotion/transitions": "^4.0.452",
     "@types/react": "^19.2.14",
     "@types/three": "0.170.0",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
-    "remotion": "4.0.242",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "remotion": "^4.0.452",
     "three": "0.170.0"
   }
 }
