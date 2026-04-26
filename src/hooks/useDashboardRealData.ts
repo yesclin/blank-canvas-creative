@@ -182,6 +182,7 @@ function usePeriodAppointments(clinicId: string | null, userRole: string | null,
         
         return {
           id: apt.id,
+          scheduled_date: apt.scheduled_date,
           time: apt.start_time?.substring(0, 5) || '',
           end_time: apt.end_time?.substring(0, 5) || '',
           patient_name: (patient as any)?.full_name || 'Paciente',
@@ -675,7 +676,7 @@ export function useDashboardRealData() {
     [appointments, finance, professionals, marginAlerts, marginConfig?.periodDays, isAdmin]
   );
   
-  // Dynamic greeting based on real data
+  // Dynamic greeting based on real data and period
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
     let greetingText = 'Bom dia';
@@ -683,17 +684,31 @@ export function useDashboardRealData() {
     else if (hour >= 18 || hour < 5) greetingText = 'Boa noite';
 
     let contextMessage = 'Aqui estão os pontos que merecem sua atenção hoje.';
-    
-    if (stats.absences > 0) {
-      contextMessage = `Você tem ${stats.absences} falta(s) registrada(s) hoje.`;
-    } else if (stats.totalAppointments > 8) {
-      contextMessage = `Dia cheio! ${stats.totalAppointments} atendimentos agendados.`;
-    } else if (finance.today.expected > 2000) {
-      contextMessage = `Faturamento previsto de R$ ${finance.today.expected.toLocaleString('pt-BR')} hoje.`;
-    } else if (stats.totalAppointments === 0) {
-      contextMessage = 'Nenhum atendimento agendado para hoje.';
-    } else if (stats.remainingAppointments <= 2) {
-      contextMessage = 'Agenda leve hoje. Oportunidade para encaixes!';
+    const total = stats.totalAppointments;
+
+    if (period === 'week') {
+      contextMessage = total === 0
+        ? 'Nenhum atendimento agendado nesta semana.'
+        : `Você tem ${total} atendimento${total > 1 ? 's' : ''} nesta semana.`;
+    } else if (period === 'month') {
+      contextMessage = total === 0
+        ? 'Nenhum atendimento agendado neste mês.'
+        : `${total} atendimento${total > 1 ? 's' : ''} agendado${total > 1 ? 's' : ''} neste mês.`;
+    } else {
+      // today
+      if (stats.absences > 0) {
+        contextMessage = `Você tem ${stats.absences} falta(s) registrada(s) hoje.`;
+      } else if (total > 8) {
+        contextMessage = `Dia cheio! ${total} atendimentos agendados.`;
+      } else if (finance.today.expected > 2000) {
+        contextMessage = `Faturamento previsto de R$ ${finance.today.expected.toLocaleString('pt-BR')} hoje.`;
+      } else if (total === 0) {
+        contextMessage = 'Nenhum atendimento agendado para hoje.';
+      } else if (stats.remainingAppointments <= 2) {
+        contextMessage = 'Agenda leve hoje. Oportunidade para encaixes!';
+      } else {
+        contextMessage = `${total} atendimento${total > 1 ? 's' : ''} agendado${total > 1 ? 's' : ''} hoje.`;
+      }
     }
 
     return {
@@ -701,7 +716,7 @@ export function useDashboardRealData() {
       userName: user.name,
       context: contextMessage,
     };
-  }, [user.name, stats, finance.today.expected]);
+  }, [user.name, stats, finance.today.expected, period]);
 
   // Upcoming appointments (filtered by current time)
   const upcomingAppointments = useMemo(() => {

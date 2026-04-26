@@ -11,6 +11,7 @@ export interface DashboardUser {
 
 export interface DashboardAppointment {
   id: string;
+  scheduled_date: string;
   time: string;
   end_time: string;
   patient_name: string;
