@@ -3,10 +3,12 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { ErrorBoundary } from "./components/app/ErrorBoundary";
-import { bootstrapAnalytics } from "./lib/analytics";
 
-// Loads PostHog only if the user previously granted consent.
-bootstrapAnalytics();
+// NOTE: Analytics bootstrap is intentionally deferred to inside <App />
+// (useEffect) so that no third-party module touches React internals before
+// the React runtime is fully initialized. This prevents
+// "Cannot read properties of null (reading 'useRef')" type crashes caused
+// by side-effectful imports running before mount.
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
