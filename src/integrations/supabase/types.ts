@@ -12990,6 +12990,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      clinic_can_mutate: { Args: { _clinic_id: string }; Returns: boolean }
       clinic_specialty_summary: { Args: { _clinic_id: string }; Returns: Json }
       count_platform_admins: { Args: never; Returns: number }
       current_professional_id_for_clinic: {
@@ -13009,6 +13010,7 @@ export type Database = {
         Returns: undefined
       }
       ensure_system_templates_integrity: { Args: never; Returns: Json }
+      expire_overdue_trials: { Args: never; Returns: number }
       find_or_create_public_patient: {
         Args: {
           _birth_date?: string
@@ -13153,6 +13155,7 @@ export type Database = {
         }
         Returns: string
       }
+      request_subscription: { Args: { _cycle: string }; Returns: Json }
       reset_anamnesis_templates: {
         Args: { p_clinic_id: string; p_user_id: string }
         Returns: undefined
