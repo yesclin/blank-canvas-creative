@@ -233,11 +233,52 @@ export function useUserInvitations(clinicId: string | null) {
       await fetchInvitations();
       return true;
     } catch (err: any) {
-      console.error("[send-invite] error:", err);
+      const correlationId = err?.correlationId ?? null;
+      const httpStatus = err?.httpStatus ?? null;
+      const payload = err?.payload ?? null;
+
+      console.error("[send-invite] error:", {
+        message: err?.message,
+        correlationId,
+        httpStatus,
+        payload,
+        raw: err,
+      });
+
+      // Build a compact, copy-friendly summary for the toast description.
+      const summaryLines: string[] = [];
+      if (err?.message) summaryLines.push(err.message);
+      if (httpStatus) summaryLines.push(`HTTP ${httpStatus}`);
+      if (correlationId) summaryLines.push(`ID: ${correlationId}`);
+      if (payload && typeof payload === "object") {
+        const compact = JSON.stringify(payload);
+        summaryLines.push(
+          compact.length > 240 ? `Payload: ${compact.slice(0, 240)}…` : `Payload: ${compact}`
+        );
+      }
+      const description = summaryLines.length > 0
+        ? summaryLines.join("\n")
+        : "Tente novamente em instantes.";
+
       toast.error(
         timedOut ? "Tempo esgotado ao enviar convite" : "Erro ao enviar convite",
         {
-          description: err?.message || "Tente novamente em instantes.",
+          description,
+          duration: 12000,
+          closeButton: true,
+          ...(correlationId
+            ? {
+                action: {
+                  label: "Copiar ID",
+                  onClick: () => {
+                    navigator.clipboard.writeText(correlationId).then(
+                      () => toast.success("ID de correlação copiado"),
+                      () => toast.error("Não foi possível copiar")
+                    );
+                  },
+                },
+              }
+            : {}),
         }
       );
       return false;
