@@ -33,8 +33,7 @@ export function FeatureGuard({
 export function DefaultUpgradeMessage() {
   return (
     <div className="rounded-md border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-      Este recurso está disponível apenas em planos superiores. Fale com o suporte
-      para fazer upgrade.
+      Este recurso não está disponível no seu plano atual. Fale com o suporte para fazer upgrade.
     </div>
   );
 }
