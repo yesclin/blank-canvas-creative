@@ -182,6 +182,7 @@ function usePeriodAppointments(clinicId: string | null, userRole: string | null,
         
         return {
           id: apt.id,
+          scheduled_date: apt.scheduled_date,
           time: apt.start_time?.substring(0, 5) || '',
           end_time: apt.end_time?.substring(0, 5) || '',
           patient_name: (patient as any)?.full_name || 'Paciente',
