@@ -1,92 +1,94 @@
-import { AbsoluteFill, Sequence, useCurrentFrame, interpolate } from "remotion";
-import { TransitionSeries, springTiming } from "@remotion/transitions";
+import { AbsoluteFill } from "remotion";
+import { TransitionSeries, linearTiming } from "@remotion/transitions";
 import { fade } from "@remotion/transitions/fade";
-import { Scene1Intro } from "./scenes/Scene1Intro";
-import { Scene2Features } from "./scenes/Scene2Features";
-import { Scene3Stats } from "./scenes/Scene3Stats";
-import { Scene4Phone } from "./scenes/Scene4Phone";
-import { Scene5CTA } from "./scenes/Scene5CTA";
+import { slide } from "@remotion/transitions/slide";
+import { wipe } from "@remotion/transitions/wipe";
 
-export const MainVideo = () => {
-  const frame = useCurrentFrame();
+import { BrandBackground, BrandChip, ProgressBar } from "./components/Shared";
+import { Scene1Hook } from "./scenes/Scene1Hook";
+import { Scene2Intro } from "./scenes/Scene2Intro";
+import { Scene3Agenda } from "./scenes/Scene3Agenda";
+import { Scene4Prontuario } from "./scenes/Scene4Prontuario";
+import { Scene5Financeiro } from "./scenes/Scene5Financeiro";
+import { Scene6Whatsapp } from "./scenes/Scene6Whatsapp";
+import { Scene7Proof } from "./scenes/Scene7Proof";
+import { Scene8CTA } from "./scenes/Scene8CTA";
 
-  // Animated gradient background
-  const hueShift = interpolate(frame, [0, 360], [0, 30]);
+export const FPS = 30;
 
+// Per-scene durations (frames @30fps). Transitions overlap by 12f each (7 transitions * 12 = 84).
+// Sum scenes 90+90+105+105+105+105+105+150 = 855
+// Final = 855 - 84 = 771 frames ≈ 25.7s. Bumped scene 8 to land around ~28-30s comfortably.
+const SCENE = {
+  hook: 90,        // 3s
+  intro: 90,       // 3s
+  agenda: 105,     // 3.5s
+  prontuario: 105, // 3.5s
+  financeiro: 105, // 3.5s
+  whatsapp: 105,   // 3.5s
+  proof: 105,      // 3.5s
+  cta: 150,        // 5s
+};
+
+const TRANSITION = 12;
+const TOTAL_SCENE_FRAMES =
+  SCENE.hook + SCENE.intro + SCENE.agenda + SCENE.prontuario +
+  SCENE.financeiro + SCENE.whatsapp + SCENE.proof + SCENE.cta;
+export const DURATION_FRAMES = TOTAL_SCENE_FRAMES - TRANSITION * 7;
+
+const slideUp = slide({ direction: "from-bottom" });
+const slideLeft = slide({ direction: "from-right" });
+const fadeT = fade();
+const wipeRight = wipe({ direction: "from-left" });
+
+const t = (presentation: ReturnType<typeof fade>) => (
+  <TransitionSeries.Transition
+    presentation={presentation}
+    timing={linearTiming({ durationInFrames: TRANSITION })}
+  />
+);
+
+export const MainVideo: React.FC = () => {
   return (
-    <AbsoluteFill
-      style={{
-        background: `linear-gradient(135deg, 
-          hsl(${210 + hueShift}, 85%, 12%) 0%, 
-          hsl(${220 + hueShift}, 80%, 18%) 40%, 
-          hsl(${200 + hueShift}, 75%, 22%) 70%,
-          hsl(${230 + hueShift}, 85%, 14%) 100%)`,
-      }}
-    >
-      {/* Floating particles layer */}
-      <AbsoluteFill style={{ opacity: 0.3 }}>
-        {Array.from({ length: 12 }).map((_, i) => {
-          const x = (i * 137) % 1080;
-          const baseY = (i * 211) % 1920;
-          const size = 4 + (i % 5) * 2;
-          const speed = 0.3 + (i % 4) * 0.15;
-          const y = baseY + Math.sin((frame * speed + i * 50) * 0.05) * 40;
-          const opacity = interpolate(
-            Math.sin(frame * 0.03 + i),
-            [-1, 1],
-            [0.2, 0.8]
-          );
-          return (
-            <div
-              key={i}
-              style={{
-                position: "absolute",
-                left: x,
-                top: y,
-                width: size,
-                height: size,
-                borderRadius: "50%",
-                background: i % 3 === 0 ? "#38bdf8" : i % 3 === 1 ? "#818cf8" : "#34d399",
-                opacity,
-              }}
-            />
-          );
-        })}
-      </AbsoluteFill>
+    <AbsoluteFill>
+      <BrandBackground />
 
       <TransitionSeries>
-        <TransitionSeries.Sequence durationInFrames={80}>
-          <Scene1Intro />
+        <TransitionSeries.Sequence durationInFrames={SCENE.hook}>
+          <Scene1Hook />
         </TransitionSeries.Sequence>
-        <TransitionSeries.Transition
-          presentation={fade()}
-          timing={springTiming({ config: { damping: 200 }, durationInFrames: 15 })}
-        />
-        <TransitionSeries.Sequence durationInFrames={80}>
-          <Scene2Features />
+        {t(fadeT)}
+        <TransitionSeries.Sequence durationInFrames={SCENE.intro}>
+          <Scene2Intro />
         </TransitionSeries.Sequence>
-        <TransitionSeries.Transition
-          presentation={fade()}
-          timing={springTiming({ config: { damping: 200 }, durationInFrames: 15 })}
-        />
-        <TransitionSeries.Sequence durationInFrames={75}>
-          <Scene3Stats />
+        {t(slideUp)}
+        <TransitionSeries.Sequence durationInFrames={SCENE.agenda}>
+          <Scene3Agenda />
         </TransitionSeries.Sequence>
-        <TransitionSeries.Transition
-          presentation={fade()}
-          timing={springTiming({ config: { damping: 200 }, durationInFrames: 15 })}
-        />
-        <TransitionSeries.Sequence durationInFrames={75}>
-          <Scene4Phone />
+        {t(slideLeft)}
+        <TransitionSeries.Sequence durationInFrames={SCENE.prontuario}>
+          <Scene4Prontuario />
         </TransitionSeries.Sequence>
-        <TransitionSeries.Transition
-          presentation={fade()}
-          timing={springTiming({ config: { damping: 200 }, durationInFrames: 15 })}
-        />
-        <TransitionSeries.Sequence durationInFrames={90}>
-          <Scene5CTA />
+        {t(slideLeft)}
+        <TransitionSeries.Sequence durationInFrames={SCENE.financeiro}>
+          <Scene5Financeiro />
+        </TransitionSeries.Sequence>
+        {t(slideLeft)}
+        <TransitionSeries.Sequence durationInFrames={SCENE.whatsapp}>
+          <Scene6Whatsapp />
+        </TransitionSeries.Sequence>
+        {t(wipeRight)}
+        <TransitionSeries.Sequence durationInFrames={SCENE.proof}>
+          <Scene7Proof />
+        </TransitionSeries.Sequence>
+        {t(fadeT)}
+        <TransitionSeries.Sequence durationInFrames={SCENE.cta}>
+          <Scene8CTA />
         </TransitionSeries.Sequence>
       </TransitionSeries>
+
+      <BrandChip />
+      <ProgressBar totalFrames={DURATION_FRAMES} />
     </AbsoluteFill>
   );
 };
