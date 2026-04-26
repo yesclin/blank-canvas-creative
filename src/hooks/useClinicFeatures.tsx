@@ -60,8 +60,6 @@ const DEFAULT_FEATURES: Record<FeatureKey, boolean> = {
   feature_insurances: false,
   feature_advanced_reports: false,
   feature_audit: false,
-  feature_odontogram: false,
-  feature_facial_map: false,
   feature_priority_support: false,
 };
 
