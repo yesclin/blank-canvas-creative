@@ -753,9 +753,10 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
             mode={noteDialogMode}
           />
           <UnifiedSignatureWizard
-            // Salvaguarda extra: nunca abre o wizard sem clinic_id resolvido,
-            // mesmo que algum caller force `signDialogOpen=true`.
-            open={signDialogOpen && !!clinicId}
+            // Salvaguarda extra: nunca abre o wizard se faltar qualquer campo
+            // obrigatório (document_id, clinic_id, patient_id), mesmo que algum
+            // caller force `signDialogOpen=true`.
+            open={signDialogOpen && getMissingSignatureContextFields(buildSignatureContext()).length === 0}
             onOpenChange={setSignDialogOpen}
             context={
               {
