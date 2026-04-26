@@ -51,11 +51,36 @@ export function useUserInvitations(clinicId: string | null) {
   }, [clinicId]);
 
   const sendInvite = useCallback(async (data: SendInviteData): Promise<boolean> => {
+    // Guard: prevent concurrent submissions even if the caller forgets.
+    if (isSending) {
+      console.warn("[send-invite] envio já em andamento, ignorando clique duplicado");
+      return false;
+    }
+
     setIsSending(true);
+    console.log("[send-invite] payload:", data);
+
+    // 15s hard timeout so the button can never get stuck on "Enviando...".
+    const TIMEOUT_MS = 15000;
+    let timedOut = false;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        timedOut = true;
+        reject(new Error(
+          "Não foi possível enviar o convite. Tente novamente ou copie o link manualmente."
+        ));
+      }, TIMEOUT_MS);
+    });
+
     try {
-      const { data: result, error } = await supabase.functions.invoke("send-invite", {
-        body: data,
-      });
+      const invokePromise = supabase.functions.invoke("send-invite", { body: data });
+
+      const { data: result, error } = await Promise.race([
+        invokePromise,
+        timeoutPromise,
+      ]) as { data: any; error: any };
+
+      console.log("[send-invite] response:", { result, error });
 
       // Network / preflight / non-2xx: surface the real cause from the
       // FunctionsHttpError context body instead of the generic
@@ -74,20 +99,20 @@ export function useUserInvitations(clinicId: string | null) {
             } catch { /* ignore */ }
           }
         }
-        console.error("[send-invite] erro:", error, "detalhe:", detail);
+        console.error("[send-invite] error:", error, "detalhe:", detail);
         throw new Error(detail || "Erro ao enviar convite");
       }
 
       if (result?.error) {
-        console.error("[send-invite] erro de domínio:", result.error);
+        console.error("[send-invite] error de domínio:", result.error);
         throw new Error(result.error);
       }
 
       // Email failed but invitation was created — show copyable link.
       if (result?.warning === "email_delivery_failed" && result?.accept_url) {
-        toast.warning("Convite criado, mas o email falhou", {
-          description: `Copie o link e envie manualmente: ${result.accept_url}`,
-          duration: 15000,
+        toast.warning("Convite criado, mas o e-mail não foi enviado", {
+          description: `Copie o link manualmente: ${result.accept_url}`,
+          duration: 20000,
           action: {
             label: "Copiar link",
             onClick: () => {
@@ -106,15 +131,18 @@ export function useUserInvitations(clinicId: string | null) {
       await fetchInvitations();
       return true;
     } catch (err: any) {
-      console.error("[send-invite] erro:", err);
-      toast.error("Erro ao enviar convite", {
-        description: err?.message || "Tente novamente em instantes.",
-      });
+      console.error("[send-invite] error:", err);
+      toast.error(
+        timedOut ? "Tempo esgotado ao enviar convite" : "Erro ao enviar convite",
+        {
+          description: err?.message || "Tente novamente em instantes.",
+        }
+      );
       return false;
     } finally {
       setIsSending(false);
     }
-  }, [fetchInvitations]);
+  }, [fetchInvitations, isSending]);
 
   const cancelInvite = useCallback(async (invitationId: string): Promise<boolean> => {
     try {
