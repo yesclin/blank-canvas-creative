@@ -12,21 +12,45 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getEmailService, sanitizeEmail, isValidEmail } from "../_shared/email-service.ts";
 import { generateInviteEmail, getRoleLabel } from "../_shared/email-templates.ts";
 
-// Allowed origins for CORS - restrict to known domains
-const ALLOWED_ORIGINS = [
-  "https://id-preview--e2305a67-dd71-4dc6-bb28-50ab8384c9ab.lovable.app",
+// Allowed origins for CORS.
+// We accept exact matches AND any Lovable-managed preview/sandbox/published
+// host. This prevents the front-end from being blocked when the project is
+// renamed, re-previewed under a new id, or accessed from a custom domain.
+const ALLOWED_EXACT_ORIGINS = [
   "https://yesclin.com",
   "https://www.yesclin.com",
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://localhost:8080",
 ];
+
+const ALLOWED_ORIGIN_PATTERNS: RegExp[] = [
+  /^https:\/\/[a-z0-9-]+\.lovable\.app$/i,
+  /^https:\/\/[a-z0-9-]+\.lovableproject\.com$/i,
+  /^https:\/\/[a-z0-9-]+\.lovable\.dev$/i,
+  /^https:\/\/[a-z0-9.-]+\.yesclin\.com$/i,
+];
+
+function isAllowedOrigin(origin: string): boolean {
+  if (!origin) return false;
+  if (ALLOWED_EXACT_ORIGINS.includes(origin)) return true;
+  return ALLOWED_ORIGIN_PATTERNS.some((re) => re.test(origin));
+}
 
 function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") || "";
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-  
+  // Echo back the caller's origin when it's allowed; otherwise fall back to
+  // the canonical production origin so the browser still sees a valid header
+  // (the request will simply fail the same-origin check, which is fine).
+  const allowedOrigin = isAllowedOrigin(origin) ? origin : ALLOWED_EXACT_ORIGINS[0];
+
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Max-Age": "86400",
+    "Vary": "Origin",
   };
 }
 
