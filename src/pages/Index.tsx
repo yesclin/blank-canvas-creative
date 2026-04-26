@@ -1,7 +1,10 @@
 import Header from "@/components/landing/Header";
 import Hero from "@/components/landing/Hero";
+import Screenshots from "@/components/landing/Screenshots";
 import Features from "@/components/landing/Features";
+import WhyChoose from "@/components/landing/WhyChoose";
 import Specialties from "@/components/landing/Specialties";
+import Testimonials from "@/components/landing/Testimonials";
 import Pricing from "@/components/landing/Pricing";
 import CTA from "@/components/landing/CTA";
 import Footer from "@/components/landing/Footer";
@@ -40,8 +43,11 @@ const Index = () => {
       <Header />
       <main>
         <Hero />
+        <Screenshots />
         <Features />
+        <WhyChoose />
         <Specialties />
+        <Testimonials />
         <Pricing />
         <CTA />
       </main>
