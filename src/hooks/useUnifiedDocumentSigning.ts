@@ -77,6 +77,47 @@ export interface SignDocumentResult {
   documentHash?: string;
 }
 
+/**
+ * Inspects a SignableDocumentContext (which may be partial / null) and returns
+ * the list of required fields that are missing. An empty array means the
+ * context is ready to be used by the signing wizard.
+ */
+export function getMissingSignatureContextFields(
+  context: Partial<SignableDocumentContext> | null | undefined,
+): Array<"document_id" | "clinic_id" | "patient_id"> {
+  const missing: Array<"document_id" | "clinic_id" | "patient_id"> = [];
+  if (!context?.document_id) missing.push("document_id");
+  if (!context?.clinic_id) missing.push("clinic_id");
+  if (!context?.patient_id) missing.push("patient_id");
+  return missing;
+}
+
+const FIELD_LABELS: Record<string, string> = {
+  document_id: "Documento",
+  clinic_id: "Clínica",
+  patient_id: "Paciente",
+};
+
+/**
+ * Validates the signature context and, when something is missing, surfaces a
+ * toast listing the missing fields. Returns `true` when ready to sign.
+ *
+ * Use this at call sites BEFORE opening the wizard, to prevent showing the
+ * heavy modal when we already know the data is incomplete.
+ */
+export function assertSignatureContextReady(
+  context: Partial<SignableDocumentContext> | null | undefined,
+): boolean {
+  const missing = getMissingSignatureContextFields(context);
+  if (missing.length === 0) return true;
+  const labels = missing.map((f) => FIELD_LABELS[f] ?? f).join(", ");
+  toast.error("Não é possível abrir a assinatura", {
+    description: `Contexto incompleto. Campos ausentes: ${labels}.`,
+  });
+  console.warn("[SIGN] Blocked wizard open — missing context fields:", missing, context);
+  return false;
+}
+
 const SOURCE_TABLE_MAP: Record<SignableDocumentType, string> = {
   consolidated_document: "clinical_attendance_documents",
   evolution: "clinical_evolutions",

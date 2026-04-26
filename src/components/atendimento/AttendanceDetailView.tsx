@@ -12,7 +12,7 @@ import { logDocumentAction } from "@/hooks/useDocumentGovernance";
 import { AddNoteDialog, NotesHistoryPanel } from "@/components/atendimento/DocumentGovernanceDialogs";
 import { UnifiedSignatureWizard } from "@/components/signature/UnifiedSignatureWizard";
 import { SignatureAuditTrailDrawer } from "@/components/signature/SignatureAuditTrailDrawer";
-import { logSignatureEvent, type SignableDocumentContext } from "@/hooks/useUnifiedDocumentSigning";
+import { logSignatureEvent, assertSignatureContextReady, getMissingSignatureContextFields, type SignableDocumentContext } from "@/hooks/useUnifiedDocumentSigning";
 import {
   ArrowLeft, FolderOpen, StickyNote, Printer, Download, PenTool,
   GitCompare, History, Clock, Calendar, User, Stethoscope,
@@ -134,20 +134,32 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
       }
     } finally { setPdfLoading(false); }
   };
+  // Constrói o contexto que seria enviado ao wizard. Centralizado para que
+  // tanto handleSign quanto o auto-trigger via ?action=sign usem a mesma fonte
+  // de verdade na validação.
+  const buildSignatureContext = (): Partial<SignableDocumentContext> => ({
+    document_type: "consolidated_document",
+    document_id: docId ?? undefined,
+    patient_id: detail?.patient_id ?? undefined,
+    clinic_id: clinicId ?? undefined,
+    snapshot: (snapshotSource as Record<string, unknown> | null) ?? null,
+    professional_name: detail?.professional_name,
+  });
+
   // Centraliza pré-condições para assinar: documento gerado, com clinic_id resolvido
   // e ainda não assinado. Sem isso o wizard recusaria com "Contexto incompleto".
-  const canSign = !!docId && !!clinicId && !isDocSigned;
+  const canSign =
+    !isDocSigned &&
+    getMissingSignatureContextFields(buildSignatureContext()).length === 0;
+
   const handleSign = () => {
-    if (!docId) {
-      toast.error("Documento consolidado indisponível para assinatura.");
-      return;
-    }
-    if (!clinicId) {
-      toast.error("Contexto do documento incompleto (campo ausente: clinic_id). Recarregue a página ou regenere o documento.");
-      return;
-    }
     if (isDocSigned) {
       toast.info("Este documento já foi assinado.");
+      return;
+    }
+    // Bloqueia a abertura do wizard ANTES de mostrar o modal quando faltar
+    // qualquer campo obrigatório (document_id, clinic_id, patient_id).
+    if (!assertSignatureContextReady(buildSignatureContext())) {
       return;
     }
     setSignDialogOpen(true);
@@ -160,16 +172,11 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
     if (!initialAction) return;
     // Aguarda o detalhe estar carregado antes de validar
     if (initialAction === "sign") {
-      if (!docId) {
-        toast.error("Documento consolidado indisponível para assinatura.");
-        return;
-      }
-      if (!clinicId) {
-        toast.error("Contexto do documento incompleto (campo ausente: clinic_id). Recarregue a página ou regenere o documento.");
-        return;
-      }
       if (isDocSigned) {
         toast.info("Este documento já foi assinado.");
+        return;
+      }
+      if (!assertSignatureContextReady(buildSignatureContext())) {
         return;
       }
       setSignDialogOpen(true);
@@ -746,9 +753,10 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
             mode={noteDialogMode}
           />
           <UnifiedSignatureWizard
-            // Salvaguarda extra: nunca abre o wizard sem clinic_id resolvido,
-            // mesmo que algum caller force `signDialogOpen=true`.
-            open={signDialogOpen && !!clinicId}
+            // Salvaguarda extra: nunca abre o wizard se faltar qualquer campo
+            // obrigatório (document_id, clinic_id, patient_id), mesmo que algum
+            // caller force `signDialogOpen=true`.
+            open={signDialogOpen && getMissingSignatureContextFields(buildSignatureContext()).length === 0}
             onOpenChange={setSignDialogOpen}
             context={
               {
