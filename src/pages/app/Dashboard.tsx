@@ -87,13 +87,13 @@ export default function Dashboard() {
         {/* Right Column - 40% (2 of 5 cols) */}
         <div className="lg:col-span-2 space-y-6">
           {/* Quick Actions */}
-          <QuickActions />
+          <QuickActions pendingConfirmations={stats.unconfirmedAppointments} />
           
           {/* Stock Prediction Alerts */}
           <StockPredictionAlerts compact maxItems={3} />
           
           {/* Visão Financeira */}
-          <FinanceOverview finance={finance} />
+          <FinanceOverview finance={finance} period={period} />
           
           {/* Insights Inteligentes */}
           <InsightsCard insights={insights} />

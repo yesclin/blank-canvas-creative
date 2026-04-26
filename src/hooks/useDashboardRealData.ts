@@ -661,6 +661,8 @@ export function useDashboardRealData() {
       absences,
       confirmationRate: total > 0 ? Math.round((confirmed / total) * 100) : 0,
       newPatients,
+      confirmedAppointments: confirmed,
+      unconfirmedAppointments: appointments.filter(a => a.status === 'nao_confirmado').length,
     };
   }, [appointments]);
   

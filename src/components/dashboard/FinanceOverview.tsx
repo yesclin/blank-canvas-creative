@@ -2,14 +2,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { TrendingUp, TrendingDown, Wallet, Target, CreditCard, Building2, Lock } from 'lucide-react';
 import { useFinancialAccessControl } from '@/hooks/useFinancialAccessControl';
-import type { DashboardFinance } from '@/types/dashboard';
+import type { DashboardFinance, DashboardPeriod } from '@/types/dashboard';
 
 interface FinanceOverviewProps {
   finance: DashboardFinance;
+  period?: DashboardPeriod;
 }
 
-export function FinanceOverview({ finance }: FinanceOverviewProps) {
+export function FinanceOverview({ finance, period = 'today' }: FinanceOverviewProps) {
   const { canViewRevenue, canViewCost, isLoading } = useFinancialAccessControl();
+  const periodLabel = period === 'today' ? 'Hoje' : period === 'week' ? 'Esta semana' : 'Este mês';
   
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -55,7 +57,7 @@ export function FinanceOverview({ finance }: FinanceOverviewProps) {
         {/* Today's Finance */}
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-            Hoje
+            {periodLabel}
           </h4>
           <div className="grid grid-cols-2 gap-3">
             <div className="p-3 rounded-lg bg-green-50 border border-green-100">
