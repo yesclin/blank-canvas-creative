@@ -101,6 +101,7 @@ export async function generateConsolidatedAttendanceDocument(appointmentId: stri
 
     // ─ Header / Clinic ─
     clinic: {
+      id: clinicId,
       name: clinic?.name || '',
       logo_url: clinic?.logo_url || null,
       phone: clinic?.phone || null,
