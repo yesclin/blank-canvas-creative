@@ -402,7 +402,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Log the action
     await supabaseAdmin.from("user_audit_logs").insert({
       clinic_id: profile.clinic_id,
-      action: "user_invited",
+      action: invitationId ? "user_invitation_resent" : "user_invited",
       target_email: email,
       performed_by: user.id,
       details: {
@@ -410,14 +410,19 @@ const handler = async (req: Request): Promise<Response> => {
         role,
         permissions,
         invitation_id: invitation.id,
+        reused_token: !!invitationId,
       },
     });
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: "Convite enviado com sucesso",
+      JSON.stringify({
+        success: true,
+        message: invitationId
+          ? "Convite reenviado com sucesso"
+          : "Convite enviado com sucesso",
         invitation_id: invitation.id,
+        accept_url: acceptUrl,
+        reused_token: !!invitationId,
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
