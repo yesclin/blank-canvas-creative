@@ -110,14 +110,18 @@ export default function Assinatura() {
         <TabsList>
           <TabsTrigger value="monthly">Mensal</TabsTrigger>
           <TabsTrigger value="yearly">
-            Anual <Badge variant="secondary" className="ml-2">2 meses grátis</Badge>
+            Anual <Badge variant="secondary" className="ml-2">Economize ~17%</Badge>
           </TabsTrigger>
         </TabsList>
       </Tabs>
 
       <div className="grid gap-4 md:grid-cols-3">
         {plans.map((plan) => {
-          const price = cycle === 'monthly' ? plan.price_monthly : plan.price_yearly;
+          const monthlyPrice = Number(plan.price_monthly);
+          const yearlyPrice = Number(plan.price_yearly);
+          const monthlyEquiv = yearlyPrice / 12;
+          const yearlySaved = monthlyPrice * 12 - yearlyPrice;
+          const displayPrice = cycle === 'monthly' ? monthlyPrice : monthlyEquiv;
           const isCurrent = sub.plan_slug === plan.slug;
           return (
             <Card key={plan.id} className={isCurrent ? 'border-primary ring-1 ring-primary' : ''}>
@@ -133,10 +137,28 @@ export default function Assinatura() {
               <CardContent className="space-y-4">
                 <div>
                   <div className="text-3xl font-bold">
-                    R$ {Number(price).toFixed(2)}
+                    R$ {displayPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     <span className="ml-1 text-sm font-normal text-muted-foreground">
-                      /{cycle === 'monthly' ? 'mês' : 'ano'}
+                      /mês
                     </span>
+                  </div>
+                  <div className="mt-1 min-h-[34px] text-xs">
+                    {cycle === 'yearly' ? (
+                      <div className="space-y-0.5">
+                        <p className="text-muted-foreground">
+                          Cobrado{' '}
+                          <strong className="text-foreground">
+                            R$ {yearlyPrice.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+                          </strong>{' '}
+                          uma vez ao ano
+                        </p>
+                        <p className="font-medium text-primary">
+                          Economize R$ {yearlySaved.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} por ano
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground">Cobrado mensalmente.</p>
+                    )}
                   </div>
                 </div>
 
