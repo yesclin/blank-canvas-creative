@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   UserCog, Plus, Search, Edit, RotateCcw, ToggleLeft, ToggleRight,
   Shield, AlertCircle, Crown, Loader2, Users, CheckCircle2, XCircle,
-  Mail, Clock, Send, RefreshCw, X, History, Save
+  Mail, Clock, Send, RefreshCw, X, History, Save, Copy, MailX, MailCheck, CalendarClock
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
