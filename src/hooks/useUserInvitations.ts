@@ -118,32 +118,76 @@ export function useUserInvitations(clinicId: string | null) {
         timeoutPromise,
       ]) as { data: any; error: any };
 
+      // Extract correlation ids when present (server should return one of these).
+      const corrId =
+        result?.requestId ??
+        result?.request_id ??
+        result?.correlationId ??
+        result?.correlation_id ??
+        null;
+      if (corrId) {
+        console.log("[send-invite] correlationId:", corrId);
+      }
       console.log("[send-invite] response:", { result, error });
 
       // Network / preflight / non-2xx: surface the real cause from the
       // FunctionsHttpError context body instead of the generic
       // "Failed to send a request to the Edge Function".
       if (error) {
-        let detail = error.message;
+        let detail: string = error.message;
+        let errorPayload: any = null;
+        let errorCorrId: string | null = null;
+        let httpStatus: number | null = null;
         const ctx = (error as any).context;
-        if (ctx && typeof ctx.json === "function") {
-          try {
-            const body = await ctx.json();
-            if (body?.error) detail = body.error;
-          } catch {
+        if (ctx) {
+          httpStatus = ctx.status ?? ctx.response?.status ?? null;
+          if (typeof ctx.json === "function") {
             try {
-              const text = await ctx.text();
-              if (text) detail = text;
-            } catch { /* ignore */ }
+              errorPayload = await ctx.json();
+              if (errorPayload?.error) detail = errorPayload.error;
+              errorCorrId =
+                errorPayload?.requestId ??
+                errorPayload?.request_id ??
+                errorPayload?.correlationId ??
+                errorPayload?.correlation_id ??
+                null;
+            } catch {
+              try {
+                const text = await ctx.text();
+                if (text) {
+                  detail = text;
+                  errorPayload = { raw: text };
+                }
+              } catch { /* ignore */ }
+            }
           }
         }
-        console.error("[send-invite] error:", error, "detalhe:", detail);
-        throw new Error(detail || "Erro ao enviar convite");
+        // Structured log so the dev can grep for the correlation id quickly.
+        console.error("[send-invite] error:", {
+          message: error.message,
+          httpStatus,
+          correlationId: errorCorrId,
+          payload: errorPayload,
+          raw: error,
+        });
+
+        const richError = new Error(detail || "Erro ao enviar convite");
+        (richError as any).payload = errorPayload;
+        (richError as any).correlationId = errorCorrId;
+        (richError as any).httpStatus = httpStatus;
+        throw richError;
       }
 
       if (result?.error) {
-        console.error("[send-invite] error de domínio:", result.error);
-        throw new Error(result.error);
+        console.error("[send-invite] error de domínio:", {
+          error: result.error,
+          correlationId: corrId,
+          payload: result,
+        });
+        const richError = new Error(result.error);
+        (richError as any).payload = result;
+        (richError as any).correlationId = corrId;
+        throw richError;
       }
 
       // Email failed but invitation was created — show copyable link.
@@ -189,11 +233,52 @@ export function useUserInvitations(clinicId: string | null) {
       await fetchInvitations();
       return true;
     } catch (err: any) {
-      console.error("[send-invite] error:", err);
+      const correlationId = err?.correlationId ?? null;
+      const httpStatus = err?.httpStatus ?? null;
+      const payload = err?.payload ?? null;
+
+      console.error("[send-invite] error:", {
+        message: err?.message,
+        correlationId,
+        httpStatus,
+        payload,
+        raw: err,
+      });
+
+      // Build a compact, copy-friendly summary for the toast description.
+      const summaryLines: string[] = [];
+      if (err?.message) summaryLines.push(err.message);
+      if (httpStatus) summaryLines.push(`HTTP ${httpStatus}`);
+      if (correlationId) summaryLines.push(`ID: ${correlationId}`);
+      if (payload && typeof payload === "object") {
+        const compact = JSON.stringify(payload);
+        summaryLines.push(
+          compact.length > 240 ? `Payload: ${compact.slice(0, 240)}…` : `Payload: ${compact}`
+        );
+      }
+      const description = summaryLines.length > 0
+        ? summaryLines.join("\n")
+        : "Tente novamente em instantes.";
+
       toast.error(
         timedOut ? "Tempo esgotado ao enviar convite" : "Erro ao enviar convite",
         {
-          description: err?.message || "Tente novamente em instantes.",
+          description,
+          duration: 12000,
+          closeButton: true,
+          ...(correlationId
+            ? {
+                action: {
+                  label: "Copiar ID",
+                  onClick: () => {
+                    navigator.clipboard.writeText(correlationId).then(
+                      () => toast.success("ID de correlação copiado"),
+                      () => toast.error("Não foi possível copiar")
+                    );
+                  },
+                },
+              }
+            : {}),
         }
       );
       return false;
