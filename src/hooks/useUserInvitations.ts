@@ -145,6 +145,15 @@ export function useUserInvitations(clinicId: string | null) {
 
       // Email failed but invitation was created — show copyable link.
       if (result?.warning === "email_delivery_failed" && result?.accept_url) {
+        if (result.invitation_id) {
+          setDeliveryMeta((prev) => ({
+            ...prev,
+            [result.invitation_id]: {
+              delivery_status: "email_failed",
+              accept_url: result.accept_url,
+            },
+          }));
+        }
         toast.warning("Convite criado, mas o e-mail não foi enviado", {
           description: `Copie o link manualmente: ${result.accept_url}`,
           duration: 20000,
@@ -162,6 +171,16 @@ export function useUserInvitations(clinicId: string | null) {
         return true;
       }
 
+      // Email sent successfully
+      if (result?.invitation_id) {
+        setDeliveryMeta((prev) => ({
+          ...prev,
+          [result.invitation_id]: {
+            delivery_status: "sent",
+            accept_url: result.accept_url,
+          },
+        }));
+      }
       toast.success("Convite enviado com sucesso!");
       await fetchInvitations();
       return true;
