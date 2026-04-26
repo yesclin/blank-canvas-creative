@@ -62,6 +62,7 @@ const PermissionsContext = createContext<PermissionsContextType | null>(null);
 
 // Provider Component
 export function PermissionsProvider({ children }: { children: ReactNode }) {
+  const { viewedRole, isImpersonating } = useCurrentViewRole();
   const [state, setState] = useState<PermissionsState>({
     permissions: [],
     role: null,
