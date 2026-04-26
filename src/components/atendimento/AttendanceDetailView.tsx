@@ -164,6 +164,10 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
         toast.error("Documento consolidado indisponível para assinatura.");
         return;
       }
+      if (!clinicId) {
+        toast.error("Clínica do documento não identificada. Recarregue a página ou regenere o documento.");
+        return;
+      }
       if (isDocSigned) {
         toast.info("Este documento já foi assinado.");
         return;
