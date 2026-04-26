@@ -203,6 +203,33 @@ export function AgendaToday({ appointments, stats, period = 'today' }: AgendaTod
   const totalLabel =
     period === 'today' ? 'Hoje' : period === 'week' ? 'Semana' : 'Mês';
 
+  const kpis = [
+    {
+      label: totalLabel,
+      value: stats.totalAppointments,
+      bg: 'bg-primary/10',
+      text: 'text-primary',
+    },
+    {
+      label: 'Confirmados',
+      value: stats.confirmedAppointments,
+      bg: 'bg-emerald-100 dark:bg-emerald-900/30',
+      text: 'text-emerald-700 dark:text-emerald-400',
+    },
+    {
+      label: 'Não confirmados',
+      value: stats.unconfirmedAppointments,
+      bg: 'bg-amber-100 dark:bg-amber-900/30',
+      text: 'text-amber-700 dark:text-amber-400',
+    },
+    {
+      label: 'Faltas',
+      value: stats.absences,
+      bg: 'bg-red-100 dark:bg-red-900/30',
+      text: 'text-red-700 dark:text-red-400',
+    },
+  ];
+
   return (
     <Card className="h-full">
       <CardHeader className="pb-3">
@@ -216,34 +243,19 @@ export function AgendaToday({ appointments, stats, period = 'today' }: AgendaTod
           </Button>
         </div>
 
-        {/* Stats Row */}
-        <div className="flex items-center gap-4 mt-3 pt-3 border-t flex-wrap">
-          <div className="flex items-center gap-2 text-sm">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <span className="font-bold text-primary">{stats.totalAppointments}</span>
+        {/* KPI Row - dinâmico por período */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 pt-3 border-t">
+          {kpis.map((kpi) => (
+            <div
+              key={kpi.label}
+              className={`flex items-center gap-2 rounded-md px-2.5 py-2 ${kpi.bg}`}
+            >
+              <span className={`text-lg font-bold ${kpi.text}`}>{kpi.value}</span>
+              <span className="text-xs text-muted-foreground leading-tight">
+                {kpi.label}
+              </span>
             </div>
-            <span className="text-muted-foreground">{totalLabel}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-              <span className="font-bold text-green-600">{stats.completedAppointments}</span>
-            </div>
-            <span className="text-muted-foreground">Realizados</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-              <span className="font-bold text-blue-600">{stats.remainingAppointments}</span>
-            </div>
-            <span className="text-muted-foreground">Restantes</span>
-          </div>
-          {stats.absences > 0 && (
-            <div className="flex items-center gap-2 text-sm">
-              <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
-                <span className="font-bold text-red-600">{stats.absences}</span>
-              </div>
-              <span className="text-muted-foreground">Faltas</span>
-            </div>
-          )}
+          ))}
         </div>
       </CardHeader>
 
