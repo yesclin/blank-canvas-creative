@@ -104,12 +104,29 @@ interface InviteRequest {
 // Invitation expiration in days
 const INVITATION_EXPIRATION_DAYS = 7;
 
-const handler = async (req: Request): Promise<Response> => {
+export const handler = async (req: Request): Promise<Response> => {
   const corsHeaders = getCorsHeaders(req);
-  
+
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Public diagnostics endpoint — no auth required.
+  // Returns the effective CORS configuration and whether the caller's origin
+  // is currently accepted. Useful to debug "Failed to send a request to the
+  // Edge Function" errors caused by an unrecognized origin.
+  // Accessed via: GET <function-url>/diagnostics OR GET <function-url>?diagnostics=1
+  {
+    const url = new URL(req.url);
+    const isDiagnosticsPath = url.pathname.endsWith("/diagnostics");
+    const isDiagnosticsQuery = url.searchParams.has("diagnostics");
+    if (req.method === "GET" && (isDiagnosticsPath || isDiagnosticsQuery)) {
+      return new Response(JSON.stringify(buildDiagnosticsPayload(req), null, 2), {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
   }
 
   try {
