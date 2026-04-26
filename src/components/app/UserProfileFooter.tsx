@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { useCurrentUser } from "@/hooks/useClinicUsers";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useSidebar } from "@/components/ui/sidebar";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 type UserRole = "admin" | "owner" | "profissional" | "recepcionista";
