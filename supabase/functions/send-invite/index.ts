@@ -64,6 +64,9 @@ interface InviteRequest {
   professionalType?: string;
   registrationNumber?: string;
   specialtyIds?: string[];
+  // When set, reuse the existing invitation (same token) instead of creating
+  // a new one. Used by the "Reenviar convite" action.
+  invitationId?: string;
 }
 
 // Invitation expiration in days
@@ -187,6 +190,7 @@ const handler = async (req: Request): Promise<Response> => {
       professionalType,
       registrationNumber,
       specialtyIds,
+      invitationId,
     }: InviteRequest = await req.json();
 
     if (!email || !fullName || !role) {
@@ -213,74 +217,139 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log("[send-invite] Creating invitation for:", sanitizedEmail);
+    let invitation: any;
 
-    // Check if there's already a pending invitation for this email
-    const { data: existingInvite } = await supabaseAdmin
-      .from("user_invitations")
-      .select("id")
-      .eq("clinic_id", profile.clinic_id)
-      .eq("email", sanitizedEmail)
-      .eq("status", "pending")
-      .single();
+    // ───────────────────────────────────────────────────────────────────
+    // RESEND PATH: reuse existing invitation (same token), only refresh
+    // the expiration window if it already expired.
+    // ───────────────────────────────────────────────────────────────────
+    if (invitationId) {
+      console.log("[send-invite] Resending existing invitation:", invitationId);
 
-    if (existingInvite) {
-      return new Response(
-        JSON.stringify({ error: "Já existe um convite pendente para este e-mail" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    // Check if user already exists in this clinic
-    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-    const existingAuthUser = existingUsers?.users.find(
-      u => u.email?.toLowerCase() === sanitizedEmail
-    );
-    
-    if (existingAuthUser) {
-      const { data: existingProfile } = await supabaseAdmin
-        .from("profiles")
-        .select("id")
-        .eq("user_id", existingAuthUser.id)
+      const { data: existing, error: existingError } = await supabaseAdmin
+        .from("user_invitations")
+        .select("*")
+        .eq("id", invitationId)
         .eq("clinic_id", profile.clinic_id)
-        .single();
+        .maybeSingle();
 
-      if (existingProfile) {
+      if (existingError || !existing) {
         return new Response(
-          JSON.stringify({ error: "Este usuário já faz parte da clínica" }),
+          JSON.stringify({ error: "Convite não encontrado" }),
+          { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      if (existing.status !== "pending") {
+        return new Response(
+          JSON.stringify({ error: "Convite não está mais pendente e não pode ser reenviado" }),
           { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
-    }
 
-    // Create invitation record
-    const { data: invitation, error: inviteError } = await supabaseAdmin
-      .from("user_invitations")
-      .insert({
-        clinic_id: profile.clinic_id,
-        email: sanitizedEmail,
-        full_name: fullName,
-        role: role,
-        invited_by: user.id,
-        permissions: permissions || null,
-        // Professional fields
-        is_professional: isProfessional || false,
-        professional_type: professionalType || null,
-        registration_number: registrationNumber || null,
-        specialty_ids: specialtyIds || [],
-      })
-      .select()
-      .single();
+      // If expired, refresh the expiration window so the same token stays valid
+      const isExpired =
+        existing.expires_at && new Date(existing.expires_at).getTime() < Date.now();
 
-    if (inviteError) {
-      console.error("[send-invite] Error creating invitation:", inviteError);
-      return new Response(
-        JSON.stringify({ error: "Erro ao criar convite" }),
-        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      if (isExpired) {
+        const newExpiresAt = new Date(
+          Date.now() + INVITATION_EXPIRATION_DAYS * 24 * 60 * 60 * 1000
+        ).toISOString();
+        const { data: refreshed, error: refreshError } = await supabaseAdmin
+          .from("user_invitations")
+          .update({ expires_at: newExpiresAt })
+          .eq("id", invitationId)
+          .select()
+          .single();
+        if (refreshError) {
+          console.error("[send-invite] Error refreshing invitation expiry:", refreshError);
+          return new Response(
+            JSON.stringify({ error: "Erro ao renovar convite" }),
+            { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        }
+        invitation = refreshed;
+      } else {
+        invitation = existing;
+      }
+    } else {
+      // ─────────────────────────────────────────────────────────────────
+      // CREATE PATH: brand-new invitation
+      // ─────────────────────────────────────────────────────────────────
+      console.log("[send-invite] Creating invitation for:", sanitizedEmail);
+
+      // Check if there's already a pending invitation for this email
+      const { data: existingInvite } = await supabaseAdmin
+        .from("user_invitations")
+        .select("id")
+        .eq("clinic_id", profile.clinic_id)
+        .eq("email", sanitizedEmail)
+        .eq("status", "pending")
+        .maybeSingle();
+
+      if (existingInvite) {
+        return new Response(
+          JSON.stringify({
+            error: "Já existe um convite pendente para este e-mail. Use a ação 'Reenviar' no convite existente.",
+            existing_invitation_id: existingInvite.id,
+          }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Check if user already exists in this clinic
+      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+      const existingAuthUser = existingUsers?.users.find(
+        u => u.email?.toLowerCase() === sanitizedEmail
       );
+      
+      if (existingAuthUser) {
+        const { data: existingProfile } = await supabaseAdmin
+          .from("profiles")
+          .select("id")
+          .eq("user_id", existingAuthUser.id)
+          .eq("clinic_id", profile.clinic_id)
+          .maybeSingle();
+
+        if (existingProfile) {
+          return new Response(
+            JSON.stringify({ error: "Este usuário já faz parte da clínica" }),
+            { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        }
+      }
+
+      // Create invitation record
+      const { data: created, error: inviteError } = await supabaseAdmin
+        .from("user_invitations")
+        .insert({
+          clinic_id: profile.clinic_id,
+          email: sanitizedEmail,
+          full_name: fullName,
+          role: role,
+          invited_by: user.id,
+          permissions: permissions || null,
+          // Professional fields
+          is_professional: isProfessional || false,
+          professional_type: professionalType || null,
+          registration_number: registrationNumber || null,
+          specialty_ids: specialtyIds || [],
+        })
+        .select()
+        .single();
+
+      if (inviteError) {
+        console.error("[send-invite] Error creating invitation:", inviteError);
+        return new Response(
+          JSON.stringify({ error: "Erro ao criar convite" }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      invitation = created;
     }
 
-    console.log("[send-invite] Invitation created:", invitation.id);
+    console.log("[send-invite] Invitation ready:", invitation.id, "(reused:", !!invitationId, ")");
 
     // Generate accept URL
     const baseUrl = req.headers.get("origin") || "https://yesclin.com";
@@ -333,7 +402,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Log the action
     await supabaseAdmin.from("user_audit_logs").insert({
       clinic_id: profile.clinic_id,
-      action: "user_invited",
+      action: invitationId ? "user_invitation_resent" : "user_invited",
       target_email: email,
       performed_by: user.id,
       details: {
@@ -341,14 +410,19 @@ const handler = async (req: Request): Promise<Response> => {
         role,
         permissions,
         invitation_id: invitation.id,
+        reused_token: !!invitationId,
       },
     });
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: "Convite enviado com sucesso",
+      JSON.stringify({
+        success: true,
+        message: invitationId
+          ? "Convite reenviado com sucesso"
+          : "Convite enviado com sucesso",
         invitation_id: invitation.id,
+        accept_url: acceptUrl,
+        reused_token: !!invitationId,
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
