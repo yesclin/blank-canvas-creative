@@ -210,8 +210,22 @@ export function useUnifiedDocumentSigning() {
         toast.error("Clínica não identificada.");
         return { success: false };
       }
-      if (!context.document_id || !context.clinic_id || !context.patient_id) {
-        toast.error("Contexto do documento incompleto.");
+      const missingFields: string[] = [];
+      if (!context.document_id) missingFields.push("document_id");
+      if (!context.clinic_id) missingFields.push("clinic_id");
+      if (!context.patient_id) missingFields.push("patient_id");
+      if (missingFields.length > 0) {
+        const label = missingFields.length === 1 ? "campo ausente" : "campos ausentes";
+        toast.error(`Contexto do documento incompleto (${label}: ${missingFields.join(", ")})`);
+        console.warn("[useUnifiedDocumentSigning] missing context fields", {
+          missing: missingFields,
+          context: {
+            document_type: context.document_type,
+            document_id: context.document_id,
+            clinic_id: context.clinic_id,
+            patient_id: context.patient_id,
+          },
+        });
         return { success: false };
       }
       if (method === "handwritten" && !handwrittenDataUrl) {

@@ -143,7 +143,7 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
       return;
     }
     if (!clinicId) {
-      toast.error("Clínica do documento não identificada. Recarregue a página ou regenere o documento.");
+      toast.error("Contexto do documento incompleto (campo ausente: clinic_id). Recarregue a página ou regenere o documento.");
       return;
     }
     if (isDocSigned) {
@@ -165,7 +165,7 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
         return;
       }
       if (!clinicId) {
-        toast.error("Clínica do documento não identificada. Recarregue a página ou regenere o documento.");
+        toast.error("Contexto do documento incompleto (campo ausente: clinic_id). Recarregue a página ou regenere o documento.");
         return;
       }
       if (isDocSigned) {
