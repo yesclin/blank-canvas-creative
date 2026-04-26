@@ -41,13 +41,13 @@ const Hero = () => {
             </motion.div>
 
             <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold text-foreground leading-tight mb-6">
-              Gerencie sua clínica com{" "}
-              <span className="text-gradient-brand">simplicidade</span>
+              Pare de perder tempo com agenda, financeiro e papelada.{" "}
+              <span className="text-gradient-brand">Centralize tudo</span> da sua clínica.
             </h1>
 
             <p className="text-lg lg:text-xl text-muted-foreground mb-8 max-w-xl mx-auto lg:mx-0">
-              Agenda, prontuário, financeiro e muito mais em uma única plataforma. 
-              Feito para clínicas médicas, odontológicas, psicologia, estética e todas as especialidades.
+              Um único sistema simples e inteligente para clínicas médicas, odontológicas, 
+              psicologia, estética e todas as especialidades. Teste grátis por 7 dias.
             </p>
 
             {/* Feature Pills */}
@@ -67,7 +67,7 @@ const Hero = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <Button variant="hero" size="xl" asChild>
                 <Link to="/criar-conta">
-                  Começar Grátis
+                  Começar teste grátis agora
                   <ArrowRight size={20} />
                 </Link>
               </Button>
