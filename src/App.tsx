@@ -86,6 +86,17 @@ import FollowupsPage from "./pages/app/comercial/FollowupsPage";
 import GoalsPage from "./pages/app/comercial/GoalsPage";
 import CommercialReportsPage from "./pages/app/comercial/CommercialReportsPage";
 
+// Super Admin
+import { SuperAdminLayout } from "./components/super-admin/SuperAdminLayout";
+import { ProtectedSuperAdminRoute } from "./components/super-admin/ProtectedSuperAdminRoute";
+import SuperAdminDashboard from "./pages/super-admin/SuperAdminDashboard";
+import SuperAdminClinics from "./pages/super-admin/SuperAdminClinics";
+import SuperAdminPlans from "./pages/super-admin/SuperAdminPlans";
+import SuperAdminSubscriptions from "./pages/super-admin/SuperAdminSubscriptions";
+import SuperAdminFeatureOverrides from "./pages/super-admin/SuperAdminFeatureOverrides";
+import SuperAdminSetup from "./pages/super-admin/SuperAdminSetup";
+import SuperAdminStub from "./pages/super-admin/SuperAdminStub";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -184,6 +195,37 @@ const App = () => (
             <Route path="*" element={<Navigate to="/app" replace />} />
           </Route>
           
+          {/* Super Admin (plataforma) */}
+          <Route
+            path="/super-admin"
+            element={
+              <ProtectedSuperAdminRoute>
+                <SuperAdminLayout />
+              </ProtectedSuperAdminRoute>
+            }
+          >
+            <Route index element={<SuperAdminDashboard />} />
+            <Route path="clinicas" element={<SuperAdminClinics />} />
+            <Route path="planos" element={<SuperAdminPlans />} />
+            <Route path="assinaturas" element={<SuperAdminSubscriptions />} />
+            <Route path="recursos" element={<SuperAdminFeatureOverrides />} />
+            <Route path="usuarios" element={<SuperAdminStub title="Usuários da plataforma" description="Gestão de papéis globais (Super Admin, Suporte) e auditoria de acesso." />} />
+            <Route path="ocorrencias" element={<SuperAdminStub title="Ocorrências e bugs" description="Triagem e acompanhamento de incidentes reportados pelas clínicas." />} />
+            <Route path="logs" element={<SuperAdminStub title="Logs e Auditoria" description="Auditoria das ações administrativas da plataforma." />} />
+            <Route path="integracoes" element={<SuperAdminStub title="Integrações" description="Conectores com gateways, mensageria, Storage e outros provedores." />} />
+            <Route path="uso" element={<SuperAdminStub title="Uso da plataforma" description="Métricas de adoção, consumo e saúde por clínica." />} />
+            <Route path="financeiro" element={<SuperAdminStub title="Financeiro SaaS" description="Faturamento, cobranças e MRR/ARR consolidados." />} />
+            <Route path="configuracoes" element={<SuperAdminStub title="Configurações da plataforma" description="Parâmetros globais, defaults de clínica e flags do sistema." />} />
+          </Route>
+          <Route
+            path="/super-admin/setup"
+            element={
+              <ProtectedSuperAdminRoute>
+                <SuperAdminSetup />
+              </ProtectedSuperAdminRoute>
+            }
+          />
+
           {/* Catch-all global: NotFound decide entre /app e /login conforme auth */}
           <Route path="*" element={<NotFound />} />
         </Routes>

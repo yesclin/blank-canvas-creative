@@ -16,6 +16,12 @@ import { createContext, ReactNode, useContext, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
+/**
+ * Flags de plano (controlam módulos administrativos/comerciais).
+ * IMPORTANTE: recursos clínicos próprios de uma especialidade
+ * (odontograma, mapa facial, etc.) NÃO são gateados por plano —
+ * são liberados pela especialidade ativa da clínica.
+ */
 export type FeatureKey =
   | 'feature_whatsapp'
   | 'feature_teleconsulta'
@@ -26,8 +32,6 @@ export type FeatureKey =
   | 'feature_insurances'
   | 'feature_advanced_reports'
   | 'feature_audit'
-  | 'feature_odontogram'
-  | 'feature_facial_map'
   | 'feature_priority_support';
 
 export type LimitKey =
@@ -56,8 +60,6 @@ const DEFAULT_FEATURES: Record<FeatureKey, boolean> = {
   feature_insurances: false,
   feature_advanced_reports: false,
   feature_audit: false,
-  feature_odontogram: false,
-  feature_facial_map: false,
   feature_priority_support: false,
 };
 
