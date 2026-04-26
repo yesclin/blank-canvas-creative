@@ -974,6 +974,8 @@ export function UnifiedSignatureWizard({
             </>
           )}
         </DialogFooter>
+        </>
+        )}
       </DialogContent>
     </Dialog>
   );
