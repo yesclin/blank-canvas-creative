@@ -192,7 +192,7 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
       handlePDF();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialAction, docId, isDocSigned, snapshotSource]);
+  }, [initialAction, docId, clinicId, isDocSigned, snapshotSource]);
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6 print:p-0 print:space-y-4">
