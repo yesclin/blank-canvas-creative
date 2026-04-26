@@ -221,16 +221,15 @@ export function useUserInvitations(clinicId: string | null) {
   }, [fetchInvitations]);
 
   const resendInvite = useCallback(async (invitation: UserInvitation): Promise<boolean> => {
-    // Cancel the old one first
-    await cancelInvite(invitation.id);
-
-    // Send a new one
+    // Reuse the existing invitation (same token) — the edge function will
+    // refresh expires_at if it has expired. We do NOT cancel the old one.
     return sendInvite({
       email: invitation.email,
       fullName: invitation.full_name,
       role: invitation.role,
+      invitationId: invitation.id,
     });
-  }, [cancelInvite, sendInvite]);
+  }, [sendInvite]);
 
   const pendingInvitations = invitations.filter(i => i.status === "pending");
 
