@@ -108,6 +108,7 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      <UserViewModeBootstrap>
       <PermissionsProvider>
         <ClinicFeaturesProvider>
         <Toaster />
