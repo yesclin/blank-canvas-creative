@@ -14,9 +14,15 @@ const inlineLink = (to: string, label: string) => (
   </Link>
 );
 
-const faqs: { q: string; a: ReactNode }[] = [
+// Each FAQ item has:
+// - q: question (string)
+// - aText: plain-text answer used for SEO JSON-LD (FAQPage schema)
+// - a: rich answer (ReactNode) shown to users, may contain internal links
+const faqs: { q: string; aText: string; a: ReactNode }[] = [
   {
     q: "Como funciona o teste grátis de 7 dias?",
+    aText:
+      "Ao criar sua conta, você libera automaticamente 7 dias de acesso ao plano Profissional, sem precisar informar cartão de crédito. Pode testar todos os recursos com seus dados reais. Dúvidas no caminho? A Central de Ajuda tem tutoriais rápidos.",
     a: (
       <>
         Ao criar sua conta, você libera automaticamente 7 dias de acesso ao
@@ -28,6 +34,8 @@ const faqs: { q: string; a: ReactNode }[] = [
   },
   {
     q: "O que acontece quando os 7 dias acabam?",
+    aText:
+      "Após o período de teste, sua conta entra em modo de bloqueio: você ainda acessa os dados em modo leitura, mas não consegue criar novos pacientes ou agendamentos até escolher um plano. Nada é perdido — basta assinar para continuar de onde parou.",
     a: (
       <>
         Após o período de teste, sua conta entra em modo de bloqueio: você
@@ -39,6 +47,8 @@ const faqs: { q: string; a: ReactNode }[] = [
   },
   {
     q: "Preciso assinar contrato ou fidelidade?",
+    aText:
+      "Não. O YesClin funciona em modelo de assinatura mensal ou anual sem fidelidade. Você pode cancelar quando quiser, direto pelo painel ou falando com o nosso time pela página de contato.",
     a: (
       <>
         Não. O YesClin funciona em modelo de assinatura mensal ou anual sem
@@ -50,6 +60,8 @@ const faqs: { q: string; a: ReactNode }[] = [
   },
   {
     q: "Como funciona o cancelamento?",
+    aText:
+      "Você pode cancelar a qualquer momento. No plano mensal, o acesso permanece ativo até o fim do período já pago. Seus dados ficam disponíveis para exportação caso precise — fale com a gente em /contato para solicitar.",
     a: (
       <>
         Você pode cancelar a qualquer momento. No plano mensal, o acesso
@@ -61,6 +73,8 @@ const faqs: { q: string; a: ReactNode }[] = [
   },
   {
     q: "Meus dados e os dos meus pacientes estão seguros?",
+    aText:
+      "Sim. Os dados são armazenados em infraestrutura criptografada, com isolamento por clínica, controle de acesso por papel (médico, recepção, admin) e auditoria de ações. O sistema segue as exigências da LGPD — veja detalhes na nossa Política de Privacidade.",
     a: (
       <>
         Sim. Os dados são armazenados em infraestrutura criptografada, com
@@ -73,6 +87,8 @@ const faqs: { q: string; a: ReactNode }[] = [
   },
   {
     q: "A teleconsulta funciona de verdade dentro do sistema?",
+    aText:
+      "Sim. A teleconsulta é integrada ao prontuário e à agenda: você gera o link da consulta, atende pelo navegador (sem instalar nada), registra a evolução e emite receita ou atestado durante o atendimento.",
     a: (
       <>
         Sim. A teleconsulta é integrada ao prontuário e à agenda: você gera o
@@ -83,6 +99,8 @@ const faqs: { q: string; a: ReactNode }[] = [
   },
   {
     q: "Vocês oferecem suporte? Como falo com o time?",
+    aText:
+      "Sim, o suporte humano está incluído em todos os planos. Atendemos por WhatsApp e e-mail, com tempo de resposta rápido em horário comercial. Veja todos os canais na página de contato ou consulte a Central de Ajuda antes. O plano Clínica conta com suporte prioritário.",
     a: (
       <>
         Sim, o suporte humano está incluído em todos os planos. Atendemos por
@@ -96,6 +114,8 @@ const faqs: { q: string; a: ReactNode }[] = [
   },
   {
     q: "Funciona para qualquer especialidade?",
+    aText:
+      "Sim. O YesClin atende medicina, odontologia, psicologia, estética, fisioterapia, nutrição, fonoaudiologia, terapia ocupacional e clínicas multidisciplinares, com modelos clínicos próprios para cada área.",
     a: (
       <>
         Sim. O YesClin atende medicina, odontologia, psicologia, estética,
@@ -106,9 +126,31 @@ const faqs: { q: string; a: ReactNode }[] = [
   },
 ];
 
+// Build FAQPage JSON-LD for Google Rich Results.
+// Reference: https://developers.google.com/search/docs/appearance/structured-data/faqpage
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqs.map((item) => ({
+    "@type": "Question",
+    name: item.q,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: item.aText,
+    },
+  })),
+};
+
 const FAQ = () => {
   return (
     <section id="faq" className="py-20 lg:py-28 bg-muted/30">
+      {/* SEO: FAQPage structured data for Google rich results */}
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+
       <div className="section-container max-w-3xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
