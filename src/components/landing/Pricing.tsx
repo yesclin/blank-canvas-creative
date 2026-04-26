@@ -86,7 +86,7 @@ export default function Pricing() {
             Escolha o plano ideal para sua clínica
           </h2>
           <p className="text-muted-foreground">
-            Comece com 7 dias grátis. Sem cartão de crédito. Cancele quando quiser.
+            <strong className="text-foreground">Teste grátis por 7 dias.</strong> Sem cartão de crédito. Cancele quando quiser.
           </p>
         </div>
 
@@ -163,7 +163,7 @@ export default function Pricing() {
                   variant={plan.highlight ? "default" : "outline"}
                   className="mb-5 w-full"
                 >
-                  <a href="/criar-conta">Começar teste grátis</a>
+                  <a href="/criar-conta">Começar teste grátis de 7 dias</a>
                 </Button>
 
                 <ul className="space-y-2 text-sm">

@@ -1,13 +1,13 @@
 import { motion } from "framer-motion";
-import { 
-  Calendar, 
-  FileText, 
-  Users, 
-  CreditCard, 
-  MessageSquare, 
-  BarChart3,
+import {
+  Calendar,
+  FileText,
+  Users,
+  Wallet,
+  Video,
+  MessageCircle,
   Shield,
-  Zap
+  Building2,
 } from "lucide-react";
 
 const Features = () => {
@@ -15,49 +15,49 @@ const Features = () => {
     {
       icon: Calendar,
       title: "Agenda Inteligente",
-      description: "Gerencie consultas, sala de espera e disponibilidade por profissional. Confirmações automáticas e lembretes.",
+      description: "Encaixes, sala de espera, status do atendimento e disponibilidade por profissional.",
       highlight: true,
     },
     {
       icon: FileText,
       title: "Prontuário Digital",
-      description: "Timeline completa do paciente com modelos por especialidade, anexos de imagens e alertas clínicos.",
+      description: "Timeline do paciente, modelos por especialidade, anexos e assinatura eletrônica avançada.",
       highlight: true,
     },
     {
       icon: Users,
       title: "Gestão de Pacientes",
-      description: "Cadastro completo, histórico de atendimentos, convênios vinculados e comunicação centralizada.",
+      description: "Cadastro completo, histórico de atendimentos, convênios e pré-cadastro público por link.",
       highlight: false,
     },
     {
-      icon: CreditCard,
-      title: "Controle Financeiro",
-      description: "Caixa diário, pacotes de tratamento, contas a receber e integração com convênios.",
+      icon: Wallet,
+      title: "Financeiro por Atendimento",
+      description: "Recebimentos por consulta, métodos de pagamento, caixa diário e contas a receber.",
       highlight: true,
     },
     {
-      icon: MessageSquare,
-      title: "CRM e Comunicação",
-      description: "Templates de mensagens, histórico de contatos e preparação para automações futuras.",
-      highlight: false,
+      icon: Video,
+      title: "Teleconsulta Integrada",
+      description: "Consultas online seguras com prontuário, prescrição eletrônica e validação de documentos.",
+      highlight: true,
     },
     {
-      icon: BarChart3,
-      title: "Relatórios",
-      description: "Acompanhe indicadores de atendimento, financeiro e produtividade da sua clínica.",
+      icon: MessageCircle,
+      title: "WhatsApp Conectado",
+      description: "Envio de mensagens, modelos prontos e central de relacionamento com o paciente.",
       highlight: false,
     },
     {
       icon: Shield,
       title: "Segurança e LGPD",
-      description: "Dados protegidos, isolamento por clínica, auditoria de ações e conformidade com LGPD.",
+      description: "Dados isolados por clínica, controle de acesso por papel e auditoria de ações.",
       highlight: false,
     },
     {
-      icon: Zap,
-      title: "Multi-Clínica",
-      description: "Gerencie múltiplas unidades com dados isolados e permissões específicas por usuário.",
+      icon: Building2,
+      title: "Multi-Profissional",
+      description: "Vários profissionais e especialidades em uma clínica, com permissões individuais.",
       highlight: false,
     },
   ];

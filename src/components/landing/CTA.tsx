@@ -5,9 +5,10 @@ import { ArrowRight, CheckCircle } from "lucide-react";
 
 const CTA = () => {
   const benefits = [
+    "7 dias grátis",
     "Sem cartão de crédito",
-    "Suporte incluso",
-    "Dados seguros",
+    "Suporte humano incluso",
+    "Dados seguros e LGPD",
   ];
 
   return (
@@ -29,11 +30,11 @@ const CTA = () => {
           className="text-center max-w-3xl mx-auto"
         >
           <h2 className="font-display text-3xl lg:text-5xl font-bold text-primary-foreground mb-6">
-            Comece a transformar sua clínica hoje
+            Comece hoje a organizar sua clínica de verdade
           </h2>
           <p className="text-lg lg:text-xl text-primary-foreground/80 mb-8">
-            Junte-se a centenas de profissionais que já simplificaram a gestão 
-            de suas clínicas com o Yesclin.
+            Crie sua conta grátis e teste o YesClin por 7 dias. Sem cartão de crédito, 
+            sem compromisso, com suporte humano desde o primeiro dia.
           </p>
 
           {/* Benefits */}
@@ -57,7 +58,7 @@ const CTA = () => {
               asChild
             >
               <Link to="/criar-conta">
-                Criar Conta Grátis
+                Começar teste grátis agora
                 <ArrowRight size={20} />
               </Link>
             </Button>
@@ -67,7 +68,7 @@ const CTA = () => {
               className="text-primary-foreground border-2 border-primary-foreground/30 hover:bg-primary-foreground/10 hover:text-primary-foreground"
               asChild
             >
-              <Link to="#features">Conhecer Recursos</Link>
+              <Link to="#sistema">Ver o sistema</Link>
             </Button>
           </div>
         </motion.div>
