@@ -4,17 +4,38 @@ import App from "./App.tsx";
 import "./index.css";
 import { ErrorBoundary } from "./components/app/ErrorBoundary";
 
-// NOTE: Analytics bootstrap is intentionally deferred to inside <App />
-// (useEffect) so that no third-party module touches React internals before
-// the React runtime is fully initialized. This prevents
-// "Cannot read properties of null (reading 'useRef')" type crashes caused
-// by side-effectful imports running before mount.
+declare global {
+  interface Window {
+    __ycLastEvent?: string;
+  }
+}
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <ErrorBoundary scope="App">
-      <App />
-    </ErrorBoundary>
-  </StrictMode>
-);
+if (typeof window !== "undefined") {
+  ["click", "keydown", "submit", "popstate"].forEach((eventName) => {
+    window.addEventListener(
+      eventName,
+      (event) => {
+        const target = event.target as HTMLElement | null;
+        window.__ycLastEvent = `${eventName}${target?.tagName ? `:${target.tagName.toLowerCase()}` : ""}`;
+      },
+      { capture: true, passive: true }
+    );
+  });
+}
 
+const rootElement = document.getElementById("root");
+
+if (!rootElement) {
+  console.error("[YesClin boot] Root element #root was not found", {
+    route: window.location.pathname,
+    lastEvent: window.__ycLastEvent ?? null,
+  });
+} else {
+  createRoot(rootElement).render(
+    <StrictMode>
+      <ErrorBoundary scope="App">
+        <App />
+      </ErrorBoundary>
+    </StrictMode>
+  );
+}
