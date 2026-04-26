@@ -12,6 +12,7 @@ import {
   Wallet,
   Settings,
   ShieldCheck,
+  ToggleRight,
 } from 'lucide-react';
 import {
   Sidebar,
