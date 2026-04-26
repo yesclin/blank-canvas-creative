@@ -34,6 +34,9 @@ export interface SendInviteData {
   professionalType?: string;
   registrationNumber?: string;
   specialtyIds?: string[];
+  // When set, the edge function reuses the existing invitation (same token)
+  // instead of creating a new one. Used by the "Reenviar convite" action.
+  invitationId?: string;
 }
 
 export function useUserInvitations(clinicId: string | null) {
