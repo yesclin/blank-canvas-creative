@@ -57,20 +57,59 @@ export function useUserInvitations(clinicId: string | null) {
         body: data,
       });
 
+      // Network / preflight / non-2xx: surface the real cause from the
+      // FunctionsHttpError context body instead of the generic
+      // "Failed to send a request to the Edge Function".
       if (error) {
-        throw new Error(error.message || "Erro ao enviar convite");
+        let detail = error.message;
+        const ctx = (error as any).context;
+        if (ctx && typeof ctx.json === "function") {
+          try {
+            const body = await ctx.json();
+            if (body?.error) detail = body.error;
+          } catch {
+            try {
+              const text = await ctx.text();
+              if (text) detail = text;
+            } catch { /* ignore */ }
+          }
+        }
+        console.error("[send-invite] erro:", error, "detalhe:", detail);
+        throw new Error(detail || "Erro ao enviar convite");
       }
 
       if (result?.error) {
+        console.error("[send-invite] erro de domínio:", result.error);
         throw new Error(result.error);
+      }
+
+      // Email failed but invitation was created — show copyable link.
+      if (result?.warning === "email_delivery_failed" && result?.accept_url) {
+        toast.warning("Convite criado, mas o email falhou", {
+          description: `Copie o link e envie manualmente: ${result.accept_url}`,
+          duration: 15000,
+          action: {
+            label: "Copiar link",
+            onClick: () => {
+              navigator.clipboard.writeText(result.accept_url).then(
+                () => toast.success("Link copiado"),
+                () => toast.error("Não foi possível copiar")
+              );
+            },
+          },
+        });
+        await fetchInvitations();
+        return true;
       }
 
       toast.success("Convite enviado com sucesso!");
       await fetchInvitations();
       return true;
     } catch (err: any) {
-      console.error("Error sending invite:", err);
-      toast.error(err.message || "Erro ao enviar convite");
+      console.error("[send-invite] erro:", err);
+      toast.error("Erro ao enviar convite", {
+        description: err?.message || "Tente novamente em instantes.",
+      });
       return false;
     } finally {
       setIsSending(false);
