@@ -40,6 +40,10 @@ export function useUserInvitations(clinicId: string | null) {
   const [invitations, setInvitations] = useState<UserInvitation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  // UI-only delivery metadata keyed by invitation id (resets on reload).
+  const [deliveryMeta, setDeliveryMeta] = useState<
+    Record<string, { delivery_status: InvitationDeliveryStatus; accept_url?: string }>
+  >({});
 
   const fetchInvitations = useCallback(async () => {
     if (!clinicId) return;
@@ -54,13 +58,32 @@ export function useUserInvitations(clinicId: string | null) {
 
       if (error) throw error;
 
-      setInvitations(data || []);
+      const now = Date.now();
+      const enriched = (data || []).map((inv) => {
+        const meta = deliveryMeta[inv.id];
+        // Default delivery status: derive from db status + expiry
+        let delivery: InvitationDeliveryStatus;
+        if (inv.status === "accepted") delivery = "accepted";
+        else if (inv.status === "cancelled") delivery = "cancelled";
+        else if (inv.status === "expired") delivery = "expired";
+        else if (inv.expires_at && new Date(inv.expires_at).getTime() < now) delivery = "expired";
+        else if (meta?.delivery_status) delivery = meta.delivery_status;
+        else delivery = "pending";
+
+        return {
+          ...inv,
+          delivery_status: delivery,
+          accept_url: meta?.accept_url,
+        } as UserInvitation;
+      });
+
+      setInvitations(enriched);
     } catch (err) {
       console.error("Error fetching invitations:", err);
     } finally {
       setIsLoading(false);
     }
-  }, [clinicId]);
+  }, [clinicId, deliveryMeta]);
 
   const sendInvite = useCallback(async (data: SendInviteData): Promise<boolean> => {
     // Guard: prevent concurrent submissions even if the caller forgets.
