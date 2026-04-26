@@ -81,10 +81,6 @@ export function UserProfileFooter() {
     toast.info("Redirecionando para seu perfil...");
   };
 
-  const handleImpersonate = () => {
-    toast.info("Funcionalidade de troca de usuário em desenvolvimento");
-  };
-
   const handleStopImpersonating = () => {
     setIsImpersonating(false);
     toast.success("Voltando para seu usuário original");
