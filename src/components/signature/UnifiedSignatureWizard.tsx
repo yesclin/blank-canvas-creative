@@ -59,6 +59,7 @@ import { cn } from "@/lib/utils";
 import {
   useUnifiedDocumentSigning,
   logSignatureEvent,
+  getMissingSignatureContextFieldDetails,
   type SignableDocumentContext,
   type SignDocumentResult,
   type GeolocationEvidence,
@@ -440,17 +441,16 @@ export function UnifiedSignatureWizard({
   if (!open) return null;
 
   // Identify missing required context fields so we can render an in-wizard
-  // diagnostic instead of silently failing or only showing a toast.
-  const missingFields: string[] = [];
-  if (!context?.document_id) missingFields.push("document_id");
-  if (!context?.clinic_id) missingFields.push("clinic_id");
-  if (!context?.patient_id) missingFields.push("patient_id");
-  const hasMissingContext = missingFields.length > 0;
+  // diagnostic instead of silently failing or only showing a toast. Uses the
+  // shared helper so labels + sources stay consistent with the toast message.
+  const missingDetails = getMissingSignatureContextFieldDetails(context);
+  const hasMissingContext = missingDetails.length > 0;
+  const missingFields = missingDetails.map((m) => m.field);
 
-  const fieldLabels: Record<string, string> = {
-    document_id: "Documento (document_id)",
-    clinic_id: "Clínica (clinic_id)",
-    patient_id: "Paciente (patient_id)",
+  const sourceBadge: Record<string, string> = {
+    documento: "documento",
+    atendimento: "atendimento",
+    metadados: "metadados",
   };
 
   return (
@@ -473,12 +473,25 @@ export function UnifiedSignatureWizard({
             <AlertDescription className="space-y-2">
               <p>
                 Não é possível iniciar a assinatura porque os seguintes campos
-                obrigatórios não foram fornecidos:
+                obrigatórios não foram fornecidos. Cada campo abaixo indica de
+                onde ele normalmente deveria vir:
               </p>
-              <ul className="list-disc pl-5 space-y-1">
-                {missingFields.map((f) => (
-                  <li key={f} className="font-medium">
-                    {fieldLabels[f] ?? f}
+              <ul className="space-y-2 mt-2">
+                {missingDetails.map((m) => (
+                  <li
+                    key={m.field}
+                    className="rounded-md border border-destructive/30 bg-destructive/5 p-2"
+                  >
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold">{m.label}</span>
+                      <code className="text-[11px] px-1.5 py-0.5 rounded bg-background/60 border">
+                        {m.field}
+                      </code>
+                      <Badge variant="outline" className="text-[10px] h-4 px-1.5">
+                        origem: {sourceBadge[m.source] ?? m.source}
+                      </Badge>
+                    </div>
+                    <p className="text-xs mt-1 opacity-90">{m.hint}</p>
                   </li>
                 ))}
               </ul>
