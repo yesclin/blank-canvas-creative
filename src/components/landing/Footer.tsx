@@ -11,14 +11,13 @@ const Footer = () => {
       { label: "Preços", href: "#pricing" },
     ],
     empresa: [
-      { label: "Sobre", href: "#" },
-      { label: "Blog", href: "#" },
-      { label: "Contato", href: "#" },
+      { label: "Central de Ajuda", href: "/ajuda" },
+      { label: "Contato", href: "/contato" },
     ],
     legal: [
-      { label: "Privacidade", href: "#" },
+      { label: "Privacidade", href: "/privacidade" },
       { label: "Termos de Uso", href: "#" },
-      { label: "LGPD", href: "#" },
+      { label: "LGPD", href: "/privacidade" },
     ],
   };
 

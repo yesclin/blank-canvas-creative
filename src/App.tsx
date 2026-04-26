@@ -21,6 +21,9 @@ import AceitarConvite from "./pages/AceitarConvite";
 import NotFound from "./pages/NotFound";
 import ValidarDocumento from "./pages/ValidarDocumento";
 import PreCadastro from "./pages/PreCadastro";
+import Ajuda from "./pages/Ajuda";
+import Privacidade from "./pages/Privacidade";
+import Contato from "./pages/Contato";
 
 // Teleconsulta - Páginas Públicas
 import PrecheckPage from "./pages/teleconsulta/PrecheckPage";
@@ -120,6 +123,9 @@ const App = () => (
           
           <Route path="/aceitar-convite" element={<AceitarConvite />} />
           <Route path="/pre-cadastro/:token" element={<PreCadastro />} />
+          <Route path="/ajuda" element={<Ajuda />} />
+          <Route path="/privacidade" element={<Privacidade />} />
+          <Route path="/contato" element={<Contato />} />
           
           {/* Teleconsulta - Páginas Públicas */}
           <Route path="/teleconsulta/:token/precheck" element={<PrecheckPage />} />

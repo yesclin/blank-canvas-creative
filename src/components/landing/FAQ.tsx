@@ -1,43 +1,108 @@
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import type { ReactNode } from "react";
 
-const faqs = [
+const inlineLink = (to: string, label: string) => (
+  <Link to={to} className="text-primary font-medium hover:underline">
+    {label}
+  </Link>
+);
+
+const faqs: { q: string; a: ReactNode }[] = [
   {
     q: "Como funciona o teste grátis de 7 dias?",
-    a: "Ao criar sua conta, você libera automaticamente 7 dias de acesso ao plano Profissional, sem precisar informar cartão de crédito. Pode testar todos os recursos com seus dados reais.",
+    a: (
+      <>
+        Ao criar sua conta, você libera automaticamente 7 dias de acesso ao
+        plano Profissional, sem precisar informar cartão de crédito. Pode
+        testar todos os recursos com seus dados reais. Dúvidas no caminho? A{" "}
+        {inlineLink("/ajuda", "Central de Ajuda")} tem tutoriais rápidos.
+      </>
+    ),
   },
   {
     q: "O que acontece quando os 7 dias acabam?",
-    a: "Após o período de teste, sua conta entra em modo de bloqueio: você ainda acessa os dados em modo leitura, mas não consegue criar novos pacientes ou agendamentos até escolher um plano. Nada é perdido — basta assinar para continuar de onde parou.",
+    a: (
+      <>
+        Após o período de teste, sua conta entra em modo de bloqueio: você
+        ainda acessa os dados em modo leitura, mas não consegue criar novos
+        pacientes ou agendamentos até escolher um plano. Nada é perdido —
+        basta assinar para continuar de onde parou.
+      </>
+    ),
   },
   {
     q: "Preciso assinar contrato ou fidelidade?",
-    a: "Não. O YesClin funciona em modelo de assinatura mensal ou anual sem fidelidade. Você pode cancelar quando quiser, direto pelo painel ou falando com nosso time.",
+    a: (
+      <>
+        Não. O YesClin funciona em modelo de assinatura mensal ou anual sem
+        fidelidade. Você pode cancelar quando quiser, direto pelo painel ou
+        falando com o nosso time pela página de{" "}
+        {inlineLink("/contato", "contato")}.
+      </>
+    ),
   },
   {
     q: "Como funciona o cancelamento?",
-    a: "Você pode cancelar a qualquer momento. No plano mensal, o acesso permanece ativo até o fim do período já pago. Seus dados ficam disponíveis para exportação caso precise.",
+    a: (
+      <>
+        Você pode cancelar a qualquer momento. No plano mensal, o acesso
+        permanece ativo até o fim do período já pago. Seus dados ficam
+        disponíveis para exportação caso precise — fale com a gente em{" "}
+        {inlineLink("/contato", "/contato")} para solicitar.
+      </>
+    ),
   },
   {
     q: "Meus dados e os dos meus pacientes estão seguros?",
-    a: "Sim. Os dados são armazenados em infraestrutura criptografada, com isolamento por clínica, controle de acesso por papel (médico, recepção, admin) e auditoria de ações. O sistema segue as exigências da LGPD.",
+    a: (
+      <>
+        Sim. Os dados são armazenados em infraestrutura criptografada, com
+        isolamento por clínica, controle de acesso por papel (médico, recepção,
+        admin) e auditoria de ações. O sistema segue as exigências da LGPD —
+        veja detalhes na nossa{" "}
+        {inlineLink("/privacidade", "Política de Privacidade")}.
+      </>
+    ),
   },
   {
     q: "A teleconsulta funciona de verdade dentro do sistema?",
-    a: "Sim. A teleconsulta é integrada ao prontuário e à agenda: você gera o link da consulta, atende pelo navegador (sem instalar nada), registra a evolução e emite receita ou atestado durante o atendimento.",
+    a: (
+      <>
+        Sim. A teleconsulta é integrada ao prontuário e à agenda: você gera o
+        link da consulta, atende pelo navegador (sem instalar nada), registra
+        a evolução e emite receita ou atestado durante o atendimento.
+      </>
+    ),
   },
   {
     q: "Vocês oferecem suporte? Como falo com o time?",
-    a: "Sim, o suporte humano está incluído em todos os planos. Atendemos por WhatsApp e e-mail, com tempo de resposta rápido em horário comercial. O plano Clínica conta com suporte prioritário.",
+    a: (
+      <>
+        Sim, o suporte humano está incluído em todos os planos. Atendemos por
+        WhatsApp e e-mail, com tempo de resposta rápido em horário comercial.
+        Veja todos os canais na página de{" "}
+        {inlineLink("/contato", "contato")} ou consulte a{" "}
+        {inlineLink("/ajuda", "Central de Ajuda")} antes. O plano Clínica
+        conta com suporte prioritário.
+      </>
+    ),
   },
   {
     q: "Funciona para qualquer especialidade?",
-    a: "Sim. O YesClin atende medicina, odontologia, psicologia, estética, fisioterapia, nutrição, fonoaudiologia, terapia ocupacional e clínicas multidisciplinares, com modelos clínicos próprios para cada área.",
+    a: (
+      <>
+        Sim. O YesClin atende medicina, odontologia, psicologia, estética,
+        fisioterapia, nutrição, fonoaudiologia, terapia ocupacional e clínicas
+        multidisciplinares, com modelos clínicos próprios para cada área.
+      </>
+    ),
   },
 ];
 
