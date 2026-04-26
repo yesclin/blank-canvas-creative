@@ -145,6 +145,7 @@ const App = () => (
             }
           >
             <Route index element={<ProtectedRoute module="dashboard"><Dashboard /></ProtectedRoute>} />
+            <Route path="assinatura" element={<Assinatura />} />
             <Route path="agenda" element={<ProtectedRoute module="agenda"><Agenda /></ProtectedRoute>} />
             <Route path="prontuario" element={<ProtectedRoute module="prontuario"><Prontuario /></ProtectedRoute>} />
             <Route path="prontuario/:patientId" element={<ProtectedRoute module="prontuario"><Prontuario /></ProtectedRoute>} />
