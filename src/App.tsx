@@ -86,6 +86,17 @@ import FollowupsPage from "./pages/app/comercial/FollowupsPage";
 import GoalsPage from "./pages/app/comercial/GoalsPage";
 import CommercialReportsPage from "./pages/app/comercial/CommercialReportsPage";
 
+// Super Admin
+import { SuperAdminLayout } from "./components/super-admin/SuperAdminLayout";
+import { ProtectedSuperAdminRoute } from "./components/super-admin/ProtectedSuperAdminRoute";
+import SuperAdminDashboard from "./pages/super-admin/SuperAdminDashboard";
+import SuperAdminClinics from "./pages/super-admin/SuperAdminClinics";
+import SuperAdminPlans from "./pages/super-admin/SuperAdminPlans";
+import SuperAdminSubscriptions from "./pages/super-admin/SuperAdminSubscriptions";
+import SuperAdminFeatureOverrides from "./pages/super-admin/SuperAdminFeatureOverrides";
+import SuperAdminSetup from "./pages/super-admin/SuperAdminSetup";
+import SuperAdminStub from "./pages/super-admin/SuperAdminStub";
+
 const queryClient = new QueryClient();
 
 const App = () => (
