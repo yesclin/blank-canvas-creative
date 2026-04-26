@@ -348,9 +348,8 @@ const handler = async (req: Request): Promise<Response> => {
 
       invitation = created;
     }
-    }
 
-    console.log("[send-invite] Invitation created:", invitation.id);
+    console.log("[send-invite] Invitation ready:", invitation.id, "(reused:", !!invitationId, ")");
 
     // Generate accept URL
     const baseUrl = req.headers.get("origin") || "https://yesclin.com";
