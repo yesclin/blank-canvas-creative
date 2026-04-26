@@ -2,6 +2,7 @@ import Header from "@/components/landing/Header";
 import Hero from "@/components/landing/Hero";
 import Features from "@/components/landing/Features";
 import Specialties from "@/components/landing/Specialties";
+import Pricing from "@/components/landing/Pricing";
 import CTA from "@/components/landing/CTA";
 import Footer from "@/components/landing/Footer";
 import { useEffect } from "react";
@@ -41,6 +42,7 @@ const Index = () => {
         <Hero />
         <Features />
         <Specialties />
+        <Pricing />
         <CTA />
       </main>
       <Footer />
