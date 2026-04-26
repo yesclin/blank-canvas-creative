@@ -7,6 +7,7 @@ import Specialties from "@/components/landing/Specialties";
 import Testimonials from "@/components/landing/Testimonials";
 import Pricing from "@/components/landing/Pricing";
 import FAQ from "@/components/landing/FAQ";
+import FAQCta from "@/components/landing/FAQCta";
 import CTA from "@/components/landing/CTA";
 import Footer from "@/components/landing/Footer";
 import { useEffect } from "react";
@@ -51,6 +52,7 @@ const Index = () => {
         <Testimonials />
         <Pricing />
         <FAQ />
+        <FAQCta />
         <CTA />
       </main>
       <Footer />
