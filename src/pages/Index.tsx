@@ -6,6 +6,7 @@ import WhyChoose from "@/components/landing/WhyChoose";
 import Specialties from "@/components/landing/Specialties";
 import Testimonials from "@/components/landing/Testimonials";
 import Pricing from "@/components/landing/Pricing";
+import FAQ from "@/components/landing/FAQ";
 import CTA from "@/components/landing/CTA";
 import Footer from "@/components/landing/Footer";
 import { useEffect } from "react";
