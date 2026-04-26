@@ -25,6 +25,7 @@ export function ProtectedFeatureRoute({
   redirectTo,
 }: ProtectedFeatureRouteProps) {
   const { hasFeature, loading, plan_name } = useClinicFeatures();
+  void plan_name;
   const location = useLocation();
 
   if (loading) {
