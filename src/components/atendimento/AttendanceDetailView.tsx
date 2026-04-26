@@ -72,7 +72,10 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
 
   const snapshotSource = detail.consolidated_document?.snapshot_json || null;
   const docId = detail.consolidated_document?.id || null;
-  const clinicId = (snapshotSource as any)?.clinic?.id || "";
+  const clinicId =
+    (snapshotSource as any)?.clinic?.id ||
+    (detail.consolidated_document as any)?.clinic_id ||
+    "";
   const isDocSigned = !!detail.consolidated_document?.signed_at;
 
   // Build integrity payload from the persisted signed document so the PDF
