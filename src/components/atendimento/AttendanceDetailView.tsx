@@ -134,7 +134,24 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
       }
     } finally { setPdfLoading(false); }
   };
-  const handleSign = () => setSignDialogOpen(true);
+  // Centraliza pré-condições para assinar: documento gerado, com clinic_id resolvido
+  // e ainda não assinado. Sem isso o wizard recusaria com "Contexto incompleto".
+  const canSign = !!docId && !!clinicId && !isDocSigned;
+  const handleSign = () => {
+    if (!docId) {
+      toast.error("Documento consolidado indisponível para assinatura.");
+      return;
+    }
+    if (!clinicId) {
+      toast.error("Clínica do documento não identificada. Recarregue a página ou regenere o documento.");
+      return;
+    }
+    if (isDocSigned) {
+      toast.info("Este documento já foi assinado.");
+      return;
+    }
+    setSignDialogOpen(true);
+  };
   const handleCompare = () => toast.info("Comparação de atendimentos em desenvolvimento.");
   const handleHistory = () => setHistoryPanelOpen(true);
 
@@ -145,6 +162,10 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
     if (initialAction === "sign") {
       if (!docId) {
         toast.error("Documento consolidado indisponível para assinatura.");
+        return;
+      }
+      if (!clinicId) {
+        toast.error("Clínica do documento não identificada. Recarregue a página ou regenere o documento.");
         return;
       }
       if (isDocSigned) {
@@ -171,7 +192,7 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
       handlePDF();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialAction, docId, isDocSigned, snapshotSource]);
+  }, [initialAction, docId, clinicId, isDocSigned, snapshotSource]);
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6 print:p-0 print:space-y-4">
@@ -725,7 +746,9 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
             mode={noteDialogMode}
           />
           <UnifiedSignatureWizard
-            open={signDialogOpen}
+            // Salvaguarda extra: nunca abre o wizard sem clinic_id resolvido,
+            // mesmo que algum caller force `signDialogOpen=true`.
+            open={signDialogOpen && !!clinicId}
             onOpenChange={setSignDialogOpen}
             context={
               {
