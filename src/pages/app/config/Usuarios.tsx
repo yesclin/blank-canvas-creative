@@ -35,8 +35,19 @@ import { toast } from "sonner";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format, differenceInCalendarDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+type DeliveryStatus = "pending" | "sent" | "email_failed" | "accepted" | "expired" | "cancelled";
+
+const deliveryStatusMeta: Record<DeliveryStatus, { label: string; className: string; Icon: typeof Mail }> = {
+  pending:      { label: "Pendente",       className: "bg-amber-500/10 text-amber-600 border-amber-500/20",   Icon: Clock },
+  sent:         { label: "Enviado",        className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20", Icon: MailCheck },
+  email_failed: { label: "Falha no e-mail", className: "bg-destructive/10 text-destructive border-destructive/20", Icon: MailX },
+  accepted:     { label: "Aceito",         className: "bg-primary/10 text-primary border-primary/20",         Icon: CheckCircle2 },
+  expired:      { label: "Expirado",       className: "bg-muted text-muted-foreground border-border",         Icon: CalendarClock },
+  cancelled:    { label: "Cancelado",      className: "bg-muted text-muted-foreground border-border",         Icon: XCircle },
+};
 import {
   UserTypeSelector, UserType, ProfessionalFields,
   GranularPermissions, getDefaultPermissions, ModuleAction,
