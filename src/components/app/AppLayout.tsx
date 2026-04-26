@@ -109,16 +109,6 @@ export function AppLayout() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <button className="flex items-center gap-1.5 text-sm font-semibold text-foreground hover:text-primary transition-colors">
-                  {clinic.logo_url ? (
-                    <img src={clinic.logo_url} alt={clinic.name} className="h-6 w-6 rounded object-cover" />
-                  ) : (
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                  )}
-                  <span className="truncate max-w-[200px]">{clinic.name}</span>
-                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                </button>
-              ) : (
                 <span className="text-sm font-semibold text-foreground">Yesclin</span>
               )}
             </div>
