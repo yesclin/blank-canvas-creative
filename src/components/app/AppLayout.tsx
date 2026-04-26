@@ -1,11 +1,19 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 import { GuidedTour } from "./GuidedTour";
 import { useClinicData } from "@/hooks/useClinicData";
-import { Building2, ChevronDown } from "lucide-react";
+import { Building2, ChevronDown, Settings, Users, CreditCard, Image as ImageIcon, ExternalLink } from "lucide-react";
 import logoFull from "@/assets/logo-full.png";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ActiveSpecialtiesBadge } from "./ActiveSpecialtiesBadge";
 import { GlobalSpecialtyProvider } from "@/hooks/useGlobalSpecialty";
 import { GlobalActiveAppointmentProvider } from "@/contexts/GlobalActiveAppointmentContext";
