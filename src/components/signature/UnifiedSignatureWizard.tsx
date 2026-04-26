@@ -59,6 +59,7 @@ import { cn } from "@/lib/utils";
 import {
   useUnifiedDocumentSigning,
   logSignatureEvent,
+  getMissingSignatureContextFieldDetails,
   type SignableDocumentContext,
   type SignDocumentResult,
   type GeolocationEvidence,
