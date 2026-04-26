@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -104,7 +105,27 @@ import Assinatura from "./pages/app/Assinatura";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  // Defer analytics bootstrap until React is mounted. Importing posthog-js
+  // dynamically here guarantees it cannot run before the React runtime exists,
+  // and any failure inside the module is caught silently — it must never
+  // break the app shell.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { bootstrapAnalytics } = await import("@/lib/analytics");
+        if (!cancelled) bootstrapAnalytics();
+      } catch {
+        // analytics is optional — never crash the app because of it
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <PermissionsProvider>
@@ -244,6 +265,7 @@ const App = () => (
       </PermissionsProvider>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;

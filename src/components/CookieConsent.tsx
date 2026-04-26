@@ -3,34 +3,52 @@ import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Cookie, X } from "lucide-react";
-import { getConsent, setConsent } from "@/lib/analytics";
 
 /**
  * LGPD cookie/analytics consent banner.
  *
  * Shown once until the user grants or denies analytics tracking.
  * Persists the decision via the analytics module (localStorage).
+ *
+ * The analytics module is imported lazily so that posthog-js never gets
+ * pulled into the initial render path.
  */
 const CookieConsent = () => {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (getConsent() === null) {
-      // Small delay so it doesn't compete with hero animations.
-      const t = window.setTimeout(() => setVisible(true), 600);
-      return () => window.clearTimeout(t);
-    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const { getConsent } = await import("@/lib/analytics");
+        if (cancelled) return;
+        if (getConsent() === null) {
+          const t = window.setTimeout(() => {
+            if (!cancelled) setVisible(true);
+          }, 600);
+          return () => window.clearTimeout(t);
+        }
+      } catch {
+        // never block the UI because of analytics
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const handleAccept = () => {
-    setConsent("granted");
+  const apply = async (value: "granted" | "denied") => {
     setVisible(false);
+    try {
+      const { setConsent } = await import("@/lib/analytics");
+      setConsent(value);
+    } catch {
+      // ignore – the UI already reflects the user's choice
+    }
   };
 
-  const handleReject = () => {
-    setConsent("denied");
-    setVisible(false);
-  };
+  const handleAccept = () => void apply("granted");
+  const handleReject = () => void apply("denied");
 
   return (
     <AnimatePresence>
