@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from "react";
+import { useState, useEffect, useCallback, useMemo, createContext, useContext, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentViewRole } from "@/contexts/UserViewModeContext";
 
 // Types
 export type AppModule = 
@@ -61,6 +62,7 @@ const PermissionsContext = createContext<PermissionsContextType | null>(null);
 
 // Provider Component
 export function PermissionsProvider({ children }: { children: ReactNode }) {
+  const { viewedRole, isImpersonating } = useCurrentViewRole();
   const [state, setState] = useState<PermissionsState>({
     permissions: [],
     role: null,
@@ -152,69 +154,89 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [fetchPermissions]);
 
-  // Check if user can perform action on module
-  // OWNER ALWAYS BYPASSES ALL PERMISSION CHECKS
-  const can = useCallback((module: AppModule, action: AppAction = "view"): boolean => {
-    // If still loading, deny access (avoid optimistic UI that could reveal privileged UI)
-    if (state.isLoading) return false;
-    
-    // OWNER has TOTAL BYPASS - ignores all permission checks
-    if (state.isOwner) return true;
-    
-    // Admin has full access (but can be restricted in future if needed)
-    if (state.isAdmin) return true;
-    
-    // If no permissions loaded (no user or no role), deny by default
-    if (state.permissions.length === 0) return false;
-    
-    const perm = state.permissions.find(p => p.module === module);
-    if (!perm) return false;
-    
-    // Check if blocked
-    if (perm.restrictions?.blocked) return false;
-    
-    return perm.actions.includes(action);
-  }, [state.permissions, state.isAdmin, state.isOwner, state.isLoading]);
+  // ===== Effective state with view-mode override (impersonation) =====
+  // realRole comes from DB (state.role); when an owner is "viewing as" another
+  // role, we recompute the effective role/flags. We DO NOT bypass DB security —
+  // this is purely a frontend simulation for UX validation.
+  const effective = useMemo(() => {
+    const realRole = state.role;
+    const realIsOwner = realRole === "owner";
+    // Only owners may impersonate; ignore any view override otherwise.
+    const activeRole = realIsOwner && isImpersonating && viewedRole ? viewedRole : realRole;
+    const isOwner = activeRole === "owner";
+    const isAdmin = activeRole === "owner" || activeRole === "admin";
+    return { activeRole, isOwner, isAdmin, realIsOwner };
+  }, [state.role, isImpersonating, viewedRole]);
 
-  // Check if user can perform any of the given actions
+  // Load template permissions for the simulated role when impersonating.
+  // (When not impersonating, we use whatever the DB returned for the real user.)
+  const [simulatedPermissions, setSimulatedPermissions] = useState<ModulePermission[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (!isImpersonating || !effective.realIsOwner || !viewedRole || viewedRole === "owner") {
+      setSimulatedPermissions(null);
+      return;
+    }
+    (async () => {
+      const { data: templates } = await supabase
+        .from("permission_templates")
+        .select("module, actions, restrictions")
+        .eq("role", viewedRole);
+      if (cancelled) return;
+      const perms = (templates || []).map((t: any) => ({
+        module: t.module as AppModule,
+        actions: (t.actions || []) as AppAction[],
+        restrictions: (t.restrictions || {}) as Record<string, boolean>,
+      }));
+      setSimulatedPermissions(perms);
+    })();
+    return () => { cancelled = true; };
+  }, [isImpersonating, effective.realIsOwner, viewedRole]);
+
+  const effectivePermissions = simulatedPermissions ?? state.permissions;
+
+  // Check if user can perform action on module
+  const can = useCallback((module: AppModule, action: AppAction = "view"): boolean => {
+    if (state.isLoading) return false;
+    if (effective.isOwner) return true;
+    if (effective.isAdmin) return true;
+    if (effectivePermissions.length === 0) return false;
+    const perm = effectivePermissions.find(p => p.module === module);
+    if (!perm) return false;
+    if (perm.restrictions?.blocked) return false;
+    return perm.actions.includes(action);
+  }, [effectivePermissions, effective.isAdmin, effective.isOwner, state.isLoading]);
+
   const canAny = useCallback((module: AppModule, actions: AppAction[]): boolean => {
     return actions.some(action => can(module, action));
   }, [can]);
 
-  // Check if user has a specific restriction
   const hasRestriction = useCallback((module: AppModule, restriction: string): boolean => {
-    // Owner bypasses all restrictions
-    if (state.isOwner) return false;
-    const perm = state.permissions.find(p => p.module === module);
+    if (effective.isOwner) return false;
+    const perm = effectivePermissions.find(p => p.module === module);
     return perm?.restrictions?.[restriction] ?? false;
-  }, [state.permissions, state.isOwner]);
+  }, [effectivePermissions, effective.isOwner]);
 
-  // Get full permissions for a module
   const getModulePermissions = useCallback((module: AppModule): ModulePermission | null => {
-    return state.permissions.find(p => p.module === module) || null;
-  }, [state.permissions]);
+    return effectivePermissions.find(p => p.module === module) || null;
+  }, [effectivePermissions]);
 
-  // Only OWNER can manage users and permissions
-  const canManageUsers = state.isOwner;
-  
-  // Owner/Admin can manage clinic settings (procedures, templates, rules, specialties)
-  const canManageClinic = state.isOwner || state.isAdmin;
-  const canManageSpecialties = state.isOwner || state.isAdmin;
-  
-  // Check if user is a receptionist
-  const isRecepcionista = state.role === 'recepcionista';
-  
-  // Owner/Admin/Profissional can access clinical content - Receptionist CANNOT
-  const canAccessClinicalContent = !isRecepcionista && (state.isOwner || state.isAdmin || state.role === 'profissional');
-  
-  // Owner/Admin can access system configurations - Receptionist CANNOT
-  const canAccessConfigurations = state.isOwner || state.isAdmin;
-  
-  // Owner/Admin/Profissional can perform clinical care - Receptionist CANNOT
-  const canPerformClinicalCare = state.isOwner || state.isAdmin || state.role === 'profissional';
+  // Derived flags use the EFFECTIVE (possibly simulated) role
+  const canManageUsers = effective.isOwner;
+  const canManageClinic = effective.isOwner || effective.isAdmin;
+  const canManageSpecialties = effective.isOwner || effective.isAdmin;
+  const isRecepcionista = effective.activeRole === 'recepcionista';
+  const canAccessClinicalContent = !isRecepcionista && (effective.isOwner || effective.isAdmin || effective.activeRole === 'profissional');
+  const canAccessConfigurations = effective.isOwner || effective.isAdmin;
+  const canPerformClinicalCare = effective.isOwner || effective.isAdmin || effective.activeRole === 'profissional';
 
   const value: PermissionsContextType = {
     ...state,
+    // Override with effective values so consumers see the simulated role
+    role: effective.activeRole,
+    isOwner: effective.isOwner,
+    isAdmin: effective.isAdmin,
+    permissions: effectivePermissions,
     can,
     canAny,
     hasRestriction,

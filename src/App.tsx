@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { PermissionsProvider } from "@/hooks/usePermissions";
+import { UserViewModeBootstrap } from "@/contexts/UserViewModeBootstrap";
 import { ClinicFeaturesProvider } from "@/hooks/useClinicFeatures";
 import { RequireAuth } from "@/components/app/RequireAuth";
 import { ProtectedRoute } from "@/components/app/ProtectedRoute";
@@ -107,6 +108,7 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      <UserViewModeBootstrap>
       <PermissionsProvider>
         <ClinicFeaturesProvider>
         <Toaster />
@@ -242,6 +244,7 @@ const App = () => (
       </BrowserRouter>
         </ClinicFeaturesProvider>
       </PermissionsProvider>
+      </UserViewModeBootstrap>
     </TooltipProvider>
   </QueryClientProvider>
 );
