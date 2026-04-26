@@ -308,16 +308,20 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (!emailResult.success) {
       console.error("[send-invite] Failed to send email:", emailResult.error);
-      
-      // Mark invitation as failed but don't delete it
-      await supabaseAdmin
-        .from("user_invitations")
-        .update({ status: "cancelled" })
-        .eq("id", invitation.id);
-      
+
+      // Per spec: keep the invitation as `pending` so the admin can copy the
+      // link manually and share it (the token is still valid for 7 days).
       return new Response(
-        JSON.stringify({ error: "Erro ao enviar email. Tente novamente." }),
-        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        JSON.stringify({
+          success: true,
+          warning: "email_delivery_failed",
+          message:
+            "Convite criado, mas o envio do email falhou. Copie o link abaixo e compartilhe manualmente.",
+          invitation_id: invitation.id,
+          accept_url: acceptUrl,
+          email_error: emailResult.error || "Falha desconhecida no provedor de email",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
