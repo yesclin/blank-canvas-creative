@@ -37,6 +37,7 @@ function getModuleScope(pathname: string): string {
 
 export function AppLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { clinic, isLoading } = useClinicData();
 
   return (
@@ -55,6 +56,59 @@ export function AppLayout() {
               {isLoading ? (
                 <div className="h-4 w-32 bg-muted animate-pulse rounded" />
               ) : clinic ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex items-center gap-1.5 text-sm font-semibold text-foreground hover:text-primary transition-colors rounded-md px-1.5 py-1 hover:bg-accent/50 focus:outline-none focus:ring-2 focus:ring-ring">
+                      {clinic.logo_url ? (
+                        <img src={clinic.logo_url} alt={clinic.name} className="h-6 w-6 rounded object-cover" />
+                      ) : (
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                      )}
+                      <span className="truncate max-w-[200px]">{clinic.name}</span>
+                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-64">
+                    <DropdownMenuLabel className="flex items-center gap-2">
+                      {clinic.logo_url ? (
+                        <img src={clinic.logo_url} alt={clinic.name} className="h-8 w-8 rounded object-cover" />
+                      ) : (
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                      )}
+                      <div className="flex flex-col min-w-0">
+                        <span className="truncate font-semibold">{clinic.name}</span>
+                        <span className="text-xs text-muted-foreground font-normal">Clínica ativa</span>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate("/app/config/clinica")}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      Dados da clínica
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/app/config/clinica?tab=identidade")}>
+                      <ImageIcon className="mr-2 h-4 w-4" />
+                      Identidade visual
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/app/config/equipe")}>
+                      <Users className="mr-2 h-4 w-4" />
+                      Equipe
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/app/config/plano")}>
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Plano e assinatura
+                    </DropdownMenuItem>
+                    {clinic.slug && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => window.open(`/agendar/${clinic.slug}`, "_blank")}>
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          Página pública de agendamento
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
                 <button className="flex items-center gap-1.5 text-sm font-semibold text-foreground hover:text-primary transition-colors">
                   {clinic.logo_url ? (
                     <img src={clinic.logo_url} alt={clinic.name} className="h-6 w-6 rounded object-cover" />
