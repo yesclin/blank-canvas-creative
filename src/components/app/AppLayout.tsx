@@ -97,15 +97,6 @@ export function AppLayout() {
                       <CreditCard className="mr-2 h-4 w-4" />
                       Plano e assinatura
                     </DropdownMenuItem>
-                    {clinic.slug && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => window.open(`/agendar/${clinic.slug}`, "_blank")}>
-                          <ExternalLink className="mr-2 h-4 w-4" />
-                          Página pública de agendamento
-                        </DropdownMenuItem>
-                      </>
-                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
