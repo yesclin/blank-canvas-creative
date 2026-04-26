@@ -96,6 +96,7 @@ import SuperAdminSubscriptions from "./pages/super-admin/SuperAdminSubscriptions
 import SuperAdminFeatureOverrides from "./pages/super-admin/SuperAdminFeatureOverrides";
 import SuperAdminSetup from "./pages/super-admin/SuperAdminSetup";
 import SuperAdminStub from "./pages/super-admin/SuperAdminStub";
+import Assinatura from "./pages/app/Assinatura";
 
 const queryClient = new QueryClient();
 
