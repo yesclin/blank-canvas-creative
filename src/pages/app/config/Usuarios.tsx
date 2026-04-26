@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   UserCog, Plus, Search, Edit, RotateCcw, ToggleLeft, ToggleRight,
   Shield, AlertCircle, Crown, Loader2, Users, CheckCircle2, XCircle,
-  Mail, Clock, Send, RefreshCw, X, History, Save
+  Mail, Clock, Send, RefreshCw, X, History, Save, Copy, MailX, MailCheck, CalendarClock
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -35,8 +35,19 @@ import { toast } from "sonner";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format, differenceInCalendarDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+type DeliveryStatus = "pending" | "sent" | "email_failed" | "accepted" | "expired" | "cancelled";
+
+const deliveryStatusMeta: Record<DeliveryStatus, { label: string; className: string; Icon: typeof Mail }> = {
+  pending:      { label: "Pendente",       className: "bg-amber-500/10 text-amber-600 border-amber-500/20",   Icon: Clock },
+  sent:         { label: "Enviado",        className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20", Icon: MailCheck },
+  email_failed: { label: "Falha no e-mail", className: "bg-destructive/10 text-destructive border-destructive/20", Icon: MailX },
+  accepted:     { label: "Aceito",         className: "bg-primary/10 text-primary border-primary/20",         Icon: CheckCircle2 },
+  expired:      { label: "Expirado",       className: "bg-muted text-muted-foreground border-border",         Icon: CalendarClock },
+  cancelled:    { label: "Cancelado",      className: "bg-muted text-muted-foreground border-border",         Icon: XCircle },
+};
 import {
   UserTypeSelector, UserType, ProfessionalFields,
   GranularPermissions, getDefaultPermissions, ModuleAction,
@@ -515,62 +526,125 @@ export default function ConfigUsuarios() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {pendingInvitations.map((invitation) => (
-                    <div
-                      key={invitation.id}
-                      className="flex items-center justify-between p-3 rounded-lg border bg-muted/30"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="bg-amber-500/10 p-2 rounded-full">
-                          <Mail className="h-4 w-4 text-amber-600" />
+                  {pendingInvitations.map((invitation) => {
+                    const delivery = (invitation.delivery_status ?? "pending") as DeliveryStatus;
+                    const meta = deliveryStatusMeta[delivery];
+                    const StatusIcon = meta.Icon;
+                    const expiresDate = invitation.expires_at ? new Date(invitation.expires_at) : null;
+                    const daysToExpire = expiresDate
+                      ? differenceInCalendarDays(expiresDate, new Date())
+                      : null;
+                    const isExpired = daysToExpire !== null && daysToExpire < 0;
+                    const isExpiringSoon = daysToExpire !== null && daysToExpire >= 0 && daysToExpire <= 2;
+
+                    return (
+                      <div
+                        key={invitation.id}
+                        className="flex items-center justify-between p-3 rounded-lg border bg-muted/30 gap-3 flex-wrap"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="bg-amber-500/10 p-2 rounded-full shrink-0">
+                            <Mail className="h-4 w-4 text-amber-600" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm truncate">{invitation.full_name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{invitation.email}</p>
+                          </div>
+                          <Badge variant="outline" className={roleColors[invitation.role]}>
+                            {roleLabels[invitation.role]}
+                          </Badge>
+                          <Badge variant="outline" className={`${meta.className} gap-1`}>
+                            <StatusIcon className="h-3 w-3" />
+                            {meta.label}
+                          </Badge>
                         </div>
-                        <div>
-                          <p className="font-medium text-sm">{invitation.full_name}</p>
-                          <p className="text-xs text-muted-foreground">{invitation.email}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className="flex flex-col items-end text-xs text-muted-foreground">
+                            <span>
+                              Enviado {formatDistanceToNow(new Date(invitation.created_at), {
+                                addSuffix: true,
+                                locale: ptBR,
+                              })}
+                            </span>
+                            {expiresDate && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span
+                                      className={
+                                        isExpired
+                                          ? "text-destructive font-medium"
+                                          : isExpiringSoon
+                                          ? "text-amber-600 font-medium"
+                                          : ""
+                                      }
+                                    >
+                                      {isExpired
+                                        ? "Expirado"
+                                        : `Expira em ${formatDistanceToNow(expiresDate, { locale: ptBR })}`}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {format(expiresDate, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </div>
+                          {delivery === "email_failed" && invitation.accept_url && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(invitation.accept_url!).then(
+                                        () => toast.success("Link copiado"),
+                                        () => toast.error("Não foi possível copiar")
+                                      );
+                                    }}
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Copiar link de convite</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => resendInvite(invitation)}
+                                  disabled={isSending}
+                                >
+                                  <RefreshCw className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Reenviar convite</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => cancelInvite(invitation.id)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Cancelar convite</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
-                        <Badge variant="outline" className={roleColors[invitation.role]}>
-                          {roleLabels[invitation.role]}
-                        </Badge>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">
-                          Enviado {formatDistanceToNow(new Date(invitation.created_at), { 
-                            addSuffix: true, 
-                            locale: ptBR 
-                          })}
-                        </span>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => resendInvite(invitation)}
-                                disabled={isSending}
-                              >
-                                <RefreshCw className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Reenviar convite</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => cancelInvite(invitation.id)}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Cancelar convite</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
