@@ -195,6 +195,37 @@ const App = () => (
             <Route path="*" element={<Navigate to="/app" replace />} />
           </Route>
           
+          {/* Super Admin (plataforma) */}
+          <Route
+            path="/super-admin"
+            element={
+              <ProtectedSuperAdminRoute>
+                <SuperAdminLayout />
+              </ProtectedSuperAdminRoute>
+            }
+          >
+            <Route index element={<SuperAdminDashboard />} />
+            <Route path="clinicas" element={<SuperAdminClinics />} />
+            <Route path="planos" element={<SuperAdminPlans />} />
+            <Route path="assinaturas" element={<SuperAdminSubscriptions />} />
+            <Route path="recursos" element={<SuperAdminFeatureOverrides />} />
+            <Route path="usuarios" element={<SuperAdminStub />} />
+            <Route path="ocorrencias" element={<SuperAdminStub />} />
+            <Route path="logs" element={<SuperAdminStub />} />
+            <Route path="integracoes" element={<SuperAdminStub />} />
+            <Route path="uso" element={<SuperAdminStub />} />
+            <Route path="financeiro" element={<SuperAdminStub />} />
+            <Route path="configuracoes" element={<SuperAdminStub />} />
+          </Route>
+          <Route
+            path="/super-admin/setup"
+            element={
+              <ProtectedSuperAdminRoute>
+                <SuperAdminSetup />
+              </ProtectedSuperAdminRoute>
+            }
+          />
+
           {/* Catch-all global: NotFound decide entre /app e /login conforme auth */}
           <Route path="*" element={<NotFound />} />
         </Routes>
