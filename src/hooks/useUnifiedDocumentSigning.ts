@@ -78,29 +78,81 @@ export interface SignDocumentResult {
 }
 
 /**
+ * Metadata describing a required signature-context field, including where it
+ * is expected to come from in the application data flow. Used to produce
+ * actionable error messages when the context is incomplete.
+ */
+export type SignatureContextFieldKey = "document_id" | "clinic_id" | "patient_id";
+
+export interface SignatureContextFieldInfo {
+  field: SignatureContextFieldKey;
+  /** Human-readable label (UI). */
+  label: string;
+  /** High-level source bucket the value normally comes from. */
+  source: "documento" | "atendimento" | "metadados";
+  /** Short hint pointing the developer/user to the typical origin. */
+  hint: string;
+}
+
+const SIGNATURE_CONTEXT_FIELD_INFO: Record<SignatureContextFieldKey, SignatureContextFieldInfo> = {
+  document_id: {
+    field: "document_id",
+    label: "Documento",
+    source: "documento",
+    hint: "vem do documento consolidado / registro clínico (ex.: clinical_attendance_documents.id). Gere ou recarregue o documento.",
+  },
+  patient_id: {
+    field: "patient_id",
+    label: "Paciente",
+    source: "atendimento",
+    hint: "vem do atendimento atual (appointments.patient_id) ou do snapshot do documento. Verifique se o atendimento foi carregado.",
+  },
+  clinic_id: {
+    field: "clinic_id",
+    label: "Clínica",
+    source: "metadados",
+    hint: "vem dos metadados de sessão da clínica ativa (useClinicData). Recarregue a página para reidratar o contexto.",
+  },
+};
+
+/**
+ * Returns the metadata for a single required signature-context field.
+ */
+export function getSignatureContextFieldInfo(
+  field: SignatureContextFieldKey,
+): SignatureContextFieldInfo {
+  return SIGNATURE_CONTEXT_FIELD_INFO[field];
+}
+
+/**
  * Inspects a SignableDocumentContext (which may be partial / null) and returns
  * the list of required fields that are missing. An empty array means the
  * context is ready to be used by the signing wizard.
  */
 export function getMissingSignatureContextFields(
   context: Partial<SignableDocumentContext> | null | undefined,
-): Array<"document_id" | "clinic_id" | "patient_id"> {
-  const missing: Array<"document_id" | "clinic_id" | "patient_id"> = [];
+): SignatureContextFieldKey[] {
+  const missing: SignatureContextFieldKey[] = [];
   if (!context?.document_id) missing.push("document_id");
   if (!context?.clinic_id) missing.push("clinic_id");
   if (!context?.patient_id) missing.push("patient_id");
   return missing;
 }
 
-const FIELD_LABELS: Record<string, string> = {
-  document_id: "Documento",
-  clinic_id: "Clínica",
-  patient_id: "Paciente",
-};
+/**
+ * Same as getMissingSignatureContextFields, but returns the full metadata for
+ * each missing field (label + source + hint).
+ */
+export function getMissingSignatureContextFieldDetails(
+  context: Partial<SignableDocumentContext> | null | undefined,
+): SignatureContextFieldInfo[] {
+  return getMissingSignatureContextFields(context).map(getSignatureContextFieldInfo);
+}
 
 /**
  * Validates the signature context and, when something is missing, surfaces a
- * toast listing the missing fields. Returns `true` when ready to sign.
+ * toast listing the missing fields and where each one is expected to come
+ * from. Returns `true` when ready to sign.
  *
  * Use this at call sites BEFORE opening the wizard, to prevent showing the
  * heavy modal when we already know the data is incomplete.
@@ -108,11 +160,14 @@ const FIELD_LABELS: Record<string, string> = {
 export function assertSignatureContextReady(
   context: Partial<SignableDocumentContext> | null | undefined,
 ): boolean {
-  const missing = getMissingSignatureContextFields(context);
+  const missing = getMissingSignatureContextFieldDetails(context);
   if (missing.length === 0) return true;
-  const labels = missing.map((f) => FIELD_LABELS[f] ?? f).join(", ");
+  const description = missing
+    .map((m) => `• ${m.label} (esperado em: ${m.source}) — ${m.hint}`)
+    .join("\n");
   toast.error("Não é possível abrir a assinatura", {
-    description: `Contexto incompleto. Campos ausentes: ${labels}.`,
+    description,
+    duration: 8000,
   });
   console.warn("[SIGN] Blocked wizard open — missing context fields:", missing, context);
   return false;
