@@ -50,6 +50,7 @@ const Index = () => {
         <Specialties />
         <Testimonials />
         <Pricing />
+        <FAQ />
         <CTA />
       </main>
       <Footer />
