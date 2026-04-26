@@ -205,23 +205,25 @@ export function UserProfileFooter() {
             </DropdownMenuItem>
             
             {canImpersonate && !isImpersonating && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <DropdownMenuItem
-                      disabled
-                      onSelect={(e) => e.preventDefault()}
-                      className="cursor-not-allowed text-muted-foreground opacity-60"
-                    >
-                      <UserCog className="mr-2 h-4 w-4" />
-                      <span>Trocar de Usuário</span>
-                    </DropdownMenuItem>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  Funcionalidade disponível em breve
-                </TooltipContent>
-              </Tooltip>
+              <TooltipProvider delayDuration={150}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <DropdownMenuItem
+                        disabled
+                        onSelect={(e) => e.preventDefault()}
+                        className="cursor-not-allowed text-muted-foreground opacity-60"
+                      >
+                        <UserCog className="mr-2 h-4 w-4" />
+                        <span>Trocar de Usuário</span>
+                      </DropdownMenuItem>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    Funcionalidade disponível em breve
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
             
             <DropdownMenuSeparator />
