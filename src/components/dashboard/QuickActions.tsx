@@ -1,16 +1,21 @@
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  CalendarPlus, 
-  MessageSquare, 
-  CreditCard, 
-  FileText, 
-  Paperclip,
-  Zap
+import {
+  CalendarPlus,
+  MessageSquare,
+  CreditCard,
+  FileText,
+  Zap,
+  BellRing,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-export function QuickActions() {
+interface QuickActionsProps {
+  pendingConfirmations?: number;
+}
+
+export function QuickActions({ pendingConfirmations = 0 }: QuickActionsProps) {
   const navigate = useNavigate();
 
   const actions = [
@@ -48,7 +53,23 @@ export function QuickActions() {
           Ações Rápidas
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-3">
+        {pendingConfirmations > 0 && (
+          <Button
+            variant="default"
+            className="w-full justify-between bg-amber-500 hover:bg-amber-600 text-white"
+            onClick={() => navigate('/app/marketing')}
+          >
+            <span className="flex items-center gap-2">
+              <BellRing className="h-4 w-4" />
+              Confirmar agendamentos pendentes
+            </span>
+            <Badge variant="secondary" className="bg-white/20 text-white border-0">
+              {pendingConfirmations}
+            </Badge>
+          </Button>
+        )}
+
         <div className="grid grid-cols-2 gap-2">
           {actions.map((action, index) => (
             <Button
