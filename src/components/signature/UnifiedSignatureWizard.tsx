@@ -499,7 +499,6 @@ export function UnifiedSignatureWizard({
 
         {!hasMissingContext && (
         <>
-        {/* eslint-disable-next-line @typescript-eslint/no-unused-expressions */}
 
         {/* Steps indicator */}
         <div className="flex items-center gap-2 text-xs">
