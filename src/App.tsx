@@ -209,13 +209,13 @@ const App = () => (
             <Route path="planos" element={<SuperAdminPlans />} />
             <Route path="assinaturas" element={<SuperAdminSubscriptions />} />
             <Route path="recursos" element={<SuperAdminFeatureOverrides />} />
-            <Route path="usuarios" element={<SuperAdminStub />} />
-            <Route path="ocorrencias" element={<SuperAdminStub />} />
-            <Route path="logs" element={<SuperAdminStub />} />
-            <Route path="integracoes" element={<SuperAdminStub />} />
-            <Route path="uso" element={<SuperAdminStub />} />
-            <Route path="financeiro" element={<SuperAdminStub />} />
-            <Route path="configuracoes" element={<SuperAdminStub />} />
+            <Route path="usuarios" element={<SuperAdminStub title="Usuários da plataforma" description="Gestão de papéis globais (Super Admin, Suporte) e auditoria de acesso." />} />
+            <Route path="ocorrencias" element={<SuperAdminStub title="Ocorrências e bugs" description="Triagem e acompanhamento de incidentes reportados pelas clínicas." />} />
+            <Route path="logs" element={<SuperAdminStub title="Logs e Auditoria" description="Auditoria das ações administrativas da plataforma." />} />
+            <Route path="integracoes" element={<SuperAdminStub title="Integrações" description="Conectores com gateways, mensageria, Storage e outros provedores." />} />
+            <Route path="uso" element={<SuperAdminStub title="Uso da plataforma" description="Métricas de adoção, consumo e saúde por clínica." />} />
+            <Route path="financeiro" element={<SuperAdminStub title="Financeiro SaaS" description="Faturamento, cobranças e MRR/ARR consolidados." />} />
+            <Route path="configuracoes" element={<SuperAdminStub title="Configurações da plataforma" description="Parâmetros globais, defaults de clínica e flags do sistema." />} />
           </Route>
           <Route
             path="/super-admin/setup"
