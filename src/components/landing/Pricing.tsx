@@ -97,7 +97,7 @@ export default function Pricing() {
               <TabsTrigger value="yearly">
                 Anual
                 <Badge variant="secondary" className="ml-2">
-                  Economize ~17%
+                  Economize 2 meses
                 </Badge>
               </TabsTrigger>
             </TabsList>
@@ -145,18 +145,16 @@ export default function Pricing() {
                 <div className="mb-5 min-h-[40px] text-xs">
                   {cycle === "yearly" ? (
                     <div className="space-y-0.5">
-                      <p className="text-muted-foreground">
-                        Cobrado <strong className="text-foreground">R$ {formatBRLInt(plan.yearly)}</strong>{" "}
-                        uma vez ao ano
+                      <p className="text-foreground">
+                        <strong>Pagamento único anual de R$ {formatBRLInt(plan.yearly)}</strong>
                       </p>
+                      <p className="text-muted-foreground">valor mensal equivalente para comparação</p>
                       <p className="font-medium text-primary">
                         Economize R$ {formatBRLInt(yearlySaved)} por ano
                       </p>
                     </div>
                   ) : (
-                    <p className="text-muted-foreground">
-                      Cobrado mensalmente. No anual, economize ~17%.
-                    </p>
+                    <p className="text-muted-foreground">Cobrado mensalmente.</p>
                   )}
                 </div>
 

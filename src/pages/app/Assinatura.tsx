@@ -110,7 +110,7 @@ export default function Assinatura() {
         <TabsList>
           <TabsTrigger value="monthly">Mensal</TabsTrigger>
           <TabsTrigger value="yearly">
-            Anual <Badge variant="secondary" className="ml-2">Economize ~17%</Badge>
+            Anual <Badge variant="secondary" className="ml-2">Economize 2 meses</Badge>
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -145,12 +145,14 @@ export default function Assinatura() {
                   <div className="mt-1 min-h-[34px] text-xs">
                     {cycle === 'yearly' ? (
                       <div className="space-y-0.5">
+                        <p className="text-foreground">
+                          <strong>
+                            Pagamento único anual de R${' '}
+                            {yearlyPrice.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+                          </strong>
+                        </p>
                         <p className="text-muted-foreground">
-                          Cobrado{' '}
-                          <strong className="text-foreground">
-                            R$ {yearlyPrice.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
-                          </strong>{' '}
-                          uma vez ao ano
+                          valor mensal equivalente para comparação
                         </p>
                         <p className="font-medium text-primary">
                           Economize R$ {yearlySaved.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} por ano
