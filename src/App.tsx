@@ -243,7 +243,6 @@ const App = () => (
         <CookieConsent />
       </BrowserRouter>
         </ClinicFeaturesProvider>
-        </ClinicFeaturesProvider>
       </PermissionsProvider>
       </UserViewModeBootstrap>
     </TooltipProvider>
