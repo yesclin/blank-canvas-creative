@@ -16,7 +16,7 @@ import { generateInviteEmail, getRoleLabel } from "../_shared/email-templates.ts
 // We accept exact matches AND any Lovable-managed preview/sandbox/published
 // host. This prevents the front-end from being blocked when the project is
 // renamed, re-previewed under a new id, or accessed from a custom domain.
-const ALLOWED_EXACT_ORIGINS = [
+export const ALLOWED_EXACT_ORIGINS = [
   "https://yesclin.com",
   "https://www.yesclin.com",
   "http://localhost:3000",
@@ -24,20 +24,25 @@ const ALLOWED_EXACT_ORIGINS = [
   "http://localhost:8080",
 ];
 
-const ALLOWED_ORIGIN_PATTERNS: RegExp[] = [
+export const ALLOWED_ORIGIN_PATTERNS: RegExp[] = [
   /^https:\/\/[a-z0-9-]+\.lovable\.app$/i,
   /^https:\/\/[a-z0-9-]+\.lovableproject\.com$/i,
   /^https:\/\/[a-z0-9-]+\.lovable\.dev$/i,
   /^https:\/\/[a-z0-9.-]+\.yesclin\.com$/i,
 ];
 
-function isAllowedOrigin(origin: string): boolean {
+export const ALLOWED_REQUEST_HEADERS =
+  "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version";
+
+export const ALLOWED_METHODS = "POST, OPTIONS";
+
+export function isAllowedOrigin(origin: string): boolean {
   if (!origin) return false;
   if (ALLOWED_EXACT_ORIGINS.includes(origin)) return true;
   return ALLOWED_ORIGIN_PATTERNS.some((re) => re.test(origin));
 }
 
-function getCorsHeaders(req: Request): Record<string, string> {
+export function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") || "";
   // Echo back the caller's origin when it's allowed; otherwise fall back to
   // the canonical production origin so the browser still sees a valid header
@@ -46,11 +51,38 @@ function getCorsHeaders(req: Request): Record<string, string> {
 
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers":
-      "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": ALLOWED_REQUEST_HEADERS,
+    "Access-Control-Allow-Methods": ALLOWED_METHODS,
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
+  };
+}
+
+/**
+ * Builds the diagnostics payload describing the current CORS configuration
+ * and whether the caller's origin is currently accepted. Exposed so tests
+ * (and the GET /diagnostics route) can share the exact same logic.
+ */
+export function buildDiagnosticsPayload(req: Request) {
+  const origin = req.headers.get("origin") || "";
+  const accepted = isAllowedOrigin(origin);
+  return {
+    function: "send-invite",
+    request: {
+      method: req.method,
+      origin: origin || null,
+      accepted,
+    },
+    cors: {
+      allowed_exact_origins: ALLOWED_EXACT_ORIGINS,
+      allowed_origin_patterns: ALLOWED_ORIGIN_PATTERNS.map((re) => re.source),
+      allowed_methods: ALLOWED_METHODS,
+      allowed_headers: ALLOWED_REQUEST_HEADERS,
+      max_age_seconds: 86400,
+      vary: "Origin",
+    },
+    effective_response_headers: getCorsHeaders(req),
+    timestamp: new Date().toISOString(),
   };
 }
 
@@ -72,12 +104,29 @@ interface InviteRequest {
 // Invitation expiration in days
 const INVITATION_EXPIRATION_DAYS = 7;
 
-const handler = async (req: Request): Promise<Response> => {
+export const handler = async (req: Request): Promise<Response> => {
   const corsHeaders = getCorsHeaders(req);
-  
+
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Public diagnostics endpoint — no auth required.
+  // Returns the effective CORS configuration and whether the caller's origin
+  // is currently accepted. Useful to debug "Failed to send a request to the
+  // Edge Function" errors caused by an unrecognized origin.
+  // Accessed via: GET <function-url>/diagnostics OR GET <function-url>?diagnostics=1
+  {
+    const url = new URL(req.url);
+    const isDiagnosticsPath = url.pathname.endsWith("/diagnostics");
+    const isDiagnosticsQuery = url.searchParams.has("diagnostics");
+    if (req.method === "GET" && (isDiagnosticsPath || isDiagnosticsQuery)) {
+      return new Response(JSON.stringify(buildDiagnosticsPayload(req), null, 2), {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
   }
 
   try {
