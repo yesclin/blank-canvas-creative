@@ -24,10 +24,10 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/hooks/useClinicUsers";
-import { usePermissions } from "@/hooks/usePermissions";
 import { useSidebar } from "@/components/ui/sidebar";
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useCurrentViewRole } from "@/contexts/UserViewModeContext";
+import { RoleSwitcherDialog } from "./RoleSwitcherDialog";
 
 type UserRole = "admin" | "owner" | "profissional" | "recepcionista";
 
@@ -48,15 +48,13 @@ const roleColors: Record<UserRole, string> = {
 export function UserProfileFooter() {
   const navigate = useNavigate();
   const { user, isLoading } = useCurrentUser();
-  const { isAdmin } = usePermissions();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
-  const [isImpersonating, setIsImpersonating] = useState(false);
-  
-  // UI-only gating; server-side access control must still be enforced.
-  const canImpersonate = !!user && isAdmin;
-  
+  const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
+
+  const { canSwitchView, isImpersonating, viewedRole, resetViewedRole } = useCurrentViewRole();
+
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -68,6 +66,9 @@ export function UserProfileFooter() {
 
   const handleLogout = async () => {
     try {
+      // Clear simulated role before signing out
+      resetViewedRole();
+      window.dispatchEvent(new Event("yc:signout"));
       await supabase.auth.signOut();
       toast.success("Sessão encerrada com sucesso");
       navigate("/login");
@@ -82,8 +83,8 @@ export function UserProfileFooter() {
   };
 
   const handleStopImpersonating = () => {
-    setIsImpersonating(false);
-    toast.success("Voltando para seu usuário original");
+    resetViewedRole();
+    toast.success("Voltando para Proprietário");
   };
 
   if (isLoading) {
@@ -103,7 +104,9 @@ export function UserProfileFooter() {
     return null;
   }
 
-  const isAdminRole = isAdmin;
+  // Display role: when impersonating, show the simulated role in the footer
+  const displayRole: UserRole = (isImpersonating && viewedRole ? viewedRole : user.role) as UserRole;
+  const isAdminLike = displayRole === "owner" || displayRole === "admin";
 
   return (
     <>
@@ -112,20 +115,20 @@ export function UserProfileFooter() {
         isCollapsed ? "p-2" : "p-3"
       )}>
         {!isCollapsed && isImpersonating && (
-          <div className="mb-2 flex items-center justify-between rounded-md bg-amber-500/10 px-2 py-1.5 text-xs text-amber-600">
-            <span className="flex items-center gap-1">
-              <ArrowLeftRight className="h-3 w-3" />
-              Acessando como outro usuário
+          <div className="mb-2 flex items-center justify-between rounded-md bg-amber-500/10 px-2 py-1.5 text-xs text-amber-700">
+            <span className="flex items-center gap-1 truncate">
+              <ArrowLeftRight className="h-3 w-3 shrink-0" />
+              Visualizando como: {roleLabels[displayRole]}
             </span>
             <button
               onClick={handleStopImpersonating}
-              className="font-medium underline hover:no-underline"
+              className="font-medium underline hover:no-underline shrink-0 ml-2"
             >
               Voltar
             </button>
           </div>
         )}
-        
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className={cn(
@@ -142,90 +145,93 @@ export function UserProfileFooter() {
                     {getInitials(user.name)}
                   </AvatarFallback>
                 </Avatar>
-                {isAdminRole && (
+                {isAdminLike && (
                   <div className="absolute -top-1 -right-1 bg-amber-500 rounded-full p-0.5">
                     <Crown className="h-2.5 w-2.5 text-white" />
                   </div>
                 )}
               </div>
-              
+
               {!isCollapsed && (
                 <>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">
                       {user.name}
                     </p>
-                    <Badge 
-                      variant="outline" 
-                      className={`text-[10px] px-1.5 py-0 h-4 ${roleColors[user.role]}`}
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] px-1.5 py-0 h-4 ${roleColors[displayRole]}`}
                     >
-                      {roleLabels[user.role]}
+                      {roleLabels[displayRole]}
                     </Badge>
                   </div>
-                  
+
                   <ChevronUp className="h-4 w-4 text-muted-foreground" />
                 </>
               )}
             </button>
           </DropdownMenuTrigger>
-          
-          <DropdownMenuContent 
-            align="start" 
-            side="top" 
-            className="w-56 bg-popover border shadow-lg"
+
+          <DropdownMenuContent
+            align="start"
+            side="top"
+            className="w-60 bg-popover border shadow-lg"
             sideOffset={8}
           >
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-medium">{user.name}</p>
-                  {isAdminRole && (
+                  {isAdminLike && (
                     <Crown className="h-3.5 w-3.5 text-amber-500" />
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">{user.email}</p>
-                <Badge 
-                  variant="outline" 
-                  className={`text-[10px] px-1.5 py-0 h-4 w-fit mt-1 ${roleColors[user.role]}`}
+                <Badge
+                  variant="outline"
+                  className={`text-[10px] px-1.5 py-0 h-4 w-fit mt-1 ${roleColors[displayRole]}`}
                 >
-                  {roleLabels[user.role]}
+                  {roleLabels[displayRole]}
                 </Badge>
+                {isImpersonating && (
+                  <p className="text-[11px] text-amber-700 mt-1">
+                    Modo de visualização ativo
+                  </p>
+                )}
               </div>
             </DropdownMenuLabel>
-            
+
             <DropdownMenuSeparator />
-            
+
             <DropdownMenuItem onClick={handleViewProfile} className="cursor-pointer">
               <User className="mr-2 h-4 w-4" />
               <span>Meu Perfil</span>
             </DropdownMenuItem>
-            
-            {canImpersonate && !isImpersonating && (
-              <TooltipProvider delayDuration={150}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <DropdownMenuItem
-                        disabled
-                        onSelect={(e) => e.preventDefault()}
-                        className="cursor-not-allowed text-muted-foreground opacity-60"
-                      >
-                        <UserCog className="mr-2 h-4 w-4" />
-                        <span>Trocar de Usuário</span>
-                      </DropdownMenuItem>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    Funcionalidade disponível em breve
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+
+            {canSwitchView && !isImpersonating && (
+              <DropdownMenuItem
+                onClick={() => setShowRoleSwitcher(true)}
+                className="cursor-pointer"
+              >
+                <UserCog className="mr-2 h-4 w-4" />
+                <span>Trocar de Usuário</span>
+              </DropdownMenuItem>
             )}
-            
+
+            {canSwitchView && isImpersonating && (
+              <DropdownMenuItem
+                onClick={handleStopImpersonating}
+                className="cursor-pointer text-amber-700 focus:text-amber-700"
+              >
+                <ArrowLeftRight className="mr-2 h-4 w-4" />
+                <span>Voltar para Proprietário</span>
+              </DropdownMenuItem>
+            )}
+
             <DropdownMenuSeparator />
-            
-            <DropdownMenuItem 
-              onClick={() => setShowLogoutDialog(true)} 
+
+            <DropdownMenuItem
+              onClick={() => setShowLogoutDialog(true)}
               className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
             >
               <LogOut className="mr-2 h-4 w-4" />
@@ -234,6 +240,8 @@ export function UserProfileFooter() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      <RoleSwitcherDialog open={showRoleSwitcher} onOpenChange={setShowRoleSwitcher} />
 
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
         <AlertDialogContent>
