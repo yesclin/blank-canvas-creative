@@ -12,6 +12,7 @@ import { GlobalActiveAppointmentProvider } from "@/contexts/GlobalActiveAppointm
 import { FloatingActiveAppointmentButton } from "./FloatingActiveAppointmentButton";
 import { ActiveAppointmentDrawer } from "./ActiveAppointmentDrawer";
 import { ErrorBoundary } from "./ErrorBoundary";
+import { SubscriptionGate } from "./SubscriptionGate";
 
 function getModuleScope(pathname: string): string {
   if (pathname.startsWith("/app/prontuario")) return "Prontuário";
@@ -61,10 +62,14 @@ export function AppLayout() {
             </div>
             <ActiveSpecialtiesBadge />
           </header>
-          <div className="flex-1 p-6 overflow-auto">
-            <ErrorBoundary key={location.pathname} scope={getModuleScope(location.pathname)}>
-              <Outlet />
-            </ErrorBoundary>
+          <div className="flex-1 overflow-auto">
+            <SubscriptionGate>
+              <div className="p-6">
+                <ErrorBoundary key={location.pathname} scope={getModuleScope(location.pathname)}>
+                  <Outlet />
+                </ErrorBoundary>
+              </div>
+            </SubscriptionGate>
           </div>
         </main>
       </div>

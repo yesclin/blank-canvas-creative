@@ -25,6 +25,7 @@ export function ProtectedFeatureRoute({
   redirectTo,
 }: ProtectedFeatureRouteProps) {
   const { hasFeature, loading, plan_name } = useClinicFeatures();
+  void plan_name;
   const location = useLocation();
 
   if (loading) {
@@ -58,24 +59,19 @@ function FeatureUpgradeScreen({
       <h1 className="text-2xl font-bold text-foreground mb-2">
         Recurso indisponível no seu plano
       </h1>
-      <p className="text-muted-foreground max-w-md mb-2">
-        {planName ? (
-          <>
-            O plano <strong>{planName}</strong> não inclui este recurso.
-          </>
-        ) : (
-          <>Sua clínica ainda não tem um plano ativo.</>
-        )}
-      </p>
-      <p className="text-muted-foreground max-w-md mb-6 text-sm">
-        Faça upgrade para liberar <code className="rounded bg-muted px-1 py-0.5 text-xs">{feature}</code> e
-        outras funcionalidades.
+      <p className="text-muted-foreground max-w-md mb-6">
+        Este recurso não está disponível no seu plano atual. Fale com o suporte para fazer upgrade.
       </p>
       <div className="flex gap-2">
         <Button asChild>
+          <a href="/app/assinatura">
+            Ver planos
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </a>
+        </Button>
+        <Button variant="outline" asChild>
           <a href="mailto:suporte@yesclin.com.br?subject=Upgrade%20de%20plano">
             Falar com o suporte
-            <ArrowRight className="ml-2 h-4 w-4" />
           </a>
         </Button>
       </div>
