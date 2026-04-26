@@ -76,6 +76,8 @@ export interface DashboardStats {
   absences: number;
   confirmationRate: number;
   newPatients: number;
+  confirmedAppointments: number;
+  unconfirmedAppointments: number;
 }
 
 export type DashboardPeriod = 'today' | 'week' | 'month';
