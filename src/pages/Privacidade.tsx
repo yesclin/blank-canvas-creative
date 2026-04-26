@@ -40,6 +40,15 @@ const Privacidade = () => {
         </Link>
         .
       </p>
+
+      <h2 className="font-display text-2xl font-bold mt-8 mb-3">Cookies e analytics</h2>
+      <p>
+        Utilizamos o PostHog apenas para entender como o site é navegado e
+        melhorar a experiência. Os cookies de analytics só são carregados
+        após o seu consentimento explícito e podem ser revogados a qualquer
+        momento abaixo.
+      </p>
+      <ConsentManager />
     </LegalPage>
   );
 };
