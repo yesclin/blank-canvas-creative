@@ -158,13 +158,14 @@ export function useUserInvitations(clinicId: string | null) {
           }));
         }
         toast.warning("Convite criado, mas o e-mail não foi enviado", {
-          description: `Copie o link manualmente: ${result.accept_url}`,
-          duration: 20000,
+          description: `Link de aceite (copie e envie manualmente):\n${result.accept_url}`,
+          duration: 30000,
+          closeButton: true,
           action: {
             label: "Copiar link",
             onClick: () => {
               navigator.clipboard.writeText(result.accept_url).then(
-                () => toast.success("Link copiado"),
+                () => toast.success("Link de aceite copiado"),
                 () => toast.error("Não foi possível copiar")
               );
             },
