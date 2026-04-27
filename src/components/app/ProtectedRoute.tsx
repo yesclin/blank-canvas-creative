@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 import { usePermissions, AppModule, AppAction } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ShieldX, UserX } from "lucide-react";
+import { ShieldX, UserX, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { withTimeout } from "@/lib/asyncTimeout";
 
@@ -15,11 +15,18 @@ interface ProtectedRouteProps {
 }
 
 /**
- * Route-level permission guard
- * - Checks if user is active (inactive users cannot access)
- * - Shows loading state while permissions are being fetched
- * - Redirects or shows blocked message when access is denied
- * - Renders children when access is granted
+ * Route-level permission guard.
+ *
+ * REGRAS INVIOLÁVEIS:
+ *  1. NUNCA chamar signOut() aqui. Falha de profile/clinic/role NÃO é
+ *     falha de autenticação — só o RequireAuth decide quem vai para /login.
+ *  2. Enquanto isLoading (auth/permissions) for true, mostrar skeleton.
+ *     Nunca decidir bloqueio antes de loading=false.
+ *  3. Se as permissões falharem temporariamente (role=null após carregar),
+ *     mostrar tela de erro recuperável com botão "Tentar novamente" —
+ *     NÃO redirecionar para /login e NÃO deslogar.
+ *  4. Apenas exibir AccessDeniedPage quando o role EXISTE e realmente
+ *     não tem permissão para o módulo solicitado.
  */
 export function ProtectedRoute({
   children,
@@ -27,7 +34,7 @@ export function ProtectedRoute({
   action = "view",
   redirectTo,
 }: ProtectedRouteProps) {
-  const { can, isLoading, isOwner, isAdmin } = usePermissions();
+  const { can, isLoading, isOwner, isAdmin, role, refetch } = usePermissions();
   const [isActive, setIsActive] = useState<boolean | null>(null);
   const [checkingActive, setCheckingActive] = useState(true);
 
@@ -101,6 +108,13 @@ export function ProtectedRoute({
     return <InactiveUserPage />;
   }
 
+  // CRÍTICO: se as permissões já terminaram de carregar mas o role veio
+  // null/undefined, foi falha temporária de dados — NÃO é falha de auth.
+  // Mostrar erro recuperável com "Tentar novamente". NUNCA deslogar aqui.
+  if (!isLoading && !role) {
+    return <PermissionsLoadFailedPage onRetry={() => refetch()} />;
+  }
+
   // Owner and Admin bypass all permission checks
   if (isOwner || isAdmin) {
     return <>{children}</>;
@@ -150,6 +164,40 @@ function AccessDeniedPage({ module }: { module: AppModule }) {
         Você não tem permissão para acessar o módulo <strong>{moduleLabels[module]}</strong>.
         Entre em contato com o administrador da clínica para solicitar acesso.
       </p>
+    </div>
+  );
+}
+
+function PermissionsLoadFailedPage({ onRetry }: { onRetry: () => void | Promise<void> }) {
+  const [retrying, setRetrying] = useState(false);
+  const handleRetry = async () => {
+    setRetrying(true);
+    try {
+      await onRetry();
+    } finally {
+      setRetrying(false);
+    }
+  };
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center">
+      <div className="w-20 h-20 rounded-full bg-warning/10 flex items-center justify-center mb-6">
+        <AlertTriangle className="h-10 w-10 text-warning" />
+      </div>
+      <h1 className="text-2xl font-bold text-foreground mb-2">
+        Não foi possível carregar suas permissões
+      </h1>
+      <p className="text-muted-foreground max-w-md mb-6">
+        Sua sessão continua ativa, mas tivemos um problema temporário ao buscar
+        os dados da sua clínica. Tente novamente em instantes.
+      </p>
+      <div className="flex gap-2">
+        <Button onClick={handleRetry} disabled={retrying}>
+          {retrying ? "Tentando..." : "Tentar novamente"}
+        </Button>
+        <Button variant="outline" onClick={() => window.location.reload()}>
+          Recarregar página
+        </Button>
+      </div>
     </div>
   );
 }
