@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { withTimeout } from "@/lib/asyncTimeout";
 import { 
   resolveSpecialtyBySlug, 
   enableCoreModulesForSpecialty,
@@ -59,18 +60,18 @@ export function useOnboarding() {
   // Check if user is admin/owner and should see onboarding
   const checkOnboardingStatus = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await withTimeout<any>(supabase.auth.getUser(), 10000, "Tempo esgotado ao carregar onboarding.");
       if (!user) {
         setIsLoading(false);
         return;
       }
 
       // Get user profile
-      const { data: profile } = await supabase
+      const { data: profile } = await withTimeout<any>(supabase
         .from("profiles")
         .select("clinic_id")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle(), 10000, "Tempo esgotado ao carregar perfil do onboarding.");
 
       if (!profile) {
         setIsLoading(false);
@@ -78,12 +79,12 @@ export function useOnboarding() {
       }
 
       // Get user role from user_roles table
-      const { data: roleData } = await supabase
+      const { data: roleData } = await withTimeout<any>(supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
         .eq("clinic_id", profile.clinic_id)
-        .single();
+        .maybeSingle(), 10000, "Tempo esgotado ao carregar papel do onboarding.");
 
       const role = roleData?.role || "recepcionista";
       setUserRole(role);
@@ -97,19 +98,19 @@ export function useOnboarding() {
       }
 
       // Check if onboarding exists
-      const { data: onboardingData } = await supabase
+      const { data: onboardingData } = await withTimeout<any>(supabase
         .from("onboarding_progress")
         .select("*")
         .eq("clinic_id", profile.clinic_id)
         .eq("user_id", user.id)
-        .maybeSingle();
+        .maybeSingle(), 10000, "Tempo esgotado ao carregar progresso do onboarding.");
 
       if (onboardingData) {
         setProgress(onboardingData as OnboardingProgress);
         setShouldShowOnboarding(!onboardingData.is_completed && !onboardingData.skipped_at);
       } else {
         // First login - create onboarding record
-        const { data: newProgress, error } = await supabase
+        const { data: newProgress, error } = await withTimeout<any>(supabase
           .from("onboarding_progress")
           .insert({
             clinic_id: profile.clinic_id,
@@ -119,7 +120,7 @@ export function useOnboarding() {
             preferences: {},
           })
           .select()
-          .single();
+          .single(), 10000, "Tempo esgotado ao criar onboarding.");
 
         if (error) {
           console.error("Error creating onboarding:", error);
@@ -129,7 +130,7 @@ export function useOnboarding() {
         }
       }
     } catch (error) {
-      console.error("Error checking onboarding status:", error);
+      console.error("[PROVIDER_ERROR] OnboardingProvider", error);
     } finally {
       setIsLoading(false);
     }
@@ -137,6 +138,12 @@ export function useOnboarding() {
 
   useEffect(() => {
     checkOnboardingStatus();
+    const bootTimeout = window.setTimeout(() => {
+      console.error("[BOOT_TIMEOUT] OnboardingProvider demorou demais");
+      setIsLoading(false);
+      setShouldShowOnboarding(false);
+    }, 10000);
+    return () => window.clearTimeout(bootTimeout);
   }, [checkOnboardingStatus]);
 
   const updateStep = useCallback(async (step: number) => {
