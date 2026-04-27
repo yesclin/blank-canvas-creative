@@ -166,6 +166,8 @@ export function ClinicFeaturesProvider({ children }: { children: ReactNode }) {
     staleTime: 5 * 60 * 1000, // 5 min
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
+    retry: 1,
+    throwOnError: false,
   });
 
   // Reagir a mudanças de auth e de modo suporte
