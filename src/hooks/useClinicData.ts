@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { withTimeout } from "@/lib/asyncTimeout";
 
 export interface ClinicData {
   id: string;
@@ -30,7 +31,7 @@ export function useClinicData() {
     let cancelled = false;
     const fetchClinicData = async () => {
       try {
-        const { data: authData, error: authError } = await supabase.auth.getUser();
+        const { data: authData, error: authError } = await withTimeout<any>(supabase.auth.getUser());
         if (authError) throw authError;
 
         const userId = authData.user?.id;
@@ -53,7 +54,9 @@ export function useClinicData() {
             : null;
 
           if (supportClinicId) {
-            const { data: isAdmin } = await supabase.rpc('is_platform_admin', { _user_id: userId });
+            const { data: isAdmin } = await withTimeout<any>(
+              supabase.rpc('is_platform_admin', { _user_id: userId })
+            );
             if (isAdmin === true) {
               resolvedClinicId = supportClinicId;
             }
@@ -63,11 +66,11 @@ export function useClinicData() {
         }
 
         if (!resolvedClinicId) {
-          const { data: profile } = await supabase
+          const { data: profile } = await withTimeout<any>(supabase
             .from("profiles")
             .select("clinic_id")
             .eq("user_id", userId)
-            .maybeSingle();
+            .maybeSingle());
 
           if (cancelled) return;
 
@@ -78,7 +81,7 @@ export function useClinicData() {
           resolvedClinicId = profile.clinic_id;
         }
 
-        const { data: clinicData } = await supabase
+        const { data: clinicData } = await withTimeout<any>(supabase
           .from("clinics")
           .select(`
             id,
@@ -101,7 +104,7 @@ export function useClinicData() {
             address_zip
           `)
           .eq("id", resolvedClinicId)
-          .maybeSingle();
+          .maybeSingle());
 
         if (cancelled) return;
 
@@ -113,9 +116,9 @@ export function useClinicData() {
             const match = clinicData.logo_url.match(/clinic-logos\/(.+)$/);
             if (match) {
               const path = match[1];
-              const { data: signedData } = await supabase.storage
+              const { data: signedData } = await withTimeout<any>(supabase.storage
                 .from('clinic-logos')
-                .createSignedUrl(path, 3600); // 1 hour expiration
+                .createSignedUrl(path, 3600)); // 1 hour expiration
               if (!cancelled && signedData?.signedUrl) {
                 signedLogoUrl = signedData.signedUrl;
               }
@@ -126,9 +129,10 @@ export function useClinicData() {
           }
         }
       } catch (error) {
-        console.error("Error fetching clinic data:", error);
+        console.error("[APP_ERROR]", error);
       } finally {
         if (!cancelled) {
+          console.log("[CLINIC] carregada", { hasClinic: Boolean(clinic) });
           setIsLoading(false);
         }
       }
