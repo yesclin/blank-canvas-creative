@@ -37,9 +37,9 @@ const Login = () => {
       password,
     });
 
-    setIsLoading(false);
-
     if (error) {
+      setIsLoading(false);
+      console.error("[AUTH] signIn error:", error);
       toast({
         title: "Erro ao entrar",
         description:
@@ -51,11 +51,33 @@ const Login = () => {
       return;
     }
 
+    if (import.meta.env.DEV) {
+      console.log("[AUTH] signIn ok", {
+        hasSession: Boolean(data?.session),
+        hasUser: Boolean(data?.user),
+      });
+    }
+
+    // CRÍTICO: aguardar a sessão estar de fato persistida no storage antes
+    // de navegar para /app. Sem isso, o RequireAuth pode ler o storage antes
+    // de o token ter sido escrito e devolver o usuário para /login.
+    try {
+      for (let i = 0; i < 10; i += 1) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData?.session) break;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+    } catch (waitError) {
+      console.error("[AUTH] erro aguardando sessão", waitError);
+    }
+
+    setIsLoading(false);
+
     toast({
       title: "Bem-vindo!",
       description: "Login realizado com sucesso.",
     });
-    navigate("/app");
+    navigate("/app", { replace: true });
   };
 
   return (
