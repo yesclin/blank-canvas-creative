@@ -154,6 +154,9 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
+      // Cache básico: evita refetch em remontagens rápidas (ex.: troca de aba)
+      staleTime: 30_000,
+      gcTime: 5 * 60_000,
     },
   },
 });
@@ -161,7 +164,7 @@ const queryClient = new QueryClient({
 function RouteBoundary({ children, scope }: { children: ReactNode; scope: string }) {
   return (
     <ErrorBoundary scope={scope} showHome={false}>
-      <Suspense fallback={null}>
+      <Suspense fallback={<AppLoadingFallback />}>
         {children}
       </Suspense>
     </ErrorBoundary>
