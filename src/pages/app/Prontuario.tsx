@@ -233,14 +233,6 @@ import {
 } from "@/hooks/prontuario/nutricao";
 import {
   useVisaoGeralFisioterapiaData,
-  useAnamneseFisioterapiaData,
-  useAvaliacaoFuncionalData,
-  useAvaliacaoDorData,
-  useDiagnosticoFuncionalData,
-  usePlanoTerapeuticoData as usePlanoTerapeuticoFisioData,
-  useSessoesFisioterapiaData,
-  useExerciciosPrescritosData,
-  useAlertasFuncionaisData,
 } from "@/hooks/prontuario/fisioterapia";
 // Pilates hooks are NOT imported here - components use hooks internally
 import { useConsentTerms, usePatientConsents } from "@/hooks/lgpd";
@@ -933,62 +925,6 @@ export default function Prontuario() {
   const fisioVisaoGeral = useVisaoGeralFisioterapiaData({ 
     patientId, 
     clinicId: clinicIdForFisio || null 
-  });
-
-  // Anamnese Fisioterapia Data
-  const fisioAnamnese = useAnamneseFisioterapiaData({ 
-    patientId, 
-    clinicId: clinicIdForFisio || null,
-    professionalId: currentProfessionalId || null,
-  });
-
-  // Avaliação Funcional Data
-  const fisioAvaliacaoFuncional = useAvaliacaoFuncionalData({ 
-    patientId, 
-    clinicId: clinicIdForFisio || null,
-    professionalId: currentProfessionalId || null,
-  });
-
-  // Avaliação de Dor Data
-  const fisioAvaliacaoDor = useAvaliacaoDorData({ 
-    patientId, 
-    clinicId: clinicIdForFisio || null,
-    professionalId: currentProfessionalId || null,
-  });
-
-  // Diagnóstico Funcional Data
-  const fisioDiagnostico = useDiagnosticoFuncionalData({ 
-    patientId, 
-    clinicId: clinicIdForFisio || null,
-    professionalId: currentProfessionalId || null,
-  });
-
-  // Plano Terapêutico Fisioterapia Data
-  const fisioPlano = usePlanoTerapeuticoFisioData({ 
-    patientId, 
-    clinicId: clinicIdForFisio || null,
-    professionalId: currentProfessionalId || null,
-  });
-
-  // Sessões Fisioterapia Data
-  const fisioSessoes = useSessoesFisioterapiaData({ 
-    patientId, 
-    clinicId: clinicIdForFisio || null,
-    professionalId: currentProfessionalId || null,
-  });
-
-  // Exercícios Prescritos Fisioterapia Data
-  const fisioExercicios = useExerciciosPrescritosData({ 
-    patientId, 
-    clinicId: clinicIdForFisio || null,
-    professionalId: currentProfessionalId || null,
-  });
-
-  // Alertas Funcionais Data
-  const fisioAlertas = useAlertasFuncionaisData({ 
-    patientId, 
-    clinicId: clinicIdForFisio || null,
-    professionalId: currentProfessionalId || null,
   });
 
   // Pilates hooks are NOT needed here - components use hooks internally
