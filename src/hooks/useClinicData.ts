@@ -30,6 +30,7 @@ export function useClinicData() {
   useEffect(() => {
     let cancelled = false;
     const fetchClinicData = async () => {
+      let loadedClinic = false;
       try {
         const { data: authData, error: authError } = await withTimeout<any>(supabase.auth.getUser());
         if (authError) throw authError;
@@ -109,6 +110,7 @@ export function useClinicData() {
         if (cancelled) return;
 
         if (clinicData) {
+          loadedClinic = true;
           // Generate signed URL for logo if exists (bucket is now private)
           let signedLogoUrl = clinicData.logo_url;
           if (clinicData.logo_url) {
@@ -132,7 +134,7 @@ export function useClinicData() {
         console.error("[APP_ERROR]", error);
       } finally {
         if (!cancelled) {
-          console.log("[CLINIC] carregada", { hasClinic: Boolean(clinic) });
+          console.log("[CLINIC] carregada", { hasClinic: loadedClinic });
           setIsLoading(false);
         }
       }
