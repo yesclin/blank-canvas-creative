@@ -813,7 +813,7 @@ export default function Prontuario() {
     loading: planoTerapeuticoLoading,
     saving: planoTerapeuticoSaving,
     savePlano: savePlanoTerapeutico,
-  } = usePlanoTerapeuticoData(patientId);
+  } = usePlanoTerapeuticoData(shouldLoadTab('conduta', 'historico', 'timeline') ? patientId : null);
 
   // Metas Terapêuticas Data - goal-based tracking for Psicologia
   const {
@@ -825,7 +825,7 @@ export default function Prontuario() {
     updateStatus: updateMetaStatus,
     updateScaleScore: updateMetaScaleScore,
     fetchGoalUpdates: fetchMetaUpdates,
-  } = useMetasTerapeuticasData(patientId);
+  } = useMetasTerapeuticasData(shouldLoadTab('conduta') ? patientId : null);
 
   // Compute latest PHQ-9 and GAD-7 scores from sessions
   const latestPHQ9Score = sessoesPsico.find(s => s.phq9_total != null)?.phq9_total ?? null;
@@ -838,7 +838,7 @@ export default function Prontuario() {
     saving: instrumentosPsicoSaving,
     saveInstrumento: saveInstrumentoPsico,
     deleteInstrumento: deleteInstrumentoPsico,
-  } = useInstrumentosPsicologicosData(patientId, currentProfessionalId || undefined);
+  } = useInstrumentosPsicologicosData(shouldLoadTab('instrumentos', 'historico', 'timeline') ? patientId : null, currentProfessionalId || undefined);
 
   // Consent Terms Data - for Psicologia specialty
   const {
@@ -853,7 +853,7 @@ export default function Prontuario() {
     saving: patientConsentsSaving,
     grantConsent: grantPatientConsent,
     revokeConsent: revokePatientConsent,
-  } = usePatientConsents(patientId || undefined);
+  } = usePatientConsents(shouldLoadTab('termos_consentimentos', 'historico', 'timeline') ? patientId || undefined : undefined);
 
   // Alertas Psicologia Data - specific for Psicologia specialty
   const {
@@ -866,7 +866,7 @@ export default function Prontuario() {
     saveAlerta: saveAlertaPsico,
     deactivateAlerta: deactivateAlertaPsico,
     reactivateAlerta: reactivateAlertaPsico,
-  } = useAlertasPsicologiaData(patientId);
+  } = useAlertasPsicologiaData(shouldLoadTab('alertas') ? patientId : null);
 
   // Exame Físico Data - specific for Clínica Geral specialty
   const {
@@ -876,7 +876,7 @@ export default function Prontuario() {
     currentProfessionalId: exameProfId,
     currentProfessionalName: exameProfName,
     saveExame: saveExameFisico,
-  } = useExameFisicoData(patientId);
+  } = useExameFisicoData(shouldLoadTab('exame_fisico') ? patientId : null);
 
   // Conduta Data - specific for Clínica Geral specialty
   const {
@@ -886,7 +886,7 @@ export default function Prontuario() {
     currentProfessionalId: condutaProfId,
     currentProfessionalName: condutaProfName,
     saveConduta,
-  } = useCondutaData(patientId);
+  } = useCondutaData(shouldLoadTab('conduta') ? patientId : null);
 
   // Documentos Data - specific for Clínica Geral specialty
   const {
@@ -898,7 +898,7 @@ export default function Prontuario() {
     uploadDocumento,
     deleteDocumento,
     downloadDocumento,
-  } = useDocumentosData(patientId);
+  } = useDocumentosData(shouldLoadTab('exames', 'fotos_intraorais') ? patientId : null);
 
   // Alertas Data - specific for Clínica Geral specialty
   const {
