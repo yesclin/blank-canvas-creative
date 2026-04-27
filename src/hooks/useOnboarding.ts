@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { withTimeout } from "@/lib/asyncTimeout";
@@ -56,6 +56,11 @@ export function useOnboarding() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [clinicId, setClinicId] = useState<string | null>(null);
   const { toast } = useToast();
+  const loadingRef = useRef(isLoading);
+
+  useEffect(() => {
+    loadingRef.current = isLoading;
+  }, [isLoading]);
 
   // Check if user is admin/owner and should see onboarding
   const checkOnboardingStatus = useCallback(async () => {
@@ -139,6 +144,7 @@ export function useOnboarding() {
   useEffect(() => {
     checkOnboardingStatus();
     const bootTimeout = window.setTimeout(() => {
+      if (!loadingRef.current) return;
       console.error("[BOOT_TIMEOUT] OnboardingProvider demorou demais");
       setIsLoading(false);
       setShouldShowOnboarding(false);
