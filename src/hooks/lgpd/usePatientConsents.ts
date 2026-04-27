@@ -21,14 +21,14 @@ export interface PatientConsent {
   patient_name?: string;
 }
 
-export function usePatientConsents(patientId?: string) {
+export function usePatientConsents(patientId?: string, enabled = true) {
   const { clinic, isLoading: clinicLoading } = useClinicData();
   const [consents, setConsents] = useState<PatientConsent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
   const [saving, setSaving] = useState(false);
 
   const fetchConsents = useCallback(async () => {
-    if (!clinic?.id) return;
+    if (!enabled || !clinic?.id) return;
     setLoading(true);
     try {
       let query = supabase
@@ -83,13 +83,17 @@ export function usePatientConsents(patientId?: string) {
     } finally {
       setLoading(false);
     }
-  }, [clinic?.id, patientId]);
+  }, [clinic?.id, patientId, enabled]);
 
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
     if (!clinicLoading && clinic?.id) {
       fetchConsents();
     }
-  }, [clinicLoading, clinic?.id, fetchConsents]);
+  }, [enabled, clinicLoading, clinic?.id, fetchConsents]);
 
   const grantConsent = async (
     patientId: string, 

@@ -21,14 +21,14 @@ export interface ConsentTermInput {
   version?: number;
 }
 
-export function useConsentTerms() {
+export function useConsentTerms(enabled = true) {
   const { clinic, isLoading: clinicLoading } = useClinicData();
   const [terms, setTerms] = useState<ConsentTerm[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
   const [saving, setSaving] = useState(false);
 
   const fetchTerms = useCallback(async () => {
-    if (!clinic?.id) return;
+    if (!enabled || !clinic?.id) return;
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -45,13 +45,17 @@ export function useConsentTerms() {
     } finally {
       setLoading(false);
     }
-  }, [clinic?.id]);
+  }, [clinic?.id, enabled]);
 
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
     if (!clinicLoading && clinic?.id) {
       fetchTerms();
     }
-  }, [clinicLoading, clinic?.id, fetchTerms]);
+  }, [enabled, clinicLoading, clinic?.id, fetchTerms]);
 
   const createTerm = async (input: ConsentTermInput): Promise<boolean> => {
     if (!clinic?.id) return false;

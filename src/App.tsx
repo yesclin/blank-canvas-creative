@@ -106,35 +106,18 @@ const SuperAdminStub = lazyWithTimeout(() => import("./pages/super-admin/SuperAd
 const Assinatura = lazyWithTimeout(() => import("./pages/app/Assinatura"), "Assinatura");
 
 /**
- * lazyWithTimeout — carrega chunk dinâmico com:
- *  - timeout generoso (30s) para tolerar redes lentas / cold start de CDN
- *  - 1 retry automático em caso de timeout ou falha de chunk
- *  - log diagnóstico do tempo gasto em cada módulo
- *
- * O timeout NÃO derruba a tela: é capturado pelo Suspense/ErrorBoundary
- * mais próximo (RouteBoundary), que mostra fallback amigável.
+ * lazyWithTimeout — mantém compatibilidade com as rotas lazy, mas sem
+ * timeout destrutivo. Chunks grandes/lentos continuam no Suspense em vez de
+ * lançar MODULE_TIMEOUT e derrubar a tela inteira.
  */
 function lazyWithTimeout<T extends { default: ComponentType<any> }>(
   loader: () => Promise<T>,
-  scope: string,
-  timeoutMs = 30000
+  scope: string
 ) {
-  const loadOnce = (): Promise<T> => {
-    let timer: number | undefined;
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      timer = window.setTimeout(() => {
-        reject(new Error(`[MODULE_TIMEOUT] ${scope} demorou demais para carregar`));
-      }, timeoutMs);
-    });
-    return Promise.race([loader(), timeoutPromise]).finally(() => {
-      if (timer !== undefined) window.clearTimeout(timer);
-    }) as Promise<T>;
-  };
-
   return lazy(async () => {
     const t0 = performance.now();
     try {
-      const mod = await loadOnce();
+      const mod = await loader();
       if (import.meta.env.DEV) {
         console.log(`[MODULE_LOAD] ${scope} ok em ${Math.round(performance.now() - t0)}ms`);
       }
@@ -142,7 +125,7 @@ function lazyWithTimeout<T extends { default: ComponentType<any> }>(
     } catch (err) {
       console.warn(`[MODULE_LOAD] ${scope} falhou na 1ª tentativa, refazendo…`, err);
       // Retry único — cobre cold-start de CDN e falhas transitórias
-      const mod = await loadOnce();
+      const mod = await loader();
       console.log(`[MODULE_LOAD] ${scope} ok em ${Math.round(performance.now() - t0)}ms (retry)`);
       return mod;
     }
