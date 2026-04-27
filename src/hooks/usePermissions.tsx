@@ -142,6 +142,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       }));
 
       setState({ permissions, role, isLoading: false, isAdmin, isOwner, professionalId });
+      console.log("[PERMISSIONS] carregadas", { role, permissions: permissions.length });
     } catch (error) {
       console.error("[APP_ERROR]", error);
       setState({ permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null });
