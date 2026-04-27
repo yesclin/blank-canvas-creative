@@ -123,35 +123,35 @@ function usePeriodAppointments(clinicId: string | null, userRole: string | null,
         query = query.eq('professional_id', professionalId);
       }
       
-      const { data: appointments, error } = await query;
+      const { data: appointments, error } = await withTimeout<any>(query, 10000, 'Tempo esgotado ao carregar agenda do dashboard.');
       
       if (error) throw error;
       if (!appointments || appointments.length === 0) return [];
       
       // Buscar pacientes
       const patientIds = [...new Set(appointments.map(a => a.patient_id).filter(Boolean))];
-      const { data: patients } = await supabase
+      const { data: patients } = await withTimeout<any>(supabase
         .from('patients')
         .select('id, full_name')
-        .in('id', patientIds);
+        .in('id', patientIds), 10000, 'Tempo esgotado ao carregar pacientes do dashboard.');
       const patientsMap = new Map(patients?.map(p => [p.id, p]) || []);
       
       // Buscar profissionais
       const professionalIds = [...new Set(appointments.map(a => a.professional_id).filter(Boolean))];
-      const { data: professionals } = await supabase
+      const { data: professionals } = await withTimeout<any>(supabase
         .from('professionals')
         .select('id, full_name, color')
-        .in('id', professionalIds);
+        .in('id', professionalIds), 10000, 'Tempo esgotado ao carregar profissionais do dashboard.');
       const professionalsMap = new Map(professionals?.map(p => [p.id, p]) || []);
       
       // Buscar procedimentos
       const procedureIds = [...new Set(appointments.map(a => a.procedure_id).filter(Boolean))] as string[];
       let proceduresMap = new Map<string, { id: string; name: string }>();
       if (procedureIds.length > 0) {
-        const { data: procedures } = await supabase
+        const { data: procedures } = await withTimeout<any>(supabase
           .from('procedures')
           .select('id, name')
-          .in('id', procedureIds);
+          .in('id', procedureIds), 10000, 'Tempo esgotado ao carregar procedimentos do dashboard.');
         proceduresMap = new Map(procedures?.map(p => [p.id, p]) || []);
       }
       
@@ -159,19 +159,19 @@ function usePeriodAppointments(clinicId: string | null, userRole: string | null,
       const insuranceIds = [...new Set(appointments.map(a => a.insurance_id).filter(Boolean))] as string[];
       let insurancesMap = new Map<string, { id: string; name: string }>();
       if (insuranceIds.length > 0) {
-        const { data: insurances } = await supabase
+        const { data: insurances } = await withTimeout<any>(supabase
           .from('insurances')
           .select('id, name')
-          .in('id', insuranceIds);
+          .in('id', insuranceIds), 10000, 'Tempo esgotado ao carregar convênios do dashboard.');
         insurancesMap = new Map(insurances?.map(i => [i.id, i]) || []);
       }
       
       // Buscar alertas clínicos dos pacientes
-      const { data: alertsData } = await supabase
+      const { data: alertsData } = await withTimeout<any>(supabase
         .from('patient_clinical_data')
         .select('patient_id')
         .in('patient_id', patientIds)
-        .not('allergies', 'is', null);
+        .not('allergies', 'is', null), 10000, 'Tempo esgotado ao carregar alertas clínicos do dashboard.');
       
       const patientsWithAlerts = new Set(alertsData?.map(a => a.patient_id) || []);
       
