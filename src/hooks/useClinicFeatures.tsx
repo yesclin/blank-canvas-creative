@@ -15,6 +15,7 @@
 import { createContext, ReactNode, useContext, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { withTimeout } from '@/lib/asyncTimeout';
 
 /**
  * Flags de plano (controlam módulos administrativos/comerciais).
@@ -72,7 +73,7 @@ const DEFAULT_LIMITS: Record<LimitKey, number | null> = {
 };
 
 async function resolveActiveClinicId(): Promise<string | null> {
-  const { data: auth } = await supabase.auth.getUser();
+  const { data: auth } = await withTimeout<any>(supabase.auth.getUser());
   const userId = auth?.user?.id;
   if (!userId) return null;
 
@@ -85,20 +86,20 @@ async function resolveActiveClinicId(): Promise<string | null> {
         : null;
 
     if (supportClinicId) {
-      const { data: isAdmin } = await supabase.rpc('is_platform_admin', {
+      const { data: isAdmin } = await withTimeout<any>(supabase.rpc('is_platform_admin', {
         _user_id: userId,
-      });
+      }));
       if (isAdmin === true) return supportClinicId;
     }
   } catch {
     // ignora — segue para clinic_id natural
   }
 
-  const { data: profile } = await supabase
+  const { data: profile } = await withTimeout<any>(supabase
     .from('profiles')
     .select('clinic_id')
     .eq('user_id', userId)
-    .maybeSingle();
+    .maybeSingle());
 
   return profile?.clinic_id ?? null;
 }
@@ -116,11 +117,11 @@ async function fetchClinicFeatures(): Promise<ClinicFeaturesData> {
   const clinicId = await resolveActiveClinicId();
   if (!clinicId) return empty;
 
-  const { data, error } = await supabase
+  const { data, error } = await withTimeout<any>(supabase
     .from('clinic_effective_features')
     .select('*')
     .eq('clinic_id', clinicId)
-    .maybeSingle();
+    .maybeSingle());
 
   if (error || !data) {
     // Sem assinatura ainda → sem features. Mantém clinic_id para gates por clínica.
