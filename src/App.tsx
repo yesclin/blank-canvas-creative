@@ -341,12 +341,8 @@ function AppRouter() {
                   <CookieConsent />
                 </BrowserRouter>
               </ErrorBoundary>
-            </ClinicFeaturesProvider>
-          </PermissionsProvider>
-        </UserViewModeBootstrap>
-      </TooltipProvider>
-    </QueryClientProvider>
+    </>
   );
-};
+}
 
 export default App;
