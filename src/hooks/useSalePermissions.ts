@@ -2,6 +2,7 @@ import { useMemo, useCallback } from "react";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useLgpdEnforcement } from "@/hooks/lgpd/useLgpdEnforcement";
 import { supabase } from "@/integrations/supabase/client";
+import { withTimeout } from "@/lib/asyncTimeout";
 
 export interface SalePermissionResult {
   canCreateSale: boolean;

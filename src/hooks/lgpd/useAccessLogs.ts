@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useClinicData } from '@/hooks/useClinicData';
+import { withTimeout } from '@/lib/asyncTimeout';
 import { toast } from 'sonner';
 
 export interface AccessLog {

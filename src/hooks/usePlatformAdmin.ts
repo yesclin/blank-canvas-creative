@@ -6,6 +6,7 @@
  */
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { withTimeout } from '@/lib/asyncTimeout';
 
 interface PlatformAdminState {
   isPlatformAdmin: boolean;
