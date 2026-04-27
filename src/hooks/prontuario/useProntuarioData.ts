@@ -96,7 +96,10 @@ export function useProntuarioData(patientId: string | null) {
     }
   }, [patientId, clinic?.id]);
 
-  // Fetch clinical alerts from clinical_alerts table
+  // Fetch clinical alerts from clinical_alerts table.
+  // Mantemos is_active=true como filtro mínimo para alinhar com
+  // usePatientClinicalAlerts (fonte única da verdade). A ordenação
+  // por severidade/created_at é feita no consumidor.
   const fetchAlerts = useCallback(async () => {
     if (!patientId || !clinic?.id) return;
     try {
@@ -105,7 +108,7 @@ export function useProntuarioData(patientId: string | null) {
         .select('*')
         .eq('patient_id', patientId)
         .eq('clinic_id', clinic.id)
-        .order('severity', { ascending: true });
+        .eq('is_active', true);
 
       if (error) throw error;
       setAlerts((data as ClinicalAlert[]) || []);
