@@ -30,13 +30,13 @@ export function useSalePermissions(patientId: string | null): SalePermissionResu
   // Log denied permission attempts to audit
   const logDeniedAction = useCallback(async (action: string, saleId?: string) => {
     try {
-      await supabase.functions.invoke('log-access', {
+      await withTimeout<any>(supabase.functions.invoke('log-access', {
         body: {
           action: `PERMISSION_DENIED_${action.toUpperCase()}`,
           resource: saleId ? `sales/${saleId}` : 'sales',
           user_agent: navigator.userAgent,
         },
-      });
+      }), 15000, "Tempo limite atingido. Tente novamente.");
     } catch (error) {
       console.warn("Failed to log denied action:", error);
     }

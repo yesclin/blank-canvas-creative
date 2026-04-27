@@ -125,16 +125,16 @@ export function useAccessLogs() {
     if (!clinic?.id) return;
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await withTimeout<any>(supabase.auth.getSession());
       if (!session) return;
 
-      await supabase.functions.invoke('log-access', {
+      await withTimeout<any>(supabase.functions.invoke('log-access', {
         body: {
           action,
           resource_type: resourceType || 'system',
           user_agent: navigator.userAgent,
         },
-      });
+      }), 15000, "Tempo limite atingido. Tente novamente.");
     } catch (err) {
       console.error('Error logging action:', err);
     }

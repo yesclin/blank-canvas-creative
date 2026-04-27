@@ -179,9 +179,9 @@ export function FiscalIdentificationCard({
     setCnpjData(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('consulta-cnpj', {
+      const { data, error } = await withTimeout<any>(supabase.functions.invoke('consulta-cnpj', {
         body: { cnpj: cleanCNPJ }
-      });
+      }), 15000, "Tempo limite atingido. Tente novamente.");
 
       if (error) throw error;
 
