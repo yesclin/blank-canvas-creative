@@ -1,6 +1,8 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { AppLoadingFallback } from "./AppLoadingFallback";
+import { withTimeout } from "@/lib/asyncTimeout";
 
 type RequireAuthProps = {
   children: ReactNode;
@@ -20,9 +22,17 @@ export function RequireAuth({ children }: RequireAuthProps) {
 
     const load = async () => {
       try {
-        const { data } = await supabase.auth.getSession();
+        const { data } = await withTimeout(
+          supabase.auth.getSession(),
+          15000,
+          "Tempo esgotado ao carregar autenticação."
+        );
         if (!mounted) return;
+        console.log("[AUTH] carregado", { authenticated: Boolean(data.session) });
         setIsAuthed(Boolean(data.session));
+      } catch (error) {
+        console.error("[APP_ERROR]", error);
+        if (mounted) setIsAuthed(false);
       } finally {
         if (mounted) setIsLoading(false);
       }
@@ -45,11 +55,7 @@ export function RequireAuth({ children }: RequireAuthProps) {
   }, []);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <p className="text-sm text-muted-foreground">Carregando…</p>
-      </div>
-    );
+    return <AppLoadingFallback message="Carregando autenticação..." />;
   }
 
   if (!isAuthed) {
