@@ -168,6 +168,40 @@ function AccessDeniedPage({ module }: { module: AppModule }) {
   );
 }
 
+function PermissionsLoadFailedPage({ onRetry }: { onRetry: () => void | Promise<void> }) {
+  const [retrying, setRetrying] = useState(false);
+  const handleRetry = async () => {
+    setRetrying(true);
+    try {
+      await onRetry();
+    } finally {
+      setRetrying(false);
+    }
+  };
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center">
+      <div className="w-20 h-20 rounded-full bg-warning/10 flex items-center justify-center mb-6">
+        <AlertTriangle className="h-10 w-10 text-warning" />
+      </div>
+      <h1 className="text-2xl font-bold text-foreground mb-2">
+        Não foi possível carregar suas permissões
+      </h1>
+      <p className="text-muted-foreground max-w-md mb-6">
+        Sua sessão continua ativa, mas tivemos um problema temporário ao buscar
+        os dados da sua clínica. Tente novamente em instantes.
+      </p>
+      <div className="flex gap-2">
+        <Button onClick={handleRetry} disabled={retrying}>
+          {retrying ? "Tentando..." : "Tentar novamente"}
+        </Button>
+        <Button variant="outline" onClick={() => window.location.reload()}>
+          Recarregar página
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function InactiveUserPage() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
