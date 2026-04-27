@@ -48,7 +48,7 @@ export function useClinicUsers() {
       setError(null);
 
       // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await withTimeout<any>(supabase.auth.getUser());
       if (!user) {
         setError("Usuário não autenticado");
         setIsLoading(false);
@@ -56,11 +56,11 @@ export function useClinicUsers() {
       }
 
       // Get user's clinic
-      const { data: profile } = await supabase
+      const { data: profile } = await withTimeout<any>(supabase
         .from("profiles")
         .select("clinic_id, full_name, avatar_url")
         .eq("user_id", user.id)
-        .single();
+        .single());
 
       if (!profile?.clinic_id) {
         setError("Clínica não encontrada");
@@ -71,18 +71,18 @@ export function useClinicUsers() {
       setClinicId(profile.clinic_id);
 
       // Get current user's role
-      const { data: currentUserRole } = await supabase
+      const { data: currentUserRole } = await withTimeout<any>(supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
         .eq("clinic_id", profile.clinic_id)
-        .single();
+        .single());
 
       // Get all profiles in the same clinic
-      const { data: clinicProfiles, error: profilesError } = await supabase
+      const { data: clinicProfiles, error: profilesError } = await withTimeout<any>(supabase
         .from("profiles")
         .select("id, user_id, full_name, avatar_url, is_active, created_at")
-        .eq("clinic_id", profile.clinic_id);
+        .eq("clinic_id", profile.clinic_id));
 
       if (profilesError) {
         console.error("Error fetching profiles:", profilesError);
@@ -93,18 +93,20 @@ export function useClinicUsers() {
 
       // Get roles for all users
       const userIds = clinicProfiles?.map(p => p.user_id) || [];
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("user_id, role")
-        .eq("clinic_id", profile.clinic_id)
-        .in("user_id", userIds);
+      const { data: roles } = userIds.length > 0
+        ? await withTimeout<any>(supabase
+            .from("user_roles")
+            .select("user_id, role")
+            .eq("clinic_id", profile.clinic_id)
+            .in("user_id", userIds))
+        : { data: [] };
 
       // Get clinic creation info to identify primary admin
-      const { data: clinic } = await supabase
+      const { data: clinic } = await withTimeout<any>(supabase
         .from("clinics")
         .select("created_at")
         .eq("id", profile.clinic_id)
-        .single();
+        .single());
 
       // Get user emails from auth (we need to get this differently)
       // For now, we'll use a placeholder - in production this would come from a secure function
@@ -184,17 +186,17 @@ export function useClinicUsers() {
     if (!clinicId) return;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await withTimeout<any>(supabase.auth.getUser());
       if (!user) return;
 
-      await supabase.from("user_audit_logs").insert({
+      await withTimeout<any>(supabase.from("user_audit_logs").insert({
         clinic_id: clinicId,
         action,
         target_user_id: targetUserId,
         target_email: targetEmail,
         performed_by: user.id,
         details,
-      });
+      }));
     } catch (err) {
       console.error("Error logging audit action:", err);
     }
