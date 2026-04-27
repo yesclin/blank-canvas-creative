@@ -12,6 +12,10 @@ const _supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
+    // CRÍTICO para o fluxo de auth não voltar para /login após login/recovery:
+    // detecta tokens em querystring/hash e troca por sessão persistida.
+    detectSessionInUrl: true,
+    flowType: 'pkce',
   }
 });
 

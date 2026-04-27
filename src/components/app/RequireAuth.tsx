@@ -10,7 +10,15 @@ type RequireAuthProps = {
 
 /**
  * Garante que nenhuma rota autenticada renderize sem sessão.
- * Enquanto carrega, renderiza um estado neutro (evita "piscar" rota sem layout).
+ *
+ * Regras de ouro (NÃO QUEBRAR):
+ *  1. Registrar `onAuthStateChange` ANTES de chamar `getSession()`.
+ *     Caso contrário perdemos o evento `INITIAL_SESSION` e o usuário pode ser
+ *     redirecionado para /login com a sessão já válida no storage.
+ *  2. Nunca redirecionar enquanto `isLoading` for `true`.
+ *  3. Nunca chamar `signOut()` aqui — só leitura de sessão.
+ *  4. Watchdog de 8s: se `getSession()` travar, libera o gate como "sem sessão"
+ *     em vez de deixar o app preso em "Carregando autenticação...".
  */
 export function RequireAuth({ children }: RequireAuthProps) {
   const location = useLocation();
@@ -20,39 +28,57 @@ export function RequireAuth({ children }: RequireAuthProps) {
   useEffect(() => {
     let mounted = true;
 
-    const load = async () => {
-      try {
-        const { data } = await withTimeout<{ data: { session: unknown | null } }>(
-          supabase.auth.getSession(),
-          15000,
-          "Tempo esgotado ao carregar autenticação."
-        );
-        if (!mounted) return;
-        console.log("[AUTH] carregado", { authenticated: Boolean(data.session) });
-        setIsAuthed(Boolean(data.session));
-      } catch (error) {
-        console.error("[APP_ERROR]", error);
-        if (mounted) setIsAuthed(false);
-      } finally {
-        if (mounted) setIsLoading(false);
-      }
-    };
-
-    // IMPORTANT: register the listener BEFORE calling getSession to avoid
-    // missing the INITIAL_SESSION event. Keep the callback strictly synchronous
-    // (no awaits, no Supabase queries) to prevent auth deadlocks.
+    // 1) Listener PRIMEIRO. O Supabase dispara INITIAL_SESSION assim que
+    //    a sessão é hidratada do storage — esse é o caminho mais confiável
+    //    para saber se o usuário está logado.
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
+      if (import.meta.env.DEV) {
+        console.log("[AUTH] event", event, { hasSession: Boolean(session) });
+      }
       setIsAuthed(Boolean(session));
       setIsLoading(false);
     });
 
-    load();
+    // 2) Buscar sessão atual (cobre o caso de o listener não disparar
+    //    INITIAL_SESSION ou de já estarmos autenticados antes do mount).
+    (async () => {
+      try {
+        const { data } = await withTimeout<{ data: { session: unknown | null } }>(
+          supabase.auth.getSession(),
+          8000,
+          "Tempo esgotado ao carregar autenticação."
+        );
+        if (!mounted) return;
+        if (import.meta.env.DEV) {
+          console.log("[AUTH] getSession", { hasSession: Boolean(data.session) });
+        }
+        setIsAuthed(Boolean(data.session));
+        setIsLoading(false);
+      } catch (error) {
+        // Importante: NÃO marcar como autenticado nem deslogar.
+        // Apenas liberar o gate para que o redirect aconteça normalmente.
+        console.error("[AUTH_ERROR] getSession falhou", error);
+        if (!mounted) return;
+        setIsLoading(false);
+      }
+    })();
+
+    // 3) Watchdog: se nada resolveu em 8s, liberar o gate.
+    const watchdog = window.setTimeout(() => {
+      if (!mounted) return;
+      setIsLoading((prev) => {
+        if (!prev) return prev;
+        console.error("[AUTH_TIMEOUT] RequireAuth liberando gate por timeout");
+        return false;
+      });
+    }, 8000);
 
     return () => {
       mounted = false;
+      window.clearTimeout(watchdog);
       subscription.unsubscribe();
     };
   }, []);
