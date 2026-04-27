@@ -142,10 +142,13 @@ export function useClinicData() {
 
     fetchClinicData();
 
-    // Re-fetch when auth state changes (e.g. session restored after refresh)
+    // Re-fetch when auth state changes (e.g. session restored after refresh).
+    // Defer Supabase calls out of the listener to avoid auth deadlocks.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-        fetchClinicData();
+        setTimeout(() => {
+          if (!cancelled) fetchClinicData();
+        }, 0);
       }
       if (event === 'SIGNED_OUT') {
         setClinic(null);

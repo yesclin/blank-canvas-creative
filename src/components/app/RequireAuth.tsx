@@ -38,8 +38,9 @@ export function RequireAuth({ children }: RequireAuthProps) {
       }
     };
 
-    load();
-
+    // IMPORTANT: register the listener BEFORE calling getSession to avoid
+    // missing the INITIAL_SESSION event. Keep the callback strictly synchronous
+    // (no awaits, no Supabase queries) to prevent auth deadlocks.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -47,6 +48,8 @@ export function RequireAuth({ children }: RequireAuthProps) {
       setIsAuthed(Boolean(session));
       setIsLoading(false);
     });
+
+    load();
 
     return () => {
       mounted = false;
