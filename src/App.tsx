@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ReactNode } from "react";
+import { lazy, Suspense, type ReactNode, type ComponentType } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -17,93 +17,110 @@ import { AppLoadingFallback } from "@/components/app/AppLoadingFallback";
 import CookieConsent from "@/components/CookieConsent";
 
 // Páginas Públicas — lazy para não pesar no boot inicial.
-const Index = lazy(() => import("./pages/Index"));
-const Login = lazy(() => import("./pages/Login"));
-const CriarConta = lazy(() => import("./pages/CriarConta"));
-const RecuperarSenha = lazy(() => import("./pages/RecuperarSenha"));
-const RedefinirSenha = lazy(() => import("./pages/RedefinirSenha"));
-const AceitarConvite = lazy(() => import("./pages/AceitarConvite"));
-const NotFound = lazy(() => import("./pages/NotFound"));
-const ValidarDocumento = lazy(() => import("./pages/ValidarDocumento"));
-const PreCadastro = lazy(() => import("./pages/PreCadastro"));
-const Ajuda = lazy(() => import("./pages/Ajuda"));
-const Privacidade = lazy(() => import("./pages/Privacidade"));
-const Contato = lazy(() => import("./pages/Contato"));
+const Index = lazyWithTimeout(() => import("./pages/Index"), "Index");
+const Login = lazyWithTimeout(() => import("./pages/Login"), "Login");
+const CriarConta = lazyWithTimeout(() => import("./pages/CriarConta"), "CriarConta");
+const RecuperarSenha = lazyWithTimeout(() => import("./pages/RecuperarSenha"), "RecuperarSenha");
+const RedefinirSenha = lazyWithTimeout(() => import("./pages/RedefinirSenha"), "RedefinirSenha");
+const AceitarConvite = lazyWithTimeout(() => import("./pages/AceitarConvite"), "AceitarConvite");
+const NotFound = lazyWithTimeout(() => import("./pages/NotFound"), "NotFound");
+const ValidarDocumento = lazyWithTimeout(() => import("./pages/ValidarDocumento"), "ValidarDocumento");
+const PreCadastro = lazyWithTimeout(() => import("./pages/PreCadastro"), "PreCadastro");
+const Ajuda = lazyWithTimeout(() => import("./pages/Ajuda"), "Ajuda");
+const Privacidade = lazyWithTimeout(() => import("./pages/Privacidade"), "Privacidade");
+const Contato = lazyWithTimeout(() => import("./pages/Contato"), "Contato");
 
 // Teleconsulta - Páginas Públicas
-const PrecheckPage = lazy(() => import("./pages/teleconsulta/PrecheckPage"));
-const PatientRoomPage = lazy(() => import("./pages/teleconsulta/PatientRoomPage"));
+const PrecheckPage = lazyWithTimeout(() => import("./pages/teleconsulta/PrecheckPage"), "PrecheckPage");
+const PatientRoomPage = lazyWithTimeout(() => import("./pages/teleconsulta/PatientRoomPage"), "PatientRoomPage");
 
 // Agendamento Público
-const PublicBookingLayout = lazy(() => import("./pages/public/PublicBookingLayout"));
-const PublicClinicBookingPage = lazy(() => import("./pages/public/PublicClinicBookingPage"));
-const SpecialtySelectionStep = lazy(() => import("./pages/public/SpecialtySelectionStep"));
-const ProfessionalSelectionStep = lazy(() => import("./pages/public/ProfessionalSelectionStep"));
-const TimeSelectionStep = lazy(() => import("./pages/public/TimeSelectionStep"));
-const PatientDataStep = lazy(() => import("./pages/public/PatientDataStep"));
-const BookingConfirmationStep = lazy(() => import("./pages/public/BookingConfirmationStep"));
+const PublicBookingLayout = lazyWithTimeout(() => import("./pages/public/PublicBookingLayout"), "PublicBookingLayout");
+const PublicClinicBookingPage = lazyWithTimeout(() => import("./pages/public/PublicClinicBookingPage"), "PublicClinicBookingPage");
+const SpecialtySelectionStep = lazyWithTimeout(() => import("./pages/public/SpecialtySelectionStep"), "SpecialtySelectionStep");
+const ProfessionalSelectionStep = lazyWithTimeout(() => import("./pages/public/ProfessionalSelectionStep"), "ProfessionalSelectionStep");
+const TimeSelectionStep = lazyWithTimeout(() => import("./pages/public/TimeSelectionStep"), "TimeSelectionStep");
+const PatientDataStep = lazyWithTimeout(() => import("./pages/public/PatientDataStep"), "PatientDataStep");
+const BookingConfirmationStep = lazyWithTimeout(() => import("./pages/public/BookingConfirmationStep"), "BookingConfirmationStep");
 
 // Teleconsulta - Página Autenticada
-const TeleconsultaSala = lazy(() => import("./pages/app/TeleconsultaSala"));
+const TeleconsultaSala = lazyWithTimeout(() => import("./pages/app/TeleconsultaSala"), "TeleconsultaSala");
 
 // Layout do App
 import { AppLayout } from "./components/app/AppLayout";
 
 // Páginas do App — carregadas sob demanda por rota.
-const Dashboard = lazy(() => import("./pages/app/Dashboard"));
-const Agenda = lazy(() => import("./pages/app/Agenda"));
-const Prontuario = lazy(() => import("./pages/app/Prontuario"));
-const Pacientes = lazy(() => import("./pages/app/Pacientes"));
-const Convenios = lazy(() => import("./pages/app/gestao/Convenios"));
-const MeuFinanceiro = lazy(() => import("./pages/app/MeuFinanceiro"));
-const Atendimento = lazy(() => import("./pages/app/Atendimento"));
-const VerAtendimento = lazy(() => import("./pages/app/VerAtendimento"));
+const Dashboard = lazyWithTimeout(() => import("./pages/app/Dashboard"), "Dashboard");
+const Agenda = lazyWithTimeout(() => import("./pages/app/Agenda"), "Agenda");
+const Prontuario = lazyWithTimeout(() => import("./pages/app/Prontuario"), "Prontuario");
+const Pacientes = lazyWithTimeout(() => import("./pages/app/Pacientes"), "Pacientes");
+const Convenios = lazyWithTimeout(() => import("./pages/app/gestao/Convenios"), "Convenios");
+const MeuFinanceiro = lazyWithTimeout(() => import("./pages/app/MeuFinanceiro"), "MeuFinanceiro");
+const Atendimento = lazyWithTimeout(() => import("./pages/app/Atendimento"), "Atendimento");
+const VerAtendimento = lazyWithTimeout(() => import("./pages/app/VerAtendimento"), "VerAtendimento");
 
 // Marketing
-const MarketingLayout = lazy(() => import("./pages/app/marketing/MarketingLayout"));
+const MarketingLayout = lazyWithTimeout(() => import("./pages/app/marketing/MarketingLayout"), "MarketingLayout");
 
 // Gestão
-const Financas = lazy(() => import("./pages/app/gestao/Financas"));
-const Estoque = lazy(() => import("./pages/app/gestao/Estoque"));
-const Relatorios = lazy(() => import("./pages/app/gestao/Relatorios"));
-const Auditoria = lazy(() => import("./pages/app/gestao/Auditoria"));
+const Financas = lazyWithTimeout(() => import("./pages/app/gestao/Financas"), "Financas");
+const Estoque = lazyWithTimeout(() => import("./pages/app/gestao/Estoque"), "Estoque");
+const Relatorios = lazyWithTimeout(() => import("./pages/app/gestao/Relatorios"), "Relatorios");
+const Auditoria = lazyWithTimeout(() => import("./pages/app/gestao/Auditoria"), "Auditoria");
 
 // Configurações
-const ConfigProcedimentos = lazy(() => import("./pages/app/config/Procedimentos"));
-const ConfigClinica = lazy(() => import("./pages/app/config/Clinica"));
-const ConfigUsuarios = lazy(() => import("./pages/app/config/Usuarios"));
-const ConfigMateriais = lazy(() => import("./pages/app/config/Materiais"));
-const CatalogoClinico = lazy(() => import("./pages/app/config/CatalogoClinico"));
-const ConfigAgenda = lazy(() => import("./pages/app/config/Agenda"));
-const ConfigProntuario = lazy(() => import("./pages/app/config/Prontuario"));
-const ConfigSeguranca = lazy(() => import("./pages/app/config/Seguranca"));
-const ConfigIntegracoes = lazy(() => import("./pages/app/config/Integracoes"));
-const ModelosAnamnese = lazy(() => import("./pages/configuracoes/ModelosAnamnese"));
-const DocumentosInstitucionais = lazy(() => import("./pages/app/config/DocumentosInstitucionais"));
-const FormasRecebimento = lazy(() => import("./pages/app/config/FormasRecebimento"));
+const ConfigProcedimentos = lazyWithTimeout(() => import("./pages/app/config/Procedimentos"), "ConfigProcedimentos");
+const ConfigClinica = lazyWithTimeout(() => import("./pages/app/config/Clinica"), "ConfigClinica");
+const ConfigUsuarios = lazyWithTimeout(() => import("./pages/app/config/Usuarios"), "ConfigUsuarios");
+const ConfigMateriais = lazyWithTimeout(() => import("./pages/app/config/Materiais"), "ConfigMateriais");
+const CatalogoClinico = lazyWithTimeout(() => import("./pages/app/config/CatalogoClinico"), "CatalogoClinico");
+const ConfigAgenda = lazyWithTimeout(() => import("./pages/app/config/Agenda"), "ConfigAgenda");
+const ConfigProntuario = lazyWithTimeout(() => import("./pages/app/config/Prontuario"), "ConfigProntuario");
+const ConfigSeguranca = lazyWithTimeout(() => import("./pages/app/config/Seguranca"), "ConfigSeguranca");
+const ConfigIntegracoes = lazyWithTimeout(() => import("./pages/app/config/Integracoes"), "ConfigIntegracoes");
+const ModelosAnamnese = lazyWithTimeout(() => import("./pages/configuracoes/ModelosAnamnese"), "ModelosAnamnese");
+const DocumentosInstitucionais = lazyWithTimeout(() => import("./pages/app/config/DocumentosInstitucionais"), "DocumentosInstitucionais");
+const FormasRecebimento = lazyWithTimeout(() => import("./pages/app/config/FormasRecebimento"), "FormasRecebimento");
 
 // Comercial
-const ComercialDashboard = lazy(() => import("./pages/app/comercial/ComercialDashboard"));
-const LeadsPage = lazy(() => import("./pages/app/comercial/LeadsPage"));
-const OpportunitiesPage = lazy(() => import("./pages/app/comercial/OpportunitiesPage"));
-const QuotesPage = lazy(() => import("./pages/app/comercial/QuotesPage"));
-const PackagesCommercialPage = lazy(() => import("./pages/app/comercial/PackagesCommercialPage"));
-const ConversionsPage = lazy(() => import("./pages/app/comercial/ConversionsPage"));
-const FollowupsPage = lazy(() => import("./pages/app/comercial/FollowupsPage"));
-const GoalsPage = lazy(() => import("./pages/app/comercial/GoalsPage"));
-const CommercialReportsPage = lazy(() => import("./pages/app/comercial/CommercialReportsPage"));
+const ComercialDashboard = lazyWithTimeout(() => import("./pages/app/comercial/ComercialDashboard"), "ComercialDashboard");
+const LeadsPage = lazyWithTimeout(() => import("./pages/app/comercial/LeadsPage"), "LeadsPage");
+const OpportunitiesPage = lazyWithTimeout(() => import("./pages/app/comercial/OpportunitiesPage"), "OpportunitiesPage");
+const QuotesPage = lazyWithTimeout(() => import("./pages/app/comercial/QuotesPage"), "QuotesPage");
+const PackagesCommercialPage = lazyWithTimeout(() => import("./pages/app/comercial/PackagesCommercialPage"), "PackagesCommercialPage");
+const ConversionsPage = lazyWithTimeout(() => import("./pages/app/comercial/ConversionsPage"), "ConversionsPage");
+const FollowupsPage = lazyWithTimeout(() => import("./pages/app/comercial/FollowupsPage"), "FollowupsPage");
+const GoalsPage = lazyWithTimeout(() => import("./pages/app/comercial/GoalsPage"), "GoalsPage");
+const CommercialReportsPage = lazyWithTimeout(() => import("./pages/app/comercial/CommercialReportsPage"), "CommercialReportsPage");
 
 // Super Admin
 import { SuperAdminLayout } from "./components/super-admin/SuperAdminLayout";
 import { ProtectedSuperAdminRoute } from "./components/super-admin/ProtectedSuperAdminRoute";
-const SuperAdminDashboard = lazy(() => import("./pages/super-admin/SuperAdminDashboard"));
-const SuperAdminClinics = lazy(() => import("./pages/super-admin/SuperAdminClinics"));
-const SuperAdminPlans = lazy(() => import("./pages/super-admin/SuperAdminPlans"));
-const SuperAdminSubscriptions = lazy(() => import("./pages/super-admin/SuperAdminSubscriptions"));
-const SuperAdminFeatureOverrides = lazy(() => import("./pages/super-admin/SuperAdminFeatureOverrides"));
-const SuperAdminSetup = lazy(() => import("./pages/super-admin/SuperAdminSetup"));
-const SuperAdminStub = lazy(() => import("./pages/super-admin/SuperAdminStub"));
-const Assinatura = lazy(() => import("./pages/app/Assinatura"));
+const SuperAdminDashboard = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminDashboard"), "SuperAdminDashboard");
+const SuperAdminClinics = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminClinics"), "SuperAdminClinics");
+const SuperAdminPlans = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminPlans"), "SuperAdminPlans");
+const SuperAdminSubscriptions = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminSubscriptions"), "SuperAdminSubscriptions");
+const SuperAdminFeatureOverrides = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminFeatureOverrides"), "SuperAdminFeatureOverrides");
+const SuperAdminSetup = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminSetup"), "SuperAdminSetup");
+const SuperAdminStub = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminStub"), "SuperAdminStub");
+const Assinatura = lazyWithTimeout(() => import("./pages/app/Assinatura"), "Assinatura");
+
+function lazyWithTimeout<T extends { default: ComponentType<any> }>(
+  loader: () => Promise<T>,
+  scope: string,
+  timeoutMs = 10000
+) {
+  return lazy(() =>
+    Promise.race([
+      loader(),
+      new Promise<never>((_, reject) => {
+        window.setTimeout(() => {
+          reject(new Error(`[MODULE_TIMEOUT] ${scope} demorou demais para carregar`));
+        }, timeoutMs);
+      }),
+    ])
+  );
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -117,7 +134,7 @@ const queryClient = new QueryClient({
 function RouteBoundary({ children, scope }: { children: ReactNode; scope: string }) {
   return (
     <ErrorBoundary scope={scope} showHome={false}>
-      <Suspense fallback={<AppLoadingFallback message="Carregando módulo..." />}>
+      <Suspense fallback={null}>
         {children}
       </Suspense>
     </ErrorBoundary>
