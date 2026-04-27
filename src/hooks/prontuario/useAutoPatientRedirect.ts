@@ -77,6 +77,8 @@ export function useAutoPatientRedirect(hasPatientId: boolean) {
   });
 
   useEffect(() => {
+    // REGRA ABSOLUTA: o patientId da URL é a fonte da verdade.
+    // Nunca redirecionar / sobrescrever quando já há um paciente na rota.
     if (hasPatientId || redirected || isLoading || permLoading) return;
     if (!autoPatient) return;
 
