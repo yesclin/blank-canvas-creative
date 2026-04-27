@@ -318,11 +318,11 @@ function useDashboardProfessionals(clinicId: string | null, period: DashboardPer
       if (!clinicId) return [];
       
       // Buscar profissionais ativos
-      const { data: professionals } = await supabase
+      const { data: professionals } = await withTimeout<any>(supabase
         .from('professionals')
         .select('id, full_name, color, specialty_id')
         .eq('clinic_id', clinicId)
-        .eq('is_active', true);
+        .eq('is_active', true), 10000, 'Tempo esgotado ao carregar equipe do dashboard.');
       
       if (!professionals || professionals.length === 0) return [];
       
@@ -330,30 +330,30 @@ function useDashboardProfessionals(clinicId: string | null, period: DashboardPer
       const specialtyIds = [...new Set(professionals.map(p => p.specialty_id).filter(Boolean))] as string[];
       let specialtiesMap = new Map<string, string>();
       if (specialtyIds.length > 0) {
-        const { data: specialties } = await supabase
+        const { data: specialties } = await withTimeout<any>(supabase
           .from('specialties')
           .select('id, name')
-          .in('id', specialtyIds);
+          .in('id', specialtyIds), 10000, 'Tempo esgotado ao carregar especialidades do dashboard.');
         specialtiesMap = new Map(specialties?.map(s => [s.id, s.name]) || []);
       }
       
       // Buscar atendimentos do período
-      const { data: appointments } = await supabase
+      const { data: appointments } = await withTimeout<any>(supabase
         .from('appointments')
         .select('professional_id, status, patient_id')
         .eq('clinic_id', clinicId)
         .gte('scheduled_date', startDate)
-        .lte('scheduled_date', endDate);
+        .lte('scheduled_date', endDate), 10000, 'Tempo esgotado ao carregar agenda da equipe.');
       
       // Buscar nomes dos pacientes em atendimento
       const inProgressApts = appointments?.filter(a => a.status === 'em_atendimento') || [];
       const patientIds = inProgressApts.map(a => a.patient_id).filter(Boolean);
       let patientsMap = new Map<string, string>();
       if (patientIds.length > 0) {
-        const { data: patients } = await supabase
+        const { data: patients } = await withTimeout<any>(supabase
           .from('patients')
           .select('id, full_name')
-          .in('id', patientIds);
+          .in('id', patientIds), 10000, 'Tempo esgotado ao carregar pacientes em atendimento.');
         patientsMap = new Map(patients?.map(p => [p.id, p.full_name]) || []);
       }
       
