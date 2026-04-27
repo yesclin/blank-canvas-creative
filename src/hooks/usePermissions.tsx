@@ -119,10 +119,10 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       if (error) {
         console.error("Error fetching permissions:", error);
         // Fallback to template permissions
-        const { data: templates } = await supabase
+        const { data: templates } = await withTimeout<any>(supabase
           .from("permission_templates")
           .select("module, actions, restrictions")
-          .eq("role", role);
+          .eq("role", role));
 
         const permissions = (templates || []).map(t => ({
           module: t.module as AppModule,
@@ -131,6 +131,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         }));
 
         setState({ permissions, role, isLoading: false, isAdmin, isOwner, professionalId });
+        console.log("[PERMISSIONS] carregadas", { role, permissions: permissions.length });
         return;
       }
 
@@ -142,8 +143,9 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
 
       setState({ permissions, role, isLoading: false, isAdmin, isOwner, professionalId });
     } catch (error) {
-      console.error("Error in fetchPermissions:", error);
+      console.error("[APP_ERROR]", error);
       setState({ permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null });
+      console.log("[PERMISSIONS] carregadas", { role: null, permissions: 0, failed: true });
     }
   }, []);
 
@@ -182,10 +184,10 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       return;
     }
     (async () => {
-      const { data: templates } = await supabase
+      const { data: templates } = await withTimeout<any>(supabase
         .from("permission_templates")
         .select("module, actions, restrictions")
-        .eq("role", viewedRole);
+        .eq("role", viewedRole));
       if (cancelled) return;
       const perms = (templates || []).map((t: any) => ({
         module: t.module as AppModule,
