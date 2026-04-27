@@ -474,7 +474,8 @@ export const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log("[send-invite] Email sent successfully. ID:", emailResult.messageId);
+    const messageId = "messageId" in emailResult ? emailResult.messageId : undefined;
+    console.log("[send-invite] Email sent successfully. ID:", messageId);
 
     // Log the action without letting audit logging delay or fail the invite response.
     withEdgeTimeout(supabaseAdmin.from("user_audit_logs").insert({
