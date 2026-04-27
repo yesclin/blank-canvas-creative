@@ -42,26 +42,26 @@ async function countResource(
 ): Promise<number> {
   switch (type) {
     case 'professionals': {
-      const { count } = await supabase
+      const { count } = await withTimeout<any>(supabase
         .from('professionals')
         .select('id', { count: 'exact', head: true })
         .eq('clinic_id', clinicId)
-        .eq('is_active', true);
+        .eq('is_active', true));
       return count ?? 0;
     }
     case 'patients': {
-      const { count } = await supabase
+      const { count } = await withTimeout<any>(supabase
         .from('patients')
         .select('id', { count: 'exact', head: true })
-        .eq('clinic_id', clinicId);
+        .eq('clinic_id', clinicId));
       return count ?? 0;
     }
     case 'specialties': {
-      const { count } = await supabase
+      const { count } = await withTimeout<any>(supabase
         .from('specialties')
         .select('id', { count: 'exact', head: true })
         .eq('clinic_id', clinicId)
-        .eq('is_active', true);
+        .eq('is_active', true));
       return count ?? 0;
     }
     case 'appointments_monthly': {
@@ -72,20 +72,20 @@ async function countResource(
         `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
           d.getDate(),
         ).padStart(2, '0')}`;
-      const { count } = await supabase
+      const { count } = await withTimeout<any>(supabase
         .from('appointments')
         .select('id', { count: 'exact', head: true })
         .eq('clinic_id', clinicId)
         .gte('scheduled_date', fmt(start))
-        .lt('scheduled_date', fmt(end));
+        .lt('scheduled_date', fmt(end)));
       return count ?? 0;
     }
     case 'whatsapp_instances': {
-      const { count } = await supabase
+      const { count } = await withTimeout<any>(supabase
         .from('clinic_channel_integrations')
         .select('id', { count: 'exact', head: true })
         .eq('clinic_id', clinicId)
-        .eq('channel', 'whatsapp');
+        .eq('channel', 'whatsapp'));
       return count ?? 0;
     }
     default:
