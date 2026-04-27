@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { TimeoutError, withTimeout } from "@/lib/asyncTimeout";
 
 export type InvitationDeliveryStatus =
   | "pending"
@@ -53,11 +54,11 @@ export function useUserInvitations(clinicId: string | null) {
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await withTimeout<any>(supabase
         .from("user_invitations")
         .select("id, email, full_name, role, status, created_at, expires_at")
         .eq("clinic_id", clinicId)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false }));
 
       if (error) throw error;
 
@@ -82,7 +83,7 @@ export function useUserInvitations(clinicId: string | null) {
 
       setInvitations(enriched);
     } catch (err) {
-      console.error("Error fetching invitations:", err);
+      console.error("[send-invite] erro ao listar convites:", err);
     } finally {
       setIsLoading(false);
     }
@@ -98,25 +99,12 @@ export function useUserInvitations(clinicId: string | null) {
     setIsSending(true);
     console.log("[send-invite] payload:", data);
 
-    // 15s hard timeout so the button can never get stuck on "Enviando...".
-    const TIMEOUT_MS = 15000;
-    let timedOut = false;
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => {
-        timedOut = true;
-        reject(new Error(
-          "Não foi possível enviar o convite. Tente novamente ou copie o link manualmente."
-        ));
-      }, TIMEOUT_MS);
-    });
-
     try {
-      const invokePromise = supabase.functions.invoke("send-invite", { body: data });
-
-      const { data: result, error } = await Promise.race([
-        invokePromise,
-        timeoutPromise,
-      ]) as { data: any; error: any };
+      const { data: result, error } = await withTimeout<any>(
+        supabase.functions.invoke("send-invite", { body: data }),
+        15000,
+        "Tempo esgotado ao enviar convite. Tente novamente ou copie o link manualmente."
+      );
 
       // Extract correlation ids when present (server should return one of these).
       const corrId =
@@ -236,6 +224,7 @@ export function useUserInvitations(clinicId: string | null) {
       const correlationId = err?.correlationId ?? null;
       const httpStatus = err?.httpStatus ?? null;
       const payload = err?.payload ?? null;
+      const timedOut = err instanceof TimeoutError;
 
       console.error("[send-invite] error:", {
         message: err?.message,

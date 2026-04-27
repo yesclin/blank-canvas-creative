@@ -45,7 +45,7 @@ export class ErrorBoundary extends Component<Props, State> {
     const componentName = info.componentStack?.split("\n").find(Boolean)?.trim() ?? this.props.scope ?? "unknown";
 
     console.groupCollapsed(`[ErrorBoundary] ${this.props.scope || "global"}: ${error.message}`);
-    console.error("Error", error);
+    console.error("[APP_ERROR]", error);
     console.error("Stack trace", error.stack);
     console.error("Component", componentName);
     console.error("Route", route);
@@ -69,6 +69,10 @@ export class ErrorBoundary extends Component<Props, State> {
 
   reload = () => {
     window.location.reload();
+  };
+
+  goLogin = () => {
+    window.location.href = "/login";
   };
 
   render() {
@@ -146,6 +150,9 @@ export class ErrorBoundary extends Component<Props, State> {
               <Button onClick={this.reload} variant="ghost" className="flex-1">
                 <RotateCw className="h-4 w-4 mr-2" />
                 Recarregar
+              </Button>
+              <Button onClick={this.goLogin} variant="ghost" className="flex-1">
+                Login
               </Button>
             </div>
           </CardContent>

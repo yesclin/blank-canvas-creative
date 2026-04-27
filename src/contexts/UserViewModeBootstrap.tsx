@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserViewModeProvider, ViewableRole } from "@/contexts/UserViewModeContext";
+import { withTimeout } from "@/lib/asyncTimeout";
 
 /**
  * Resolves the authenticated user's real role from `user_roles` and exposes it
@@ -14,19 +15,24 @@ export function UserViewModeBootstrap({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      try {
+        const { data: { user } } = await withTimeout<any>(supabase.auth.getUser());
+        if (!user) {
+          if (!cancelled) setRealRole(null);
+          return;
+        }
+        const { data } = await withTimeout<any>(supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .maybeSingle());
+        if (cancelled) return;
+        const role = (data?.role as ViewableRole | undefined) ?? null;
+        setRealRole(role);
+      } catch (error) {
+        console.error("[APP_ERROR]", error);
         if (!cancelled) setRealRole(null);
-        return;
       }
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (cancelled) return;
-      const role = (data?.role as ViewableRole | undefined) ?? null;
-      setRealRole(role);
     };
 
     load();

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, createContext, useContext, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentViewRole } from "@/contexts/UserViewModeContext";
+import { withTimeout } from "@/lib/asyncTimeout";
 
 // Types
 export type AppModule = 
@@ -74,31 +75,33 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
 
   const fetchPermissions = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await withTimeout<any>(supabase.auth.getUser());
       if (!user) {
         setState({ permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null });
+        console.log("[PERMISSIONS] carregadas", { role: null, permissions: 0 });
         return;
       }
 
       // Get user role
-      const { data: roleData } = await supabase
+      const { data: roleData } = await withTimeout<any>(supabase
         .from("user_roles")
         .select("role, clinic_id")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle());
 
       if (!roleData) {
         setState({ permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null });
+        console.log("[PERMISSIONS] carregadas", { role: null, permissions: 0 });
         return;
       }
       
       // Get linked professional_id (if user is linked to a professional)
-      const { data: professionalData } = await supabase
+      const { data: professionalData } = await withTimeout<any>(supabase
         .from("professionals")
         .select("id")
         .eq("user_id", user.id)
         .eq("is_active", true)
-        .maybeSingle();
+        .maybeSingle());
       
       const professionalId = professionalData?.id || null;
 
@@ -109,16 +112,17 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       const isAdmin = ["owner", "admin"].includes(role);
 
       // Get permissions using the database function
-      const { data: permsData, error } = await supabase
-        .rpc("get_user_all_permissions", { _user_id: user.id });
+      const { data: permsData, error } = await withTimeout<any>(
+        supabase.rpc("get_user_all_permissions", { _user_id: user.id })
+      );
 
       if (error) {
         console.error("Error fetching permissions:", error);
         // Fallback to template permissions
-        const { data: templates } = await supabase
+        const { data: templates } = await withTimeout<any>(supabase
           .from("permission_templates")
           .select("module, actions, restrictions")
-          .eq("role", role);
+          .eq("role", role));
 
         const permissions = (templates || []).map(t => ({
           module: t.module as AppModule,
@@ -127,6 +131,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         }));
 
         setState({ permissions, role, isLoading: false, isAdmin, isOwner, professionalId });
+        console.log("[PERMISSIONS] carregadas", { role, permissions: permissions.length });
         return;
       }
 
@@ -137,9 +142,11 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       }));
 
       setState({ permissions, role, isLoading: false, isAdmin, isOwner, professionalId });
+      console.log("[PERMISSIONS] carregadas", { role, permissions: permissions.length });
     } catch (error) {
-      console.error("Error in fetchPermissions:", error);
+      console.error("[APP_ERROR]", error);
       setState({ permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null });
+      console.log("[PERMISSIONS] carregadas", { role: null, permissions: 0, failed: true });
     }
   }, []);
 
@@ -178,10 +185,10 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       return;
     }
     (async () => {
-      const { data: templates } = await supabase
+      const { data: templates } = await withTimeout<any>(supabase
         .from("permission_templates")
         .select("module, actions, restrictions")
-        .eq("role", viewedRole);
+        .eq("role", viewedRole));
       if (cancelled) return;
       const perms = (templates || []).map((t: any) => ({
         module: t.module as AppModule,
