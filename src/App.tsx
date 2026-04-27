@@ -14,6 +14,7 @@ import { ProtectedFeatureRoute } from "@/components/app/ProtectedFeatureRoute";
 import { PasswordRecoveryHandler } from "@/components/app/PasswordRecoveryHandler";
 import { ErrorBoundary } from "@/components/app/ErrorBoundary";
 import { AppLoadingFallback } from "@/components/app/AppLoadingFallback";
+import { PageSkeleton } from "@/components/app/PageSkeleton";
 import CookieConsent from "@/components/CookieConsent";
 
 // Páginas Públicas — lazy para não pesar no boot inicial.
@@ -147,7 +148,12 @@ const queryClient = new QueryClient({
 function RouteBoundary({ children, scope }: { children: ReactNode; scope: string }) {
   return (
     <ErrorBoundary scope={scope} showHome={false}>
-      <Suspense fallback={<AppLoadingFallback />}>
+      {/*
+        Fallback contextual: skeleton local em vez do antigo loading central
+        com logo. Mantém sidebar/header visíveis e dá sensação de troca de
+        rota imediata.
+      */}
+      <Suspense fallback={<PageSkeleton />}>
         {children}
       </Suspense>
     </ErrorBoundary>
