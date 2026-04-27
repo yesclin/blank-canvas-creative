@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getSeverityLabel } from "@/utils/clinicalAlertLabels";
+import { usePatientClinicalAlerts } from "@/hooks/prontuario/usePatientClinicalAlerts";
 
 interface QuickClinicalSummaryProps {
   patientId: string;
@@ -17,25 +18,10 @@ interface QuickClinicalSummaryProps {
   onCloseDrawer: () => void;
 }
 
-function useClinicalSummaryData(patientId: string, clinicId: string, enabled: boolean) {
-  // Active clinical alerts
-  const alerts = useQuery({
-    queryKey: ["clinical-alerts-summary", patientId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("clinical_alerts")
-        .select("id, title, severity, alert_type")
-        .eq("patient_id", patientId)
-        .eq("clinic_id", clinicId)
-        .eq("is_active", true)
-        .order("created_at", { ascending: false })
-        .limit(3);
-      return data || [];
-    },
-    enabled,
-    staleTime: 60000,
-  });
+// Quantos alertas mostrar inline antes de exibir "+N alertas adicionais"
+const ALERTS_PREVIEW_LIMIT = 3;
 
+function useClinicalSummaryData(patientId: string, clinicId: string, enabled: boolean) {
   // Last evolution
   const lastEvolution = useQuery({
     queryKey: ["last-evolution-summary", patientId],
@@ -74,10 +60,9 @@ function useClinicalSummaryData(patientId: string, clinicId: string, enabled: bo
   });
 
   return {
-    alerts: alerts.data || [],
     lastEvolution: lastEvolution.data,
     lastAppointment: lastAppointment.data,
-    isLoading: alerts.isLoading || lastEvolution.isLoading || lastAppointment.isLoading,
+    isLoading: lastEvolution.isLoading || lastAppointment.isLoading,
   };
 }
 
