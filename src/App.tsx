@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { PermissionsProvider } from "@/hooks/usePermissions";
 import { UserViewModeBootstrap } from "@/contexts/UserViewModeBootstrap";
+import { UserViewModeProvider } from "@/contexts/UserViewModeContext";
 import { ClinicFeaturesProvider } from "@/hooks/useClinicFeatures";
 import { RequireAuth } from "@/components/app/RequireAuth";
 import { ProtectedRoute } from "@/components/app/ProtectedRoute";
@@ -119,6 +120,34 @@ function RouteBoundary({ children, scope }: { children: ReactNode; scope: string
       <Suspense fallback={<AppLoadingFallback message="Carregando módulo..." />}>
         {children}
       </Suspense>
+    </ErrorBoundary>
+  );
+}
+
+/**
+ * Envolve providers não-essenciais. Se o provider lançar, o app segue
+ * renderizando os fallbackChildren — nunca derrubamos o boot por causa de
+ * UserViewMode / Permissions / ClinicFeatures.
+ */
+function SafeProvider({
+  scope,
+  fallbackChildren,
+  children,
+}: {
+  scope: string;
+  fallbackChildren: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <ErrorBoundary
+      scope={scope}
+      showHome={false}
+      fallback={(error) => {
+        console.error(`[PROVIDER_ERROR] ${scope} caiu — seguindo sem ele`, error);
+        return <>{fallbackChildren}</>;
+      }}
+    >
+      {children}
     </ErrorBoundary>
   );
 }
