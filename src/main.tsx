@@ -11,6 +11,7 @@ declare global {
 }
 
 if (typeof window !== "undefined") {
+  console.log("[APP_INIT] iniciado", { route: window.location.pathname });
   ["click", "keydown", "submit", "popstate"].forEach((eventName) => {
     window.addEventListener(
       eventName,
@@ -26,7 +27,7 @@ if (typeof window !== "undefined") {
 const rootElement = document.getElementById("root");
 
 if (!rootElement) {
-  console.error("[YesClin boot] Root element #root was not found", {
+  console.error("[APP_ERROR]", "Root element #root was not found", {
     route: window.location.pathname,
     lastEvent: window.__ycLastEvent ?? null,
   });
