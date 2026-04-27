@@ -137,7 +137,7 @@ export const handler = async (req: Request): Promise<Response> => {
     if (!authHeader) {
       console.error("[send-invite] No authorization header");
       return new Response(
-        JSON.stringify({ error: "Não autorizado" }),
+        JSON.stringify({ success: false, error: "Não autorizado" }),
         { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -160,7 +160,7 @@ export const handler = async (req: Request): Promise<Response> => {
     if (authError || !user) {
       console.error("[send-invite] Auth error:", authError);
       return new Response(
-        JSON.stringify({ error: "Não autenticado" }),
+        JSON.stringify({ success: false, error: "Não autenticado" }),
         { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -176,7 +176,7 @@ export const handler = async (req: Request): Promise<Response> => {
 
     if (!profile?.clinic_id) {
       return new Response(
-        JSON.stringify({ error: "Clínica não encontrada" }),
+        JSON.stringify({ success: false, error: "Clínica não encontrada" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -187,7 +187,7 @@ export const handler = async (req: Request): Promise<Response> => {
 
     if (!isAdmin) {
       return new Response(
-        JSON.stringify({ error: "Apenas administradores podem convidar usuários" }),
+        JSON.stringify({ success: false, error: "Apenas administradores podem convidar usuários" }),
         { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -209,7 +209,7 @@ export const handler = async (req: Request): Promise<Response> => {
     if (countError) {
       console.error("[send-invite] Error counting profiles:", countError);
       return new Response(
-        JSON.stringify({ error: "Erro ao verificar limite de usuários" }),
+        JSON.stringify({ success: false, error: "Erro ao verificar limite de usuários" }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -224,7 +224,7 @@ export const handler = async (req: Request): Promise<Response> => {
     const totalActive = (activeProfiles?.length || 0) + (pendingInvites?.length || 0);
     if (totalActive >= 3) {
       return new Response(
-        JSON.stringify({ error: "Limite de 3 usuários ativos atingido neste plano" }),
+        JSON.stringify({ success: false, error: "Limite de 3 usuários ativos atingido neste plano" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -244,7 +244,7 @@ export const handler = async (req: Request): Promise<Response> => {
 
     if (!email || !fullName || !role) {
       return new Response(
-        JSON.stringify({ error: "E-mail, nome e perfil são obrigatórios" }),
+        JSON.stringify({ success: false, error: "E-mail, nome e perfil são obrigatórios" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -252,7 +252,7 @@ export const handler = async (req: Request): Promise<Response> => {
     // Validate professional data if isProfessional is true
     if (isProfessional && (!specialtyIds || specialtyIds.length === 0)) {
       return new Response(
-        JSON.stringify({ error: "Profissionais devem ter pelo menos uma especialidade" }),
+        JSON.stringify({ success: false, error: "Profissionais devem ter pelo menos uma especialidade" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -261,7 +261,7 @@ export const handler = async (req: Request): Promise<Response> => {
 
     if (!isValidEmail(sanitizedEmail)) {
       return new Response(
-        JSON.stringify({ error: "Formato de email inválido" }),
+        JSON.stringify({ success: false, error: "Formato de email inválido" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -284,14 +284,14 @@ export const handler = async (req: Request): Promise<Response> => {
 
       if (existingError || !existing) {
         return new Response(
-          JSON.stringify({ error: "Convite não encontrado" }),
+          JSON.stringify({ success: false, error: "Convite não encontrado" }),
           { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
 
       if (existing.status !== "pending") {
         return new Response(
-          JSON.stringify({ error: "Convite não está mais pendente e não pode ser reenviado" }),
+          JSON.stringify({ success: false, error: "Convite não está mais pendente e não pode ser reenviado" }),
           { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
@@ -313,7 +313,7 @@ export const handler = async (req: Request): Promise<Response> => {
         if (refreshError) {
           console.error("[send-invite] Error refreshing invitation expiry:", refreshError);
           return new Response(
-            JSON.stringify({ error: "Erro ao renovar convite" }),
+            JSON.stringify({ success: false, error: "Erro ao renovar convite" }),
             { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
           );
         }
@@ -362,7 +362,7 @@ export const handler = async (req: Request): Promise<Response> => {
 
         if (existingProfile) {
           return new Response(
-            JSON.stringify({ error: "Este usuário já faz parte da clínica" }),
+            JSON.stringify({ success: false, error: "Este usuário já faz parte da clínica" }),
             { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
           );
         }
@@ -390,7 +390,7 @@ export const handler = async (req: Request): Promise<Response> => {
       if (inviteError) {
         console.error("[send-invite] Error creating invitation:", inviteError);
         return new Response(
-          JSON.stringify({ error: "Erro ao criar convite" }),
+          JSON.stringify({ success: false, error: "Erro ao criar convite" }),
           { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
@@ -479,7 +479,7 @@ export const handler = async (req: Request): Promise<Response> => {
   } catch (error) {
     console.error("[send-invite] Error:", error);
     return new Response(
-      JSON.stringify({ error: "Erro interno do servidor" }),
+      JSON.stringify({ success: false, error: error instanceof Error ? error.message : "Erro interno do servidor" }),
       { status: 500, headers: { "Content-Type": "application/json", ...getCorsHeaders(req) } }
     );
   }
