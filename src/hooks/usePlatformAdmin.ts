@@ -29,7 +29,7 @@ export function usePlatformAdmin(): PlatformAdminState {
   const load = useCallback(async () => {
     setState((s) => ({ ...s, loading: true }));
     try {
-      const { data: auth } = await supabase.auth.getUser();
+      const { data: auth } = await withTimeout<any>(supabase.auth.getUser());
       const user = auth?.user;
       if (!user) {
         setState({ isPlatformAdmin: false, loading: false, userId: null, email: null, totalAdmins: null });
@@ -37,8 +37,8 @@ export function usePlatformAdmin(): PlatformAdminState {
       }
 
       const [{ data: isAdmin }, { data: total }] = await Promise.all([
-        supabase.rpc('is_platform_admin', { _user_id: user.id }),
-        supabase.rpc('count_platform_admins'),
+        withTimeout<any>(supabase.rpc('is_platform_admin', { _user_id: user.id })),
+        withTimeout<any>(supabase.rpc('count_platform_admins')),
       ]);
 
       setState({
@@ -56,7 +56,9 @@ export function usePlatformAdmin(): PlatformAdminState {
 
   useEffect(() => {
     load();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => load());
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      setTimeout(() => load(), 0);
+    });
     return () => subscription.unsubscribe();
   }, [load]);
 

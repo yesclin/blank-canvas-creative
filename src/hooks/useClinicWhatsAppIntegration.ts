@@ -103,9 +103,9 @@ export function useClinicWhatsAppIntegration() {
       }
       setActionLoading(action);
       try {
-        const { data, error } = await supabase.functions.invoke("uazapi-instance", {
+        const { data, error } = await withTimeout<any>(supabase.functions.invoke("uazapi-instance", {
           body: { action, clinic_id: clinic.id, payload },
-        });
+        }), 15000, "Tempo limite atingido. Tente novamente.");
 
         if (data?.qrcode !== undefined) setQrcode(data.qrcode);
         if (data?.paircode !== undefined) setPaircode(data.paircode);
