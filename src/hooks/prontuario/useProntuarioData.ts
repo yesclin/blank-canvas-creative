@@ -66,7 +66,7 @@ export function useProntuarioData(patientId: string | null) {
     security: null,
     loading: false,
     fetchConfig: async () => undefined,
-    getTemplateFields: getFieldsForTemplate,
+    getTemplateFields: async () => [] as Field[],
     getTemplatesByType: () => [],
     getDefaultTemplate: () => undefined,
   };
