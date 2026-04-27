@@ -680,6 +680,7 @@ export default function Prontuario() {
   }, [loadedTabs]);
 
   useEffect(() => {
+    if (activeTab === 'resumo') return;
     setLoadedTabs((prev) => {
       if (prev.has(activeTab)) return prev;
       const next = new Set(prev);
@@ -1131,6 +1132,12 @@ export default function Prontuario() {
 
   // When user manually changes tabs, clear the focus (user wants the full list)
   const handleTabChange = useCallback((tabKey: string) => {
+    setLoadedTabs((prev) => {
+      if (prev.has(tabKey)) return prev;
+      const next = new Set(prev);
+      next.add(tabKey);
+      return next;
+    });
     setActiveTab(tabKey);
     if (searchFocus && searchFocus.tabKey !== tabKey) {
       setSearchFocus(null);
