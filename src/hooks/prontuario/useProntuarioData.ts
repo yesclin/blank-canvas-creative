@@ -57,10 +57,14 @@ export function useProntuarioData(patientId: string | null) {
   const [patient, setPatient] = useState<PatientRecord | null>(null);
   const [alerts, setAlerts] = useState<ClinicalAlert[]>([]);
   const [clinicalData, setClinicalData] = useState<PatientClinicalData | null>(null);
-  const [patientLoading, setPatientLoading] = useState(false);
+  // Inicia em `true` quando há patientId — evita falso "Paciente não encontrado"
+  // antes da primeira busca (clinic ainda carregando, etc.).
+  const [patientLoading, setPatientLoading] = useState<boolean>(!!patientId);
   const [clinicalDataLoading, setClinicalDataLoading] = useState(false);
 
   // Fetch patient data
+  // CRÍTICO: nunca substituir um `patient` válido por `null` em caso de erro
+  // temporário (RLS transitório, conexão, etc.). Mantém o último válido.
   const fetchPatient = useCallback(async () => {
     if (!patientId || !clinic?.id) return;
     setPatientLoading(true);
@@ -70,13 +74,23 @@ export function useProntuarioData(patientId: string | null) {
         .select('id, full_name, birth_date, gender, phone, email, cpf')
         .eq('id', patientId)
         .eq('clinic_id', clinic.id)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
-      setPatient(data as PatientRecord);
+      if (error) {
+        console.error('[PRONTUARIO] Error fetching patient (kept last value):', error);
+        // Não zera o paciente já carregado — só atualiza se nunca houve patient.
+        setPatient((prev) => prev ?? null);
+        return;
+      }
+      if (data) {
+        setPatient(data as PatientRecord);
+      } else {
+        // Confirmadamente vazio: paciente não existe nesta clínica.
+        setPatient(null);
+      }
     } catch (err) {
-      console.error('Error fetching patient:', err);
-      setPatient(null);
+      console.error('[PRONTUARIO] fetchPatient threw (kept last value):', err);
+      setPatient((prev) => prev ?? null);
     } finally {
       setPatientLoading(false);
     }
@@ -121,13 +135,20 @@ export function useProntuarioData(patientId: string | null) {
     }
   }, [patientId, clinic?.id]);
 
-  // Load all data when patient or clinic changes — reset state when deps are missing
+  // Load all data when patient or clinic changes.
+  // CRÍTICO: só resetamos quando o `patientId` realmente fica vazio.
+  // Se apenas o `clinic.id` ainda não chegou, mantemos o paciente já carregado
+  // (evita o flash "Paciente não encontrado" entre re-renders do AuthProvider).
   useEffect(() => {
-    if (!patientId || !clinic?.id) {
-      // Reset all state to prevent showing stale data
+    if (!patientId) {
       setPatient(null);
       setAlerts([]);
       setClinicalData(null);
+      setPatientLoading(false);
+      return;
+    }
+    if (!clinic?.id) {
+      // Aguarda a clínica carregar — não zera o paciente já visível.
       return;
     }
 
@@ -138,6 +159,12 @@ export function useProntuarioData(patientId: string | null) {
     filesHook.fetchFilesForPatient(patientId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patientId, clinic?.id, activeSpecialtyId, fetchPatient, fetchAlerts, fetchClinicalData]);
+
+  // Quando o `patientId` da URL muda, descartamos imediatamente o paciente
+  // anterior para não exibir dados de outra pessoa enquanto o novo carrega.
+  useEffect(() => {
+    setPatient((prev) => (prev && prev.id !== patientId ? null : prev));
+  }, [patientId]);
 
   // Get active tabs from configuration
   const getActiveTabs = useCallback((): TabConfig[] => {
