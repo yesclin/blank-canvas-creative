@@ -74,6 +74,9 @@ export function useProntuarioData(patientId: string | null) {
   // Fetch patient data
   // CRÍTICO: nunca substituir um `patient` válido por `null` em caso de erro
   // temporário (RLS transitório, conexão, etc.). Mantém o último válido.
+  // REGRA ABSOLUTA: o patientId da URL é a fonte da verdade. Falha em qualquer
+  // dado secundário (alertas, dados clínicos, especialidade) NÃO pode apagar
+  // ou substituir o paciente já carregado.
   const fetchPatient = useCallback(async () => {
     if (!patientId || !clinic?.id) return;
     setPatientLoading(true);
@@ -92,10 +95,18 @@ export function useProntuarioData(patientId: string | null) {
         return;
       }
       if (data) {
-        setPatient(data as PatientRecord);
+        // Só aceita o resultado se ainda corresponder ao patientId da URL —
+        // protege contra respostas tardias depois de uma troca de paciente.
+        setPatient((prev) => {
+          if (prev && prev.id === (data as PatientRecord).id) return prev;
+          return data as PatientRecord;
+        });
       } else {
         // Confirmadamente vazio: paciente não existe nesta clínica.
-        setPatient(null);
+        // Só limpamos se o paciente atual em estado for justamente o que
+        // acabou de retornar vazio — evita apagar paciente válido durante
+        // uma troca de clinic_id no contexto.
+        setPatient((prev) => (prev && prev.id === patientId ? null : prev));
       }
     } catch (err) {
       console.error('[PRONTUARIO] fetchPatient threw (kept last value):', err);
@@ -154,6 +165,8 @@ export function useProntuarioData(patientId: string | null) {
   // Não carregamos entradas, arquivos, templates ou dados clínicos pesados aqui:
   // cada aba deve buscar sob demanda quando for aberta.
   useEffect(() => {
+    // REGRA ABSOLUTA: só zeramos o paciente quando o patientId da URL
+    // efetivamente desaparece. Mudança de clínica/contexto NÃO apaga.
     if (!patientId) {
       setPatient(null);
       setAlerts([]);
