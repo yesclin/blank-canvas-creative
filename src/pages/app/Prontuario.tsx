@@ -679,6 +679,15 @@ export default function Prontuario() {
     return tabKeys.some((tabKey) => loadedTabs.has(tabKey));
   }, [loadedTabs]);
 
+  useEffect(() => {
+    setLoadedTabs((prev) => {
+      if (prev.has(activeTab)) return prev;
+      const next = new Set(prev);
+      next.add(activeTab);
+      return next;
+    });
+  }, [activeTab]);
+
   // Visão Geral Data - specific for Clínica Geral specialty
   const {
     patient: visaoGeralPatient,
@@ -693,7 +702,7 @@ export default function Prontuario() {
     patient: psicologiaPatient,
     summary: psicologiaSummary,
     loading: psicologiaVisaoGeralLoading,
-  } = useVisaoGeralPsicologiaData(patientId);
+  } = useVisaoGeralPsicologiaData(shouldLoadTab('resumo') ? patientId : null);
 
   // Anamnese Data - specific for Clínica Geral specialty
   const {
@@ -703,7 +712,7 @@ export default function Prontuario() {
     saving: anamneseSaving,
     saveAnamnese,
     updateAnamnese,
-  } = useAnamneseData(patientId);
+  } = useAnamneseData(shouldLoadTab('anamnese') ? patientId : null);
 
   // Anamnese Psicológica Data - specific for Psicologia specialty
   const {
@@ -713,7 +722,7 @@ export default function Prontuario() {
     saving: anamnesePsicoSaving,
     saveAnamnese: saveAnamnesePsico,
     updateAnamnese: updateAnamnesePsico,
-  } = useAnamnesePsicologiaData(patientId);
+  } = useAnamnesePsicologiaData(shouldLoadTab('anamnese', 'historico', 'timeline') ? patientId : null);
 
   // Evoluções Data - specific for Clínica Geral specialty
   const {
@@ -724,7 +733,7 @@ export default function Prontuario() {
     currentProfessionalName,
     saveEvolucao,
     signEvolucao,
-  } = useEvolucoesData(patientId);
+  } = useEvolucoesData(shouldLoadTab('evolucao', 'exame_fisico', 'conduta') ? patientId : null);
 
   // Sessões Psicológicas Data - specific for Psicologia specialty
   const {
