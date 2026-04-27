@@ -74,9 +74,13 @@ export function QuickClinicalSummary({
   onCloseDrawer,
 }: QuickClinicalSummaryProps) {
   const navigate = useNavigate();
-  const { alerts, lastEvolution, lastAppointment, isLoading } = useClinicalSummaryData(patientId, clinicId, true);
+  const { lastEvolution, lastAppointment, isLoading } = useClinicalSummaryData(patientId, clinicId, true);
 
-  if (isLoading) {
+  // Fonte única da verdade para alertas — total real e lista completa.
+  const { alerts: allAlerts, total: totalAlerts, isLoading: alertsLoading } =
+    usePatientClinicalAlerts(patientId, clinicId);
+
+  if (isLoading || alertsLoading) {
     return (
       <div className="space-y-2">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
@@ -92,7 +96,11 @@ export function QuickClinicalSummary({
     );
   }
 
-  const hasAnyData = alerts.length > 0 || lastEvolution || lastAppointment || specialtyName;
+  // Preview limitado, mas SEMPRE indicando o total real.
+  const previewAlerts = allAlerts.slice(0, ALERTS_PREVIEW_LIMIT);
+  const remainingAlerts = Math.max(0, totalAlerts - previewAlerts.length);
+
+  const hasAnyData = totalAlerts > 0 || lastEvolution || lastAppointment || specialtyName;
 
   return (
     <div className="space-y-2">
@@ -110,10 +118,18 @@ export function QuickClinicalSummary({
           </div>
         )}
 
-        {/* Clinical alerts */}
-        {alerts.length > 0 && (
+        {/* Clinical alerts — total sempre visível, preview limitado */}
+        {totalAlerts > 0 && (
           <div className="space-y-1">
-            {alerts.map((alert) => (
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-destructive/80">
+                Alertas clínicos ativos
+              </span>
+              <Badge variant="destructive" className="text-[9px] px-1.5 py-0">
+                {totalAlerts}
+              </Badge>
+            </div>
+            {previewAlerts.map((alert) => (
               <div
                 key={alert.id}
                 className="flex items-center gap-2 text-xs p-1.5 rounded bg-destructive/5 border border-destructive/10"
@@ -128,6 +144,18 @@ export function QuickClinicalSummary({
                 </Badge>
               </div>
             ))}
+            {remainingAlerts > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  onCloseDrawer();
+                  navigate(`/app/prontuario/${patientId}?appointmentId=${appointmentId}&tab=alertas`);
+                }}
+                className="w-full text-left text-[11px] text-destructive/80 hover:text-destructive font-medium px-1.5 py-1 rounded hover:bg-destructive/5 transition-colors"
+              >
+                +{remainingAlerts} {remainingAlerts === 1 ? "alerta adicional" : "alertas adicionais"} — ver todos
+              </button>
+            )}
           </div>
         )}
 
