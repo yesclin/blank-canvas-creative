@@ -911,13 +911,13 @@ export default function Prontuario() {
     saveAlerta,
     deactivateAlerta,
     reactivateAlerta,
-  } = useAlertasData(patientId);
+  } = useAlertasData(shouldLoadTab('alertas') ? patientId : null);
 
   // Linha do Tempo Data - specific for Clínica Geral specialty
   const {
     eventos: timelineEventos,
     loading: timelineLoading,
-  } = useLinhaTempoData(patientId);
+  } = useLinhaTempoData(shouldLoadTab('historico', 'timeline') ? patientId : null);
 
   // Diagnósticos Data - specific for Clínica Geral specialty
   const {
@@ -927,7 +927,7 @@ export default function Prontuario() {
     currentProfessionalId: diagProfId,
     saveDiagnostico,
     updateDiagnostico,
-  } = useDiagnosticosData(patientId);
+  } = useDiagnosticosData(shouldLoadTab('diagnostico') ? patientId : null);
 
   // Prescrições Data - specific for Clínica Geral specialty
   const {
@@ -936,7 +936,7 @@ export default function Prontuario() {
     saving: prescricoesSaving,
     savePrescricao,
     signPrescricao,
-  } = usePrescricoesData(patientId);
+  } = usePrescricoesData(shouldLoadTab('prescricoes') ? patientId : null);
 
   // ===== FISIOTERAPIA HOOKS =====
   // Obter clinic_id do hook useClinicData
@@ -966,7 +966,7 @@ export default function Prontuario() {
     cancelDocumento: cancelDocumentoClinico,
     saveModeloPessoal: saveModeloPessoalClinico,
     deleteModeloPessoal: deleteModeloPessoalClinico,
-  } = useDocumentosClinicosData(patientId);
+  } = useDocumentosClinicosData(shouldLoadTab('documentos_clinicos') ? patientId : null);
 
 
   // Wrap permission checks to respect the enable_tab_permissions setting
