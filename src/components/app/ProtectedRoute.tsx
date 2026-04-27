@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShieldX, UserX } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { withTimeout } from "@/lib/asyncTimeout";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -34,18 +35,18 @@ export function ProtectedRoute({
   useEffect(() => {
     async function checkUserActive() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await withTimeout<any>(supabase.auth.getUser());
         if (!user) {
           setIsActive(false);
           setCheckingActive(false);
           return;
         }
 
-        const { data: profile } = await supabase
+        const { data: profile } = await withTimeout<any>(supabase
           .from("profiles")
           .select("is_active")
           .eq("user_id", user.id)
-          .maybeSingle();
+          .maybeSingle());
 
         // CRITICAL: If profile doesn't exist yet (race condition during signup),
         // treat as active — the handle_new_user trigger will create it shortly.
@@ -57,7 +58,7 @@ export function ProtectedRoute({
           setIsActive(profile.is_active ?? true);
         }
       } catch (error) {
-        console.error("Error checking user status:", error);
+        console.error("[APP_ERROR]", error);
         // On error, don't block the user — default to active
         setIsActive(true);
       } finally {
