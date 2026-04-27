@@ -842,10 +842,11 @@ export default function Prontuario() {
   } = useInstrumentosPsicologicosData(shouldLoadTab('instrumentos', 'historico', 'timeline') ? patientId : null, currentProfessionalId || undefined);
 
   // Consent Terms Data - for Psicologia specialty
+  const shouldLoadConsentData = shouldLoadTab('termos_consentimentos', 'historico', 'timeline');
   const {
     terms: consentTerms,
     loading: consentTermsLoading,
-  } = useConsentTerms();
+  } = useConsentTerms(shouldLoadConsentData);
 
   // Patient Consents Data - for Psicologia specialty
   const {
@@ -854,7 +855,7 @@ export default function Prontuario() {
     saving: patientConsentsSaving,
     grantConsent: grantPatientConsent,
     revokeConsent: revokePatientConsent,
-  } = usePatientConsents(shouldLoadTab('termos_consentimentos', 'historico', 'timeline') ? patientId || undefined : undefined);
+  } = usePatientConsents(patientId || undefined, shouldLoadConsentData);
 
   // Alertas Psicologia Data - specific for Psicologia specialty
   const {
