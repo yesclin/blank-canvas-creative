@@ -13,7 +13,6 @@ import { ProtectedRoute } from "@/components/app/ProtectedRoute";
 import { ProtectedFeatureRoute } from "@/components/app/ProtectedFeatureRoute";
 import { PasswordRecoveryHandler } from "@/components/app/PasswordRecoveryHandler";
 import { ErrorBoundary } from "@/components/app/ErrorBoundary";
-import { AppLoadingFallback } from "@/components/app/AppLoadingFallback";
 import { PageSkeleton } from "@/components/app/PageSkeleton";
 import CookieConsent from "@/components/CookieConsent";
 
