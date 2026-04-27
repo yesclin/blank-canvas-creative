@@ -36,7 +36,12 @@ export function UserViewModeBootstrap({ children }: { children: ReactNode }) {
     };
 
     load();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => load());
+    // Defer query execution out of the auth callback to avoid Supabase deadlocks.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      setTimeout(() => {
+        if (!cancelled) load();
+      }, 0);
+    });
     return () => {
       cancelled = true;
       subscription.unsubscribe();

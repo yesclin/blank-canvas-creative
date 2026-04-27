@@ -153,9 +153,11 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     fetchPermissions();
 
-    // Listen for auth changes
+    // Listen for auth changes — defer Supabase queries out of the callback to
+    // avoid deadlocks (anti-pattern: awaiting Supabase calls inside the auth
+    // listener can block subsequent events).
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      fetchPermissions();
+      setTimeout(() => fetchPermissions(), 0);
     });
 
     return () => subscription.unsubscribe();

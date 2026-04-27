@@ -181,7 +181,8 @@ export function ClinicFeaturesProvider({ children }: { children: ReactNode }) {
         event === 'SIGNED_OUT' ||
         event === 'TOKEN_REFRESHED'
       ) {
-        invalidate();
+        // Defer to avoid Supabase auth deadlocks
+        setTimeout(() => invalidate(), 0);
       }
     });
 
