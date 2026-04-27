@@ -2308,8 +2308,34 @@ export default function Prontuario() {
     return <PatientSelector onSelectPatient={handleSelectPatient} />;
   }
 
-  // Patient ID provided in URL but not found in database
-  if (patientId && !patientLoading && !patient) {
+  // Logs temporários para diagnóstico do fluxo do prontuário
+  if (typeof window !== 'undefined') {
+    console.log("[PRONTUARIO] route patientId:", patientId);
+    console.log("[PRONTUARIO] loaded patient:", patient);
+    console.log("[PRONTUARIO] patientLoading:", patientLoading);
+    console.log("[PRONTUARIO] activeAppointment:", activeAppointment);
+    console.log("[PRONTUARIO] clinic loaded:", !!clinic?.id);
+  }
+
+  // Patient ID provided in URL but not found.
+  // Só mostramos a mensagem de erro quando temos certeza:
+  //  - clínica resolvida
+  //  - busca finalizada (patientLoading=false)
+  //  - paciente confirmadamente ausente
+  // Enquanto qualquer dependência ainda carrega, exibimos um loading suave
+  // em vez de "Paciente não encontrado".
+  if (patientId && !patient) {
+    if (!clinic?.id || patientLoading) {
+      return (
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="space-y-4 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+            <p className="text-sm text-muted-foreground">Carregando prontuário...</p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex items-center justify-center min-h-[60vh] p-6">
         <div className="max-w-md w-full text-center space-y-4">
@@ -2319,7 +2345,7 @@ export default function Prontuario() {
           <div className="space-y-1">
             <h2 className="text-xl font-semibold">Paciente não encontrado</h2>
             <p className="text-sm text-muted-foreground">
-              O paciente solicitado não existe ou você não tem permissão para acessá-lo.
+              O paciente solicitado não existe nesta clínica ou você não tem permissão para acessá-lo.
             </p>
           </div>
           <div className="flex gap-2 justify-center">
