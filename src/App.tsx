@@ -105,21 +105,48 @@ const SuperAdminSetup = lazyWithTimeout(() => import("./pages/super-admin/SuperA
 const SuperAdminStub = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminStub"), "SuperAdminStub");
 const Assinatura = lazyWithTimeout(() => import("./pages/app/Assinatura"), "Assinatura");
 
+/**
+ * lazyWithTimeout — carrega chunk dinâmico com:
+ *  - timeout generoso (30s) para tolerar redes lentas / cold start de CDN
+ *  - 1 retry automático em caso de timeout ou falha de chunk
+ *  - log diagnóstico do tempo gasto em cada módulo
+ *
+ * O timeout NÃO derruba a tela: é capturado pelo Suspense/ErrorBoundary
+ * mais próximo (RouteBoundary), que mostra fallback amigável.
+ */
 function lazyWithTimeout<T extends { default: ComponentType<any> }>(
   loader: () => Promise<T>,
   scope: string,
-  timeoutMs = 10000
+  timeoutMs = 30000
 ) {
-  return lazy(() =>
-    Promise.race([
-      loader(),
-      new Promise<never>((_, reject) => {
-        window.setTimeout(() => {
-          reject(new Error(`[MODULE_TIMEOUT] ${scope} demorou demais para carregar`));
-        }, timeoutMs);
-      }),
-    ])
-  );
+  const loadOnce = (): Promise<T> => {
+    let timer: number | undefined;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timer = window.setTimeout(() => {
+        reject(new Error(`[MODULE_TIMEOUT] ${scope} demorou demais para carregar`));
+      }, timeoutMs);
+    });
+    return Promise.race([loader(), timeoutPromise]).finally(() => {
+      if (timer !== undefined) window.clearTimeout(timer);
+    }) as Promise<T>;
+  };
+
+  return lazy(async () => {
+    const t0 = performance.now();
+    try {
+      const mod = await loadOnce();
+      if (import.meta.env.DEV) {
+        console.log(`[MODULE_LOAD] ${scope} ok em ${Math.round(performance.now() - t0)}ms`);
+      }
+      return mod;
+    } catch (err) {
+      console.warn(`[MODULE_LOAD] ${scope} falhou na 1ª tentativa, refazendo…`, err);
+      // Retry único — cobre cold-start de CDN e falhas transitórias
+      const mod = await loadOnce();
+      console.log(`[MODULE_LOAD] ${scope} ok em ${Math.round(performance.now() - t0)}ms (retry)`);
+      return mod;
+    }
+  });
 }
 
 const queryClient = new QueryClient({
