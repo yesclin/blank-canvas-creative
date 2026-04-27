@@ -3,6 +3,7 @@ import { Lock, Clock, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useClinicSubscription } from '@/hooks/useClinicSubscription';
+import { ErrorBoundary } from './ErrorBoundary';
 
 const ROUTES_ALWAYS_ALLOWED = ['/app/assinatura', '/app'];
 
@@ -12,7 +13,25 @@ const ROUTES_ALWAYS_ALLOWED = ['/app/assinatura', '/app'];
  * Também exibe um banner discreto durante o trial.
  */
 export function SubscriptionGate({ children }: { children: React.ReactNode }) {
-  const sub = useClinicSubscription();
+  return (
+    <ErrorBoundary
+      scope="SubscriptionGate"
+      showHome={false}
+      fallback={() => <>{children}</>}
+    >
+      <SubscriptionGateInner>{children}</SubscriptionGateInner>
+    </ErrorBoundary>
+  );
+}
+
+function SubscriptionGateInner({ children }: { children: React.ReactNode }) {
+  let sub: ReturnType<typeof useClinicSubscription>;
+  try {
+    sub = useClinicSubscription();
+  } catch (error) {
+    console.error('[PROVIDER_ERROR] SubscriptionGate', error);
+    return <>{children}</>;
+  }
   const navigate = useNavigate();
   const location = useLocation();
 

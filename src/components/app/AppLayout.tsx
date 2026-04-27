@@ -120,14 +120,22 @@ export function AppLayout() {
     </SidebarProvider>
     
     {/* Global Active Appointment Widget - must be inside GlobalActiveAppointmentProvider */}
-    <FloatingActiveAppointmentButton />
-    <ActiveAppointmentDrawer />
-    
-    {/* Onboarding Wizard */}
-    <OnboardingWizard />
-    
-    {/* Guided Tour for first-time users */}
-    {location.pathname === "/app" && <GuidedTour />}
+    <ErrorBoundary scope="ActiveAppointmentWidget" compact>
+      <FloatingActiveAppointmentButton />
+      <ActiveAppointmentDrawer />
+    </ErrorBoundary>
+
+    {/* Onboarding Wizard — falha não pode derrubar o layout */}
+    <ErrorBoundary scope="OnboardingWizard" compact fallback={() => null as any}>
+      <OnboardingWizard />
+    </ErrorBoundary>
+
+    {/* Guided Tour for first-time users — falha não pode derrubar o layout */}
+    {location.pathname === "/app" && (
+      <ErrorBoundary scope="GuidedTour" compact fallback={() => null as any}>
+        <GuidedTour />
+      </ErrorBoundary>
+    )}
     </GlobalActiveAppointmentProvider>
     </GlobalSpecialtyProvider>
   );

@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { PermissionsProvider } from "@/hooks/usePermissions";
 import { UserViewModeBootstrap } from "@/contexts/UserViewModeBootstrap";
+import { UserViewModeProvider } from "@/contexts/UserViewModeContext";
 import { ClinicFeaturesProvider } from "@/hooks/useClinicFeatures";
 import { RequireAuth } from "@/components/app/RequireAuth";
 import { ProtectedRoute } from "@/components/app/ProtectedRoute";
@@ -123,6 +124,34 @@ function RouteBoundary({ children, scope }: { children: ReactNode; scope: string
   );
 }
 
+/**
+ * Envolve providers não-essenciais. Se o provider lançar, o app segue
+ * renderizando os fallbackChildren — nunca derrubamos o boot por causa de
+ * UserViewMode / Permissions / ClinicFeatures.
+ */
+function SafeProvider({
+  scope,
+  fallbackChildren,
+  children,
+}: {
+  scope: string;
+  fallbackChildren: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <ErrorBoundary
+      scope={scope}
+      showHome={false}
+      fallback={(error) => {
+        console.error(`[PROVIDER_ERROR] ${scope} caiu — seguindo sem ele`, error);
+        return <>{fallbackChildren}</>;
+      }}
+    >
+      {children}
+    </ErrorBoundary>
+  );
+}
+
 const moduleRoute = (children: ReactNode, scope: string) => (
   <RouteBoundary scope={scope}>{children}</RouteBoundary>
 );
@@ -142,9 +171,42 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <UserViewModeBootstrap>
-          <PermissionsProvider>
-            <ClinicFeaturesProvider>
+        <SafeProvider
+          scope="UserViewModeBootstrap"
+          fallbackChildren={
+            <UserViewModeProvider realRole={null}>
+              <SafeProvider scope="PermissionsProvider" fallbackChildren={<AppRouter />}>
+                <PermissionsProvider>
+                  <SafeProvider scope="ClinicFeaturesProvider" fallbackChildren={<AppRouter />}>
+                    <ClinicFeaturesProvider>
+                      <AppRouter />
+                    </ClinicFeaturesProvider>
+                  </SafeProvider>
+                </PermissionsProvider>
+              </SafeProvider>
+            </UserViewModeProvider>
+          }
+        >
+          <UserViewModeBootstrap>
+            <SafeProvider scope="PermissionsProvider" fallbackChildren={<AppRouter />}>
+              <PermissionsProvider>
+                <SafeProvider scope="ClinicFeaturesProvider" fallbackChildren={<AppRouter />}>
+                  <ClinicFeaturesProvider>
+                    <AppRouter />
+                  </ClinicFeaturesProvider>
+                </SafeProvider>
+              </PermissionsProvider>
+            </SafeProvider>
+          </UserViewModeBootstrap>
+        </SafeProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
+
+function AppRouter() {
+  return (
+    <>
               <Toaster />
               <Sonner />
               <ErrorBoundary scope="Router" showHome={false}>
@@ -279,12 +341,8 @@ const App = () => {
                   <CookieConsent />
                 </BrowserRouter>
               </ErrorBoundary>
-            </ClinicFeaturesProvider>
-          </PermissionsProvider>
-        </UserViewModeBootstrap>
-      </TooltipProvider>
-    </QueryClientProvider>
+    </>
   );
-};
+}
 
 export default App;
