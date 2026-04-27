@@ -12,13 +12,14 @@ import type {
   DashboardPeriod,
 } from '@/types/dashboard';
 import { useMarginAlerts, useMarginAlertConfig, generateMarginInsights, type ProcedureMarginAlert } from './useMarginAlerts';
+import { withTimeout } from '@/lib/asyncTimeout';
 
 // =============================================
 // HELPER FUNCTIONS
 // =============================================
 
 async function getUserContext() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await withTimeout<any>(supabase.auth.getUser(), 10000, 'Tempo esgotado ao carregar sessão do dashboard.');
   if (!user) {
     // Retorna contexto vazio em vez de erro
     return {
@@ -29,11 +30,11 @@ async function getUserContext() {
     };
   }
   
-  const { data: profile } = await supabase
+  const { data: profile } = await withTimeout<any>(supabase
     .from("profiles")
     .select("clinic_id, full_name")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle(), 10000, 'Tempo esgotado ao carregar perfil do dashboard.');
   
   // Retorna contexto parcial se não houver clínica
   if (!profile?.clinic_id) {
@@ -45,12 +46,12 @@ async function getUserContext() {
     };
   }
   
-  const { data: roleData } = await supabase
+  const { data: roleData } = await withTimeout<any>(supabase
     .from("user_roles")
     .select("role")
     .eq("user_id", user.id)
     .eq("clinic_id", profile.clinic_id)
-    .single();
+    .maybeSingle(), 10000, 'Tempo esgotado ao carregar permissões do dashboard.');
   
   return {
     userId: user.id,
@@ -122,35 +123,35 @@ function usePeriodAppointments(clinicId: string | null, userRole: string | null,
         query = query.eq('professional_id', professionalId);
       }
       
-      const { data: appointments, error } = await query;
+      const { data: appointments, error } = await withTimeout<any>(query, 10000, 'Tempo esgotado ao carregar agenda do dashboard.');
       
       if (error) throw error;
       if (!appointments || appointments.length === 0) return [];
       
       // Buscar pacientes
       const patientIds = [...new Set(appointments.map(a => a.patient_id).filter(Boolean))];
-      const { data: patients } = await supabase
+      const { data: patients } = await withTimeout<any>(supabase
         .from('patients')
         .select('id, full_name')
-        .in('id', patientIds);
+        .in('id', patientIds), 10000, 'Tempo esgotado ao carregar pacientes do dashboard.');
       const patientsMap = new Map(patients?.map(p => [p.id, p]) || []);
       
       // Buscar profissionais
       const professionalIds = [...new Set(appointments.map(a => a.professional_id).filter(Boolean))];
-      const { data: professionals } = await supabase
+      const { data: professionals } = await withTimeout<any>(supabase
         .from('professionals')
         .select('id, full_name, color')
-        .in('id', professionalIds);
+        .in('id', professionalIds), 10000, 'Tempo esgotado ao carregar profissionais do dashboard.');
       const professionalsMap = new Map(professionals?.map(p => [p.id, p]) || []);
       
       // Buscar procedimentos
       const procedureIds = [...new Set(appointments.map(a => a.procedure_id).filter(Boolean))] as string[];
       let proceduresMap = new Map<string, { id: string; name: string }>();
       if (procedureIds.length > 0) {
-        const { data: procedures } = await supabase
+        const { data: procedures } = await withTimeout<any>(supabase
           .from('procedures')
           .select('id, name')
-          .in('id', procedureIds);
+          .in('id', procedureIds), 10000, 'Tempo esgotado ao carregar procedimentos do dashboard.');
         proceduresMap = new Map(procedures?.map(p => [p.id, p]) || []);
       }
       
@@ -158,19 +159,19 @@ function usePeriodAppointments(clinicId: string | null, userRole: string | null,
       const insuranceIds = [...new Set(appointments.map(a => a.insurance_id).filter(Boolean))] as string[];
       let insurancesMap = new Map<string, { id: string; name: string }>();
       if (insuranceIds.length > 0) {
-        const { data: insurances } = await supabase
+        const { data: insurances } = await withTimeout<any>(supabase
           .from('insurances')
           .select('id, name')
-          .in('id', insuranceIds);
+          .in('id', insuranceIds), 10000, 'Tempo esgotado ao carregar convênios do dashboard.');
         insurancesMap = new Map(insurances?.map(i => [i.id, i]) || []);
       }
       
       // Buscar alertas clínicos dos pacientes
-      const { data: alertsData } = await supabase
+      const { data: alertsData } = await withTimeout<any>(supabase
         .from('patient_clinical_data')
         .select('patient_id')
         .in('patient_id', patientIds)
-        .not('allergies', 'is', null);
+        .not('allergies', 'is', null), 10000, 'Tempo esgotado ao carregar alertas clínicos do dashboard.');
       
       const patientsWithAlerts = new Set(alertsData?.map(a => a.patient_id) || []);
       
@@ -225,49 +226,49 @@ function useDashboardFinance(clinicId: string | null, period: DashboardPeriod) {
       const monthEnd = format(endOfMonth(today), 'yyyy-MM-dd');
       
       // Buscar atendimentos do período para calcular previsto
-      const { data: periodAppointments } = await supabase
+      const { data: periodAppointments } = await withTimeout<any>(supabase
         .from('appointments')
         .select('expected_value, payment_type, status')
         .eq('clinic_id', clinicId)
         .gte('scheduled_date', startDate)
         .lte('scheduled_date', endDate)
-        .neq('status', 'cancelado');
+        .neq('status', 'cancelado'), 10000, 'Tempo esgotado ao carregar financeiro do dashboard.');
       
       // Buscar transações do período (recebimentos)
-      const { data: periodTransactions } = await supabase
+      const { data: periodTransactions } = await withTimeout<any>(supabase
         .from('finance_transactions')
         .select('amount')
         .eq('clinic_id', clinicId)
         .eq('type', 'receita')
         .eq('status', 'pago')
         .gte('paid_at', `${startDate}T00:00:00`)
-        .lte('paid_at', `${endDate}T23:59:59`);
+        .lte('paid_at', `${endDate}T23:59:59`), 10000, 'Tempo esgotado ao carregar recebimentos do dashboard.');
       
       // Buscar transações do mês (acumulado)
-      const { data: monthTransactions } = await supabase
+      const { data: monthTransactions } = await withTimeout<any>(supabase
         .from('finance_transactions')
         .select('amount')
         .eq('clinic_id', clinicId)
         .eq('type', 'receita')
         .eq('status', 'pago')
         .gte('paid_at', `${monthStart}T00:00:00`)
-        .lte('paid_at', `${monthEnd}T23:59:59`);
+        .lte('paid_at', `${monthEnd}T23:59:59`), 10000, 'Tempo esgotado ao carregar acumulado mensal do dashboard.');
       
       // Buscar atendimentos finalizados do mês para distribuição particular/convênio
-      const { data: monthAppointments } = await supabase
+      const { data: monthAppointments } = await withTimeout<any>(supabase
         .from('appointments')
         .select('expected_value, payment_type')
         .eq('clinic_id', clinicId)
         .gte('scheduled_date', monthStart)
         .lte('scheduled_date', monthEnd)
-        .eq('status', 'finalizado');
+        .eq('status', 'finalizado'), 10000, 'Tempo esgotado ao carregar atendimentos mensais do dashboard.');
       
       // Buscar meta mensal da clínica
-      const { data: clinicData } = await supabase
+      const { data: clinicData } = await withTimeout<any>(supabase
         .from('clinics')
         .select('monthly_goal')
         .eq('id', clinicId)
-        .single();
+        .maybeSingle(), 10000, 'Tempo esgotado ao carregar meta mensal do dashboard.');
       
       // Calcular valores do período
       const periodExpected = periodAppointments?.reduce((sum, apt) => sum + (Number(apt.expected_value) || 0), 0) || 0;
@@ -317,11 +318,11 @@ function useDashboardProfessionals(clinicId: string | null, period: DashboardPer
       if (!clinicId) return [];
       
       // Buscar profissionais ativos
-      const { data: professionals } = await supabase
+      const { data: professionals } = await withTimeout<any>(supabase
         .from('professionals')
         .select('id, full_name, color, specialty_id')
         .eq('clinic_id', clinicId)
-        .eq('is_active', true);
+        .eq('is_active', true), 10000, 'Tempo esgotado ao carregar equipe do dashboard.');
       
       if (!professionals || professionals.length === 0) return [];
       
@@ -329,30 +330,30 @@ function useDashboardProfessionals(clinicId: string | null, period: DashboardPer
       const specialtyIds = [...new Set(professionals.map(p => p.specialty_id).filter(Boolean))] as string[];
       let specialtiesMap = new Map<string, string>();
       if (specialtyIds.length > 0) {
-        const { data: specialties } = await supabase
+        const { data: specialties } = await withTimeout<any>(supabase
           .from('specialties')
           .select('id, name')
-          .in('id', specialtyIds);
+          .in('id', specialtyIds), 10000, 'Tempo esgotado ao carregar especialidades do dashboard.');
         specialtiesMap = new Map(specialties?.map(s => [s.id, s.name]) || []);
       }
       
       // Buscar atendimentos do período
-      const { data: appointments } = await supabase
+      const { data: appointments } = await withTimeout<any>(supabase
         .from('appointments')
         .select('professional_id, status, patient_id')
         .eq('clinic_id', clinicId)
         .gte('scheduled_date', startDate)
-        .lte('scheduled_date', endDate);
+        .lte('scheduled_date', endDate), 10000, 'Tempo esgotado ao carregar agenda da equipe.');
       
       // Buscar nomes dos pacientes em atendimento
       const inProgressApts = appointments?.filter(a => a.status === 'em_atendimento') || [];
       const patientIds = inProgressApts.map(a => a.patient_id).filter(Boolean);
       let patientsMap = new Map<string, string>();
       if (patientIds.length > 0) {
-        const { data: patients } = await supabase
+        const { data: patients } = await withTimeout<any>(supabase
           .from('patients')
           .select('id, full_name')
-          .in('id', patientIds);
+          .in('id', patientIds), 10000, 'Tempo esgotado ao carregar pacientes em atendimento.');
         patientsMap = new Map(patients?.map(p => [p.id, p.full_name]) || []);
       }
       
@@ -569,12 +570,12 @@ export function useDashboardRealData() {
         
         // Se for profissional, buscar o professional_id
         if (context.role === 'profissional' && context.userId && context.clinicId) {
-          const { data: profData } = await supabase
+          const { data: profData } = await withTimeout<any>(supabase
             .from('professionals')
             .select('id')
             .eq('clinic_id', context.clinicId)
             .eq('user_id', context.userId)
-            .single();
+            .maybeSingle(), 10000, 'Tempo esgotado ao carregar profissional do dashboard.');
           
           setUserContext({ 
             userId: context.userId,

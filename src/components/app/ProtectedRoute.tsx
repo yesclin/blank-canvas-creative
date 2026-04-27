@@ -33,12 +33,16 @@ export function ProtectedRoute({
 
   // Check if user is active
   useEffect(() => {
+    let mounted = true;
+
     async function checkUserActive() {
       try {
         const { data: { user } } = await withTimeout<any>(supabase.auth.getUser());
         if (!user) {
-          setIsActive(false);
-          setCheckingActive(false);
+          if (mounted) {
+            setIsActive(false);
+            setCheckingActive(false);
+          }
           return;
         }
 
@@ -51,6 +55,7 @@ export function ProtectedRoute({
         // CRITICAL: If profile doesn't exist yet (race condition during signup),
         // treat as active — the handle_new_user trigger will create it shortly.
         // Only show "Conta Desativada" when profile EXISTS and is_active is explicitly false.
+        if (!mounted) return;
         if (!profile) {
           // Profile not found — new user, treat as active
           setIsActive(true);
@@ -60,13 +65,25 @@ export function ProtectedRoute({
       } catch (error) {
         console.error("[APP_ERROR]", error);
         // On error, don't block the user — default to active
-        setIsActive(true);
+        if (mounted) setIsActive(true);
       } finally {
-        setCheckingActive(false);
+        if (mounted) setCheckingActive(false);
       }
     }
 
     checkUserActive();
+
+    const bootTimeout = window.setTimeout(() => {
+      if (!mounted) return;
+      console.error("[BOOT_TIMEOUT] ProtectedRoute demorou demais");
+      setIsActive(true);
+      setCheckingActive(false);
+    }, 10000);
+
+    return () => {
+      mounted = false;
+      window.clearTimeout(bootTimeout);
+    };
   }, []);
 
   // Show skeleton while loading

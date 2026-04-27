@@ -153,6 +153,14 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     fetchPermissions();
 
+    const bootTimeout = window.setTimeout(() => {
+      setState((current) => {
+        if (!current.isLoading) return current;
+        console.error("[BOOT_TIMEOUT] PermissionsProvider demorou demais");
+        return { ...current, isLoading: false };
+      });
+    }, 10000);
+
     // Listen for auth changes — defer Supabase queries out of the callback to
     // avoid deadlocks (anti-pattern: awaiting Supabase calls inside the auth
     // listener can block subsequent events).
@@ -160,7 +168,10 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       setTimeout(() => fetchPermissions(), 0);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      window.clearTimeout(bootTimeout);
+      subscription.unsubscribe();
+    };
   }, [fetchPermissions]);
 
   // ===== Effective state with view-mode override (impersonation) =====

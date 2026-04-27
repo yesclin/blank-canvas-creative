@@ -9,6 +9,7 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { withTimeout } from '@/lib/asyncTimeout';
 
 export type SubscriptionStatus =
   | 'trial'
@@ -30,7 +31,7 @@ export interface ClinicSubscriptionData {
 }
 
 async function resolveClinicId(): Promise<string | null> {
-  const { data: auth } = await supabase.auth.getUser();
+  const { data: auth } = await withTimeout<any>(supabase.auth.getUser(), 10000, 'Tempo esgotado ao carregar sessão.');
   const userId = auth?.user?.id;
   if (!userId) return null;
 
@@ -40,18 +41,22 @@ async function resolveClinicId(): Promise<string | null> {
         ? window.localStorage.getItem('yesclin_support_clinic_id')
         : null;
     if (supportClinicId) {
-      const { data: isAdmin } = await supabase.rpc('is_platform_admin', { _user_id: userId });
+      const { data: isAdmin } = await withTimeout<any>(
+        supabase.rpc('is_platform_admin', { _user_id: userId }),
+        10000,
+        'Tempo esgotado ao validar suporte.'
+      );
       if (isAdmin === true) return supportClinicId;
     }
   } catch {
     /* noop */
   }
 
-  const { data: profile } = await supabase
+  const { data: profile } = await withTimeout<any>(supabase
     .from('profiles')
     .select('clinic_id')
     .eq('user_id', userId)
-    .maybeSingle();
+    .maybeSingle(), 10000, 'Tempo esgotado ao carregar perfil.');
   return profile?.clinic_id ?? null;
 }
 
@@ -70,7 +75,7 @@ async function fetchSubscription(): Promise<ClinicSubscriptionData> {
 
   // Tenta expirar trials vencidos antes de ler. Falha silenciosa.
   try {
-    await supabase.rpc('expire_overdue_trials');
+    await withTimeout<any>(supabase.rpc('expire_overdue_trials'), 10000, 'Tempo esgotado ao verificar assinatura.');
   } catch {
     /* noop */
   }
@@ -78,11 +83,11 @@ async function fetchSubscription(): Promise<ClinicSubscriptionData> {
   const clinicId = await resolveClinicId();
   if (!clinicId) return empty;
 
-  const { data, error } = await supabase
+  const { data, error } = await withTimeout<any>(supabase
     .from('clinic_subscriptions')
     .select('status, cycle, trial_ends_at, current_period_end, plan_id, subscription_plans(name, slug)')
     .eq('clinic_id', clinicId)
-    .maybeSingle();
+    .maybeSingle(), 10000, 'Tempo esgotado ao carregar assinatura.');
 
   if (error || !data) return { ...empty, clinic_id: clinicId };
 
@@ -119,12 +124,16 @@ export function useClinicSubscription() {
     queryFn: fetchSubscription,
     staleTime: 60 * 1000,
     refetchOnWindowFocus: true,
+    retry: 1,
+    throwOnError: false,
   });
 
   useEffect(() => {
     const invalidate = () => queryClient.invalidateQueries({ queryKey: ['clinic-subscription'] });
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (['SIGNED_IN', 'SIGNED_OUT', 'TOKEN_REFRESHED'].includes(event)) invalidate();
+      if (['SIGNED_IN', 'SIGNED_OUT', 'TOKEN_REFRESHED', 'INITIAL_SESSION'].includes(event)) {
+        setTimeout(() => invalidate(), 0);
+      }
     });
     const onSupport = () => invalidate();
     const onStorage = (e: StorageEvent) => {
