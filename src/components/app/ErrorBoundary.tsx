@@ -45,7 +45,7 @@ export class ErrorBoundary extends Component<Props, State> {
     const componentName = info.componentStack?.split("\n").find(Boolean)?.trim() ?? this.props.scope ?? "unknown";
 
     console.groupCollapsed(`[ErrorBoundary] ${this.props.scope || "global"}: ${error.message}`);
-    console.error("Error", error);
+    console.error("[APP_ERROR]", error);
     console.error("Stack trace", error.stack);
     console.error("Component", componentName);
     console.error("Route", route);
