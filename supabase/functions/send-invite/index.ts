@@ -359,6 +359,7 @@ export const handler = async (req: Request): Promise<Response> => {
       if (existingInvite) {
         return new Response(
           JSON.stringify({
+            success: false,
             error: "Já existe um convite pendente para este e-mail. Use a ação 'Reenviar' no convite existente.",
             existing_invitation_id: existingInvite.id,
           }),
