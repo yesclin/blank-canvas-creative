@@ -12,13 +12,14 @@ import type {
   DashboardPeriod,
 } from '@/types/dashboard';
 import { useMarginAlerts, useMarginAlertConfig, generateMarginInsights, type ProcedureMarginAlert } from './useMarginAlerts';
+import { withTimeout } from '@/lib/asyncTimeout';
 
 // =============================================
 // HELPER FUNCTIONS
 // =============================================
 
 async function getUserContext() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await withTimeout<any>(supabase.auth.getUser(), 10000, 'Tempo esgotado ao carregar sessão do dashboard.');
   if (!user) {
     // Retorna contexto vazio em vez de erro
     return {
@@ -29,11 +30,11 @@ async function getUserContext() {
     };
   }
   
-  const { data: profile } = await supabase
+  const { data: profile } = await withTimeout<any>(supabase
     .from("profiles")
     .select("clinic_id, full_name")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle(), 10000, 'Tempo esgotado ao carregar perfil do dashboard.');
   
   // Retorna contexto parcial se não houver clínica
   if (!profile?.clinic_id) {
@@ -45,12 +46,12 @@ async function getUserContext() {
     };
   }
   
-  const { data: roleData } = await supabase
+  const { data: roleData } = await withTimeout<any>(supabase
     .from("user_roles")
     .select("role")
     .eq("user_id", user.id)
     .eq("clinic_id", profile.clinic_id)
-    .single();
+    .maybeSingle(), 10000, 'Tempo esgotado ao carregar permissões do dashboard.');
   
   return {
     userId: user.id,
@@ -569,12 +570,12 @@ export function useDashboardRealData() {
         
         // Se for profissional, buscar o professional_id
         if (context.role === 'profissional' && context.userId && context.clinicId) {
-          const { data: profData } = await supabase
+          const { data: profData } = await withTimeout<any>(supabase
             .from('professionals')
             .select('id')
             .eq('clinic_id', context.clinicId)
             .eq('user_id', context.userId)
-            .single();
+            .maybeSingle(), 10000, 'Tempo esgotado ao carregar profissional do dashboard.');
           
           setUserContext({ 
             userId: context.userId,
