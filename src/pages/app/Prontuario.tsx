@@ -667,6 +667,18 @@ export default function Prontuario() {
     noSpecialtyConfigured,
   } = useActiveSpecialty(patientId, preferredAppointmentId);
 
+  const [activeTab, setActiveTab] = useState("resumo");
+  const [loadedTabs, setLoadedTabs] = useState<Set<string>>(() => new Set());
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const [searchFocus, setSearchFocus] = useState<SearchFocusTarget | null>(null);
+  const [consentDialogOpen, setConsentDialogOpen] = useState(false);
+  const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
+  const [selectedEntryForSignature, setSelectedEntryForSignature] = useState<MedicalRecordEntry | null>(null);
+  const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const shouldLoadTab = useCallback((...tabKeys: string[]) => {
+    return tabKeys.some((tabKey) => loadedTabs.has(tabKey));
+  }, [loadedTabs]);
+
   // Visão Geral Data - specific for Clínica Geral specialty
   const {
     patient: visaoGeralPatient,
@@ -674,7 +686,7 @@ export default function Prontuario() {
     alerts: visaoGeralAlerts,
     lastAppointment: visaoGeralLastAppointment,
     loading: visaoGeralLoading,
-  } = useVisaoGeralData(patientId);
+  } = useVisaoGeralData(shouldLoadTab('resumo') ? patientId : null);
 
   // Visão Geral Data - specific for Psicologia specialty
   const {
