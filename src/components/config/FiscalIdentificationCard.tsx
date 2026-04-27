@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { validateCPF, validateCNPJ, maskCPF, maskCNPJ } from "@/lib/validators";
 import { supabase } from "@/integrations/supabase/client";
+import { withTimeout } from "@/lib/asyncTimeout";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -178,9 +179,9 @@ export function FiscalIdentificationCard({
     setCnpjData(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('consulta-cnpj', {
+      const { data, error } = await withTimeout<any>(supabase.functions.invoke('consulta-cnpj', {
         body: { cnpj: cleanCNPJ }
-      });
+      }), 15000, "Tempo limite atingido. Tente novamente.");
 
       if (error) throw error;
 

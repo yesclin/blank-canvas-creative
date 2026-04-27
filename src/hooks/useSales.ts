@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { withTimeout } from "@/lib/asyncTimeout";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import type { Sale, SaleFormData, SaleItem, PaymentStatus } from "@/types/inventory";
@@ -209,9 +210,9 @@ export function useCreateSale() {
   
   return useMutation({
     mutationFn: async (data: SaleFormData & { allowNegativeStock?: boolean }) => {
-      const { data: response, error } = await supabase.functions.invoke("create-sale", {
+      const { data: response, error } = await withTimeout<any>(supabase.functions.invoke("create-sale", {
         body: data,
-      });
+      }), 15000, "Tempo limite atingido. Tente novamente.");
       
       if (error) {
         throw new Error(error.message || "Erro ao criar venda");
@@ -277,12 +278,14 @@ export function useUpdateSaleStatus() {
       if (error) throw error;
       
       // Log audit entry
-      await supabase.functions.invoke('log-access', {
+      withTimeout<any>(supabase.functions.invoke('log-access', {
         body: {
           action: 'SALE_STATUS_UPDATED',
           resource: `sales/${id}?status=${paymentStatus}`,
           user_agent: navigator.userAgent,
         },
+      }), 15000, "Tempo limite atingido. Tente novamente.").catch((logError) => {
+        console.warn("Failed to log sale status update:", logError);
       });
       
       return { id };
@@ -309,9 +312,9 @@ export function useCancelSale() {
   
   return useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason?: string }) => {
-      const { data: response, error } = await supabase.functions.invoke("cancel-sale", {
+      const { data: response, error } = await withTimeout<any>(supabase.functions.invoke("cancel-sale", {
         body: { sale_id: id, reason },
-      });
+      }), 15000, "Tempo limite atingido. Tente novamente.");
       
       if (error) {
         throw new Error(error.message || "Erro ao cancelar venda");

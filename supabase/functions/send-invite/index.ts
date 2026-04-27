@@ -101,8 +101,28 @@ interface InviteRequest {
   invitationId?: string;
 }
 
-// Invitation expiration in days
 const INVITATION_EXPIRATION_DAYS = 7;
+
+class EdgeTimeoutError extends Error {
+  constructor(message = "Tempo limite atingido") {
+    super(message);
+    this.name = "EdgeTimeoutError";
+  }
+}
+
+function withEdgeTimeout<T>(
+  promise: PromiseLike<T>,
+  timeoutMs = 12000,
+  message = "Tempo limite atingido. Tente novamente.",
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new EdgeTimeoutError(message)), timeoutMs);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeoutId) clearTimeout(timeoutId);
+  }) as Promise<T>;
+}
 
 export const handler = async (req: Request): Promise<Response> => {
   const corsHeaders = getCorsHeaders(req);
@@ -339,6 +359,7 @@ export const handler = async (req: Request): Promise<Response> => {
       if (existingInvite) {
         return new Response(
           JSON.stringify({
+            success: false,
             error: "Já existe um convite pendente para este e-mail. Use a ação 'Reenviar' no convite existente.",
             existing_invitation_id: existingInvite.id,
           }),
@@ -421,11 +442,18 @@ export const handler = async (req: Request): Promise<Response> => {
     // Single attempt (no retries) to keep total response time well under
     // the frontend's 15s timeout. If delivery fails the invitation is still
     // created and the admin gets a copyable accept_url back.
-    const emailResult = await emailService.send({
-      to: sanitizedEmail,
-      subject: `Convite para participar de ${clinic?.name || "clínica"} no YESCLIN`,
-      html: emailHtml,
-    });
+    const emailResult = await withEdgeTimeout(
+      emailService.send({
+        to: sanitizedEmail,
+        subject: `Convite para participar de ${clinic?.name || "clínica"} no YESCLIN`,
+        html: emailHtml,
+      }),
+      12000,
+      "Tempo limite atingido ao enviar email. Convite criado para envio manual.",
+    ).catch((error) => ({
+      success: false,
+      error: error instanceof Error ? error.message : "Falha desconhecida no provedor de email",
+    }));
 
     if (!emailResult.success) {
       console.error("[send-invite] Failed to send email:", emailResult.error);
@@ -446,10 +474,11 @@ export const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log("[send-invite] Email sent successfully. ID:", emailResult.messageId);
+    const messageId = "messageId" in emailResult ? emailResult.messageId : undefined;
+    console.log("[send-invite] Email sent successfully. ID:", messageId);
 
-    // Log the action
-    await supabaseAdmin.from("user_audit_logs").insert({
+    // Log the action without letting audit logging delay or fail the invite response.
+    withEdgeTimeout(supabaseAdmin.from("user_audit_logs").insert({
       clinic_id: profile.clinic_id,
       action: invitationId ? "user_invitation_resent" : "user_invited",
       target_email: email,
@@ -461,6 +490,8 @@ export const handler = async (req: Request): Promise<Response> => {
         invitation_id: invitation.id,
         reused_token: !!invitationId,
       },
+    }), 3000, "Tempo limite ao registrar auditoria").catch((auditError) => {
+      console.error("[send-invite] Audit log failed:", auditError);
     });
 
     return new Response(

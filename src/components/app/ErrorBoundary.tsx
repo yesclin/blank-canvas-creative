@@ -44,14 +44,14 @@ export class ErrorBoundary extends Component<Props, State> {
     const lastEvent = typeof window !== "undefined" ? window.__ycLastEvent ?? null : null;
     const componentName = info.componentStack?.split("\n").find(Boolean)?.trim() ?? this.props.scope ?? "unknown";
 
-    console.groupCollapsed(`[ErrorBoundary] ${this.props.scope || "global"}: ${error.message}`);
-    console.error("[APP_ERROR]", error);
-    console.error("Stack trace", error.stack);
-    console.error("Component", componentName);
-    console.error("Route", route);
-    console.error("Last event", lastEvent);
-    console.error("Component stack", info.componentStack);
-    console.groupEnd();
+    console.error("[APP_ERROR_BOUNDARY]", error, {
+      scope: this.props.scope || "global",
+      component: componentName,
+      route,
+      lastEvent,
+      stack: error.stack,
+      componentStack: info.componentStack,
+    });
   }
 
   reset = () => {
