@@ -171,9 +171,42 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <UserViewModeBootstrap>
-          <PermissionsProvider>
-            <ClinicFeaturesProvider>
+        <SafeProvider
+          scope="UserViewModeBootstrap"
+          fallbackChildren={
+            <UserViewModeProvider realRole={null}>
+              <SafeProvider scope="PermissionsProvider" fallbackChildren={<AppRouter />}>
+                <PermissionsProvider>
+                  <SafeProvider scope="ClinicFeaturesProvider" fallbackChildren={<AppRouter />}>
+                    <ClinicFeaturesProvider>
+                      <AppRouter />
+                    </ClinicFeaturesProvider>
+                  </SafeProvider>
+                </PermissionsProvider>
+              </SafeProvider>
+            </UserViewModeProvider>
+          }
+        >
+          <UserViewModeBootstrap>
+            <SafeProvider scope="PermissionsProvider" fallbackChildren={<AppRouter />}>
+              <PermissionsProvider>
+                <SafeProvider scope="ClinicFeaturesProvider" fallbackChildren={<AppRouter />}>
+                  <ClinicFeaturesProvider>
+                    <AppRouter />
+                  </ClinicFeaturesProvider>
+                </SafeProvider>
+              </PermissionsProvider>
+            </SafeProvider>
+          </UserViewModeBootstrap>
+        </SafeProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
+
+function AppRouter() {
+  return (
+    <>
               <Toaster />
               <Sonner />
               <ErrorBoundary scope="Router" showHome={false}>
