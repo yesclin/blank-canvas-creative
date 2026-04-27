@@ -10,6 +10,7 @@ import { RequireAuth } from "@/components/app/RequireAuth";
 import { ProtectedRoute } from "@/components/app/ProtectedRoute";
 import { ProtectedFeatureRoute } from "@/components/app/ProtectedFeatureRoute";
 import { PasswordRecoveryHandler } from "@/components/app/PasswordRecoveryHandler";
+import { ErrorBoundary } from "@/components/app/ErrorBoundary";
 import CookieConsent from "@/components/CookieConsent";
 
 // Páginas Públicas
@@ -103,17 +104,28 @@ import SuperAdminSetup from "./pages/super-admin/SuperAdminSetup";
 import SuperAdminStub from "./pages/super-admin/SuperAdminStub";
 import Assinatura from "./pages/app/Assinatura";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <UserViewModeBootstrap>
-      <PermissionsProvider>
-        <ClinicFeaturesProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+const App = () => {
+  console.log("[APP_INIT] App renderizando");
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <UserViewModeBootstrap>
+        <PermissionsProvider>
+          <ClinicFeaturesProvider>
+          <Toaster />
+          <Sonner />
+          <ErrorBoundary scope="Router" showHome={false}>
+          <BrowserRouter>
         <PasswordRecoveryHandler />
         <Routes>
           {/* Páginas Públicas */}
@@ -241,12 +253,14 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
         <CookieConsent />
-      </BrowserRouter>
-        </ClinicFeaturesProvider>
-      </PermissionsProvider>
-      </UserViewModeBootstrap>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+        </BrowserRouter>
+          </ErrorBoundary>
+          </ClinicFeaturesProvider>
+        </PermissionsProvider>
+        </UserViewModeBootstrap>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
