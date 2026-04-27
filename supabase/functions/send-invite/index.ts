@@ -101,8 +101,28 @@ interface InviteRequest {
   invitationId?: string;
 }
 
-// Invitation expiration in days
 const INVITATION_EXPIRATION_DAYS = 7;
+
+class EdgeTimeoutError extends Error {
+  constructor(message = "Tempo limite atingido") {
+    super(message);
+    this.name = "EdgeTimeoutError";
+  }
+}
+
+function withEdgeTimeout<T>(
+  promise: PromiseLike<T>,
+  timeoutMs = 12000,
+  message = "Tempo limite atingido. Tente novamente.",
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new EdgeTimeoutError(message)), timeoutMs);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeoutId) clearTimeout(timeoutId);
+  }) as Promise<T>;
+}
 
 export const handler = async (req: Request): Promise<Response> => {
   const corsHeaders = getCorsHeaders(req);
