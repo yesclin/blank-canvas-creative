@@ -108,6 +108,13 @@ export function ProtectedRoute({
     return <InactiveUserPage />;
   }
 
+  // CRÍTICO: se as permissões já terminaram de carregar mas o role veio
+  // null/undefined, foi falha temporária de dados — NÃO é falha de auth.
+  // Mostrar erro recuperável com "Tentar novamente". NUNCA deslogar aqui.
+  if (!isLoading && !role) {
+    return <PermissionsLoadFailedPage onRetry={() => refetch()} />;
+  }
+
   // Owner and Admin bypass all permission checks
   if (isOwner || isAdmin) {
     return <>{children}</>;
