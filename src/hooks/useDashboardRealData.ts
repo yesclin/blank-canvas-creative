@@ -226,49 +226,49 @@ function useDashboardFinance(clinicId: string | null, period: DashboardPeriod) {
       const monthEnd = format(endOfMonth(today), 'yyyy-MM-dd');
       
       // Buscar atendimentos do período para calcular previsto
-      const { data: periodAppointments } = await supabase
+      const { data: periodAppointments } = await withTimeout<any>(supabase
         .from('appointments')
         .select('expected_value, payment_type, status')
         .eq('clinic_id', clinicId)
         .gte('scheduled_date', startDate)
         .lte('scheduled_date', endDate)
-        .neq('status', 'cancelado');
+        .neq('status', 'cancelado'), 10000, 'Tempo esgotado ao carregar financeiro do dashboard.');
       
       // Buscar transações do período (recebimentos)
-      const { data: periodTransactions } = await supabase
+      const { data: periodTransactions } = await withTimeout<any>(supabase
         .from('finance_transactions')
         .select('amount')
         .eq('clinic_id', clinicId)
         .eq('type', 'receita')
         .eq('status', 'pago')
         .gte('paid_at', `${startDate}T00:00:00`)
-        .lte('paid_at', `${endDate}T23:59:59`);
+        .lte('paid_at', `${endDate}T23:59:59`), 10000, 'Tempo esgotado ao carregar recebimentos do dashboard.');
       
       // Buscar transações do mês (acumulado)
-      const { data: monthTransactions } = await supabase
+      const { data: monthTransactions } = await withTimeout<any>(supabase
         .from('finance_transactions')
         .select('amount')
         .eq('clinic_id', clinicId)
         .eq('type', 'receita')
         .eq('status', 'pago')
         .gte('paid_at', `${monthStart}T00:00:00`)
-        .lte('paid_at', `${monthEnd}T23:59:59`);
+        .lte('paid_at', `${monthEnd}T23:59:59`), 10000, 'Tempo esgotado ao carregar acumulado mensal do dashboard.');
       
       // Buscar atendimentos finalizados do mês para distribuição particular/convênio
-      const { data: monthAppointments } = await supabase
+      const { data: monthAppointments } = await withTimeout<any>(supabase
         .from('appointments')
         .select('expected_value, payment_type')
         .eq('clinic_id', clinicId)
         .gte('scheduled_date', monthStart)
         .lte('scheduled_date', monthEnd)
-        .eq('status', 'finalizado');
+        .eq('status', 'finalizado'), 10000, 'Tempo esgotado ao carregar atendimentos mensais do dashboard.');
       
       // Buscar meta mensal da clínica
-      const { data: clinicData } = await supabase
+      const { data: clinicData } = await withTimeout<any>(supabase
         .from('clinics')
         .select('monthly_goal')
         .eq('id', clinicId)
-        .single();
+        .maybeSingle(), 10000, 'Tempo esgotado ao carregar meta mensal do dashboard.');
       
       // Calcular valores do período
       const periodExpected = periodAppointments?.reduce((sum, apt) => sum + (Number(apt.expected_value) || 0), 0) || 0;
