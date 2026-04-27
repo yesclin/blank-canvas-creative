@@ -982,14 +982,6 @@ export default function Prontuario() {
     return rawCanPerformAction(actionKey);
   };
 
-  const [activeTab, setActiveTab] = useState("resumo");
-  const [highlightedId, setHighlightedId] = useState<string | null>(null);
-  const [searchFocus, setSearchFocus] = useState<SearchFocusTarget | null>(null);
-  const [consentDialogOpen, setConsentDialogOpen] = useState(false);
-  const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
-  const [selectedEntryForSignature, setSelectedEntryForSignature] = useState<MedicalRecordEntry | null>(null);
-  const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
   // Track previous specialty to detect changes
   const previousSpecialtyKeyRef = useRef<string | null>(null);
 
