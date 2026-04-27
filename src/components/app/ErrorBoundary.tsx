@@ -71,6 +71,10 @@ export class ErrorBoundary extends Component<Props, State> {
     window.location.reload();
   };
 
+  goLogin = () => {
+    window.location.href = "/login";
+  };
+
   render() {
     if (!this.state.hasError) return this.props.children;
 
@@ -146,6 +150,9 @@ export class ErrorBoundary extends Component<Props, State> {
               <Button onClick={this.reload} variant="ghost" className="flex-1">
                 <RotateCw className="h-4 w-4 mr-2" />
                 Recarregar
+              </Button>
+              <Button onClick={this.goLogin} variant="ghost" className="flex-1">
+                Login
               </Button>
             </div>
           </CardContent>
