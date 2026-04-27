@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 import { usePermissions, AppModule, AppAction } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ShieldX, UserX } from "lucide-react";
+import { ShieldX, UserX, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { withTimeout } from "@/lib/asyncTimeout";
 
@@ -15,11 +15,18 @@ interface ProtectedRouteProps {
 }
 
 /**
- * Route-level permission guard
- * - Checks if user is active (inactive users cannot access)
- * - Shows loading state while permissions are being fetched
- * - Redirects or shows blocked message when access is denied
- * - Renders children when access is granted
+ * Route-level permission guard.
+ *
+ * REGRAS INVIOLÁVEIS:
+ *  1. NUNCA chamar signOut() aqui. Falha de profile/clinic/role NÃO é
+ *     falha de autenticação — só o RequireAuth decide quem vai para /login.
+ *  2. Enquanto isLoading (auth/permissions) for true, mostrar skeleton.
+ *     Nunca decidir bloqueio antes de loading=false.
+ *  3. Se as permissões falharem temporariamente (role=null após carregar),
+ *     mostrar tela de erro recuperável com botão "Tentar novamente" —
+ *     NÃO redirecionar para /login e NÃO deslogar.
+ *  4. Apenas exibir AccessDeniedPage quando o role EXISTE e realmente
+ *     não tem permissão para o módulo solicitado.
  */
 export function ProtectedRoute({
   children,
@@ -27,7 +34,7 @@ export function ProtectedRoute({
   action = "view",
   redirectTo,
 }: ProtectedRouteProps) {
-  const { can, isLoading, isOwner, isAdmin } = usePermissions();
+  const { can, isLoading, isOwner, isAdmin, role, refetch } = usePermissions();
   const [isActive, setIsActive] = useState<boolean | null>(null);
   const [checkingActive, setCheckingActive] = useState(true);
 
