@@ -127,6 +127,13 @@ const moduleRoute = (children: ReactNode, scope: string) => (
   <RouteBoundary scope={scope}>{children}</RouteBoundary>
 );
 
+function RouterReadyLog() {
+  if (import.meta.env.DEV) {
+    console.log("[ROUTER] pronto");
+  }
+  return null;
+}
+
 const App = () => {
   if (import.meta.env.DEV) {
     console.log("[APP_INIT] App renderizando");
