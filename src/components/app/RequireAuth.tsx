@@ -22,7 +22,7 @@ export function RequireAuth({ children }: RequireAuthProps) {
 
     const load = async () => {
       try {
-        const { data } = await withTimeout(
+        const { data } = await withTimeout<{ data: { session: unknown | null } }>(
           supabase.auth.getSession(),
           15000,
           "Tempo esgotado ao carregar autenticação."
