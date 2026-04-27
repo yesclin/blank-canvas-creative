@@ -83,6 +83,10 @@ export class ErrorBoundary extends Component<Props, State> {
 
     if (fallback && error) return fallback(error, this.reset);
 
+    // Detalhes técnicos só aparecem em DEV. Em produção, usuário vê
+    // sempre uma mensagem amigável — o erro completo fica no console.
+    const isDev = import.meta.env.DEV;
+
     if (compact) {
       return (
         <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
@@ -92,9 +96,12 @@ export class ErrorBoundary extends Component<Props, State> {
               <p className="font-medium text-foreground">
                 Não foi possível carregar esta seção.
               </p>
-              {scope && (
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Módulo: {scope}
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Tente novamente em instantes.
+              </p>
+              {isDev && scope && (
+                <p className="text-xs text-muted-foreground/70 mt-1 font-mono">
+                  [dev] Módulo: {scope}
                 </p>
               )}
               <Button
@@ -121,18 +128,18 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
             <div className="space-y-1">
               <h2 className="text-xl font-semibold text-foreground">
-                Algo deu errado ao carregar esta tela.
+                Não foi possível carregar esta tela
               </h2>
               <p className="text-sm text-muted-foreground">
-                {scope
-                  ? `Ocorreu um erro inesperado no módulo "${scope}". Você pode tentar novamente sem perder seu progresso em outras áreas.`
-                  : "Ocorreu um erro inesperado. Você pode tentar novamente."}
+                Tente novamente ou volte para o Dashboard.
               </p>
-              {error?.message && (
+              {isDev && error?.message && (
                 <div className="text-xs text-muted-foreground/80 font-mono mt-2 p-2 bg-muted rounded break-words text-left space-y-1">
+                  <p className="font-semibold">[dev] Detalhes técnicos:</p>
                   <p>{error.message}</p>
                   <p>Rota: {route}</p>
                   <p>Último evento: {lastEvent ?? "indisponível"}</p>
+                  {scope && <p>Escopo: {scope}</p>}
                 </div>
               )}
             </div>
