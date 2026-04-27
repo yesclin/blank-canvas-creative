@@ -143,7 +143,7 @@ const App = () => {
               <ErrorBoundary scope="Router" showHome={false}>
                 <BrowserRouter>
                   <PasswordRecoveryHandler />
-                  {import.meta.env.DEV && console.log("[ROUTER] pronto")}
+                  <RouterReadyLog />
                   <Routes>
                     {/* Páginas Públicas */}
                     <Route path="/" element={moduleRoute(<Index />, "Página inicial")} />
