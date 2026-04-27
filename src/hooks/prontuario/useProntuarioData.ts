@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useProntuarioConfig } from './useProntuarioConfig';
 import { useMedicalRecordEntries, MedicalRecordEntry } from './useMedicalRecordEntries';
 import { useMedicalRecordFiles, MedicalRecordFile } from './useMedicalRecordFiles';
 import { useActiveSpecialty } from './useActiveSpecialty';
@@ -50,7 +49,6 @@ export interface ClinicalAlert {
 export function useProntuarioData(patientId: string | null) {
   const { clinic } = useClinicData();
   const { activeSpecialtyId, activeSpecialtyName } = useActiveSpecialty(patientId);
-  const config = useProntuarioConfig(activeSpecialtyId);
   const entriesHook = useMedicalRecordEntries();
   const filesHook = useMedicalRecordFiles();
 
@@ -138,10 +136,12 @@ export function useProntuarioData(patientId: string | null) {
     }
   }, [patientId, clinic?.id]);
 
-  // Load all data when patient or clinic changes.
+  // Load only critical data when patient or clinic changes.
   // CRÍTICO: só resetamos quando o `patientId` realmente fica vazio.
   // Se apenas o `clinic.id` ainda não chegou, mantemos o paciente já carregado
   // (evita o flash "Paciente não encontrado" entre re-renders do AuthProvider).
+  // Não carregamos entradas, arquivos, templates ou dados clínicos pesados aqui:
+  // cada aba deve buscar sob demanda quando for aberta.
   useEffect(() => {
     if (!patientId) {
       setPatient(null);
@@ -157,11 +157,8 @@ export function useProntuarioData(patientId: string | null) {
 
     fetchPatient();
     fetchAlerts();
-    fetchClinicalData();
-    entriesHook.fetchEntriesForPatient(patientId, activeSpecialtyId);
-    filesHook.fetchFilesForPatient(patientId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [patientId, clinic?.id, activeSpecialtyId, fetchPatient, fetchAlerts, fetchClinicalData]);
+  }, [patientId, clinic?.id, fetchPatient, fetchAlerts]);
 
   // Quando o `patientId` da URL muda, descartamos imediatamente o paciente
   // anterior para não exibir dados de outra pessoa enquanto o novo carrega.
@@ -171,13 +168,27 @@ export function useProntuarioData(patientId: string | null) {
 
   // Get active tabs from configuration
   const getActiveTabs = useCallback((): TabConfig[] => {
-    return config.tabs.filter((t) => t.is_active).sort((a, b) => a.display_order - b.display_order);
-  }, [config.tabs]);
+    return [];
+  }, []);
 
   // Get template fields for creating new entries
   const getFieldsForTemplate = useCallback(async (templateId: string): Promise<Field[]> => {
-    return config.getTemplateFields(templateId);
-  }, [config]);
+    const { data, error } = await supabase
+      .from('medical_record_fields')
+      .select('*')
+      .eq('template_id', templateId)
+      .order('field_order', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching fields:', error);
+      return [];
+    }
+
+    return (data || []).map((f) => ({
+      ...f,
+      options: f.options ? (f.options as unknown as string[]) : null,
+    })) as Field[];
+  }, []);
 
   // Create a new entry using a template
   const createEntryFromTemplate = useCallback(async (
