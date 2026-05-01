@@ -425,35 +425,53 @@ export const handler = async (req: Request): Promise<Response> => {
     const baseUrl = req.headers.get("origin") || "https://yesclin.com";
     const acceptUrl = `${baseUrl}/aceitar-convite?token=${invitation.token}`;
 
-    // Send invitation email using shared service and template
-    const emailService = getEmailService();
-    
-    const emailHtml = generateInviteEmail({
-      recipientName: fullName,
-      inviterName: profile.full_name || "Administrador",
-      clinicName: clinic?.name || "Clínica",
-      clinicLogoUrl: clinic?.logo_url || undefined,
-      role: role,
-      roleLabel: getRoleLabel(role),
-      acceptUrl: acceptUrl,
-      expiresInDays: INVITATION_EXPIRATION_DAYS,
-    });
+    // Send invitation email using shared service and template.
+    // If RESEND_API_KEY is not configured, degrade gracefully: keep the
+    // invitation created and return the accept URL for manual sharing.
+    const hasResendKey = !!Deno.env.get("RESEND_API_KEY");
 
-    // Single attempt (no retries) to keep total response time well under
-    // the frontend's 15s timeout. If delivery fails the invitation is still
-    // created and the admin gets a copyable accept_url back.
-    const emailResult = await withEdgeTimeout(
-      emailService.send({
-        to: sanitizedEmail,
-        subject: `Convite para participar de ${clinic?.name || "clínica"} no YESCLIN`,
-        html: emailHtml,
-      }),
-      12000,
-      "Tempo limite atingido ao enviar email. Convite criado para envio manual.",
-    ).catch((error) => ({
-      success: false,
-      error: error instanceof Error ? error.message : "Falha desconhecida no provedor de email",
-    }));
+    let emailResult: { success: boolean; messageId?: string; error?: string };
+
+    if (!hasResendKey) {
+      console.warn("[send-invite] RESEND_API_KEY ausente — pulando envio de email, retornando link manual");
+      emailResult = {
+        success: false,
+        error: "RESEND_API_KEY não configurada no servidor. Convite criado — copie o link abaixo e envie manualmente.",
+      };
+    } else {
+      const emailHtml = generateInviteEmail({
+        recipientName: fullName,
+        inviterName: profile.full_name || "Administrador",
+        clinicName: clinic?.name || "Clínica",
+        clinicLogoUrl: clinic?.logo_url || undefined,
+        role: role,
+        roleLabel: getRoleLabel(role),
+        acceptUrl: acceptUrl,
+        expiresInDays: INVITATION_EXPIRATION_DAYS,
+      });
+
+      try {
+        const emailService = getEmailService();
+        emailResult = await withEdgeTimeout(
+          emailService.send({
+            to: sanitizedEmail,
+            subject: `Convite para participar de ${clinic?.name || "clínica"} no YESCLIN`,
+            html: emailHtml,
+          }),
+          12000,
+          "Tempo limite atingido ao enviar email. Convite criado para envio manual.",
+        ).catch((error) => ({
+          success: false,
+          error: error instanceof Error ? error.message : "Falha desconhecida no provedor de email",
+        }));
+      } catch (serviceError) {
+        console.error("[send-invite] Email service init failed:", serviceError);
+        emailResult = {
+          success: false,
+          error: serviceError instanceof Error ? serviceError.message : "Falha ao iniciar serviço de email",
+        };
+      }
+    }
 
     if (!emailResult.success) {
       console.error("[send-invite] Failed to send email:", emailResult.error);
