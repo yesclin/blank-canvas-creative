@@ -12806,9 +12806,15 @@ export type Database = {
           created_at: string
           email: string
           expires_at: string
+          full_name: string
           id: string
           invited_by: string
+          is_professional: boolean
+          permissions: string[] | null
+          professional_type: string | null
+          registration_number: string | null
           role: Database["public"]["Enums"]["app_role"]
+          specialty_ids: string[]
           status: Database["public"]["Enums"]["invitation_status"]
           token: string
           updated_at: string
@@ -12819,9 +12825,15 @@ export type Database = {
           created_at?: string
           email: string
           expires_at?: string
+          full_name: string
           id?: string
           invited_by: string
+          is_professional?: boolean
+          permissions?: string[] | null
+          professional_type?: string | null
+          registration_number?: string | null
           role?: Database["public"]["Enums"]["app_role"]
+          specialty_ids?: string[]
           status?: Database["public"]["Enums"]["invitation_status"]
           token?: string
           updated_at?: string
@@ -12832,9 +12844,15 @@ export type Database = {
           created_at?: string
           email?: string
           expires_at?: string
+          full_name?: string
           id?: string
           invited_by?: string
+          is_professional?: boolean
+          permissions?: string[] | null
+          professional_type?: string | null
+          registration_number?: string | null
           role?: Database["public"]["Enums"]["app_role"]
+          specialty_ids?: string[]
           status?: Database["public"]["Enums"]["invitation_status"]
           token?: string
           updated_at?: string
