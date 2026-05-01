@@ -38,8 +38,26 @@ export function RequireAuth({ children }: RequireAuthProps) {
       if (import.meta.env.DEV) {
         console.log("[AUTH] event", event, { hasSession: Boolean(session) });
       }
-      setIsAuthed(Boolean(session));
-      setIsLoading(false);
+      // CRÍTICO: só desautenticar em SIGNED_OUT explícito.
+      // Eventos como TOKEN_REFRESHED/USER_UPDATED podem chegar com session=null
+      // em falhas transitórias de refresh — nesses casos, mantemos o usuário
+      // logado e deixamos o Supabase tentar renovar novamente, em vez de
+      // redirecionar para /login (causando o "desloga sozinho").
+      if (event === "SIGNED_OUT") {
+        setIsAuthed(false);
+        setIsLoading(false);
+        return;
+      }
+      if (session) {
+        setIsAuthed(true);
+        setIsLoading(false);
+      } else if (event === "INITIAL_SESSION") {
+        // Único caso onde session=null sem SIGNED_OUT é decisivo:
+        // o storage realmente não tem sessão na inicialização.
+        setIsAuthed(false);
+        setIsLoading(false);
+      }
+      // Demais eventos com session=null: ignorar (não derrubar o usuário).
     });
 
     // 2) Buscar sessão atual (cobre o caso de o listener não disparar
