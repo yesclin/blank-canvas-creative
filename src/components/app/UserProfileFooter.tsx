@@ -230,6 +230,19 @@ export function UserProfileFooter() {
               </DropdownMenuItem>
             )}
 
+            {isPlatformAdmin && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => navigate("/super-admin")}
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                  <span>Painel Super Admin</span>
+                </DropdownMenuItem>
+              </>
+            )}
+
             <DropdownMenuSeparator />
 
             <DropdownMenuItem
