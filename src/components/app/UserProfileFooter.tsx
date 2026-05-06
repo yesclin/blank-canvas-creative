@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { LogOut, User, UserCog, ChevronUp, ArrowLeftRight, Crown, Loader2 } from "lucide-react";
+import { LogOut, User, UserCog, ChevronUp, ArrowLeftRight, Crown, Loader2, ShieldCheck } from "lucide-react";
+import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -54,6 +55,7 @@ export function UserProfileFooter() {
   const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
 
   const { canSwitchView, isImpersonating, viewedRole, resetViewedRole } = useCurrentViewRole();
+  const { isPlatformAdmin } = usePlatformAdmin();
 
   const getInitials = (name: string) => {
     return name
@@ -226,6 +228,19 @@ export function UserProfileFooter() {
                 <ArrowLeftRight className="mr-2 h-4 w-4" />
                 <span>Voltar para Proprietário</span>
               </DropdownMenuItem>
+            )}
+
+            {isPlatformAdmin && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => navigate("/super-admin")}
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                  <span>Painel Super Admin</span>
+                </DropdownMenuItem>
+              </>
             )}
 
             <DropdownMenuSeparator />
