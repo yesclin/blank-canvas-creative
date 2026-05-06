@@ -55,6 +55,7 @@ export function UserProfileFooter() {
   const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
 
   const { canSwitchView, isImpersonating, viewedRole, resetViewedRole } = useCurrentViewRole();
+  const { isPlatformAdmin } = usePlatformAdmin();
 
   const getInitials = (name: string) => {
     return name
