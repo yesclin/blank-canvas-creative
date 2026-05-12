@@ -144,17 +144,11 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
           return;
         }
         if (result.kind === "no-role") {
-          // Definitive: user has no role linked. Show error page (not transient).
-          setState((prev) => ({
-            permissions: prev.role ? prev.permissions : [],
-            role: prev.role ? prev.role : null,
-            isLoading: false,
-            isAdmin: prev.isAdmin,
-            isOwner: prev.isOwner,
-            professionalId: prev.professionalId,
-          }));
-          // If we never had a role before, surface as no-role
-          setState((prev) => prev.role ? prev : { permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null });
+          // Preserve previous role if we already had one (transient inconsistency
+          // right after auth events). Only surface the empty state on first load.
+          setState((prev) => prev.role
+            ? { ...prev, isLoading: false }
+            : { permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null });
           return;
         }
         setState({
