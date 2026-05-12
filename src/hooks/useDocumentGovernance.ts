@@ -113,12 +113,17 @@ export function useSignDocument() {
       if (!userId || !email) throw new Error("Sessão expirada. Faça login novamente.");
 
       // 1. Re-authenticate user with password
-      const { error: authError } = await supabase.auth.signInWithPassword({
+      const { data: reauthData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password: params.password,
       });
       if (authError) {
         throw new Error("Senha incorreta. Tente novamente.");
+      }
+      if (reauthData?.user?.id && reauthData.user.id !== userId) {
+        console.error("[AUTH_SECURITY] Reautenticação retornou usuário diferente", { userId, receivedUserId: reauthData.user.id });
+        await supabase.auth.signOut();
+        throw new Error("Sessão inconsistente detectada. Faça login novamente.");
       }
 
       // 2. Generate SHA-256 hash of the snapshot for integrity
