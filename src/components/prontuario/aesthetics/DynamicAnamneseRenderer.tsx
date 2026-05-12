@@ -362,11 +362,15 @@ function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disable
         <div className="space-y-2">
           {!hideLabel && <Label className="text-sm">{field.label}</Label>}
           <ImageUploadPlaceholder
-            value={(value as string) || null}
+            value={value}
             onChange={onChange}
             disabled={disabled}
             label={field.placeholder || 'Upload de imagem clínica'}
             accept={field.config?.accept || 'image/*'}
+            clinicId={clinicId}
+            patientId={patientId}
+            appointmentId={appointmentId}
+            fieldId={field.id}
           />
         </div>
       );
