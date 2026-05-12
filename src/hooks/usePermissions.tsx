@@ -73,82 +73,113 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     professionalId: null,
   });
 
-  const fetchPermissions = useCallback(async () => {
-    try {
-      const { data: { user } } = await withTimeout<any>(supabase.auth.getUser());
-      if (!user) {
-        setState({ permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null });
-        console.log("[PERMISSIONS] carregadas", { role: null, permissions: 0 });
-        return;
-      }
+  const fetchPermissionsOnce = useCallback(async () => {
+    const { data: { user } } = await withTimeout<any>(supabase.auth.getUser());
+    if (!user) {
+      return { kind: "no-user" as const };
+    }
 
-      // Get user role
-      const { data: roleData } = await withTimeout<any>(supabase
-        .from("user_roles")
-        .select("role, clinic_id")
-        .eq("user_id", user.id)
-        .maybeSingle());
+    // Get user role
+    const { data: roleData, error: roleErr } = await withTimeout<any>(supabase
+      .from("user_roles")
+      .select("role, clinic_id")
+      .eq("user_id", user.id)
+      .maybeSingle());
 
-      if (!roleData) {
-        setState({ permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null });
-        console.log("[PERMISSIONS] carregadas", { role: null, permissions: 0 });
-        return;
-      }
-      
-      // Get linked professional_id (if user is linked to a professional)
-      const { data: professionalData } = await withTimeout<any>(supabase
-        .from("professionals")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .maybeSingle());
-      
-      const professionalId = professionalData?.id || null;
+    if (roleErr) throw roleErr;
 
-      const role = roleData.role;
-      // Owner has TOTAL BYPASS - highest privilege level
-      const isOwner = role === "owner";
-      // Admin has elevated privileges but can still be restricted
-      const isAdmin = ["owner", "admin"].includes(role);
+    if (!roleData) {
+      return { kind: "no-role" as const };
+    }
 
-      // Get permissions using the database function
-      const { data: permsData, error } = await withTimeout<any>(
-        supabase.rpc("get_user_all_permissions", { _user_id: user.id })
-      );
+    const role = roleData.role;
+    const isOwner = role === "owner";
+    const isAdmin = ["owner", "admin"].includes(role);
 
-      if (error) {
-        console.error("Error fetching permissions:", error);
-        // Fallback to template permissions
-        const { data: templates } = await withTimeout<any>(supabase
-          .from("permission_templates")
-          .select("module, actions, restrictions")
-          .eq("role", role));
+    // Get linked professional_id (if user is linked to a professional)
+    const { data: professionalData } = await withTimeout<any>(supabase
+      .from("professionals")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .maybeSingle());
+    const professionalId = professionalData?.id || null;
 
-        const permissions = (templates || []).map(t => ({
-          module: t.module as AppModule,
-          actions: (t.actions || []) as AppAction[],
-          restrictions: (t.restrictions || {}) as Record<string, boolean>,
-        }));
+    // Get permissions using the database function
+    const { data: permsData, error } = await withTimeout<any>(
+      supabase.rpc("get_user_all_permissions", { _user_id: user.id })
+    );
 
-        setState({ permissions, role, isLoading: false, isAdmin, isOwner, professionalId });
-        console.log("[PERMISSIONS] carregadas", { role, permissions: permissions.length });
-        return;
-      }
-
-      const permissions = (permsData || []).map((p: any) => ({
+    let permissions: ModulePermission[];
+    if (error) {
+      console.warn("[PERMISSIONS] RPC failed, falling back to templates", error);
+      const { data: templates } = await withTimeout<any>(supabase
+        .from("permission_templates")
+        .select("module, actions, restrictions")
+        .eq("role", role));
+      permissions = (templates || []).map((t: any) => ({
+        module: t.module as AppModule,
+        actions: (t.actions || []) as AppAction[],
+        restrictions: (t.restrictions || {}) as Record<string, boolean>,
+      }));
+    } else {
+      permissions = (permsData || []).map((p: any) => ({
         module: p.module as AppModule,
         actions: (p.actions || []) as AppAction[],
         restrictions: (p.restrictions || {}) as Record<string, boolean>,
       }));
-
-      setState({ permissions, role, isLoading: false, isAdmin, isOwner, professionalId });
-      console.log("[PERMISSIONS] carregadas", { role, permissions: permissions.length });
-    } catch (error) {
-      console.error("[APP_ERROR]", error);
-      setState({ permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null });
-      console.log("[PERMISSIONS] carregadas", { role: null, permissions: 0, failed: true });
     }
+
+    return { kind: "ok" as const, role, isOwner, isAdmin, professionalId, permissions };
   }, []);
+
+  const fetchPermissions = useCallback(async () => {
+    const maxAttempts = 3;
+    let lastError: unknown = null;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const result = await fetchPermissionsOnce();
+        if (result.kind === "no-user") {
+          setState({ permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null });
+          return;
+        }
+        if (result.kind === "no-role") {
+          // Preserve previous role if we already had one (transient inconsistency
+          // right after auth events). Only surface the empty state on first load.
+          setState((prev) => prev.role
+            ? { ...prev, isLoading: false }
+            : { permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null });
+          return;
+        }
+        setState({
+          permissions: result.permissions,
+          role: result.role,
+          isLoading: false,
+          isAdmin: result.isAdmin,
+          isOwner: result.isOwner,
+          professionalId: result.professionalId,
+        });
+        console.log("[PERMISSIONS] carregadas", { role: result.role, permissions: result.permissions.length, attempt });
+        return;
+      } catch (error) {
+        lastError = error;
+        console.warn(`[PERMISSIONS] tentativa ${attempt}/${maxAttempts} falhou`, error);
+        if (attempt < maxAttempts) {
+          await new Promise((r) => setTimeout(r, 400 * attempt));
+        }
+      }
+    }
+    // After retries, preserve previous state if we already had a valid role,
+    // so a transient blip doesn't kick the user to the error screen.
+    setState((prev) => {
+      if (prev.role) {
+        console.warn("[PERMISSIONS] retries esgotados — mantendo estado anterior", lastError);
+        return { ...prev, isLoading: false };
+      }
+      console.error("[APP_ERROR] permissions fetch failed", lastError);
+      return { permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null };
+    });
+  }, [fetchPermissionsOnce]);
 
   useEffect(() => {
     fetchPermissions();
@@ -162,10 +193,13 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     }, 10000);
 
     // Listen for auth changes — defer Supabase queries out of the callback to
-    // avoid deadlocks (anti-pattern: awaiting Supabase calls inside the auth
-    // listener can block subsequent events).
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      setTimeout(() => fetchPermissions(), 0);
+    // avoid deadlocks. Only refetch on real identity changes; ignore noisy
+    // events like TOKEN_REFRESHED and INITIAL_SESSION which would otherwise
+    // wipe permissions mid-session and trigger the error screen.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
+        setTimeout(() => fetchPermissions(), 0);
+      }
     });
 
     return () => {
