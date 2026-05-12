@@ -9,6 +9,7 @@ import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import logoFull from "@/assets/logo-full.png";
 import logoIcon from "@/assets/logo-icon.png";
 import { motion } from "framer-motion";
+import { clearAuthenticatedTab, rememberAuthenticatedUser } from "@/lib/authSessionIsolation";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -31,6 +32,7 @@ const Login = () => {
     }
 
     setIsLoading(true);
+    clearAuthenticatedTab();
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -57,6 +59,8 @@ const Login = () => {
         hasUser: Boolean(data?.user),
       });
     }
+
+    rememberAuthenticatedUser(data?.user?.id);
 
     // CRÍTICO: aguardar a sessão estar de fato persistida no storage antes
     // de navegar para /app. Sem isso, o RequireAuth pode ler o storage antes

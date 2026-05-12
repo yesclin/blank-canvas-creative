@@ -3,6 +3,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLoadingFallback } from "./AppLoadingFallback";
 import { withTimeout } from "@/lib/asyncTimeout";
+import { clearAuthenticatedTab, ensureSessionMatchesTab } from "@/lib/authSessionIsolation";
 
 type RequireAuthProps = {
   children: ReactNode;
@@ -27,6 +28,34 @@ export function RequireAuth({ children }: RequireAuthProps) {
 
   useEffect(() => {
     let mounted = true;
+    let mismatchHandled = false;
+
+    const rejectMismatchedSession = (source: string, userId: string, expectedUserId: string) => {
+      if (mismatchHandled) return;
+      mismatchHandled = true;
+      console.error("[AUTH_SECURITY] Sessão de outro usuário bloqueada", {
+        source,
+        expectedUserId,
+        receivedUserId: userId,
+      });
+      clearAuthenticatedTab();
+      setIsAuthed(false);
+      setIsLoading(false);
+      setTimeout(() => {
+        void supabase.auth.signOut();
+      }, 0);
+    };
+
+    const acceptSession = (session: unknown, source: string) => {
+      const match = ensureSessionMatchesTab(session as any);
+      if (!match.ok) {
+        rejectMismatchedSession(source, match.userId, match.expectedUserId);
+        return false;
+      }
+      setIsAuthed(Boolean(match.userId));
+      setIsLoading(false);
+      return true;
+    };
 
     // 1) Listener PRIMEIRO. O Supabase dispara INITIAL_SESSION assim que
     //    a sessão é hidratada do storage — esse é o caminho mais confiável
@@ -44,16 +73,17 @@ export function RequireAuth({ children }: RequireAuthProps) {
       // logado e deixamos o Supabase tentar renovar novamente, em vez de
       // redirecionar para /login (causando o "desloga sozinho").
       if (event === "SIGNED_OUT") {
+        clearAuthenticatedTab();
         setIsAuthed(false);
         setIsLoading(false);
         return;
       }
       if (session) {
-        setIsAuthed(true);
-        setIsLoading(false);
+        acceptSession(session, event);
       } else if (event === "INITIAL_SESSION") {
         // Único caso onde session=null sem SIGNED_OUT é decisivo:
         // o storage realmente não tem sessão na inicialização.
+        clearAuthenticatedTab();
         setIsAuthed(false);
         setIsLoading(false);
       }
@@ -73,8 +103,7 @@ export function RequireAuth({ children }: RequireAuthProps) {
         if (import.meta.env.DEV) {
           console.log("[AUTH] getSession", { hasSession: Boolean(data.session) });
         }
-        setIsAuthed(Boolean(data.session));
-        setIsLoading(false);
+        acceptSession(data.session, "getSession");
       } catch (error) {
         // Importante: NÃO marcar como autenticado nem deslogar.
         // Apenas liberar o gate para que o redirect aconteça normalmente.

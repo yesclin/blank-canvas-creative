@@ -277,14 +277,21 @@ export function useUnifiedDocumentSigning() {
 
   const reAuthenticate = useCallback(async (password: string): Promise<boolean> => {
     const { data: userData } = await supabase.auth.getUser();
+    const currentUserId = userData?.user?.id;
     const email = userData?.user?.email;
     if (!email) {
       toast.error("Sessão expirada. Faça login novamente.");
       return false;
     }
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       toast.error("Senha incorreta. Tente novamente.");
+      return false;
+    }
+    if (currentUserId && data?.user?.id && data.user.id !== currentUserId) {
+      console.error("[AUTH_SECURITY] Reautenticação retornou usuário diferente", { currentUserId, receivedUserId: data.user.id });
+      await supabase.auth.signOut();
+      toast.error("Sessão inconsistente detectada. Faça login novamente.");
       return false;
     }
     return true;

@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, CheckCircle2, XCircle, Mail, Building2, UserCircle, Lock, Eye, EyeOff, ShieldCheck, AlertTriangle, Clock } from "lucide-react";
 import { toast } from "sonner";
+import { clearAuthenticatedTab, rememberAuthenticatedUser } from "@/lib/authSessionIsolation";
 
 interface InvitationInfo {
   id: string;
@@ -142,12 +143,14 @@ export default function AceitarConvite() {
 
       // Auto-login after account creation
       if (invitation?.email) {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
+        clearAuthenticatedTab();
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email: invitation.email,
           password: password,
         });
 
         if (!signInError) {
+          rememberAuthenticatedUser(signInData?.user?.id);
           toast.success("Conta criada! Redirecionando...");
           navigate("/app", { replace: true });
           return;
