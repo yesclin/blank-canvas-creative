@@ -528,7 +528,7 @@ export const handler = async (req: Request): Promise<Response> => {
   } catch (error) {
     console.error("[send-invite] Error:", error);
     return new Response(
-      JSON.stringify({ success: false, error: error instanceof Error ? error.message : "Erro interno do servidor" }),
+      JSON.stringify({ success: false, error: "Erro interno do servidor" }),
       { status: 500, headers: { "Content-Type": "application/json", ...getCorsHeaders(req) } }
     );
   }
