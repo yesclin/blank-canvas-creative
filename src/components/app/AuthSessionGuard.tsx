@@ -70,14 +70,22 @@ export function AuthSessionGuard() {
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      const match = ensureSessionMatchesTab(session);
-
       if (event === "SIGNED_OUT") {
         if (currentUserIdRef.current) hardReset("SIGNED_OUT", currentUserIdRef.current, null);
         clearAuthenticatedTab();
         currentUserIdRef.current = null;
         return;
       }
+
+      if (!session) {
+        if (event === "INITIAL_SESSION") {
+          clearAuthenticatedTab();
+          handleUserId(null, event);
+        }
+        return;
+      }
+
+      const match = ensureSessionMatchesTab(session);
 
       if (!match.ok) {
         handleUserId(match.userId, event, match.expectedUserId);
