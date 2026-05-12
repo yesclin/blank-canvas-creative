@@ -5,13 +5,15 @@ import { supabase } from "@/integrations/supabase/client";
 /**
  * Guard de seguranca contra mistura de contas.
  *
- * - No SIGNED_OUT: limpa queryClient + chaves de modo suporte.
- * - No SIGNED_IN com user.id diferente do anterior: limpa queryClient + modo
- *   suporte, evitando que dados em cache de outro usuario vazem para a nova
- *   sessao na mesma aba.
- * - No INITIAL_SESSION: apenas registra o user.id ativo (sem limpar).
+ * Regras:
+ * - SIGNED_OUT  -> limpa cache + modo suporte; reseta ref.
+ * - SIGNED_IN / TOKEN_REFRESHED / USER_UPDATED / INITIAL_SESSION:
+ *     Se o user.id atual difere do anterior conhecido (e havia um anterior),
+ *     limpa cache + modo suporte e dispara evento global de troca de identidade.
+ * - Tambem checa periodicamente (a cada 30s) a sessao real no Supabase para
+ *   detectar mudancas vindas de outras abas que nao dispararam evento.
  *
- * NAO faz signOut, NAO redireciona, NAO bloqueia render. So higieniza cache.
+ * Nunca redireciona, nunca faz signOut. So higieniza estado local.
  */
 export function AuthSessionGuard() {
   const qc = useQueryClient();
@@ -28,38 +30,65 @@ export function AuthSessionGuard() {
       }
     };
 
+    const hardReset = (reason: string, prev: string | null, next: string | null) => {
+      console.warn("[AUTH_GUARD] Higienizando cache:", reason, { prev, next });
+      clearSupportSession();
+      try {
+        qc.clear();
+      } catch {
+        /* ignore */
+      }
+      try {
+        window.dispatchEvent(
+          new CustomEvent("yesclin:identity-changed", { detail: { prev, next } })
+        );
+      } catch {
+        /* ignore */
+      }
+    };
+
+    const handleUserId = (newUserId: string | null, eventLabel: string) => {
+      const prev = currentUserIdRef.current;
+
+      if (!newUserId) {
+        if (prev) hardReset(`${eventLabel} sem user`, prev, null);
+        currentUserIdRef.current = null;
+        return;
+      }
+
+      if (prev && prev !== newUserId) {
+        hardReset(`${eventLabel} trocou user`, prev, newUserId);
+      }
+      currentUserIdRef.current = newUserId;
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       const newUserId = session?.user?.id ?? null;
-      const prevUserId = currentUserIdRef.current;
-
-      if (event === "INITIAL_SESSION") {
-        currentUserIdRef.current = newUserId;
-        return;
-      }
 
       if (event === "SIGNED_OUT") {
-        if (import.meta.env.DEV) console.log("[AUTH_GUARD] SIGNED_OUT - limpando cache");
+        if (currentUserIdRef.current) hardReset("SIGNED_OUT", currentUserIdRef.current, null);
         currentUserIdRef.current = null;
-        clearSupportSession();
-        qc.clear();
         return;
       }
 
-      if (event === "SIGNED_IN") {
-        // Trocou de usuario na mesma aba -> higienizar tudo.
-        if (prevUserId && newUserId && prevUserId !== newUserId) {
-          console.warn("[AUTH_GUARD] Troca de usuario detectada - limpando cache", {
-            prev: prevUserId,
-            next: newUserId,
-          });
-          clearSupportSession();
-          qc.clear();
-        }
-        currentUserIdRef.current = newUserId;
-      }
+      // INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED, USER_UPDATED, etc.
+      handleUserId(newUserId, event);
     });
 
-    return () => subscription.unsubscribe();
+    // Polling defensivo: detecta troca de sessao silenciosa entre abas.
+    const pollId = window.setInterval(async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        handleUserId(session?.user?.id ?? null, "POLL");
+      } catch {
+        /* ignore */
+      }
+    }, 30000);
+
+    return () => {
+      subscription.unsubscribe();
+      window.clearInterval(pollId);
+    };
   }, [qc]);
 
   return null;
