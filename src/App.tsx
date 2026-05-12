@@ -206,6 +206,7 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <AuthSessionGuard />
       <TooltipProvider>
         <SafeProvider
           scope="UserViewModeBootstrap"
