@@ -474,9 +474,60 @@ export function AppointmentDetailDrawer({
                   {meeting_ended_at && <InfoRow label="Fim sessão" value={formatTimestamp(meeting_ended_at) || ""} />}
 
                   {meeting_link && hasSession && (
-                    <div className="flex items-center gap-2 p-2 rounded-md bg-muted text-xs mt-1">
-                      <Video className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      <span className="truncate flex-1">{meeting_link}</span>
+                    <div className="mt-2 rounded-md border bg-muted/50 p-2.5 space-y-2">
+                      <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                        <Video className="h-3.5 w-3.5" />
+                        Link da sala (paciente)
+                      </div>
+                      <div className="flex items-center gap-2 rounded bg-background border px-2 py-1.5">
+                        <span className="truncate flex-1 text-xs font-mono text-foreground" title={meeting_link}>
+                          {meeting_link}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 gap-1 shrink-0"
+                          onClick={() => copyLink(meeting_link)}
+                        >
+                          <Copy className="h-3.5 w-3.5" /> Copiar
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1 h-8"
+                          onClick={() => {
+                            const phone = (appointment.patient?.phone || "").replace(/\D/g, "");
+                            const msg = encodeURIComponent(
+                              `Olá ${appointment.patient?.full_name || ""}, segue o link da sua teleconsulta: ${meeting_link}`
+                            );
+                            const url = phone
+                              ? `https://wa.me/${phone.startsWith("55") ? phone : "55" + phone}?text=${msg}`
+                              : `https://wa.me/?text=${msg}`;
+                            window.open(url, "_blank");
+                          }}
+                        >
+                          <Send className="h-3.5 w-3.5" /> WhatsApp
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1 h-8"
+                          onClick={() => {
+                            const subject = encodeURIComponent("Link da sua teleconsulta");
+                            const body = encodeURIComponent(
+                              `Olá ${appointment.patient?.full_name || ""},\n\nSegue o link da sua teleconsulta:\n${meeting_link}\n`
+                            );
+                            window.open(
+                              `mailto:${appointment.patient?.email || ""}?subject=${subject}&body=${body}`,
+                              "_blank"
+                            );
+                          }}
+                        >
+                          <Mail className="h-3.5 w-3.5" /> E-mail
+                        </Button>
+                      </div>
                     </div>
                   )}
 
