@@ -1134,6 +1134,9 @@ export function AnamneseEsteticaBlock({
           values={dynamicValues}
           onChange={handleDynamicFieldChange}
           disabled={!canEdit || isFormReadonly}
+          clinicId={clinicId}
+          patientId={patientId}
+          appointmentId={appointmentId ?? null}
         />
       ) : activeKind === 'standard' && activeTemplate?.structure && activeTemplate.structure.length > 0 ? (
         <StandardTemplateRenderer
