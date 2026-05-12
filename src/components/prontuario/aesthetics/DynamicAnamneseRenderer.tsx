@@ -43,6 +43,10 @@ interface DynamicAnamneseRendererProps {
   values: DynamicFormValues;
   onChange: (fieldId: string, value: unknown) => void;
   disabled?: boolean;
+  /** Required for fields that persist files (image_upload, etc.) */
+  clinicId?: string | null;
+  patientId?: string | null;
+  appointmentId?: string | null;
 }
 
 export function DynamicAnamneseRenderer({
@@ -50,6 +54,9 @@ export function DynamicAnamneseRenderer({
   values,
   onChange,
   disabled = false,
+  clinicId = null,
+  patientId = null,
+  appointmentId = null,
 }: DynamicAnamneseRendererProps) {
   // Group fields by section
   const sections = groupBySection(fields);
