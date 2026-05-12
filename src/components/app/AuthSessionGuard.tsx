@@ -1,6 +1,13 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  clearAuthenticatedTab,
+  clearIdentityScopedState,
+  emitIdentityChanged,
+  ensureSessionMatchesTab,
+  getTabExpectedUserId,
+} from "@/lib/authSessionIsolation";
 
 /**
  * Guard de seguranca contra mistura de contas.
@@ -20,38 +27,38 @@ export function AuthSessionGuard() {
   const currentUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const clearSupportSession = () => {
-      try {
-        window.localStorage.removeItem("yesclin_support_clinic_id");
-        window.localStorage.removeItem("yesclin_support_session_id");
-        window.dispatchEvent(new CustomEvent("yesclin:support-session-changed"));
-      } catch {
-        /* ignore */
-      }
-    };
-
     const hardReset = (reason: string, prev: string | null, next: string | null) => {
       console.warn("[AUTH_GUARD] Higienizando cache:", reason, { prev, next });
-      clearSupportSession();
+      clearIdentityScopedState();
       try {
         qc.clear();
       } catch {
         /* ignore */
       }
-      try {
-        window.dispatchEvent(
-          new CustomEvent("yesclin:identity-changed", { detail: { prev, next } })
-        );
-      } catch {
-        /* ignore */
-      }
+      emitIdentityChanged(prev, next, reason);
     };
 
-    const handleUserId = (newUserId: string | null, eventLabel: string) => {
+    const handleUserId = (newUserId: string | null, eventLabel: string, explicitPrevious?: string | null) => {
       const prev = currentUserIdRef.current;
 
       if (!newUserId) {
         if (prev) hardReset(`${eventLabel} sem user`, prev, null);
+        currentUserIdRef.current = null;
+        return;
+      }
+
+      const expected = explicitPrevious ?? getTabExpectedUserId();
+      if (expected && expected !== newUserId) {
+        console.error("[AUTH_SECURITY] Troca inesperada de usuário detectada; sessão será encerrada", {
+          eventLabel,
+          expectedUserId: expected,
+          receivedUserId: newUserId,
+        });
+        hardReset(`${eventLabel} user divergente`, expected, null);
+        clearAuthenticatedTab();
+        setTimeout(() => {
+          void supabase.auth.signOut();
+        }, 0);
         currentUserIdRef.current = null;
         return;
       }
@@ -63,23 +70,34 @@ export function AuthSessionGuard() {
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      const newUserId = session?.user?.id ?? null;
+      const match = ensureSessionMatchesTab(session);
 
       if (event === "SIGNED_OUT") {
         if (currentUserIdRef.current) hardReset("SIGNED_OUT", currentUserIdRef.current, null);
+        clearAuthenticatedTab();
         currentUserIdRef.current = null;
         return;
       }
 
+      if (!match.ok) {
+        handleUserId(match.userId, event, match.expectedUserId);
+        return;
+      }
+
       // INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED, USER_UPDATED, etc.
-      handleUserId(newUserId, event);
+      handleUserId(match.userId, event);
     });
 
     // Polling defensivo: detecta troca de sessao silenciosa entre abas.
     const pollId = window.setInterval(async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        handleUserId(session?.user?.id ?? null, "POLL");
+        const match = ensureSessionMatchesTab(session);
+        if (match.ok) {
+          handleUserId(match.userId, "POLL");
+        } else {
+          handleUserId(match.userId, "POLL", match.expectedUserId);
+        }
       } catch {
         /* ignore */
       }
