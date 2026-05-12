@@ -100,6 +100,7 @@ export function AuthSessionGuard() {
     const pollId = window.setInterval(async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
         const match = ensureSessionMatchesTab(session);
         if (match.ok) {
           handleUserId(match.userId, "POLL");
