@@ -78,6 +78,9 @@ export function DynamicAnamneseRenderer({
                 allValues={values}
                 onChangeAny={onChange}
                 disabled={disabled}
+                clinicId={clinicId}
+                patientId={patientId}
+                appointmentId={appointmentId}
               />
             ))}
           </CardContent>
