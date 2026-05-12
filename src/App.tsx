@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ReactNode, type ComponentType } from "react";
+import { lazy, Suspense, useEffect, useState, type ReactNode, type ComponentType } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,6 +16,7 @@ import { ErrorBoundary } from "@/components/app/ErrorBoundary";
 import { AuthSessionGuard } from "@/components/app/AuthSessionGuard";
 import { PageSkeleton } from "@/components/app/PageSkeleton";
 import CookieConsent from "@/components/CookieConsent";
+import { supabase } from "@/integrations/supabase/client";
 
 // Páginas Públicas — lazy para não pesar no boot inicial.
 const Index = lazyWithTimeout(() => import("./pages/Index"), "Index");
@@ -208,38 +209,78 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <AuthSessionGuard />
       <TooltipProvider>
-        <SafeProvider
-          scope="UserViewModeBootstrap"
-          fallbackChildren={
-            <UserViewModeProvider realRole={null}>
-              <SafeProvider scope="PermissionsProvider" fallbackChildren={<AppRouter />}>
-                <PermissionsProvider>
-                  <SafeProvider scope="ClinicFeaturesProvider" fallbackChildren={<AppRouter />}>
-                    <ClinicFeaturesProvider>
-                      <AppRouter />
-                    </ClinicFeaturesProvider>
-                  </SafeProvider>
-                </PermissionsProvider>
-              </SafeProvider>
-            </UserViewModeProvider>
-          }
-        >
-          <UserViewModeBootstrap>
-            <SafeProvider scope="PermissionsProvider" fallbackChildren={<AppRouter />}>
-              <PermissionsProvider>
-                <SafeProvider scope="ClinicFeaturesProvider" fallbackChildren={<AppRouter />}>
-                  <ClinicFeaturesProvider>
-                    <AppRouter />
-                  </ClinicFeaturesProvider>
-                </SafeProvider>
-              </PermissionsProvider>
-            </SafeProvider>
-          </UserViewModeBootstrap>
-        </SafeProvider>
+        <AuthScopedProviders />
       </TooltipProvider>
     </QueryClientProvider>
   );
 };
+
+function ProviderShell() {
+  return (
+    <SafeProvider
+      scope="UserViewModeBootstrap"
+      fallbackChildren={
+        <UserViewModeProvider realRole={null}>
+          <SafeProvider scope="PermissionsProvider" fallbackChildren={<AppRouter />}>
+            <PermissionsProvider>
+              <SafeProvider scope="ClinicFeaturesProvider" fallbackChildren={<AppRouter />}>
+                <ClinicFeaturesProvider>
+                  <AppRouter />
+                </ClinicFeaturesProvider>
+              </SafeProvider>
+            </PermissionsProvider>
+          </SafeProvider>
+        </UserViewModeProvider>
+      }
+    >
+      <UserViewModeBootstrap>
+        <SafeProvider scope="PermissionsProvider" fallbackChildren={<AppRouter />}>
+          <PermissionsProvider>
+            <SafeProvider scope="ClinicFeaturesProvider" fallbackChildren={<AppRouter />}>
+              <ClinicFeaturesProvider>
+                <AppRouter />
+              </ClinicFeaturesProvider>
+            </SafeProvider>
+          </PermissionsProvider>
+        </SafeProvider>
+      </UserViewModeBootstrap>
+    </SafeProvider>
+  );
+}
+
+function AuthScopedProviders() {
+  const [scopeKey, setScopeKey] = useState("auth:boot");
+
+  useEffect(() => {
+    let mounted = true;
+    const setFromSession = (session: any) => {
+      if (!mounted) return;
+      setScopeKey(session?.user?.id ? `auth:${session.user.id}` : "auth:anonymous");
+    };
+
+    supabase.auth.getSession().then(({ data }: any) => setFromSession(data?.session));
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED" || event === "INITIAL_SESSION") {
+        setFromSession(session);
+      }
+    });
+
+    const onIdentityChanged = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      setScopeKey(detail?.next ? `auth:${detail.next}` : `auth:changed:${Date.now()}`);
+    };
+    window.addEventListener("yesclin:identity-changed", onIdentityChanged);
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+      window.removeEventListener("yesclin:identity-changed", onIdentityChanged);
+    };
+  }, []);
+
+  return <ProviderShell key={scopeKey} />;
+}
 
 function AppRouter() {
   return (
