@@ -54,6 +54,12 @@ export interface DynamicField {
   config?: FieldConfig;
   options?: string[];
   placeholder?: string;
+  multiple?: boolean;
+  accept?: string[] | string;
+  maxFiles?: number;
+  maxSizeMB?: number;
+  storageBucket?: string;
+  description?: string;
 }
 
 export type DynamicFormValues = Record<string, unknown>;
