@@ -438,9 +438,21 @@ export function useCurrentUser() {
       }, 0);
     });
 
+    // Reset imediato quando o AuthSessionGuard sinaliza troca de identidade
+    const onIdentityChanged = () => {
+      activeUserId = null;
+      setUser(null);
+      setIsLoading(true);
+      setTimeout(() => {
+        if (!cancelled) loadUser();
+      }, 0);
+    };
+    window.addEventListener("yesclin:identity-changed", onIdentityChanged);
+
     return () => {
       cancelled = true;
       subscription.unsubscribe();
+      window.removeEventListener("yesclin:identity-changed", onIdentityChanged);
     };
   }, []);
 
