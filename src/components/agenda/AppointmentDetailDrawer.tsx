@@ -473,15 +473,18 @@ export function AppointmentDetailDrawer({
                   {meeting_started_at && <InfoRow label="Início sessão" value={formatTimestamp(meeting_started_at) || ""} />}
                   {meeting_ended_at && <InfoRow label="Fim sessão" value={formatTimestamp(meeting_ended_at) || ""} />}
 
-                  {meeting_link && hasSession && (
+                  {(() => {
+                    const linkToShare = meeting_link || (teleSession as any)?.join_url_patient || "";
+                    if (!linkToShare) return null;
+                    return (
                     <div className="mt-2 rounded-md border bg-muted/50 p-2.5 space-y-2">
                       <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                         <Video className="h-3.5 w-3.5" />
                         Link da sala (paciente)
                       </div>
                       <div className="flex items-center gap-2 rounded bg-background border px-2 py-1.5">
-                        <span className="truncate flex-1 text-xs font-mono text-foreground" title={meeting_link}>
-                          {meeting_link}
+                        <span className="truncate flex-1 text-xs font-mono text-foreground" title={linkToShare}>
+                          {linkToShare}
                         </span>
                         <Button
                           variant="ghost"
