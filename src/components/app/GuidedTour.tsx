@@ -207,9 +207,9 @@ export function GuidedTour({ onComplete }: GuidedTourProps) {
         // Get profile with tour status and clinic_id
         const { data: profile, error } = await supabase
           .from("profiles")
-          .select("tour_completed_at, clinic_id")
+          .select("tour_completed_at, clinic_id, created_at")
           .eq("user_id", user.id)
-          .single();
+          .maybeSingle();
 
         if (error) {
           console.error("Error checking tour status:", error);
@@ -217,24 +217,53 @@ export function GuidedTour({ onComplete }: GuidedTourProps) {
           return;
         }
 
-        // If tour already completed, don't show
+        // If tour already completed/dismissed, don't show
         if (profile?.tour_completed_at) {
           setHasCheckedTour(true);
           return;
         }
 
-        // CRITICAL: Check if essential onboarding is complete before starting tour
-        if (profile?.clinic_id) {
-          const isEssentialComplete = await checkEssentialOnboardingComplete(
-            profile.clinic_id,
-            user.id
-          );
+        if (!profile?.clinic_id) {
+          setHasCheckedTour(true);
+          return;
+        }
 
-          if (!isEssentialComplete) {
-            console.log("Essential onboarding not complete, skipping tour");
-            setHasCheckedTour(true);
-            return;
-          }
+        // Check essential onboarding state
+        const { data: onboarding } = await supabase
+          .from("onboarding_progress")
+          .select("is_completed, completed_at, skipped_at, created_at")
+          .eq("clinic_id", profile.clinic_id)
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        const isEssentialComplete = await checkEssentialOnboardingComplete(
+          profile.clinic_id,
+          user.id
+        );
+
+        if (!isEssentialComplete) {
+          setHasCheckedTour(true);
+          return;
+        }
+
+        // CRITICAL: Only auto-show tour for users who JUST completed onboarding
+        // (within the last 24h). For pre-existing/older accounts, silently mark
+        // the tour as completed so it never appears unsolicited.
+        const onboardingFinishedAt =
+          onboarding?.completed_at || onboarding?.skipped_at || null;
+        const referenceTs = onboardingFinishedAt || profile?.created_at || null;
+        const isRecent = referenceTs
+          ? Date.now() - new Date(referenceTs).getTime() < 24 * 60 * 60 * 1000
+          : false;
+
+        if (!isRecent) {
+          // Mark as completed silently so we never re-check / re-show automatically.
+          await supabase
+            .from("profiles")
+            .update({ tour_completed_at: new Date().toISOString() })
+            .eq("user_id", user.id);
+          setHasCheckedTour(true);
+          return;
         }
 
         const effectiveRole = role || "profissional";
