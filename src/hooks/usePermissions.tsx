@@ -199,10 +199,13 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     }, 10000);
 
     // Listen for auth changes — defer Supabase queries out of the callback to
-    // avoid deadlocks (anti-pattern: awaiting Supabase calls inside the auth
-    // listener can block subsequent events).
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      setTimeout(() => fetchPermissions(), 0);
+    // avoid deadlocks. Only refetch on real identity changes; ignore noisy
+    // events like TOKEN_REFRESHED and INITIAL_SESSION which would otherwise
+    // wipe permissions mid-session and trigger the error screen.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
+        setTimeout(() => fetchPermissions(), 0);
+      }
     });
 
     return () => {
