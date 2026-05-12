@@ -153,10 +153,34 @@ export function useTeleconsultaActions() {
         session = newSession;
       }
 
+      // Generate token + patient link if not already set
+      const token =
+        (session as any)?.external_meeting_id ||
+        (typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID().replace(/-/g, "")
+          : Math.random().toString(36).slice(2) + Date.now().toString(36));
+
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const meetingLink = `${origin}/teleconsulta/${token}/precheck`;
+
+      // Persist token on session for later joins
+      if (!(session as any)?.external_meeting_id) {
+        await supabase
+          .from("teleconsultation_sessions")
+          .update({
+            external_meeting_id: token,
+            join_url_patient: meetingLink,
+          })
+          .eq("id", (session as any).id);
+      }
+
       // Update appointment
       const updatePayload = {
         meeting_status: "gerada",
         meeting_created_at: new Date().toISOString(),
+        meeting_id: token,
+        meeting_link: meetingLink,
+        meeting_provider: provider,
       };
       console.log("[Gerar Sala] Payload update appointments:", updatePayload);
 
