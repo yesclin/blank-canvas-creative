@@ -43,6 +43,10 @@ interface DynamicAnamneseRendererProps {
   values: DynamicFormValues;
   onChange: (fieldId: string, value: unknown) => void;
   disabled?: boolean;
+  /** Required for fields that persist files (image_upload, etc.) */
+  clinicId?: string | null;
+  patientId?: string | null;
+  appointmentId?: string | null;
 }
 
 export function DynamicAnamneseRenderer({
@@ -50,6 +54,9 @@ export function DynamicAnamneseRenderer({
   values,
   onChange,
   disabled = false,
+  clinicId = null,
+  patientId = null,
+  appointmentId = null,
 }: DynamicAnamneseRendererProps) {
   // Group fields by section
   const sections = groupBySection(fields);
@@ -71,6 +78,9 @@ export function DynamicAnamneseRenderer({
                 allValues={values}
                 onChangeAny={onChange}
                 disabled={disabled}
+                clinicId={clinicId}
+                patientId={patientId}
+                appointmentId={appointmentId}
               />
             ))}
           </CardContent>
@@ -97,9 +107,12 @@ interface FieldRendererProps {
   allValues: DynamicFormValues;
   onChangeAny: (fieldId: string, value: unknown) => void;
   disabled: boolean;
+  clinicId?: string | null;
+  patientId?: string | null;
+  appointmentId?: string | null;
 }
 
-function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disabled }: FieldRendererProps) {
+function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disabled, clinicId, patientId, appointmentId }: FieldRendererProps) {
   const hideLabel = !!(field.section && field.label === field.section);
   switch (field.type) {
     case 'rich_text':
@@ -349,11 +362,15 @@ function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disable
         <div className="space-y-2">
           {!hideLabel && <Label className="text-sm">{field.label}</Label>}
           <ImageUploadPlaceholder
-            value={(value as string) || null}
+            value={value}
             onChange={onChange}
             disabled={disabled}
             label={field.placeholder || 'Upload de imagem clínica'}
             accept={field.config?.accept || 'image/*'}
+            clinicId={clinicId}
+            patientId={patientId}
+            appointmentId={appointmentId}
+            fieldId={field.id}
           />
         </div>
       );
