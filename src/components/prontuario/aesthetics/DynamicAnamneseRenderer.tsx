@@ -107,9 +107,12 @@ interface FieldRendererProps {
   allValues: DynamicFormValues;
   onChangeAny: (fieldId: string, value: unknown) => void;
   disabled: boolean;
+  clinicId?: string | null;
+  patientId?: string | null;
+  appointmentId?: string | null;
 }
 
-function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disabled }: FieldRendererProps) {
+function FieldRenderer({ field, value, onChange, allValues, onChangeAny, disabled, clinicId, patientId, appointmentId }: FieldRendererProps) {
   const hideLabel = !!(field.section && field.label === field.section);
   switch (field.type) {
     case 'rich_text':
