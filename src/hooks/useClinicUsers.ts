@@ -343,40 +343,49 @@ export function useCurrentUser() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+    let activeUserId: string | null = null;
+
     async function loadUser() {
       try {
         const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (cancelled) return;
+
         if (!authUser) {
+          activeUserId = null;
+          setUser(null);
           setIsLoading(false);
           return;
         }
 
-        // Get profile
+        const requestedFor = authUser.id;
+        activeUserId = requestedFor;
+
+        // Get profile estritamente pelo user_id da sessão
         const { data: profile } = await supabase
           .from("profiles")
           .select("full_name, avatar_url, clinic_id")
-          .eq("user_id", authUser.id)
-          .single();
+          .eq("user_id", requestedFor)
+          .maybeSingle();
 
-        // Get role if profile exists
+        if (cancelled || activeUserId !== requestedFor) return;
+
         let roleValue: "owner" | "admin" | "profissional" | "recepcionista" = "admin";
-        
         if (profile?.clinic_id) {
           const { data: roleData } = await supabase
             .from("user_roles")
             .select("role")
-            .eq("user_id", authUser.id)
+            .eq("user_id", requestedFor)
             .eq("clinic_id", profile.clinic_id)
-            .single();
-          
+            .maybeSingle();
+          if (cancelled || activeUserId !== requestedFor) return;
           if (roleData?.role) {
             roleValue = roleData.role as typeof roleValue;
           }
         }
 
-        // Always set user data - use auth email and name from profile or email
         setUser({
-          id: authUser.id,
+          id: requestedFor,
           name: profile?.full_name || authUser.email?.split("@")[0] || "Usuário",
           email: authUser.email || "",
           role: roleValue,
@@ -384,9 +393,11 @@ export function useCurrentUser() {
         });
         setIsLoading(false);
       } catch (err) {
-        console.error("Error loading current user:", err);
-        // Even on error, try to show basic auth user info
+        if (cancelled) return;
+        console.error("[useCurrentUser] erro ao carregar", err);
+        // Em erro, NUNCA manter user antigo: mostra fallback do auth atual ou nada
         const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (cancelled) return;
         if (authUser) {
           setUser({
             id: authUser.id,
@@ -395,6 +406,8 @@ export function useCurrentUser() {
             role: "admin",
             avatarUrl: null,
           });
+        } else {
+          setUser(null);
         }
         setIsLoading(false);
       }
@@ -402,13 +415,35 @@ export function useCurrentUser() {
 
     loadUser();
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      loadUser();
+    // Reset IMEDIATO em mudanças de sessão para impedir mistura de identidade
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const newId = session?.user?.id ?? null;
+
+      if (event === "SIGNED_OUT" || (!newId && event !== "INITIAL_SESSION")) {
+        activeUserId = null;
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+
+      // Trocou de usuário na mesma aba ou novo SIGNED_IN: limpa antes de recarregar
+      if (newId && newId !== activeUserId) {
+        setUser(null);
+        setIsLoading(true);
+      }
+
+      // Defer para evitar deadlock dentro do callback de auth
+      setTimeout(() => {
+        if (!cancelled) loadUser();
+      }, 0);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   return { user, isLoading };
 }
+
