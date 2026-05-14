@@ -1,9 +1,10 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLoadingFallback } from "./AppLoadingFallback";
 import { withTimeout } from "@/lib/asyncTimeout";
 import { clearAuthenticatedTab, ensureSessionMatchesTab } from "@/lib/authSessionIsolation";
+import { wasLogoutRequestedByUser, clearLogoutIntent } from "@/lib/authIntent";
 
 type RequireAuthProps = {
   children: ReactNode;
