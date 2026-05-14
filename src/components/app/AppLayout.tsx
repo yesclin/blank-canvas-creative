@@ -24,6 +24,7 @@ import { FloatingActiveAppointmentButton } from "./FloatingActiveAppointmentButt
 import { ActiveAppointmentDrawer } from "./ActiveAppointmentDrawer";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { SubscriptionGate } from "./SubscriptionGate";
+import { FloatingSupportButton } from "./FloatingSupportButton";
 
 function getModuleScope(pathname: string): string {
   if (pathname.startsWith("/app/prontuario")) return "Prontuário";
