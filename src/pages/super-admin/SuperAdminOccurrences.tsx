@@ -197,6 +197,9 @@ export default function SuperAdminOccurrences() {
   const [newComment, setNewComment] = useState('');
   const [savingComment, setSavingComment] = useState(false);
 
+  // Drawer de investigação
+  const [investigateId, setInvestigateId] = useState<string | null>(null);
+
   // Modal nova ocorrência
   const [openCreate, setOpenCreate] = useState(false);
   const [creating, setCreating] = useState(false);
