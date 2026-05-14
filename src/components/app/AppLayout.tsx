@@ -42,6 +42,27 @@ export function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { clinic, isLoading } = useClinicData();
+  const subscription = useClinicSubscription();
+  const { user: currentUser } = useCurrentUser();
+
+  // Bloqueio TOTAL: trial expirado / assinatura cancelada / bloqueada.
+  // A única rota acessível é /app/assinatura (planos). Qualquer outra rota
+  // é substituída pela tela de bloqueio (sem sidebar, sem header operacional).
+  const isOnPlansRoute = location.pathname === "/app/assinatura";
+  const subscriptionBlocked =
+    !subscription.loading &&
+    subscription.status !== null &&
+    !subscription.canMutate;
+
+  if (subscriptionBlocked && !isOnPlansRoute) {
+    return (
+      <TrialExpiredBlocker
+        status={subscription.status ?? "overdue"}
+        role={currentUser?.role ?? null}
+        clinicName={clinic?.name ?? null}
+      />
+    );
+  }
 
   return (
     <GlobalSpecialtyProvider>
