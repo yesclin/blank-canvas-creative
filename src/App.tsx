@@ -112,6 +112,8 @@ const SuperAdminLogs = lazyWithTimeout(() => import("./pages/super-admin/SuperAd
 const SuperAdminIntegrations = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminIntegrations"), "SuperAdminIntegrations");
 const SuperAdminSupport = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminSupport"), "SuperAdminSupport");
 const SuperAdminUsage = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminUsage"), "SuperAdminUsage");
+const SuperAdminFinance = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminFinance"), "SuperAdminFinance");
+const SuperAdminSettings = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminSettings"), "SuperAdminSettings");
 const Suporte = lazyWithTimeout(() => import("./pages/app/Suporte"), "Suporte");
 const Assinatura = lazyWithTimeout(() => import("./pages/app/Assinatura"), "Assinatura");
 
@@ -419,8 +421,8 @@ function AppRouter() {
                       <Route path="logs" element={moduleRoute(<SuperAdminLogs />, "Super Admin Logs")} />
                       <Route path="integracoes" element={moduleRoute(<SuperAdminIntegrations />, "Super Admin Integrações")} />
                       <Route path="uso" element={moduleRoute(<SuperAdminUsage />, "Super Admin Uso")} />
-                      <Route path="financeiro" element={moduleRoute(<SuperAdminStub title="Financeiro SaaS" description="Faturamento, cobranças e MRR/ARR consolidados." />, "Super Admin Financeiro")} />
-                      <Route path="configuracoes" element={moduleRoute(<SuperAdminStub title="Configurações da plataforma" description="Parâmetros globais, defaults de clínica e flags do sistema." />, "Super Admin Configurações")} />
+                      <Route path="financeiro" element={moduleRoute(<SuperAdminFinance />, "Super Admin Financeiro")} />
+                      <Route path="configuracoes" element={moduleRoute(<SuperAdminSettings />, "Super Admin Configurações")} />
                     </Route>
                     <Route
                       path="/super-admin/setup"
