@@ -214,12 +214,18 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthSessionGuard />
+      <PageResumeRecoveryMount />
       <TooltipProvider>
         <AuthScopedProviders />
       </TooltipProvider>
     </QueryClientProvider>
   );
 };
+
+function PageResumeRecoveryMount() {
+  usePageResumeRecovery();
+  return null;
+}
 
 function ProviderShell() {
   return (
