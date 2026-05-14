@@ -418,7 +418,7 @@ function AppRouter() {
                       <Route path="suporte" element={moduleRoute(<SuperAdminSupport />, "Super Admin Suporte")} />
                       <Route path="logs" element={moduleRoute(<SuperAdminLogs />, "Super Admin Logs")} />
                       <Route path="integracoes" element={moduleRoute(<SuperAdminIntegrations />, "Super Admin Integrações")} />
-                      <Route path="uso" element={moduleRoute(<SuperAdminStub title="Uso da plataforma" description="Métricas de adoção, consumo e saúde por clínica." />, "Super Admin Uso")} />
+                      <Route path="uso" element={moduleRoute(<SuperAdminUsage />, "Super Admin Uso")} />
                       <Route path="financeiro" element={moduleRoute(<SuperAdminStub title="Financeiro SaaS" description="Faturamento, cobranças e MRR/ARR consolidados." />, "Super Admin Financeiro")} />
                       <Route path="configuracoes" element={moduleRoute(<SuperAdminStub title="Configurações da plataforma" description="Parâmetros globais, defaults de clínica e flags do sistema." />, "Super Admin Configurações")} />
                     </Route>
