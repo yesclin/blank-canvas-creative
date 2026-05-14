@@ -384,6 +384,9 @@ function AppRouter() {
                       {/* Teleconsulta - Sala do Profissional */}
                       <Route path="teleconsulta/:appointmentId/sala" element={moduleRoute(<ProtectedRoute module="agenda"><ProtectedFeatureRoute feature="feature_teleconsulta"><TeleconsultaSala /></ProtectedFeatureRoute></ProtectedRoute>, "Teleconsulta")} />
 
+                      {/* Suporte ao usuário da clínica */}
+                      <Route path="suporte" element={moduleRoute(<Suporte />, "Suporte técnico")} />
+
                       {/* Fallback dentro do /app */}
                       <Route path="*" element={<Navigate to="/app" replace />} />
                     </Route>
