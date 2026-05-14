@@ -106,6 +106,7 @@ const SuperAdminFeatureOverrides = lazyWithTimeout(() => import("./pages/super-a
 const SuperAdminSetup = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminSetup"), "SuperAdminSetup");
 const SuperAdminStub = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminStub"), "SuperAdminStub");
 const SuperAdminUsers = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminUsers"), "SuperAdminUsers");
+const SuperAdminOccurrences = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminOccurrences"), "SuperAdminOccurrences");
 const Assinatura = lazyWithTimeout(() => import("./pages/app/Assinatura"), "Assinatura");
 
 /**
@@ -398,7 +399,7 @@ function AppRouter() {
                       <Route path="assinaturas" element={moduleRoute(<SuperAdminSubscriptions />, "Super Admin Assinaturas")} />
                       <Route path="recursos" element={moduleRoute(<SuperAdminFeatureOverrides />, "Super Admin Recursos")} />
                       <Route path="usuarios" element={moduleRoute(<SuperAdminUsers />, "Super Admin Usuários")} />
-                      <Route path="ocorrencias" element={moduleRoute(<SuperAdminStub title="Ocorrências e bugs" description="Triagem e acompanhamento de incidentes reportados pelas clínicas." />, "Super Admin Ocorrências")} />
+                      <Route path="ocorrencias" element={moduleRoute(<SuperAdminOccurrences />, "Super Admin Ocorrências")} />
                       <Route path="logs" element={moduleRoute(<SuperAdminStub title="Logs e Auditoria" description="Auditoria das ações administrativas da plataforma." />, "Super Admin Logs")} />
                       <Route path="integracoes" element={moduleRoute(<SuperAdminStub title="Integrações" description="Conectores com gateways, mensageria, Storage e outros provedores." />, "Super Admin Integrações")} />
                       <Route path="uso" element={moduleRoute(<SuperAdminStub title="Uso da plataforma" description="Métricas de adoção, consumo e saúde por clínica." />, "Super Admin Uso")} />
