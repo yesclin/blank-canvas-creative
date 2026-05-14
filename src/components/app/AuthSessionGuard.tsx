@@ -60,6 +60,9 @@ export function AuthSessionGuard() {
         hardReset(`${eventLabel} user divergente`, expected, null);
         clearAuthenticatedTab();
         setTimeout(() => {
+          import("@/lib/authIntent").then(({ markUserLogout }) =>
+            markUserLogout("session-mismatch"),
+          ).catch(() => undefined);
           void supabase.auth.signOut();
         }, 0);
         currentUserIdRef.current = null;
