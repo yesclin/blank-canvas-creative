@@ -10,6 +10,7 @@ import {
   getTabExpectedUserId,
 } from "@/lib/authSessionIsolation";
 import { clearSupportSessionIfMismatch } from "@/lib/supportSession";
+import { wasLogoutRequestedByUser } from "@/lib/authIntent";
 
 /**
  * Guard de seguranca contra mistura de contas.
