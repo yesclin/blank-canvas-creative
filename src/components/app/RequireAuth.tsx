@@ -61,6 +61,13 @@ export function RequireAuth({ children }: RequireAuthProps) {
       setIsAuthed(false);
       setIsLoading(false);
       setTimeout(() => {
+        // Logout intencional (segurança): marcar para evitar reverter.
+        try {
+          // dynamic import to avoid circular concerns
+          import("@/lib/authIntent").then(({ markUserLogout }) =>
+            markUserLogout("session-mismatch"),
+          );
+        } catch { /* ignore */ }
         void supabase.auth.signOut();
       }, 0);
     };
