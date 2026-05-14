@@ -88,6 +88,7 @@ export async function startSupportSession(params: {
   if (typeof window !== 'undefined') {
     window.localStorage.setItem(STORAGE_KEY, params.clinicId);
     window.localStorage.setItem(SESSION_ID_KEY, data.id);
+    window.localStorage.setItem(SUPPORT_ADMIN_USER_KEY, user.id);
   }
   emitChange();
   return { sessionId: data.id };
@@ -98,6 +99,7 @@ export async function endSupportSession(): Promise<void> {
   if (typeof window !== 'undefined') {
     window.localStorage.removeItem(STORAGE_KEY);
     window.localStorage.removeItem(SESSION_ID_KEY);
+    window.localStorage.removeItem(SUPPORT_ADMIN_USER_KEY);
   }
   emitChange();
 
