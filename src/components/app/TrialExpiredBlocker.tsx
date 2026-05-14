@@ -1,9 +1,10 @@
 import { useNavigate } from "react-router-dom";
-import { Lock, ArrowRight, LogOut } from "lucide-react";
+import { Lock, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import logoFull from "@/assets/logo-full.png";
+import Assinatura from "@/pages/app/Assinatura";
 
 type Role = "owner" | "admin" | "profissional" | "recepcionista" | string | null;
 
