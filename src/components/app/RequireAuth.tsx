@@ -90,11 +90,15 @@ export function RequireAuth({ children }: RequireAuthProps) {
       // Demais eventos com session=null: ignorar (não derrubar o usuário).
     });
 
-    // 2) Buscar sessão atual (cobre o caso de o listener não disparar
-    //    INITIAL_SESSION ou de já estarmos autenticados antes do mount).
+    // 2) Buscar sessão atual SOMENTE como sinal POSITIVO.
+    //    Se getSession retornar null, NÃO marcamos como deslogado —
+    //    isso pode ser apenas um null transitório enquanto o storage
+    //    hidrata ou o token está sendo refrescado. Deixamos a decisão
+    //    final para o evento INITIAL_SESSION/SIGNED_OUT do listener
+    //    (ou para o watchdog de 8s caso nenhum evento chegue).
     (async () => {
       try {
-        const { data } = await withTimeout<{ data: { session: unknown | null } }>(
+        const { data } = await withTimeout<{ data: { session: any | null } }>(
           supabase.auth.getSession(),
           8000,
           "Tempo esgotado ao carregar autenticação."
@@ -103,13 +107,14 @@ export function RequireAuth({ children }: RequireAuthProps) {
         if (import.meta.env.DEV) {
           console.log("[AUTH] getSession", { hasSession: Boolean(data.session) });
         }
-        acceptSession(data.session, "getSession");
+        if (data.session) {
+          acceptSession(data.session, "getSession");
+        }
+        // session null => aguarda listener; não muda isAuthed.
       } catch (error) {
         // Importante: NÃO marcar como autenticado nem deslogar.
-        // Apenas liberar o gate para que o redirect aconteça normalmente.
+        // O watchdog liberará o gate caso necessário.
         console.error("[AUTH_ERROR] getSession falhou", error);
-        if (!mounted) return;
-        setIsLoading(false);
       }
     })();
 
