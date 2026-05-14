@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,17 +11,79 @@ import logoIcon from "@/assets/logo-icon.png";
 import { motion } from "framer-motion";
 import { clearAuthenticatedTab, rememberAuthenticatedUser } from "@/lib/authSessionIsolation";
 
+/**
+ * Decide para onde mandar o usuário autenticado.
+ *
+ * Super Admins (tabela platform_admins) entram no painel da plataforma.
+ * Demais usuários vão para /app. Falha de rede no RPC NÃO trava o login —
+ * caímos para /app por padrão.
+ */
+async function resolveRedirectPath(userId: string, fallback: string): Promise<string> {
+  try {
+    const { data } = await supabase.rpc("is_platform_admin", { _user_id: userId });
+    if (data === true) return "/super-admin";
+  } catch (err) {
+    console.warn("[AUTH] is_platform_admin falhou — usando destino padrão", err);
+  }
+  return fallback || "/app";
+}
+
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+  const navigatedRef = useRef(false);
+  const fromPath = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
+
+  /**
+   * Se o usuário já estiver autenticado ao montar /login (ou se o evento
+   * SIGNED_IN chegar depois do remount provocado pelo `AuthScopedProviders`),
+   * redireciona automaticamente para o destino correto. Esse efeito é o
+   * caminho oficial de navegação pós-login — sobrevive ao remount do
+   * ProviderShell que acontece quando a `scopeKey` muda.
+   */
+  useEffect(() => {
+    let mounted = true;
+
+    const goTo = async (userId: string, source: string) => {
+      if (navigatedRef.current) return;
+      navigatedRef.current = true;
+      const dest = await resolveRedirectPath(userId, fromPath || "/app");
+      if (!mounted) return;
+      if (import.meta.env.DEV) {
+        console.log("[AUTH] Login redirect", { source, dest, userId });
+      }
+      navigate(dest, { replace: true });
+    };
+
+    // 1) Sessão já existente ao abrir /login
+    supabase.auth.getSession().then(({ data }: any) => {
+      const uid = data?.session?.user?.id;
+      if (uid && mounted) void goTo(uid, "getSession");
+    });
+
+    // 2) Evento posterior (SIGNED_IN, INITIAL_SESSION com sessão)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") && session?.user?.id) {
+        void goTo(session.user.id, event);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [navigate, fromPath]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    if (isLoading) return;
+
     if (!email || !password) {
       toast({
         title: "Campos obrigatórios",
@@ -53,18 +115,24 @@ const Login = () => {
       return;
     }
 
-    if (import.meta.env.DEV) {
-      console.log("[AUTH] signIn ok", {
-        hasSession: Boolean(data?.session),
-        hasUser: Boolean(data?.user),
+    if (!data?.session || !data?.user) {
+      setIsLoading(false);
+      toast({
+        title: "Não foi possível iniciar a sessão",
+        description: "Tente novamente em instantes.",
+        variant: "destructive",
       });
+      return;
     }
 
-    rememberAuthenticatedUser(data?.user?.id);
+    if (import.meta.env.DEV) {
+      console.log("[AUTH] signIn ok", { userId: data.user.id });
+    }
 
-    // CRÍTICO: aguardar a sessão estar de fato persistida no storage antes
-    // de navegar para /app. Sem isso, o RequireAuth pode ler o storage antes
-    // de o token ter sido escrito e devolver o usuário para /login.
+    rememberAuthenticatedUser(data.user.id);
+
+    // Aguarda a sessão estar persistida no storage antes de navegar
+    // (evita race com o RequireAuth no destino).
     try {
       for (let i = 0; i < 10; i += 1) {
         const { data: sessionData } = await supabase.auth.getSession();
@@ -75,13 +143,21 @@ const Login = () => {
       console.error("[AUTH] erro aguardando sessão", waitError);
     }
 
-    setIsLoading(false);
-
     toast({
       title: "Bem-vindo!",
       description: "Login realizado com sucesso.",
     });
-    navigate("/app", { replace: true });
+
+    // Navegação determinística — não depende exclusivamente do listener.
+    // Se o ProviderShell remontar por causa da mudança de `scopeKey`, o
+    // useEffect acima cobre a navegação no novo mount.
+    if (!navigatedRef.current) {
+      navigatedRef.current = true;
+      const dest = await resolveRedirectPath(data.user.id, fromPath || "/app");
+      navigate(dest, { replace: true });
+    }
+
+    setIsLoading(false);
   };
 
   return (
