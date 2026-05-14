@@ -7,6 +7,7 @@ import { Check, Loader2, MessageCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useClinicSubscription } from '@/hooks/useClinicSubscription';
+import { useCurrentUser } from '@/hooks/useClinicUsers';
 
 interface Plan {
   id: string;
