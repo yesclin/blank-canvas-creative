@@ -22,6 +22,7 @@ import {
   CreditCard,
   Activity,
   Stethoscope,
+  Headset,
   type LucideIcon,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
@@ -71,6 +72,7 @@ const ownerAdminMainMenu: MenuItem[] = [
   { title: "Atendimento", url: "/app/atendimento", icon: Activity, tourId: "atendimento" },
   { title: "Comercial", url: "/app/comercial", icon: Briefcase, tourId: "commercial", feature: "feature_crm" },
   { title: "Marketing", url: "/app/marketing", icon: Megaphone, tourId: "communication", feature: "feature_marketing" },
+  { title: "Suporte", url: "/app/suporte", icon: Headset },
 ];
 
 const ownerAdminGestaoMenu: MenuItem[] = [
@@ -101,6 +103,7 @@ const professionalMainMenu: MenuItem[] = [
   { title: "Pacientes", url: "/app/pacientes", icon: Users, tourId: "patients" },
   { title: "Atendimento", url: "/app/atendimento", icon: Activity, tourId: "atendimento" },
   { title: "Meu Financeiro", url: "/app/meu-financeiro", icon: Wallet },
+  { title: "Suporte", url: "/app/suporte", icon: Headset },
 ];
 
 // Recepcionista - No clinical content, no configurations
@@ -108,6 +111,7 @@ const receptionistMainMenu: MenuItem[] = [
   { title: "Agenda", url: "/app/agenda", icon: Calendar, tourId: "agenda" },
   { title: "Pacientes", url: "/app/pacientes", icon: Users, tourId: "patients" },
   { title: "Comercial", url: "/app/comercial", icon: Briefcase, tourId: "commercial", feature: "feature_crm" },
+  { title: "Suporte", url: "/app/suporte", icon: Headset },
 ];
 
 const receptionistGestaoMenu: MenuItem[] = [

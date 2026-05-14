@@ -12974,6 +12974,267 @@ export type Database = {
           },
         ]
       }
+      support_ticket_attachments: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          message_id: string | null
+          ticket_id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          message_id?: string | null
+          ticket_id: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          message_id?: string | null
+          ticket_id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "support_ticket_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_attachments_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_ticket_events: {
+        Row: {
+          actor_user_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+          new_value: string | null
+          old_value: string | null
+          ticket_id: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          new_value?: string | null
+          old_value?: string | null
+          ticket_id: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          new_value?: string | null
+          old_value?: string | null
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_events_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_ticket_messages: {
+        Row: {
+          author_email: string | null
+          author_name: string | null
+          author_type: string
+          author_user_id: string | null
+          created_at: string
+          id: string
+          is_internal: boolean
+          message: string
+          ticket_id: string
+        }
+        Insert: {
+          author_email?: string | null
+          author_name?: string | null
+          author_type: string
+          author_user_id?: string | null
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+          message: string
+          ticket_id: string
+        }
+        Update: {
+          author_email?: string | null
+          author_name?: string | null
+          author_type?: string
+          author_user_id?: string | null
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+          message?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          assigned_to: string | null
+          category: string
+          clinic_id: string
+          code: string
+          created_at: string
+          created_by: string | null
+          description: string
+          environment: string
+          id: string
+          last_error_message: string | null
+          module: string | null
+          preventive_action: string | null
+          priority: string
+          related_occurrence_id: string | null
+          requester_email: string | null
+          requester_name: string | null
+          requester_role: string | null
+          resolution_summary: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          root_cause: string | null
+          route: string | null
+          screen_size: string | null
+          status: string
+          technical_context: Json
+          title: string
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          category: string
+          clinic_id: string
+          code: string
+          created_at?: string
+          created_by?: string | null
+          description: string
+          environment?: string
+          id?: string
+          last_error_message?: string | null
+          module?: string | null
+          preventive_action?: string | null
+          priority?: string
+          related_occurrence_id?: string | null
+          requester_email?: string | null
+          requester_name?: string | null
+          requester_role?: string | null
+          resolution_summary?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          root_cause?: string | null
+          route?: string | null
+          screen_size?: string | null
+          status?: string
+          technical_context?: Json
+          title: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: string
+          clinic_id?: string
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          environment?: string
+          id?: string
+          last_error_message?: string | null
+          module?: string | null
+          preventive_action?: string | null
+          priority?: string
+          related_occurrence_id?: string | null
+          requester_email?: string | null
+          requester_name?: string | null
+          requester_role?: string | null
+          resolution_summary?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          root_cause?: string | null
+          route?: string | null
+          screen_size?: string | null
+          status?: string
+          technical_context?: Json
+          title?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_effective_features"
+            referencedColumns: ["clinic_id"]
+          },
+          {
+            foreignKeyName: "support_tickets_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "public_clinic_booking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_related_occurrence_id_fkey"
+            columns: ["related_occurrence_id"]
+            isOneToOne: false
+            referencedRelation: "platform_occurrences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_occurrences: {
         Row: {
           assignee_id: string | null
@@ -14399,6 +14660,42 @@ export type Database = {
           },
         ]
       }
+      user_notifications: {
+        Row: {
+          clinic_id: string | null
+          created_at: string
+          id: string
+          link: string | null
+          message: string
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          clinic_id?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          message: string
+          read_at?: string | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          clinic_id?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          message?: string
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           clinic_id: string
@@ -14606,6 +14903,7 @@ export type Database = {
       generate_platform_occurrence_code: { Args: never; Returns: string }
       generate_quote_number: { Args: { p_clinic_id: string }; Returns: string }
       generate_secure_token: { Args: { p_length?: number }; Returns: string }
+      generate_support_ticket_code: { Args: never; Returns: string }
       generate_teleconsultation_token: {
         Args: {
           p_actor: string

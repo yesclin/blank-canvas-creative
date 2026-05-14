@@ -24,6 +24,7 @@ import { FloatingActiveAppointmentButton } from "./FloatingActiveAppointmentButt
 import { ActiveAppointmentDrawer } from "./ActiveAppointmentDrawer";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { SubscriptionGate } from "./SubscriptionGate";
+import { FloatingSupportButton } from "./FloatingSupportButton";
 
 function getModuleScope(pathname: string): string {
   if (pathname.startsWith("/app/prontuario")) return "Prontuário";
@@ -146,6 +147,10 @@ export function AppLayout() {
     <ErrorBoundary scope="ActiveAppointmentWidget" compact>
       <FloatingActiveAppointmentButton />
       <ActiveAppointmentDrawer />
+    </ErrorBoundary>
+
+    <ErrorBoundary scope="FloatingSupportButton" compact fallback={() => null as any}>
+      <FloatingSupportButton />
     </ErrorBoundary>
 
     {/* Onboarding Wizard — falha não pode derrubar o layout */}

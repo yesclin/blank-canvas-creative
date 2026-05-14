@@ -109,6 +109,8 @@ const SuperAdminUsers = lazyWithTimeout(() => import("./pages/super-admin/SuperA
 const SuperAdminOccurrences = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminOccurrences"), "SuperAdminOccurrences");
 const SuperAdminLogs = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminLogs"), "SuperAdminLogs");
 const SuperAdminIntegrations = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminIntegrations"), "SuperAdminIntegrations");
+const SuperAdminSupport = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminSupport"), "SuperAdminSupport");
+const Suporte = lazyWithTimeout(() => import("./pages/app/Suporte"), "Suporte");
 const Assinatura = lazyWithTimeout(() => import("./pages/app/Assinatura"), "Assinatura");
 
 /**
@@ -382,6 +384,9 @@ function AppRouter() {
                       {/* Teleconsulta - Sala do Profissional */}
                       <Route path="teleconsulta/:appointmentId/sala" element={moduleRoute(<ProtectedRoute module="agenda"><ProtectedFeatureRoute feature="feature_teleconsulta"><TeleconsultaSala /></ProtectedFeatureRoute></ProtectedRoute>, "Teleconsulta")} />
 
+                      {/* Suporte ao usuário da clínica */}
+                      <Route path="suporte" element={moduleRoute(<Suporte />, "Suporte técnico")} />
+
                       {/* Fallback dentro do /app */}
                       <Route path="*" element={<Navigate to="/app" replace />} />
                     </Route>
@@ -402,6 +407,7 @@ function AppRouter() {
                       <Route path="recursos" element={moduleRoute(<SuperAdminFeatureOverrides />, "Super Admin Recursos")} />
                       <Route path="usuarios" element={moduleRoute(<SuperAdminUsers />, "Super Admin Usuários")} />
                       <Route path="ocorrencias" element={moduleRoute(<SuperAdminOccurrences />, "Super Admin Ocorrências")} />
+                      <Route path="suporte" element={moduleRoute(<SuperAdminSupport />, "Super Admin Suporte")} />
                       <Route path="logs" element={moduleRoute(<SuperAdminLogs />, "Super Admin Logs")} />
                       <Route path="integracoes" element={moduleRoute(<SuperAdminIntegrations />, "Super Admin Integrações")} />
                       <Route path="uso" element={moduleRoute(<SuperAdminStub title="Uso da plataforma" description="Métricas de adoção, consumo e saúde por clínica." />, "Super Admin Uso")} />
