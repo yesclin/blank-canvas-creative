@@ -10058,6 +10058,240 @@ export type Database = {
           },
         ]
       }
+      platform_integration_logs: {
+        Row: {
+          clinic_id: string | null
+          created_at: string
+          error_stack: string | null
+          event_type: string
+          http_status: number | null
+          id: string
+          message: string | null
+          metadata: Json
+          provider_key: string
+          request_id: string | null
+          request_payload: Json | null
+          response_payload: Json | null
+          status: string
+        }
+        Insert: {
+          clinic_id?: string | null
+          created_at?: string
+          error_stack?: string | null
+          event_type: string
+          http_status?: number | null
+          id?: string
+          message?: string | null
+          metadata?: Json
+          provider_key: string
+          request_id?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          status: string
+        }
+        Update: {
+          clinic_id?: string | null
+          created_at?: string
+          error_stack?: string | null
+          event_type?: string
+          http_status?: number | null
+          id?: string
+          message?: string | null
+          metadata?: Json
+          provider_key?: string
+          request_id?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_integration_logs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_effective_features"
+            referencedColumns: ["clinic_id"]
+          },
+          {
+            foreignKeyName: "platform_integration_logs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_integration_logs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "public_clinic_booking"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_integration_providers: {
+        Row: {
+          api_key_masked: string | null
+          base_url: string | null
+          category: string
+          created_at: string
+          environment: string
+          id: string
+          is_enabled: boolean
+          key: string
+          last_error_message: string | null
+          last_healthcheck_at: string | null
+          last_healthcheck_status: string | null
+          metadata: Json
+          name: string
+          notes: string | null
+          retry_limit: number
+          status: string
+          timeout_seconds: number
+          token_masked: string | null
+          updated_at: string
+          webhook_secret_masked: string | null
+        }
+        Insert: {
+          api_key_masked?: string | null
+          base_url?: string | null
+          category: string
+          created_at?: string
+          environment?: string
+          id?: string
+          is_enabled?: boolean
+          key: string
+          last_error_message?: string | null
+          last_healthcheck_at?: string | null
+          last_healthcheck_status?: string | null
+          metadata?: Json
+          name: string
+          notes?: string | null
+          retry_limit?: number
+          status?: string
+          timeout_seconds?: number
+          token_masked?: string | null
+          updated_at?: string
+          webhook_secret_masked?: string | null
+        }
+        Update: {
+          api_key_masked?: string | null
+          base_url?: string | null
+          category?: string
+          created_at?: string
+          environment?: string
+          id?: string
+          is_enabled?: boolean
+          key?: string
+          last_error_message?: string | null
+          last_healthcheck_at?: string | null
+          last_healthcheck_status?: string | null
+          metadata?: Json
+          name?: string
+          notes?: string | null
+          retry_limit?: number
+          status?: string
+          timeout_seconds?: number
+          token_masked?: string | null
+          updated_at?: string
+          webhook_secret_masked?: string | null
+        }
+        Relationships: []
+      }
+      platform_integration_settings: {
+        Row: {
+          alert_email: string | null
+          alert_webhook_url: string | null
+          created_at: string
+          default_retry_limit: number
+          default_timeout_seconds: number
+          id: string
+          log_retention_days: number
+          logs_enabled: boolean
+          notify_critical_failures: boolean
+          updated_at: string
+        }
+        Insert: {
+          alert_email?: string | null
+          alert_webhook_url?: string | null
+          created_at?: string
+          default_retry_limit?: number
+          default_timeout_seconds?: number
+          id?: string
+          log_retention_days?: number
+          logs_enabled?: boolean
+          notify_critical_failures?: boolean
+          updated_at?: string
+        }
+        Update: {
+          alert_email?: string | null
+          alert_webhook_url?: string | null
+          created_at?: string
+          default_retry_limit?: number
+          default_timeout_seconds?: number
+          id?: string
+          log_retention_days?: number
+          logs_enabled?: boolean
+          notify_critical_failures?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      platform_integration_webhooks: {
+        Row: {
+          created_at: string
+          failure_count: number
+          id: string
+          last_received_at: string | null
+          metadata: Json
+          name: string
+          provider_id: string | null
+          provider_key: string
+          secret_hash: string | null
+          secret_masked: string | null
+          status: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          failure_count?: number
+          id?: string
+          last_received_at?: string | null
+          metadata?: Json
+          name: string
+          provider_id?: string | null
+          provider_key: string
+          secret_hash?: string | null
+          secret_masked?: string | null
+          status?: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          failure_count?: number
+          id?: string
+          last_received_at?: string | null
+          metadata?: Json
+          name?: string
+          provider_id?: string | null
+          provider_key?: string
+          secret_hash?: string | null
+          secret_masked?: string | null
+          status?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_integration_webhooks_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "platform_integration_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_occurrence_comments: {
         Row: {
           author_user_id: string | null
