@@ -67,6 +67,10 @@ export default function Assinatura() {
   }, []);
 
   const requestPlan = async (plan: Plan) => {
+    if (!isOwner) {
+      toast.error('Apenas o proprietário da clínica pode contratar um plano.');
+      return;
+    }
     setRequesting(plan.id);
     const { error } = await supabase.rpc('request_subscription', { _cycle: cycle });
     setRequesting(null);
