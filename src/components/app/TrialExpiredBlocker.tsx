@@ -68,32 +68,21 @@ export function TrialExpiredBlocker({ status, role, clinicName }: Props) {
         </Button>
       </header>
 
-      <main className="flex-1 flex items-center justify-center px-4 py-12">
-        <div className="max-w-xl w-full text-center">
-          <div className="mb-6 mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-destructive/10">
-            <Lock className="h-10 w-10 text-destructive" />
+      <main className="flex-1 overflow-auto">
+        <div className="max-w-5xl mx-auto px-4 py-10">
+          <div className="text-center mb-8">
+            <div className="mb-4 mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
+              <Lock className="h-8 w-8 text-destructive" />
+            </div>
+            <h1 className="mb-2 text-3xl font-bold tracking-tight text-foreground">{headline}</h1>
+            <p className="text-base text-muted-foreground">{subline}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Seus dados continuam salvos com segurança. Após escolher um plano, o acesso será liberado automaticamente.
+            </p>
           </div>
-          <h1 className="mb-3 text-3xl font-bold tracking-tight text-foreground">{headline}</h1>
-          <p className="mb-2 text-base text-muted-foreground">{subline}</p>
-          <p className="mb-8 text-sm text-muted-foreground">
-            Seus dados continuam salvos com segurança. Após escolher um plano, o acesso será
-            liberado automaticamente.
-          </p>
 
-          <div className="flex flex-wrap justify-center gap-3">
-            {isOwner ? (
-              <Button size="lg" onClick={() => navigate("/app/assinatura")}>
-                Ver planos
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            ) : (
-              <Button size="lg" variant="outline" onClick={() => navigate("/app/assinatura")}>
-                Ver planos disponíveis
-              </Button>
-            )}
-            <Button size="lg" variant="ghost" onClick={handleLogout}>
-              Sair
-            </Button>
+          <div className="bg-card border rounded-lg shadow-sm">
+            <Assinatura />
           </div>
         </div>
       </main>
