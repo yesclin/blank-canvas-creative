@@ -7,6 +7,7 @@ import { Check, Loader2, MessageCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useClinicSubscription } from '@/hooks/useClinicSubscription';
+import { useCurrentUser } from '@/hooks/useClinicUsers';
 
 interface Plan {
   id: string;
@@ -50,6 +51,8 @@ export default function Assinatura() {
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState<string | null>(null);
   const sub = useClinicSubscription();
+  const { user: currentUser } = useCurrentUser();
+  const isOwner = currentUser?.role === 'owner';
 
   useEffect(() => {
     (async () => {
@@ -64,6 +67,10 @@ export default function Assinatura() {
   }, []);
 
   const requestPlan = async (plan: Plan) => {
+    if (!isOwner) {
+      toast.error('Apenas o proprietário da clínica pode contratar um plano.');
+      return;
+    }
     setRequesting(plan.id);
     const { error } = await supabase.rpc('request_subscription', { _cycle: cycle });
     setRequesting(null);
@@ -184,14 +191,15 @@ export default function Assinatura() {
                 <Button
                   className="w-full"
                   onClick={() => requestPlan(plan)}
-                  disabled={requesting === plan.id}
+                  disabled={requesting === plan.id || !isOwner}
+                  title={!isOwner ? 'Apenas o proprietário da clínica pode contratar um plano.' : undefined}
                 >
                   {requesting === plan.id ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
                     <MessageCircle className="mr-2 h-4 w-4" />
                   )}
-                  {isCurrent ? 'Renovar' : 'Falar com vendas'}
+                  {!isOwner ? 'Somente o proprietário pode assinar' : isCurrent ? 'Renovar' : 'Assinar plano'}
                 </Button>
               </CardContent>
             </Card>

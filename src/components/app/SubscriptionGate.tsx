@@ -5,7 +5,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useClinicSubscription } from '@/hooks/useClinicSubscription';
 import { ErrorBoundary } from './ErrorBoundary';
 
-const ROUTES_ALWAYS_ALLOWED = ['/app/assinatura', '/app'];
+// O bloqueio TOTAL agora é feito em AppLayout (substitui sidebar/header).
+// Aqui mantemos apenas o banner de trial e o alerta interno em /app/assinatura.
+const ROUTES_ALWAYS_ALLOWED = ['/app/assinatura'];
 
 /**
  * Bloqueia o app quando a assinatura está overdue/canceled/blocked,
