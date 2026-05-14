@@ -149,6 +149,10 @@ export function AppLayout() {
       <ActiveAppointmentDrawer />
     </ErrorBoundary>
 
+    <ErrorBoundary scope="FloatingSupportButton" compact fallback={() => null as any}>
+      <FloatingSupportButton />
+    </ErrorBoundary>
+
     {/* Onboarding Wizard — falha não pode derrubar o layout */}
     <ErrorBoundary scope="OnboardingWizard" compact fallback={() => null as any}>
       <OnboardingWizard />
