@@ -7,6 +7,7 @@
  */
 import { supabase } from '@/integrations/supabase/client';
 import { logPlatformAction } from './superAdminAudit';
+import { SUPPORT_ADMIN_USER_KEY } from './authSessionIsolation';
 
 const STORAGE_KEY = 'yesclin_support_clinic_id';
 const SESSION_ID_KEY = 'yesclin_support_session_id';
@@ -14,14 +15,33 @@ const SESSION_ID_KEY = 'yesclin_support_session_id';
 export interface ActiveSupportSession {
   sessionId: string;
   clinicId: string;
+  adminUserId: string;
 }
 
 export function getActiveSupportSession(): ActiveSupportSession | null {
   if (typeof window === 'undefined') return null;
   const clinicId = window.localStorage.getItem(STORAGE_KEY);
   const sessionId = window.localStorage.getItem(SESSION_ID_KEY);
-  if (!clinicId || !sessionId) return null;
-  return { clinicId, sessionId };
+  const adminUserId = window.localStorage.getItem(SUPPORT_ADMIN_USER_KEY);
+  if (!clinicId || !sessionId || !adminUserId) return null;
+  return { clinicId, sessionId, adminUserId };
+}
+
+/**
+ * Limpa qualquer sessão de suporte que não pertença ao usuário fornecido.
+ * Garante que um Super Admin nunca herde a sessão de suporte de outro usuário
+ * (ex.: troca de login na mesma máquina).
+ */
+export function clearSupportSessionIfMismatch(currentUserId: string | null) {
+  if (typeof window === 'undefined') return;
+  const owner = window.localStorage.getItem(SUPPORT_ADMIN_USER_KEY);
+  if (!owner) return;
+  if (!currentUserId || owner !== currentUserId) {
+    window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(SESSION_ID_KEY);
+    window.localStorage.removeItem(SUPPORT_ADMIN_USER_KEY);
+    window.dispatchEvent(new CustomEvent('yesclin:support-session-changed'));
+  }
 }
 
 function emitChange() {
