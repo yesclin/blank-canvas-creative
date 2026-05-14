@@ -101,8 +101,10 @@ const STATUS_LABEL: Record<Status, string> = {
   aberta: 'Aberta',
   em_triagem: 'Em triagem',
   em_andamento: 'Em andamento',
+  em_investigacao: 'Em investigação',
   aguardando_cliente: 'Aguardando cliente',
   aguardando_desenvolvimento: 'Aguardando desenvolvimento',
+  corrigida: 'Corrigida',
   resolvida: 'Resolvida',
   cancelada: 'Cancelada',
 };
