@@ -3,6 +3,11 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { ErrorBoundary } from "./components/app/ErrorBoundary";
+import { clearUnsafeAuthCache } from "./lib/authSessionIsolation";
+
+// Limpa chaves antigas/inseguras de identidade no boot. NUNCA confiamos em
+// localStorage/sessionStorage como fonte de verdade do usuário autenticado.
+clearUnsafeAuthCache();
 
 declare global {
   interface Window {
