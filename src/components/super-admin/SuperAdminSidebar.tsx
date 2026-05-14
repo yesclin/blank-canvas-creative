@@ -26,6 +26,7 @@ import {
   SidebarHeader,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { Headset } from 'lucide-react';
 
 const items = [
   { title: 'Dashboard', url: '/super-admin', icon: LayoutDashboard, exact: true },
@@ -34,6 +35,7 @@ const items = [
   { title: 'Assinaturas', url: '/super-admin/assinaturas', icon: CreditCard },
   { title: 'Recursos da Clínica', url: '/super-admin/recursos', icon: ToggleRight },
   { title: 'Usuários', url: '/super-admin/usuarios', icon: Users },
+  { title: 'Suporte', url: '/super-admin/suporte', icon: Headset },
   { title: 'Ocorrências', url: '/super-admin/ocorrencias', icon: Bug },
   { title: 'Logs e Auditoria', url: '/super-admin/logs', icon: ScrollText },
   { title: 'Integrações', url: '/super-admin/integracoes', icon: Plug },
