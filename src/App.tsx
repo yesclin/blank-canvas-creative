@@ -111,6 +111,7 @@ const SuperAdminOccurrences = lazyWithTimeout(() => import("./pages/super-admin/
 const SuperAdminLogs = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminLogs"), "SuperAdminLogs");
 const SuperAdminIntegrations = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminIntegrations"), "SuperAdminIntegrations");
 const SuperAdminSupport = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminSupport"), "SuperAdminSupport");
+const SuperAdminUsage = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminUsage"), "SuperAdminUsage");
 const Suporte = lazyWithTimeout(() => import("./pages/app/Suporte"), "Suporte");
 const Assinatura = lazyWithTimeout(() => import("./pages/app/Assinatura"), "Assinatura");
 
