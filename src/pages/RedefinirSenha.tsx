@@ -96,6 +96,8 @@ const RedefinirSenha = () => {
       setSuccess(true);
 
       // Sign out so user logs in with the new password
+      const { markUserLogout } = await import("@/lib/authIntent");
+      markUserLogout("password-reset");
       await supabase.auth.signOut();
 
       toast({
