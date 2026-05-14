@@ -23,17 +23,18 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   AlertCircle, AlertTriangle, Bug, CheckCircle2, Clock, Download, Loader2,
-  MessageSquare, MoreHorizontal, Plus, Search, XCircle,
+  MessageSquare, MoreHorizontal, Plus, Search, ShieldAlert, XCircle,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { logPlatformAction } from '@/lib/superAdminAudit';
 import { usePlatformAdmin } from '@/hooks/usePlatformAdmin';
 import { Navigate } from 'react-router-dom';
+import { InvestigationCaseDrawer } from '@/components/super-admin/InvestigationCaseDrawer';
 
 type Status =
-  | 'aberta' | 'em_triagem' | 'em_andamento' | 'aguardando_cliente'
-  | 'aguardando_desenvolvimento' | 'resolvida' | 'cancelada';
+  | 'aberta' | 'em_triagem' | 'em_andamento' | 'em_investigacao' | 'aguardando_cliente'
+  | 'aguardando_desenvolvimento' | 'corrigida' | 'resolvida' | 'cancelada';
 type Priority = 'baixa' | 'media' | 'alta' | 'critica';
 type Category =
   | 'bug' | 'instabilidade' | 'erro_integracao' | 'financeiro' | 'permissao_acesso'
