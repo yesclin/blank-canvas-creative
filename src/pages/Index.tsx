@@ -22,16 +22,26 @@ const Index = () => {
   useEffect(() => {
     let mounted = true;
 
+    const goTo = async (userId: string) => {
+      try {
+        const { data } = await supabase.rpc("is_platform_admin", { _user_id: userId });
+        if (!mounted) return;
+        navigate(data === true ? "/super-admin" : "/app", { replace: true });
+      } catch {
+        if (mounted) navigate("/app", { replace: true });
+      }
+    };
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!mounted) return;
-      if (session) navigate("/app", { replace: true });
+      if (session?.user?.id) void goTo(session.user.id);
     });
 
     supabase.auth.getSession().then(({ data }) => {
       if (!mounted) return;
-      if (data.session) navigate("/app", { replace: true });
+      if (data.session?.user?.id) void goTo(data.session.user.id);
     });
 
     return () => {
