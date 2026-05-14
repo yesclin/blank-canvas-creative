@@ -51,6 +51,8 @@ export default function Assinatura() {
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState<string | null>(null);
   const sub = useClinicSubscription();
+  const { user: currentUser } = useCurrentUser();
+  const isOwner = currentUser?.role === 'owner';
 
   useEffect(() => {
     (async () => {
