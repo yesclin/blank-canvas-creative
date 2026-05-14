@@ -9962,12 +9962,24 @@ export type Database = {
         Row: {
           action: string
           actor_email: string | null
-          actor_user_id: string
+          actor_name: string | null
+          actor_role: string | null
+          actor_user_id: string | null
           clinic_id: string | null
           created_at: string
+          description: string | null
+          entity: string | null
+          entity_id: string | null
+          environment: string
           id: string
           ip_address: string | null
           metadata: Json
+          module: string
+          new_values: Json | null
+          old_values: Json | null
+          route: string | null
+          severity: string
+          source: string
           target_id: string | null
           target_type: string | null
           user_agent: string | null
@@ -9975,12 +9987,24 @@ export type Database = {
         Insert: {
           action: string
           actor_email?: string | null
-          actor_user_id: string
+          actor_name?: string | null
+          actor_role?: string | null
+          actor_user_id?: string | null
           clinic_id?: string | null
           created_at?: string
+          description?: string | null
+          entity?: string | null
+          entity_id?: string | null
+          environment?: string
           id?: string
           ip_address?: string | null
           metadata?: Json
+          module?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          route?: string | null
+          severity?: string
+          source?: string
           target_id?: string | null
           target_type?: string | null
           user_agent?: string | null
@@ -9988,12 +10012,24 @@ export type Database = {
         Update: {
           action?: string
           actor_email?: string | null
-          actor_user_id?: string
+          actor_name?: string | null
+          actor_role?: string | null
+          actor_user_id?: string | null
           clinic_id?: string | null
           created_at?: string
+          description?: string | null
+          entity?: string | null
+          entity_id?: string | null
+          environment?: string
           id?: string
           ip_address?: string | null
           metadata?: Json
+          module?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          route?: string | null
+          severity?: string
+          source?: string
           target_id?: string | null
           target_type?: string | null
           user_agent?: string | null
