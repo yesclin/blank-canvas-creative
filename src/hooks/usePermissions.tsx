@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, createContext, useContext, ReactNode } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, createContext, useContext, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentViewRole } from "@/contexts/UserViewModeContext";
 import { withTimeout } from "@/lib/asyncTimeout";
