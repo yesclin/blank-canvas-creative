@@ -191,14 +191,15 @@ export default function Assinatura() {
                 <Button
                   className="w-full"
                   onClick={() => requestPlan(plan)}
-                  disabled={requesting === plan.id}
+                  disabled={requesting === plan.id || !isOwner}
+                  title={!isOwner ? 'Apenas o proprietário da clínica pode contratar um plano.' : undefined}
                 >
                   {requesting === plan.id ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
                     <MessageCircle className="mr-2 h-4 w-4" />
                   )}
-                  {isCurrent ? 'Renovar' : 'Falar com vendas'}
+                  {!isOwner ? 'Somente o proprietário pode assinar' : isCurrent ? 'Renovar' : 'Assinar plano'}
                 </Button>
               </CardContent>
             </Card>
