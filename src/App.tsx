@@ -17,6 +17,7 @@ import { AuthSessionGuard } from "@/components/app/AuthSessionGuard";
 import { PageSkeleton } from "@/components/app/PageSkeleton";
 import CookieConsent from "@/components/CookieConsent";
 import { supabase } from "@/integrations/supabase/client";
+import { usePageResumeRecovery } from "@/hooks/usePageResumeRecovery";
 
 // Páginas Públicas — lazy para não pesar no boot inicial.
 const Index = lazyWithTimeout(() => import("./pages/Index"), "Index");
