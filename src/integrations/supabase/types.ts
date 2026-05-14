@@ -10022,6 +10022,54 @@ export type Database = {
           },
         ]
       }
+      platform_users: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          invited_at: string
+          invited_by: string | null
+          last_login_at: string | null
+          notes: string | null
+          role: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          full_name?: string | null
+          id?: string
+          invited_at?: string
+          invited_by?: string | null
+          last_login_at?: string | null
+          notes?: string | null
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          invited_at?: string
+          invited_by?: string | null
+          last_login_at?: string | null
+          notes?: string | null
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       procedure_consumption_kits: {
         Row: {
           clinic_id: string
@@ -14048,6 +14096,7 @@ export type Database = {
       }
       clinic_can_mutate: { Args: { _clinic_id: string }; Returns: boolean }
       clinic_specialty_summary: { Args: { _clinic_id: string }; Returns: Json }
+      count_active_super_admins: { Args: never; Returns: number }
       count_platform_admins: { Args: never; Returns: number }
       current_professional_id_for_clinic: {
         Args: { p_clinic_id: string }
@@ -14161,6 +14210,7 @@ export type Database = {
         Returns: boolean
       }
       is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_platform_super_admin: { Args: { _user_id: string }; Returns: boolean }
       is_recepcionista: { Args: { _user_id?: string }; Returns: boolean }
       log_teleconsultation_event: {
         Args: {
