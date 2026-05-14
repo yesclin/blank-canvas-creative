@@ -397,7 +397,7 @@ function AppRouter() {
                       <Route path="planos" element={moduleRoute(<SuperAdminPlans />, "Super Admin Planos")} />
                       <Route path="assinaturas" element={moduleRoute(<SuperAdminSubscriptions />, "Super Admin Assinaturas")} />
                       <Route path="recursos" element={moduleRoute(<SuperAdminFeatureOverrides />, "Super Admin Recursos")} />
-                      <Route path="usuarios" element={moduleRoute(<SuperAdminStub title="Usuários da plataforma" description="Gestão de papéis globais (Super Admin, Suporte) e auditoria de acesso." />, "Super Admin Usuários")} />
+                      <Route path="usuarios" element={moduleRoute(<SuperAdminUsers />, "Super Admin Usuários")} />
                       <Route path="ocorrencias" element={moduleRoute(<SuperAdminStub title="Ocorrências e bugs" description="Triagem e acompanhamento de incidentes reportados pelas clínicas." />, "Super Admin Ocorrências")} />
                       <Route path="logs" element={moduleRoute(<SuperAdminStub title="Logs e Auditoria" description="Auditoria das ações administrativas da plataforma." />, "Super Admin Logs")} />
                       <Route path="integracoes" element={moduleRoute(<SuperAdminStub title="Integrações" description="Conectores com gateways, mensageria, Storage e outros provedores." />, "Super Admin Integrações")} />
