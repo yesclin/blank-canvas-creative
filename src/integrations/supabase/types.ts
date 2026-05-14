@@ -10022,6 +10022,212 @@ export type Database = {
           },
         ]
       }
+      platform_occurrence_comments: {
+        Row: {
+          author_user_id: string | null
+          comment: string
+          created_at: string
+          id: string
+          is_internal: boolean
+          occurrence_id: string
+        }
+        Insert: {
+          author_user_id?: string | null
+          comment: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+          occurrence_id: string
+        }
+        Update: {
+          author_user_id?: string | null
+          comment?: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+          occurrence_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_occurrence_comments_occurrence_id_fkey"
+            columns: ["occurrence_id"]
+            isOneToOne: false
+            referencedRelation: "platform_occurrences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_occurrence_events: {
+        Row: {
+          actor_user_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+          new_value: string | null
+          occurrence_id: string
+          old_value: string | null
+        }
+        Insert: {
+          actor_user_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          new_value?: string | null
+          occurrence_id: string
+          old_value?: string | null
+        }
+        Update: {
+          actor_user_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          new_value?: string | null
+          occurrence_id?: string
+          old_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_occurrence_events_occurrence_id_fkey"
+            columns: ["occurrence_id"]
+            isOneToOne: false
+            referencedRelation: "platform_occurrences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_occurrences: {
+        Row: {
+          assigned_to: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          category: string
+          clinic_id: string | null
+          code: string
+          corrective_action: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          environment: string
+          error_message: string | null
+          id: string
+          module: string | null
+          priority: string
+          recurrence_prevention: string | null
+          related_entity_id: string | null
+          related_entity_type: string | null
+          reported_by_email: string | null
+          reported_by_name: string | null
+          reported_by_phone: string | null
+          reported_by_user_id: string | null
+          resolution_summary: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          root_cause: string | null
+          route: string | null
+          stack_trace: string | null
+          status: string
+          technical_context: Json
+          title: string
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          category: string
+          clinic_id?: string | null
+          code: string
+          corrective_action?: string | null
+          created_at?: string
+          created_by?: string | null
+          description: string
+          environment?: string
+          error_message?: string | null
+          id?: string
+          module?: string | null
+          priority?: string
+          recurrence_prevention?: string | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          reported_by_email?: string | null
+          reported_by_name?: string | null
+          reported_by_phone?: string | null
+          reported_by_user_id?: string | null
+          resolution_summary?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          root_cause?: string | null
+          route?: string | null
+          stack_trace?: string | null
+          status?: string
+          technical_context?: Json
+          title: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          category?: string
+          clinic_id?: string | null
+          code?: string
+          corrective_action?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          environment?: string
+          error_message?: string | null
+          id?: string
+          module?: string | null
+          priority?: string
+          recurrence_prevention?: string | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          reported_by_email?: string | null
+          reported_by_name?: string | null
+          reported_by_phone?: string | null
+          reported_by_user_id?: string | null
+          resolution_summary?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          root_cause?: string | null
+          route?: string | null
+          stack_trace?: string | null
+          status?: string
+          technical_context?: Json
+          title?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_occurrences_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_effective_features"
+            referencedColumns: ["clinic_id"]
+          },
+          {
+            foreignKeyName: "platform_occurrences_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_occurrences_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "public_clinic_booking"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_users: {
         Row: {
           accepted_at: string | null
@@ -14127,6 +14333,7 @@ export type Database = {
         }
         Returns: string
       }
+      generate_platform_occurrence_code: { Args: never; Returns: string }
       generate_quote_number: { Args: { p_clinic_id: string }; Returns: string }
       generate_secure_token: { Args: { p_length?: number }; Returns: string }
       generate_teleconsultation_token: {
