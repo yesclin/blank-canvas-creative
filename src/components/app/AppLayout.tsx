@@ -48,13 +48,12 @@ export function AppLayout() {
   // Bloqueio TOTAL: trial expirado / assinatura cancelada / bloqueada.
   // A única rota acessível é /app/assinatura (planos). Qualquer outra rota
   // é substituída pela tela de bloqueio (sem sidebar, sem header operacional).
-  const isOnPlansRoute = location.pathname === "/app/assinatura";
   const subscriptionBlocked =
     !subscription.loading &&
     subscription.status !== null &&
     !subscription.canMutate;
 
-  if (subscriptionBlocked && !isOnPlansRoute) {
+  if (subscriptionBlocked) {
     return (
       <TrialExpiredBlocker
         status={subscription.status ?? "overdue"}
