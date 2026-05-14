@@ -866,6 +866,23 @@ export default function SuperAdminOccurrences() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Drawer Investigar caso */}
+      <InvestigationCaseDrawer
+        open={!!investigateId}
+        occurrenceId={investigateId}
+        userId={userId}
+        admins={admins}
+        clinicName={
+          investigateId
+            ? (occurrences.find(o => o.id === investigateId)?.clinic_id
+                ? clinicMap.get(occurrences.find(o => o.id === investigateId)!.clinic_id!) || null
+                : null)
+            : null
+        }
+        onClose={() => setInvestigateId(null)}
+        onChanged={() => loadAll()}
+      />
     </div>
   );
 }
