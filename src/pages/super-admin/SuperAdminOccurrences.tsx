@@ -23,17 +23,18 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   AlertCircle, AlertTriangle, Bug, CheckCircle2, Clock, Download, Loader2,
-  MessageSquare, MoreHorizontal, Plus, Search, XCircle,
+  MessageSquare, MoreHorizontal, Plus, Search, ShieldAlert, XCircle,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { logPlatformAction } from '@/lib/superAdminAudit';
 import { usePlatformAdmin } from '@/hooks/usePlatformAdmin';
 import { Navigate } from 'react-router-dom';
+import { InvestigationCaseDrawer } from '@/components/super-admin/InvestigationCaseDrawer';
 
 type Status =
-  | 'aberta' | 'em_triagem' | 'em_andamento' | 'aguardando_cliente'
-  | 'aguardando_desenvolvimento' | 'resolvida' | 'cancelada';
+  | 'aberta' | 'em_triagem' | 'em_andamento' | 'em_investigacao' | 'aguardando_cliente'
+  | 'aguardando_desenvolvimento' | 'corrigida' | 'resolvida' | 'cancelada';
 type Priority = 'baixa' | 'media' | 'alta' | 'critica';
 type Category =
   | 'bug' | 'instabilidade' | 'erro_integracao' | 'financeiro' | 'permissao_acesso'
@@ -100,8 +101,10 @@ const STATUS_LABEL: Record<Status, string> = {
   aberta: 'Aberta',
   em_triagem: 'Em triagem',
   em_andamento: 'Em andamento',
+  em_investigacao: 'Em investigação',
   aguardando_cliente: 'Aguardando cliente',
   aguardando_desenvolvimento: 'Aguardando desenvolvimento',
+  corrigida: 'Corrigida',
   resolvida: 'Resolvida',
   cancelada: 'Cancelada',
 };
@@ -139,8 +142,10 @@ function StatusBadge({ status }: { status: Status }) {
     aberta: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950 dark:text-blue-200',
     em_triagem: 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-950 dark:text-purple-200',
     em_andamento: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-200',
+    em_investigacao: 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-950 dark:text-indigo-200',
     aguardando_cliente: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-950 dark:text-orange-200',
     aguardando_desenvolvimento: 'bg-pink-100 text-pink-800 border-pink-200 dark:bg-pink-950 dark:text-pink-200',
+    corrigida: 'bg-teal-100 text-teal-800 border-teal-200 dark:bg-teal-950 dark:text-teal-200',
     resolvida: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-950 dark:text-green-200',
     cancelada: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300',
   };
@@ -163,7 +168,7 @@ function fmtDate(iso?: string | null) {
 
 const db = supabase as any;
 
-const STATUS_OPTIONS: Status[] = ['aberta', 'em_triagem', 'em_andamento', 'aguardando_cliente', 'aguardando_desenvolvimento', 'resolvida', 'cancelada'];
+const STATUS_OPTIONS: Status[] = ['aberta', 'em_triagem', 'em_andamento', 'em_investigacao', 'aguardando_cliente', 'aguardando_desenvolvimento', 'corrigida', 'resolvida', 'cancelada'];
 const PRIORITY_OPTIONS: Priority[] = ['baixa', 'media', 'alta', 'critica'];
 const CATEGORY_OPTIONS: Category[] = ['bug', 'instabilidade', 'erro_integracao', 'financeiro', 'permissao_acesso', 'prontuario', 'agenda', 'whatsapp', 'teleconsulta', 'estoque', 'relatorios', 'melhoria', 'duvida', 'outro'];
 
@@ -191,6 +196,9 @@ export default function SuperAdminOccurrences() {
   const [events, setEvents] = useState<OccurrenceEvent[]>([]);
   const [newComment, setNewComment] = useState('');
   const [savingComment, setSavingComment] = useState(false);
+
+  // Drawer de investigação
+  const [investigateId, setInvestigateId] = useState<string | null>(null);
 
   // Modal nova ocorrência
   const [openCreate, setOpenCreate] = useState(false);
@@ -587,6 +595,9 @@ export default function SuperAdminOccurrences() {
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56">
                           <DropdownMenuItem onClick={() => setSelectedId(o.id)}>Ver detalhes</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setInvestigateId(o.id)}>
+                            <ShieldAlert className="h-4 w-4 mr-2" />Investigar caso
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           {STATUS_OPTIONS.map(s => (
                             <DropdownMenuItem key={s} disabled={o.status === s} onClick={() => changeStatus(o.id, s)}>
@@ -855,6 +866,23 @@ export default function SuperAdminOccurrences() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Drawer Investigar caso */}
+      <InvestigationCaseDrawer
+        open={!!investigateId}
+        occurrenceId={investigateId}
+        userId={userId}
+        admins={admins}
+        clinicName={
+          investigateId
+            ? (occurrences.find(o => o.id === investigateId)?.clinic_id
+                ? clinicMap.get(occurrences.find(o => o.id === investigateId)!.clinic_id!) || null
+                : null)
+            : null
+        }
+        onClose={() => setInvestigateId(null)}
+        onChanged={() => loadAll()}
+      />
     </div>
   );
 }
