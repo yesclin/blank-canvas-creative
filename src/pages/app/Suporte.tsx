@@ -325,8 +325,8 @@ export default function Suporte() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         clinicId={clinic?.id ?? null}
-        userId={currentUser?.user_id ?? null}
-        userName={currentUser?.full_name ?? null}
+        userId={currentUser?.id ?? null}
+        userName={currentUser?.name ?? null}
         userEmail={currentUser?.email ?? null}
         userRole={currentUser?.role ?? null}
         onCreated={() => {
@@ -337,8 +337,8 @@ export default function Suporte() {
       <TicketDetailSheet
         ticket={detailTicket}
         onOpenChange={(o) => !o && setDetailTicket(null)}
-        currentUserId={currentUser?.user_id ?? null}
-        currentUserName={currentUser?.full_name ?? null}
+        currentUserId={currentUser?.id ?? null}
+        currentUserName={currentUser?.name ?? null}
         currentUserEmail={currentUser?.email ?? null}
         clinicId={clinic?.id ?? null}
         onChange={() => fetchTickets()}
