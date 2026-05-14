@@ -4,10 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   clearAuthenticatedTab,
   clearIdentityScopedState,
+  clearUnsafeAuthCache,
   emitIdentityChanged,
   ensureSessionMatchesTab,
   getTabExpectedUserId,
 } from "@/lib/authSessionIsolation";
+import { clearSupportSessionIfMismatch } from "@/lib/supportSession";
 
 /**
  * Guard de seguranca contra mistura de contas.
@@ -66,6 +68,10 @@ export function AuthSessionGuard() {
       if (prev && prev !== newUserId) {
         hardReset(`${eventLabel} trocou user`, prev, newUserId);
       }
+      // Sempre que sabemos quem é o usuário ativo, garantimos que a sessão
+      // de suporte (impersonação leve) não pertence a outro usuário.
+      clearSupportSessionIfMismatch(newUserId);
+      clearUnsafeAuthCache();
       currentUserIdRef.current = newUserId;
     };
 

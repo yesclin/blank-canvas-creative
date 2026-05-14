@@ -2,6 +2,48 @@ const TAB_USER_KEY = "yc.auth.expectedUserId";
 const VIEW_ROLE_KEY = "yc.viewedRole";
 const SUPPORT_CLINIC_KEY = "yesclin_support_clinic_id";
 const SUPPORT_SESSION_KEY = "yesclin_support_session_id";
+export const SUPPORT_ADMIN_USER_KEY = "yesclin_support_admin_user_id";
+
+/**
+ * Chaves legadas/inseguras que NUNCA devem servir como fonte de verdade
+ * de identidade. Limpamos no bootstrap e em todo logout para evitar que
+ * caches antigos consigam trocar o usuário ativo.
+ */
+const LEGACY_UNSAFE_KEYS = [
+  "currentUser",
+  "userProfile",
+  "selectedUser",
+  "selectedClinicUser",
+  "currentRole",
+  "userRole",
+  "clinicRole",
+  "platformRole",
+  "profile",
+  "authUser",
+  "mockUser",
+  "demoUser",
+  "impersonatedUser",
+  "activeUser",
+  "activeProfile",
+  "selectedClinic",
+  "selectedClinicId",
+  "currentProfile",
+  "yc.currentUser",
+  "yc.profile",
+  "yc.role",
+];
+
+export function clearUnsafeAuthCache() {
+  if (typeof window === "undefined") return;
+  try {
+    for (const key of LEGACY_UNSAFE_KEYS) {
+      window.localStorage.removeItem(key);
+      window.sessionStorage.removeItem(key);
+    }
+  } catch {
+    /* ignore */
+  }
+}
 
 type SessionLike = {
   user?: {
@@ -45,7 +87,9 @@ export function clearIdentityScopedState() {
   try {
     window.localStorage.removeItem(SUPPORT_CLINIC_KEY);
     window.localStorage.removeItem(SUPPORT_SESSION_KEY);
+    window.localStorage.removeItem(SUPPORT_ADMIN_USER_KEY);
     window.localStorage.removeItem(VIEW_ROLE_KEY);
+    clearUnsafeAuthCache();
     window.dispatchEvent(new CustomEvent("yesclin:support-session-changed"));
   } catch {
     /* ignore */
