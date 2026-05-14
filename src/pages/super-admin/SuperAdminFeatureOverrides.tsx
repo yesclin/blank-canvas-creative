@@ -1,13 +1,13 @@
 /**
  * Super Admin > Recursos da Clínica
  * --------------------------------------------------
- * Gerencia overrides manuais de features por clínica
- * (tabela clinic_feature_overrides). O override sempre
- * prevalece sobre a flag do plano enquanto não expirar.
+ * Gerencia liberações manuais (overrides) de recursos por clínica
+ * (tabela clinic_feature_overrides). A liberação manual sempre
+ * prevalece sobre o plano enquanto não expirar.
  *
- * IMPORTANTE: Recursos clínicos próprios de uma especialidade
- * (odontograma, mapa facial) NÃO entram aqui — são liberados
- * pela especialidade ativa da clínica.
+ * Catálogo de recursos: lista canônica em OVERRIDE_FEATURES abaixo,
+ * espelhando as flags `feature_*` da view clinic_effective_features
+ * (que já consolida plano + override + expiração).
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,17 +19,11 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Trash2, Save } from 'lucide-react';
+import { Loader2, Trash2, Save, ShieldCheck, ShieldOff, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { logPlatformAction } from '@/lib/superAdminAudit';
 
-/**
- * Recursos elegíveis para override.
- * Os valores são exatamente como armazenados em
- * clinic_feature_overrides.feature_key (sem prefixo `feature_`)
- * — é a chave usada pela view clinic_effective_features.
- */
 const OVERRIDE_FEATURES: Array<{ key: string; label: string; planFlag: string }> = [
   { key: 'whatsapp',         label: 'WhatsApp',             planFlag: 'feature_whatsapp' },
   { key: 'teleconsulta',     label: 'Teleconsulta',         planFlag: 'feature_teleconsulta' },
@@ -43,17 +37,12 @@ const OVERRIDE_FEATURES: Array<{ key: string; label: string; planFlag: string }>
   { key: 'priority_support', label: 'Suporte prioritário',  planFlag: 'feature_priority_support' },
 ];
 
-interface ClinicOption {
-  id: string;
-  name: string;
-}
-
+interface ClinicOption { id: string; name: string; }
 interface PlanInfo {
   plan_name: string | null;
   plan_slug: string | null;
   flags: Record<string, boolean>;
 }
-
 interface Override {
   id: string;
   feature_key: string;
@@ -63,6 +52,18 @@ interface Override {
   created_at: string;
 }
 
+const isExpired = (d: string | null) => !!d && new Date(d).getTime() <= Date.now();
+const daysUntil = (d: string | null) => {
+  if (!d) return null;
+  const ms = new Date(d).getTime() - Date.now();
+  if (ms <= 0) return -1;
+  return Math.ceil(ms / 86400000);
+};
+const isExpiringSoon = (d: string | null) => {
+  const n = daysUntil(d);
+  return n !== null && n >= 0 && n <= 7;
+};
+
 export default function SuperAdminFeatureOverrides() {
   const [clinics, setClinics] = useState<ClinicOption[]>([]);
   const [clinicId, setClinicId] = useState<string>('');
@@ -71,7 +72,6 @@ export default function SuperAdminFeatureOverrides() {
   const [loadingClinics, setLoadingClinics] = useState(true);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
-  // formulário de novo/edit override
   const [draftKey, setDraftKey] = useState<string>(OVERRIDE_FEATURES[0].key);
   const [draftEnabled, setDraftEnabled] = useState(true);
   const [draftReason, setDraftReason] = useState('');
@@ -81,10 +81,7 @@ export default function SuperAdminFeatureOverrides() {
   useEffect(() => {
     (async () => {
       setLoadingClinics(true);
-      const { data } = await supabase
-        .from('clinics')
-        .select('id, name')
-        .order('name');
+      const { data } = await supabase.from('clinics').select('id, name').order('name');
       setClinics(data ?? []);
       setLoadingClinics(false);
     })();
@@ -98,11 +95,7 @@ export default function SuperAdminFeatureOverrides() {
     }
     setLoadingDetails(true);
     const [{ data: eff }, { data: ovs }] = await Promise.all([
-      supabase
-        .from('clinic_effective_features')
-        .select('*')
-        .eq('clinic_id', id)
-        .maybeSingle(),
+      supabase.from('clinic_effective_features').select('*').eq('clinic_id', id).maybeSingle(),
       supabase
         .from('clinic_feature_overrides')
         .select('id, feature_key, enabled, reason, expires_at, created_at')
@@ -112,9 +105,7 @@ export default function SuperAdminFeatureOverrides() {
 
     if (eff) {
       const flags: Record<string, boolean> = {};
-      OVERRIDE_FEATURES.forEach((f) => {
-        flags[f.planFlag] = Boolean((eff as any)[f.planFlag]);
-      });
+      OVERRIDE_FEATURES.forEach((f) => { flags[f.planFlag] = Boolean((eff as any)[f.planFlag]); });
       setPlan({
         plan_name: (eff as any).plan_name ?? null,
         plan_slug: (eff as any).plan_slug ?? null,
@@ -128,50 +119,49 @@ export default function SuperAdminFeatureOverrides() {
     setLoadingDetails(false);
   };
 
-  useEffect(() => {
-    loadDetails(clinicId);
-  }, [clinicId]);
+  useEffect(() => { loadDetails(clinicId); }, [clinicId]);
 
+  // Mais recente por feature_key, ignorando expirados.
   const overrideByKey = useMemo(() => {
     const m: Record<string, Override | undefined> = {};
     overrides.forEach((o) => {
-      // pega o mais recente por feature_key (já está ordenado desc)
+      if (isExpired(o.expires_at)) return;
       if (!m[o.feature_key]) m[o.feature_key] = o;
     });
     return m;
   }, [overrides]);
 
+  const activeOverrides = useMemo(
+    () => overrides.filter((o) => !isExpired(o.expires_at)),
+    [overrides],
+  );
+
   const saveOverride = async () => {
-    if (!clinicId) {
-      toast.error('Selecione uma clínica.');
-      return;
-    }
+    if (!clinicId) { toast.error('Selecione uma clínica.'); return; }
+    if (!draftKey) { toast.error('Selecione um recurso.'); return; }
+    if (!draftReason.trim()) { toast.error('Informe o motivo da liberação manual.'); return; }
+
     setSaving(true);
     const payload = {
       clinic_id: clinicId,
       feature_key: draftKey,
       enabled: draftEnabled,
-      reason: draftReason.trim() || null,
+      reason: draftReason.trim(),
       expires_at: draftExpires ? new Date(draftExpires).toISOString() : null,
     };
 
-    // Upsert manual: remove qualquer override antigo dessa feature
-    // antes de inserir o novo, para evitar duplicidade na view.
     await supabase
       .from('clinic_feature_overrides')
       .delete()
       .eq('clinic_id', clinicId)
       .eq('feature_key', draftKey);
 
-    const { error } = await supabase
-      .from('clinic_feature_overrides')
-      .insert(payload);
-
+    const { error } = await supabase.from('clinic_feature_overrides').insert(payload);
     setSaving(false);
 
     if (error) {
       console.error(error);
-      toast.error('Erro ao salvar override.');
+      toast.error('Erro ao salvar liberação manual.');
       return;
     }
 
@@ -182,20 +172,17 @@ export default function SuperAdminFeatureOverrides() {
       metadata: payload,
     });
 
-    toast.success('Override salvo.');
+    toast.success('Liberação manual salva.');
     setDraftReason('');
     setDraftExpires('');
     loadDetails(clinicId);
   };
 
   const removeOverride = async (o: Override) => {
-    const { error } = await supabase
-      .from('clinic_feature_overrides')
-      .delete()
-      .eq('id', o.id);
+    const { error } = await supabase.from('clinic_feature_overrides').delete().eq('id', o.id);
 
     if (error) {
-      toast.error('Erro ao remover override.');
+      toast.error('Erro ao remover liberação manual.');
       return;
     }
 
@@ -204,10 +191,10 @@ export default function SuperAdminFeatureOverrides() {
       target_type: 'clinic_feature_override',
       target_id: o.id,
       clinic_id: clinicId,
-      metadata: { feature_key: o.feature_key },
+      metadata: { feature_key: o.feature_key, enabled: o.enabled },
     });
 
-    toast.success('Override removido. Sistema voltou ao plano original.');
+    toast.success('Liberação manual removida. A clínica voltou às regras do plano.');
     loadDetails(clinicId);
   };
 
@@ -263,23 +250,46 @@ export default function SuperAdminFeatureOverrides() {
                     const planValue = plan?.flags[f.planFlag] ?? false;
                     const ov = overrideByKey[f.key];
                     const effective = ov ? ov.enabled : planValue;
+                    const expSoon = ov ? isExpiringSoon(ov.expires_at) : false;
                     return (
                       <div
                         key={f.key}
-                        className="flex items-center justify-between rounded border bg-card p-2 text-sm"
+                        className="flex flex-col gap-2 rounded border bg-card p-3 text-sm"
                       >
-                        <div className="flex flex-col">
+                        <div className="flex items-center justify-between gap-2">
                           <span className="font-medium">{f.label}</span>
-                          <span className="text-xs text-muted-foreground">
-                            Plano: {planValue ? 'liberado' : 'bloqueado'}
-                            {ov && (
-                              <> · Override: {ov.enabled ? 'liberado' : 'bloqueado'}</>
-                            )}
-                          </span>
+                          <Badge
+                            variant={effective ? 'default' : 'outline'}
+                            className={effective ? 'bg-emerald-600 hover:bg-emerald-600' : ''}
+                          >
+                            {effective ? 'Ativo' : 'Inativo'}
+                          </Badge>
                         </div>
-                        <Badge variant={effective ? 'default' : 'outline'}>
-                          {effective ? 'Ativo' : 'Inativo'}
-                        </Badge>
+                        <div className="text-xs text-muted-foreground">
+                          Plano: {planValue ? 'liberado' : 'bloqueado'}
+                        </div>
+                        {ov && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {ov.enabled ? (
+                              <Badge className="bg-violet-600 hover:bg-violet-600 text-white gap-1">
+                                <ShieldCheck className="h-3 w-3" /> Liberação manual ativa
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-rose-600 hover:bg-rose-600 text-white gap-1">
+                                <ShieldOff className="h-3 w-3" /> Bloqueio manual ativo
+                              </Badge>
+                            )}
+                            {expSoon && (
+                              <Badge className="bg-amber-500 hover:bg-amber-500 text-white gap-1">
+                                <Clock className="h-3 w-3" />
+                                {(() => {
+                                  const n = daysUntil(ov.expires_at)!;
+                                  return n === 0 ? 'Expira hoje' : n === 1 ? 'Expira em 1 dia' : `Expira em ${n} dias`;
+                                })()}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -290,7 +300,7 @@ export default function SuperAdminFeatureOverrides() {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Criar / atualizar override</CardTitle>
+              <CardTitle className="text-base">Criar / atualizar liberação manual</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid gap-3 md:grid-cols-2">
@@ -312,6 +322,9 @@ export default function SuperAdminFeatureOverrides() {
                     value={draftExpires}
                     onChange={(e) => setDraftExpires(e.target.value)}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Quando expirar, a clínica volta a respeitar o plano automaticamente.
+                  </p>
                 </div>
               </div>
 
@@ -321,26 +334,26 @@ export default function SuperAdminFeatureOverrides() {
                     {draftEnabled ? 'Liberar recurso manualmente' : 'Bloquear recurso manualmente'}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    O override prevalece sobre o plano até expirar.
+                    A liberação manual prevalece sobre o plano até expirar ou ser removida.
                   </p>
                 </div>
                 <Switch checked={draftEnabled} onCheckedChange={setDraftEnabled} />
               </div>
 
               <div className="space-y-1">
-                <Label>Motivo (auditoria)</Label>
+                <Label>Motivo da auditoria</Label>
                 <Textarea
                   rows={2}
                   value={draftReason}
                   onChange={(e) => setDraftReason(e.target.value)}
-                  placeholder="Ex.: cortesia comercial, teste de feature, suporte premium..."
+                  placeholder="Ex.: cortesia comercial, teste de recurso, suporte premium..."
                 />
               </div>
 
               <div className="flex justify-end">
                 <Button onClick={saveOverride} disabled={saving}>
                   {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-                  Salvar override
+                  Salvar liberação manual
                 </Button>
               </div>
             </CardContent>
@@ -348,30 +361,30 @@ export default function SuperAdminFeatureOverrides() {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Overrides ativos</CardTitle>
+              <CardTitle className="text-base">Liberações manuais ativas</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               {loadingDetails ? (
                 <div className="p-6 flex justify-center">
                   <Loader2 className="h-5 w-5 animate-spin" />
                 </div>
-              ) : overrides.length === 0 ? (
+              ) : activeOverrides.length === 0 ? (
                 <p className="p-6 text-sm text-muted-foreground text-center">
-                  Nenhum override. A clínica está apenas com o plano.
+                  Nenhuma liberação manual ativa. A clínica está seguindo apenas as regras do plano.
                 </p>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Recurso</TableHead>
-                      <TableHead>Estado</TableHead>
+                      <TableHead>Tipo</TableHead>
                       <TableHead>Motivo</TableHead>
-                      <TableHead>Expira</TableHead>
+                      <TableHead>Expira em</TableHead>
                       <TableHead className="w-12" />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {overrides.map((o) => {
+                    {activeOverrides.map((o) => {
                       const meta = OVERRIDE_FEATURES.find((f) => f.key === o.feature_key);
                       return (
                         <TableRow key={o.id}>
@@ -379,9 +392,15 @@ export default function SuperAdminFeatureOverrides() {
                             {meta?.label ?? o.feature_key}
                           </TableCell>
                           <TableCell>
-                            <Badge variant={o.enabled ? 'default' : 'outline'}>
-                              {o.enabled ? 'Liberado' : 'Bloqueado'}
-                            </Badge>
+                            {o.enabled ? (
+                              <Badge className="bg-violet-600 hover:bg-violet-600 text-white">
+                                Liberado manualmente
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-rose-600 hover:bg-rose-600 text-white">
+                                Bloqueado manualmente
+                              </Badge>
+                            )}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {o.reason ?? '—'}
@@ -396,7 +415,8 @@ export default function SuperAdminFeatureOverrides() {
                               size="icon"
                               variant="ghost"
                               onClick={() => removeOverride(o)}
-                              aria-label="Remover override"
+                              aria-label={o.enabled ? 'Remover liberação manual' : 'Remover bloqueio manual'}
+                              title={o.enabled ? 'Remover liberação manual' : 'Remover bloqueio manual'}
                             >
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
