@@ -10058,6 +10058,57 @@ export type Database = {
           },
         ]
       }
+      platform_feature_flags: {
+        Row: {
+          allow_clinic_override: boolean
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          impact_level: string
+          is_enabled: boolean
+          is_essential: boolean
+          is_experimental: boolean
+          is_premium: boolean
+          key: string
+          name: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          allow_clinic_override?: boolean
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          impact_level?: string
+          is_enabled?: boolean
+          is_essential?: boolean
+          is_experimental?: boolean
+          is_premium?: boolean
+          key: string
+          name: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          allow_clinic_override?: boolean
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          impact_level?: string
+          is_enabled?: boolean
+          is_essential?: boolean
+          is_experimental?: boolean
+          is_premium?: boolean
+          key?: string
+          name?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       platform_integration_logs: {
         Row: {
           clinic_id: string | null
@@ -10291,6 +10342,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      platform_maintenance_windows: {
+        Row: {
+          allow_clinic_access: boolean
+          allow_super_admin_access: boolean
+          created_at: string
+          created_by: string | null
+          ends_at: string | null
+          id: string
+          is_active: boolean
+          message: string | null
+          show_banner: boolean
+          starts_at: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          allow_clinic_access?: boolean
+          allow_super_admin_access?: boolean
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          message?: string | null
+          show_banner?: boolean
+          starts_at?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          allow_clinic_access?: boolean
+          allow_super_admin_access?: boolean
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          message?: string | null
+          show_banner?: boolean
+          starts_at?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       platform_occurrence_comments: {
         Row: {
