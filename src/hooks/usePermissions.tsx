@@ -73,42 +73,66 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     professionalId: null,
   });
 
-  const fetchPermissionsOnce = useCallback(async () => {
+  // Ref que guarda quem é o usuário ativo "esperado" e o id da última
+  // requisição. Toda resposta async precisa validar antes de aplicar estado:
+  // se o auth.uid() mudou no meio do caminho, descartamos.
+  const requestRef = useRef(0);
+  const activeUserIdRef = useRef<string | null>(null);
+
+  const fetchPermissionsOnce = useCallback(async (reqId: number) => {
+    const stillCurrent = (expectedUserId: string | null) => {
+      if (reqId !== requestRef.current) return false;
+      if (expectedUserId !== null && activeUserIdRef.current !== expectedUserId) return false;
+      return true;
+    };
+
     const { data: { user } } = await withTimeout<any>(supabase.auth.getUser());
     if (!user) {
+      activeUserIdRef.current = null;
       return { kind: "no-user" as const };
     }
+    activeUserIdRef.current = user.id;
 
     // Get user role
     const { data: roleData, error: roleErr } = await withTimeout<any>(supabase
       .from("user_roles")
-      .select("role, clinic_id")
+      .select("role, clinic_id, user_id")
       .eq("user_id", user.id)
       .maybeSingle());
 
+    if (!stillCurrent(user.id)) return { kind: "stale" as const };
     if (roleErr) throw roleErr;
 
     if (!roleData) {
-      return { kind: "no-role" as const };
+      return { kind: "no-role" as const, userId: user.id };
+    }
+
+    // Defesa final: a row TEM que ser do auth.uid() atual.
+    if (roleData.user_id && roleData.user_id !== user.id) {
+      console.error("[AUTH_SECURITY] user_roles.user_id divergente — descartado", {
+        expected: user.id,
+        received: roleData.user_id,
+      });
+      return { kind: "no-role" as const, userId: user.id };
     }
 
     const role = roleData.role;
     const isOwner = role === "owner";
     const isAdmin = ["owner", "admin"].includes(role);
 
-    // Get linked professional_id (if user is linked to a professional)
     const { data: professionalData } = await withTimeout<any>(supabase
       .from("professionals")
       .select("id")
       .eq("user_id", user.id)
       .eq("is_active", true)
       .maybeSingle());
+    if (!stillCurrent(user.id)) return { kind: "stale" as const };
     const professionalId = professionalData?.id || null;
 
-    // Get permissions using the database function
     const { data: permsData, error } = await withTimeout<any>(
       supabase.rpc("get_user_all_permissions", { _user_id: user.id })
     );
+    if (!stillCurrent(user.id)) return { kind: "stale" as const };
 
     let permissions: ModulePermission[];
     if (error) {
@@ -117,6 +141,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         .from("permission_templates")
         .select("module, actions, restrictions")
         .eq("role", role));
+      if (!stillCurrent(user.id)) return { kind: "stale" as const };
       permissions = (templates || []).map((t: any) => ({
         module: t.module as AppModule,
         actions: (t.actions || []) as AppAction[],
@@ -130,7 +155,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       }));
     }
 
-    return { kind: "ok" as const, role, isOwner, isAdmin, professionalId, permissions };
+    return { kind: "ok" as const, role, isOwner, isAdmin, professionalId, permissions, userId: user.id };
   }, []);
 
   const fetchPermissions = useCallback(async () => {
