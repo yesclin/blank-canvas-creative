@@ -4,10 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   clearAuthenticatedTab,
   clearIdentityScopedState,
+  clearUnsafeAuthCache,
   emitIdentityChanged,
   ensureSessionMatchesTab,
   getTabExpectedUserId,
 } from "@/lib/authSessionIsolation";
+import { clearSupportSessionIfMismatch } from "@/lib/supportSession";
 
 /**
  * Guard de seguranca contra mistura de contas.
