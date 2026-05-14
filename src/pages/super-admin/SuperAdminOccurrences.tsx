@@ -168,7 +168,7 @@ function fmtDate(iso?: string | null) {
 
 const db = supabase as any;
 
-const STATUS_OPTIONS: Status[] = ['aberta', 'em_triagem', 'em_andamento', 'aguardando_cliente', 'aguardando_desenvolvimento', 'resolvida', 'cancelada'];
+const STATUS_OPTIONS: Status[] = ['aberta', 'em_triagem', 'em_andamento', 'em_investigacao', 'aguardando_cliente', 'aguardando_desenvolvimento', 'corrigida', 'resolvida', 'cancelada'];
 const PRIORITY_OPTIONS: Priority[] = ['baixa', 'media', 'alta', 'critica'];
 const CATEGORY_OPTIONS: Category[] = ['bug', 'instabilidade', 'erro_integracao', 'financeiro', 'permissao_acesso', 'prontuario', 'agenda', 'whatsapp', 'teleconsulta', 'estoque', 'relatorios', 'melhoria', 'duvida', 'outro'];
 
