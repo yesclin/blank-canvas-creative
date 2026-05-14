@@ -10,6 +10,7 @@ import {
   getTabExpectedUserId,
 } from "@/lib/authSessionIsolation";
 import { clearSupportSessionIfMismatch } from "@/lib/supportSession";
+import { wasLogoutRequestedByUser } from "@/lib/authIntent";
 
 /**
  * Guard de seguranca contra mistura de contas.
@@ -59,6 +60,9 @@ export function AuthSessionGuard() {
         hardReset(`${eventLabel} user divergente`, expected, null);
         clearAuthenticatedTab();
         setTimeout(() => {
+          import("@/lib/authIntent").then(({ markUserLogout }) =>
+            markUserLogout("session-mismatch"),
+          ).catch(() => undefined);
           void supabase.auth.signOut();
         }, 0);
         currentUserIdRef.current = null;
@@ -77,6 +81,31 @@ export function AuthSessionGuard() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") {
+        // Tolerância a SIGNED_OUT espúrios: se o usuário NÃO solicitou
+        // logout, revalida com getSession antes de higienizar cache.
+        // Evita derrubar dados quando refresh falha por rede instável.
+        if (!wasLogoutRequestedByUser()) {
+          (async () => {
+            try {
+              const { data } = await supabase.auth.getSession();
+              if (data?.session) {
+                if (import.meta.env.DEV) {
+                  console.warn("[AUTH_GUARD] SIGNED_OUT ignorado — sessão ainda ativa");
+                }
+                return;
+              }
+            } catch {
+              // Falha de rede: não limpar cache, aguardar próximo evento.
+              return;
+            }
+            // Confirmado: sessão realmente perdida.
+            if (currentUserIdRef.current) hardReset("SIGNED_OUT", currentUserIdRef.current, null);
+            clearAuthenticatedTab();
+            try { qc.clear(); } catch { /* ignore */ }
+            currentUserIdRef.current = null;
+          })();
+          return;
+        }
         if (currentUserIdRef.current) hardReset("SIGNED_OUT", currentUserIdRef.current, null);
         clearAuthenticatedTab();
         try { qc.clear(); } catch { /* ignore */ }

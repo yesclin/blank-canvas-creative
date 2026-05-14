@@ -68,6 +68,10 @@ export function UserProfileFooter() {
 
   const handleLogout = async () => {
     try {
+      // Sinaliza que este logout é INTENCIONAL (clique em Sair) para os
+      // guards (RequireAuth/AuthSessionGuard) não tentarem reverter.
+      const { markUserLogout } = await import("@/lib/authIntent");
+      markUserLogout("user-logout");
       // Clear simulated role before signing out
       resetViewedRole();
       window.dispatchEvent(new Event("yc:signout"));

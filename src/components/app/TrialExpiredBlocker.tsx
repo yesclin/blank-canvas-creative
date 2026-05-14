@@ -24,6 +24,8 @@ export function TrialExpiredBlocker({ status, role, clinicName }: Props) {
 
   const handleLogout = async () => {
     try {
+      const { markUserLogout } = await import("@/lib/authIntent");
+      markUserLogout("trial-expired-logout");
       await supabase.auth.signOut();
       navigate("/login", { replace: true });
     } catch {

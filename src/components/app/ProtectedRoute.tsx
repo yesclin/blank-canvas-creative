@@ -204,6 +204,8 @@ function PermissionsLoadFailedPage({ onRetry }: { onRetry: () => void | Promise<
 
 function InactiveUserPage() {
   const handleLogout = async () => {
+    const { markUserLogout } = await import("@/lib/authIntent");
+    markUserLogout("inactive-account");
     await supabase.auth.signOut();
     window.location.href = "/login";
   };

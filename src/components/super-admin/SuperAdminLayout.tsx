@@ -8,6 +8,7 @@ import { LogOut, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { usePlatformAdmin } from '@/hooks/usePlatformAdmin';
+import { markUserLogout } from '@/lib/authIntent';
 
 interface Props {
   children?: ReactNode;
@@ -18,6 +19,7 @@ export function SuperAdminLayout({ children }: Props) {
   const { email } = usePlatformAdmin();
 
   const handleLogout = async () => {
+    markUserLogout("super-admin-logout");
     await supabase.auth.signOut();
     navigate('/login', { replace: true });
   };
