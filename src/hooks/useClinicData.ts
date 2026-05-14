@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/asyncTimeout";
 
@@ -26,19 +26,38 @@ export interface ClinicData {
 export function useClinicData() {
   const [clinic, setClinic] = useState<ClinicData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const requestRef = useRef(0);
+  const activeUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+
     const fetchClinicData = async () => {
+      const reqId = ++requestRef.current;
       let loadedClinic = false;
+
+      const stillCurrent = (expectedUserId: string | null) => {
+        if (cancelled) return false;
+        if (reqId !== requestRef.current) return false;
+        if (expectedUserId !== null && activeUserIdRef.current !== expectedUserId) return false;
+        return true;
+      };
+
       try {
         const { data: authData, error: authError } = await withTimeout<any>(supabase.auth.getUser());
         if (authError) throw authError;
 
-        const userId = authData.user?.id;
+        const userId = authData.user?.id ?? null;
+        // CRÍTICO: registramos quem é o usuário desta requisição. Toda
+        // resposta posterior só pode atualizar estado se o usuário ativo
+        // continuar igual — caso contrário descartamos silenciosamente.
+        activeUserIdRef.current = userId;
+
         if (!userId) {
-          setClinic(null);
-          setIsLoading(false);
+          if (stillCurrent(null)) {
+            setClinic(null);
+            setIsLoading(false);
+          }
           return;
         }
 
@@ -68,10 +87,10 @@ export function useClinicData() {
             const { data: isAdmin } = await withTimeout<any>(
               supabase.rpc('is_platform_admin', { _user_id: userId })
             );
+            if (!stillCurrent(userId)) return;
             if (isAdmin === true) {
               resolvedClinicId = supportClinicId;
             } else {
-              // Perdeu papel de Platform Admin — limpa.
               const { clearSupportSessionIfMismatch } = await import('@/lib/supportSession');
               clearSupportSessionIfMismatch(null);
             }
@@ -80,16 +99,29 @@ export function useClinicData() {
           // Ignora — segue com fluxo normal
         }
 
+        if (!stillCurrent(userId)) return;
+
         if (!resolvedClinicId) {
           const { data: profile } = await withTimeout<any>(supabase
             .from("profiles")
-            .select("clinic_id")
+            .select("clinic_id, user_id")
             .eq("user_id", userId)
             .maybeSingle());
 
-          if (cancelled) return;
+          if (!stillCurrent(userId)) return;
+
+          // Sanity: nunca aceitar profile que não seja do auth.uid() atual.
+          if (profile && profile.user_id !== userId) {
+            console.error("[AUTH_SECURITY] profile.user_id divergente — descartado", {
+              expected: userId,
+              received: profile.user_id,
+            });
+            setIsLoading(false);
+            return;
+          }
 
           if (!profile?.clinic_id) {
+            setClinic(null);
             setIsLoading(false);
             return;
           }
@@ -121,33 +153,31 @@ export function useClinicData() {
           .eq("id", resolvedClinicId)
           .maybeSingle());
 
-        if (cancelled) return;
+        if (!stillCurrent(userId)) return;
 
         if (clinicData) {
           loadedClinic = true;
-          // Generate signed URL for logo if exists (bucket is now private)
           let signedLogoUrl = clinicData.logo_url;
           if (clinicData.logo_url) {
-            // Extract path from URL (format: .../clinic-logos/clinicId/logo-xxx.ext)
             const match = clinicData.logo_url.match(/clinic-logos\/(.+)$/);
             if (match) {
               const path = match[1];
               const { data: signedData } = await withTimeout<any>(supabase.storage
                 .from('clinic-logos')
-                .createSignedUrl(path, 3600)); // 1 hour expiration
-              if (!cancelled && signedData?.signedUrl) {
+                .createSignedUrl(path, 3600));
+              if (stillCurrent(userId) && signedData?.signedUrl) {
                 signedLogoUrl = signedData.signedUrl;
               }
             }
           }
-          if (!cancelled) {
+          if (stillCurrent(userId)) {
             setClinic({ ...clinicData, logo_url: signedLogoUrl });
           }
         }
       } catch (error) {
         console.error("[APP_ERROR]", error);
       } finally {
-        if (!cancelled) {
+        if (stillCurrent(activeUserIdRef.current)) {
           console.log("[CLINIC] carregada", { hasClinic: loadedClinic });
           setIsLoading(false);
         }
@@ -156,9 +186,15 @@ export function useClinicData() {
 
     fetchClinicData();
 
-    // Re-fetch when auth state changes (e.g. session restored after refresh).
-    // Defer Supabase calls out of the listener to avoid auth deadlocks.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    // Re-fetch when auth state changes. Em SIGNED_OUT/identidade-trocada,
+    // limpamos imediatamente o estado para nunca exibir a clínica anterior.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const newUserId = session?.user?.id ?? null;
+      if (event === 'SIGNED_OUT' || (newUserId && newUserId !== activeUserIdRef.current)) {
+        activeUserIdRef.current = newUserId;
+        setClinic(null);
+        setIsLoading(true);
+      }
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
         setTimeout(() => {
           if (!cancelled) fetchClinicData();
@@ -170,9 +206,21 @@ export function useClinicData() {
       }
     });
 
-    // Reagir ao toggle do modo suporte (Super Admin)
+    const onIdentityChanged = () => {
+      // Identidade trocada: derrubar o estado atual ANTES de recarregar,
+      // para que nenhuma resposta em voo possa preencher o usuário antigo.
+      requestRef.current++;
+      activeUserIdRef.current = null;
+      setClinic(null);
+      setIsLoading(true);
+      setTimeout(() => {
+        if (!cancelled) fetchClinicData();
+      }, 0);
+    };
+
     const onSupportToggle = () => fetchClinicData();
     if (typeof window !== 'undefined') {
+      window.addEventListener('yesclin:identity-changed', onIdentityChanged);
       window.addEventListener('yesclin:support-session-changed', onSupportToggle);
       window.addEventListener('storage', (e) => {
         if (e.key === 'yesclin_support_clinic_id') fetchClinicData();
@@ -183,6 +231,7 @@ export function useClinicData() {
       cancelled = true;
       subscription.unsubscribe();
       if (typeof window !== 'undefined') {
+        window.removeEventListener('yesclin:identity-changed', onIdentityChanged);
         window.removeEventListener('yesclin:support-session-changed', onSupportToggle);
       }
     };

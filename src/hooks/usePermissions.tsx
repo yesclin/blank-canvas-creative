@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, createContext, useContext, ReactNode } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, createContext, useContext, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentViewRole } from "@/contexts/UserViewModeContext";
 import { withTimeout } from "@/lib/asyncTimeout";
@@ -73,42 +73,66 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     professionalId: null,
   });
 
-  const fetchPermissionsOnce = useCallback(async () => {
+  // Ref que guarda quem é o usuário ativo "esperado" e o id da última
+  // requisição. Toda resposta async precisa validar antes de aplicar estado:
+  // se o auth.uid() mudou no meio do caminho, descartamos.
+  const requestRef = useRef(0);
+  const activeUserIdRef = useRef<string | null>(null);
+
+  const fetchPermissionsOnce = useCallback(async (reqId: number) => {
+    const stillCurrent = (expectedUserId: string | null) => {
+      if (reqId !== requestRef.current) return false;
+      if (expectedUserId !== null && activeUserIdRef.current !== expectedUserId) return false;
+      return true;
+    };
+
     const { data: { user } } = await withTimeout<any>(supabase.auth.getUser());
     if (!user) {
+      activeUserIdRef.current = null;
       return { kind: "no-user" as const };
     }
+    activeUserIdRef.current = user.id;
 
     // Get user role
     const { data: roleData, error: roleErr } = await withTimeout<any>(supabase
       .from("user_roles")
-      .select("role, clinic_id")
+      .select("role, clinic_id, user_id")
       .eq("user_id", user.id)
       .maybeSingle());
 
+    if (!stillCurrent(user.id)) return { kind: "stale" as const };
     if (roleErr) throw roleErr;
 
     if (!roleData) {
-      return { kind: "no-role" as const };
+      return { kind: "no-role" as const, userId: user.id };
+    }
+
+    // Defesa final: a row TEM que ser do auth.uid() atual.
+    if (roleData.user_id && roleData.user_id !== user.id) {
+      console.error("[AUTH_SECURITY] user_roles.user_id divergente — descartado", {
+        expected: user.id,
+        received: roleData.user_id,
+      });
+      return { kind: "no-role" as const, userId: user.id };
     }
 
     const role = roleData.role;
     const isOwner = role === "owner";
     const isAdmin = ["owner", "admin"].includes(role);
 
-    // Get linked professional_id (if user is linked to a professional)
     const { data: professionalData } = await withTimeout<any>(supabase
       .from("professionals")
       .select("id")
       .eq("user_id", user.id)
       .eq("is_active", true)
       .maybeSingle());
+    if (!stillCurrent(user.id)) return { kind: "stale" as const };
     const professionalId = professionalData?.id || null;
 
-    // Get permissions using the database function
     const { data: permsData, error } = await withTimeout<any>(
       supabase.rpc("get_user_all_permissions", { _user_id: user.id })
     );
+    if (!stillCurrent(user.id)) return { kind: "stale" as const };
 
     let permissions: ModulePermission[];
     if (error) {
@@ -117,6 +141,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         .from("permission_templates")
         .select("module, actions, restrictions")
         .eq("role", role));
+      if (!stillCurrent(user.id)) return { kind: "stale" as const };
       permissions = (templates || []).map((t: any) => ({
         module: t.module as AppModule,
         actions: (t.actions || []) as AppAction[],
@@ -130,27 +155,30 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       }));
     }
 
-    return { kind: "ok" as const, role, isOwner, isAdmin, professionalId, permissions };
+    return { kind: "ok" as const, role, isOwner, isAdmin, professionalId, permissions, userId: user.id };
   }, []);
 
   const fetchPermissions = useCallback(async () => {
+    const reqId = ++requestRef.current;
     const maxAttempts = 3;
     let lastError: unknown = null;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        const result = await fetchPermissionsOnce();
+        const result = await fetchPermissionsOnce(reqId);
+        if (reqId !== requestRef.current) return; // resposta obsoleta
+        if (result.kind === "stale") return;
         if (result.kind === "no-user") {
           setState({ permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null });
           return;
         }
         if (result.kind === "no-role") {
-          // Preserve previous role if we already had one (transient inconsistency
-          // right after auth events). Only surface the empty state on first load.
           setState((prev) => prev.role
             ? { ...prev, isLoading: false }
             : { permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null });
           return;
         }
+        // Última checagem antes de aplicar: o usuário não pode ter mudado.
+        if (activeUserIdRef.current !== result.userId) return;
         setState({
           permissions: result.permissions,
           role: result.role,
@@ -164,13 +192,13 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         lastError = error;
         console.warn(`[PERMISSIONS] tentativa ${attempt}/${maxAttempts} falhou`, error);
+        if (reqId !== requestRef.current) return;
         if (attempt < maxAttempts) {
           await new Promise((r) => setTimeout(r, 400 * attempt));
         }
       }
     }
-    // After retries, preserve previous state if we already had a valid role,
-    // so a transient blip doesn't kick the user to the error screen.
+    if (reqId !== requestRef.current) return;
     setState((prev) => {
       if (prev.role) {
         console.warn("[PERMISSIONS] retries esgotados — mantendo estado anterior", lastError);
@@ -192,19 +220,42 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       });
     }, 10000);
 
-    // Listen for auth changes — defer Supabase queries out of the callback to
-    // avoid deadlocks. Only refetch on real identity changes; ignore noisy
-    // events like TOKEN_REFRESHED and INITIAL_SESSION which would otherwise
-    // wipe permissions mid-session and trigger the error screen.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const newUserId = session?.user?.id ?? null;
+      // Identidade trocou no meio da sessão: derruba estado IMEDIATAMENTE
+      // para não deixar role/permissões antigas vazarem para o novo usuário.
+      if (newUserId && newUserId !== activeUserIdRef.current) {
+        requestRef.current++;
+        activeUserIdRef.current = newUserId;
+        setState({ permissions: [], role: null, isLoading: true, isAdmin: false, isOwner: false, professionalId: null });
+      }
+      if (event === "SIGNED_OUT") {
+        requestRef.current++;
+        activeUserIdRef.current = null;
+        setState({ permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null });
+        return;
+      }
+      if (event === "SIGNED_IN" || event === "USER_UPDATED" || event === "TOKEN_REFRESHED") {
         setTimeout(() => fetchPermissions(), 0);
       }
     });
 
+    const onIdentityChanged = () => {
+      requestRef.current++;
+      activeUserIdRef.current = null;
+      setState({ permissions: [], role: null, isLoading: true, isAdmin: false, isOwner: false, professionalId: null });
+      setTimeout(() => fetchPermissions(), 0);
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("yesclin:identity-changed", onIdentityChanged);
+    }
+
     return () => {
       window.clearTimeout(bootTimeout);
       subscription.unsubscribe();
+      if (typeof window !== "undefined") {
+        window.removeEventListener("yesclin:identity-changed", onIdentityChanged);
+      }
     };
   }, [fetchPermissions]);
 

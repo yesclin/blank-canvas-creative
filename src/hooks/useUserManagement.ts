@@ -256,15 +256,29 @@ export function useUpdateUserRole() {
 }
 
 /**
- * Hook to get current user info
+ * Hook to get current user info.
+ * IMPORTANTE: a queryKey precisa incluir o auth.uid() atual para evitar
+ * que o cache de um usuário anterior vaze para outro usuário no mesmo tab.
  */
 export function useCurrentUser() {
+  const { data: authUserId } = useQuery({
+    queryKey: ["auth-user-id"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      return user?.id ?? null;
+    },
+    staleTime: 0,
+  });
+
   return useQuery({
-    queryKey: ["current-user"],
+    queryKey: ["current-user", authUserId],
+    enabled: !!authUserId,
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
-      
+      // Defesa: se o auth user mudou desde o início, não retornamos nada.
+      if (authUserId && user.id !== authUserId) return null;
+
       const { data: profile } = await supabase
         .from("profiles")
         .select(`
@@ -278,19 +292,22 @@ export function useCurrentUser() {
           avatar_url
         `)
         .eq("user_id", user.id)
-        .single();
-      
+        .maybeSingle();
+
       if (!profile) return null;
-      
+      if (profile.user_id !== user.id) return null;
+
       const { data: roleData } = await supabase
         .from("user_roles")
-        .select("role")
+        .select("role, user_id")
         .eq("user_id", user.id)
         .eq("clinic_id", profile.clinic_id)
-        .single();
-      
+        .maybeSingle();
+
+      if (roleData && roleData.user_id !== user.id) return null;
+
       const appRole = (roleData?.role as AppRole) || 'recepcionista';
-      
+
       return {
         id: profile.id,
         user_id: profile.user_id,

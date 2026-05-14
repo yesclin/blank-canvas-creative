@@ -79,6 +79,7 @@ export function AuthSessionGuard() {
       if (event === "SIGNED_OUT") {
         if (currentUserIdRef.current) hardReset("SIGNED_OUT", currentUserIdRef.current, null);
         clearAuthenticatedTab();
+        try { qc.clear(); } catch { /* ignore */ }
         currentUserIdRef.current = null;
         return;
       }
@@ -98,7 +99,13 @@ export function AuthSessionGuard() {
         return;
       }
 
-      // INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED, USER_UPDATED, etc.
+      // SIGNED_IN explícito sempre limpa o cache do React Query, mesmo
+      // quando prev === new — garante que nenhum dado de qualquer usuário
+      // anterior (ex.: logout/login na mesma aba) consiga sobreviver.
+      if (event === "SIGNED_IN") {
+        try { qc.clear(); } catch { /* ignore */ }
+      }
+
       handleUserId(match.userId, event);
     });
 
