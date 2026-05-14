@@ -365,8 +365,8 @@ function SupportDetailSheet({ ticket, clinicName, onOpenChange, adminUserId, adm
     try {
       await logPlatformAction({
         action,
-        entityType: "support_ticket",
-        entityId: ticket.id,
+        target_type: "support_ticket",
+        target_id: ticket.id,
         metadata: { code: ticket.code, ...meta },
       });
     } catch (e) { console.error(e); }
