@@ -10383,6 +10383,19 @@ export type Database = {
           environment: string
           error_message: string | null
           id: string
+          investigation_action_taken: string | null
+          investigation_assigned_to: string | null
+          investigation_checklist: Json
+          investigation_diagnosis: string | null
+          investigation_impact: string | null
+          investigation_internal_notes: string | null
+          investigation_next_action: string | null
+          investigation_reproduction_steps: string | null
+          investigation_resolved_at: string | null
+          investigation_root_cause: string | null
+          investigation_severity: string | null
+          investigation_started_at: string | null
+          investigation_status: string | null
           module: string | null
           priority: string
           recurrence_prevention: string | null
@@ -10418,6 +10431,19 @@ export type Database = {
           environment?: string
           error_message?: string | null
           id?: string
+          investigation_action_taken?: string | null
+          investigation_assigned_to?: string | null
+          investigation_checklist?: Json
+          investigation_diagnosis?: string | null
+          investigation_impact?: string | null
+          investigation_internal_notes?: string | null
+          investigation_next_action?: string | null
+          investigation_reproduction_steps?: string | null
+          investigation_resolved_at?: string | null
+          investigation_root_cause?: string | null
+          investigation_severity?: string | null
+          investigation_started_at?: string | null
+          investigation_status?: string | null
           module?: string | null
           priority?: string
           recurrence_prevention?: string | null
@@ -10453,6 +10479,19 @@ export type Database = {
           environment?: string
           error_message?: string | null
           id?: string
+          investigation_action_taken?: string | null
+          investigation_assigned_to?: string | null
+          investigation_checklist?: Json
+          investigation_diagnosis?: string | null
+          investigation_impact?: string | null
+          investigation_internal_notes?: string | null
+          investigation_next_action?: string | null
+          investigation_reproduction_steps?: string | null
+          investigation_resolved_at?: string | null
+          investigation_root_cause?: string | null
+          investigation_severity?: string | null
+          investigation_started_at?: string | null
+          investigation_status?: string | null
           module?: string | null
           priority?: string
           recurrence_prevention?: string | null
