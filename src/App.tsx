@@ -407,6 +407,7 @@ function AppRouter() {
                       <Route path="recursos" element={moduleRoute(<SuperAdminFeatureOverrides />, "Super Admin Recursos")} />
                       <Route path="usuarios" element={moduleRoute(<SuperAdminUsers />, "Super Admin Usuários")} />
                       <Route path="ocorrencias" element={moduleRoute(<SuperAdminOccurrences />, "Super Admin Ocorrências")} />
+                      <Route path="suporte" element={moduleRoute(<SuperAdminSupport />, "Super Admin Suporte")} />
                       <Route path="logs" element={moduleRoute(<SuperAdminLogs />, "Super Admin Logs")} />
                       <Route path="integracoes" element={moduleRoute(<SuperAdminIntegrations />, "Super Admin Integrações")} />
                       <Route path="uso" element={moduleRoute(<SuperAdminStub title="Uso da plataforma" description="Métricas de adoção, consumo e saúde por clínica." />, "Super Admin Uso")} />
