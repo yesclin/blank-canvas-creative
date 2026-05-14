@@ -53,13 +53,27 @@ export function useClinicData() {
           const supportClinicId = typeof window !== 'undefined'
             ? window.localStorage.getItem('yesclin_support_clinic_id')
             : null;
+          const supportAdminUserId = typeof window !== 'undefined'
+            ? window.localStorage.getItem('yesclin_support_admin_user_id')
+            : null;
 
-          if (supportClinicId) {
+          // CRÍTICO: a sessão de suporte só vale se foi iniciada pelo MESMO
+          // usuário atualmente autenticado. Caso contrário, é resíduo de outro
+          // login na mesma máquina e DEVE ser descartada — nunca pode trocar
+          // o contexto da clínica para o novo usuário.
+          if (supportClinicId && supportAdminUserId && supportAdminUserId !== userId) {
+            const { clearSupportSessionIfMismatch } = await import('@/lib/supportSession');
+            clearSupportSessionIfMismatch(userId);
+          } else if (supportClinicId && supportAdminUserId === userId) {
             const { data: isAdmin } = await withTimeout<any>(
               supabase.rpc('is_platform_admin', { _user_id: userId })
             );
             if (isAdmin === true) {
               resolvedClinicId = supportClinicId;
+            } else {
+              // Perdeu papel de Platform Admin — limpa.
+              const { clearSupportSessionIfMismatch } = await import('@/lib/supportSession');
+              clearSupportSessionIfMismatch(null);
             }
           }
         } catch {
