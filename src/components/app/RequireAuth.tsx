@@ -122,7 +122,6 @@ export function RequireAuth({ children }: RequireAuthProps) {
       isAuthedRef.current = false;
       setIsAuthed(false);
       setIsLoading(false);
-      }
     };
 
     // 1) Listener PRIMEIRO. O Supabase dispara INITIAL_SESSION assim que
