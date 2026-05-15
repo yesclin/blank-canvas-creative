@@ -91,20 +91,18 @@ export function AuthSessionGuard() {
         // Sem intenção: NUNCA derruba imediatamente. Tenta recuperar.
         void (async () => {
           const result = await tryRecoverSession();
-          if (result.recovered) {
+          if (result.recovered === true) {
             if (import.meta.env.DEV) {
               console.warn("[AUTH_GUARD] SIGNED_OUT espúrio recuperado — sessão preservada");
             }
             return;
           }
-          if (!result.recovered && !result.definitive) {
-            // Falha de rede: NÃO mexer em nada. Aguarda próximo evento.
+          if (result.definitive === false) {
             if (import.meta.env.DEV) {
               console.warn("[AUTH_GUARD] SIGNED_OUT inconclusivo (rede) — preservando sessão");
             }
             return;
           }
-          // Confirmadamente sem sessão.
           if (currentUserIdRef.current) hardReset("SIGNED_OUT confirmado", currentUserIdRef.current, null);
           clearAuthenticatedTab();
           try { qc.clear(); } catch { /* ignore */ }
