@@ -72,7 +72,6 @@ const ownerAdminMainMenu: MenuItem[] = [
   { title: "Atendimento", url: "/app/atendimento", icon: Activity, tourId: "atendimento" },
   { title: "Comercial", url: "/app/comercial", icon: Briefcase, tourId: "commercial", feature: "feature_crm" },
   { title: "Marketing", url: "/app/marketing", icon: Megaphone, tourId: "communication", feature: "feature_marketing" },
-  { title: "Suporte", url: "/app/suporte", icon: Headset },
 ];
 
 const ownerAdminGestaoMenu: MenuItem[] = [
