@@ -1,69 +1,9 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Calendar } from "lucide-react";
+import { blogPosts } from "@/content/blogPosts";
 
-export const blogPosts = [
-  {
-    slug: "gestao-clinica-100-digital",
-    title: "Como tornar a gestão da sua clínica 100% digital em 30 dias",
-    excerpt:
-      "Um guia prático para migrar do papel para um sistema unificado sem perder produtividade no caminho.",
-    category: "Gestão",
-    date: "12 de maio, 2026",
-    readTime: "7 min",
-    cover: "from-primary/20 to-accent/20",
-  },
-  {
-    slug: "ia-no-prontuario",
-    title: "IA no prontuário: o que muda na rotina do profissional de saúde",
-    excerpt:
-      "Transcrição automática, sugestão de hipóteses e mais tempo olhando para o paciente. Veja como aplicar.",
-    category: "Tecnologia",
-    date: "05 de maio, 2026",
-    readTime: "6 min",
-    cover: "from-accent/30 to-primary/10",
-  },
-  {
-    slug: "lgpd-na-clinica",
-    title: "LGPD na clínica: checklist essencial para evitar multas",
-    excerpt:
-      "Consentimento, base legal, retenção e auditoria — o passo a passo para estar 100% em conformidade.",
-    category: "Compliance",
-    date: "28 de abril, 2026",
-    readTime: "9 min",
-    cover: "from-primary/15 to-success/15",
-  },
-  {
-    slug: "no-show-zero",
-    title: "No-show zero: 8 estratégias que reduzem faltas em até 60%",
-    excerpt:
-      "Lembretes pelo WhatsApp, confirmação automática, lista de espera e outras táticas comprovadas.",
-    category: "Operação",
-    date: "20 de abril, 2026",
-    readTime: "5 min",
-    cover: "from-warning/20 to-primary/10",
-  },
-  {
-    slug: "marketing-para-clinicas",
-    title: "Marketing para clínicas: do primeiro contato ao paciente fiel",
-    excerpt:
-      "CRM, jornadas automáticas e métricas que importam para crescer com previsibilidade.",
-    category: "Marketing",
-    date: "10 de abril, 2026",
-    readTime: "8 min",
-    cover: "from-accent/20 to-primary/20",
-  },
-  {
-    slug: "estoque-clinico-fefo",
-    title: "Estoque clínico com FEFO: como acabar com perdas e rupturas",
-    excerpt:
-      "Controle por lote, validade e consumo por atendimento. O método FEFO aplicado na sua clínica.",
-    category: "Estoque",
-    date: "02 de abril, 2026",
-    readTime: "6 min",
-    cover: "from-success/15 to-primary/10",
-  },
-];
+export { blogPosts };
 
 const PostCard = ({ post }: { post: (typeof blogPosts)[number] }) => (
   <article className="group bg-card border border-border/60 rounded-2xl overflow-hidden hover:shadow-lg transition-shadow">
