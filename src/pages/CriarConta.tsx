@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import { z } from "zod";
 import { maskPhone } from "@/lib/validators";
 import doctorImage from "@/assets/doctor-signup.jpg";
+import { emitIdentityChanged, rememberAuthenticatedUser } from "@/lib/authSessionIsolation";
 
 const signupSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
@@ -21,6 +22,67 @@ const signupSchema = z.object({
   ),
   password: z.string().min(8, "A senha deve conter no mínimo 8 caracteres."),
 });
+
+const normalizeAuthError = (message: string) => {
+  const lower = message.toLowerCase();
+
+  if (lower.includes("already registered") || lower.includes("user already") || lower.includes("already exists")) {
+    return "Este email já está cadastrado. Tente fazer login.";
+  }
+  if (
+    lower.includes("weak") ||
+    lower.includes("known to be weak") ||
+    lower.includes("compromised") ||
+    lower.includes("pwn")
+  ) {
+    return "Essa senha é considerada fraca ou muito comum. Use uma senha mais forte (mínimo 8 caracteres).";
+  }
+  if (lower.includes("minimum") && lower.includes("8")) {
+    return "A senha deve conter no mínimo 8 caracteres.";
+  }
+  if (lower.includes("invalid") && lower.includes("email")) {
+    return "Por favor, insira um email válido.";
+  }
+  if (lower.includes("network") || lower.includes("failed to fetch")) {
+    return "Falha de conexão. Verifique sua internet e tente novamente.";
+  }
+
+  return message;
+};
+
+const waitForSignupProvisioning = async (userId: string) => {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("clinic_id")
+      .eq("user_id", userId)
+      .limit(1)
+      .maybeSingle();
+
+    if (profile?.clinic_id) {
+      const { data: role } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("clinic_id", profile.clinic_id)
+        .limit(1)
+        .maybeSingle();
+
+      if (role?.role) return;
+    }
+
+    await new Promise((resolve) => window.setTimeout(resolve, 350));
+  }
+};
+
+const syncAuthenticatedSignup = async (session: any) => {
+  const userId = session?.user?.id;
+  if (!userId) return;
+
+  rememberAuthenticatedUser(userId);
+  emitIdentityChanged(null, userId, "signup");
+  await waitForSignupProvisioning(userId);
+};
 
 const CriarConta = () => {
   const [name, setName] = useState("");
