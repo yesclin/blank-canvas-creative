@@ -164,6 +164,8 @@ const CriarConta = () => {
 
     // Fallback final — não deveria acontecer.
     navigate("/login", { replace: true });
+  };
+
 
   return (
     <div className="min-h-screen flex">
