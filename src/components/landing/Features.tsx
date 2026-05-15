@@ -83,9 +83,9 @@ const features: Feature[] = [
     icon: ClipboardPlus,
     title: "Prontuário Eletrônico",
     description:
-      "9 especialidades nativas, anamneses por modelo, evolução, assinatura avançada e janela de edição de 15 min.",
+      "8 especialidades nativas, anamneses por modelo, evolução, assinatura avançada e janela de edição de 15 min.",
     tone: "accent",
-    badge: "9 especialidades",
+    badge: "8 especialidades",
   },
   {
     icon: Sparkles,
