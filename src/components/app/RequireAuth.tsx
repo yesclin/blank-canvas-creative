@@ -50,27 +50,22 @@ export function RequireAuth({ children }: RequireAuthProps) {
     let mismatchHandled = false;
 
     const rejectMismatchedSession = (source: string, userId: string, expectedUserId: string) => {
+      // Mismatch de identidade NÃO desloga automaticamente. Apenas registra
+      // e aceita a nova identidade real — o app irá re-renderizar com ela.
+      // Logout só deve ocorrer por ação explícita do usuário.
       if (mismatchHandled) return;
       mismatchHandled = true;
-      console.error("[AUTH_SECURITY] Sessão de outro usuário bloqueada", {
+      console.warn("[AUTH_SECURITY] Identidade divergente em RequireAuth — preservando sessão atual", {
         source,
         expectedUserId,
         receivedUserId: userId,
       });
-      clearAuthenticatedTab();
-      isAuthedRef.current = false;
-      setIsAuthed(false);
+      try {
+        window.sessionStorage.setItem("yc.auth.expectedUserId", userId);
+      } catch { /* ignore */ }
+      isAuthedRef.current = Boolean(userId);
+      setIsAuthed(Boolean(userId));
       setIsLoading(false);
-      setTimeout(() => {
-        // Logout intencional (segurança): marcar para evitar reverter.
-        try {
-          // dynamic import to avoid circular concerns
-          import("@/lib/authIntent").then(({ markUserLogout }) =>
-            markUserLogout("session-mismatch"),
-          );
-        } catch { /* ignore */ }
-        void supabase.auth.signOut();
-      }, 0);
     };
 
     const acceptSession = (session: unknown, source: string) => {
