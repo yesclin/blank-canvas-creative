@@ -97,7 +97,7 @@ export function AuthSessionGuard() {
             }
             return;
           }
-          if (!result.definitive) {
+          if (!result.recovered && !result.definitive) {
             // Falha de rede: NÃO mexer em nada. Aguarda próximo evento.
             if (import.meta.env.DEV) {
               console.warn("[AUTH_GUARD] SIGNED_OUT inconclusivo (rede) — preservando sessão");
