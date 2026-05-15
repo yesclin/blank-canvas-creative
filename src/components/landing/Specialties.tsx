@@ -31,7 +31,7 @@ const tones: Record<Specialty["tone"], { bg: string; text: string; ring: string 
 
 const specialties: Specialty[] = [
   { icon: HeartPulse,  name: "Clínico Geral",   description: "Consultas, evolução e prescrição",      tone: "primary" },
-  { icon: Stethoscope, name: "Medicina",        description: "Demais especialidades médicas",         tone: "primary" },
+  
   { icon: Sun,         name: "Dermatologia",    description: "Lesões, mapeamento e fotos clínicas",   tone: "warning" },
   { icon: Smile,       name: "Odontologia",     description: "Todas as áreas da odontologia",         tone: "info" },
   { icon: Brain,       name: "Psicologia",      description: "6 modelos de anamnese inclusos",        tone: "accent" },
@@ -63,7 +63,7 @@ const Specialties = () => {
             Feito para a <span className="text-gradient-brand">sua especialidade</span>
           </h2>
           <p className="text-lg text-muted-foreground">
-            10 especialidades nativas com modelos de prontuário, anamnese e fluxos clínicos
+            9 especialidades nativas com modelos de prontuário, anamnese e fluxos clínicos
             específicos — e novos módulos chegando a cada mês.
           </p>
         </motion.div>
