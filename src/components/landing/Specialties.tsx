@@ -8,7 +8,6 @@ import {
   Apple,
   Baby,
   Dumbbell,
-  Ear,
 } from "lucide-react";
 
 type Specialty = {
@@ -36,7 +35,6 @@ const specialties: Specialty[] = [
   { icon: Apple,       name: "Nutrição",        description: "Antropometria e plano alimentar",       tone: "success" },
   { icon: Baby,        name: "Pediatria",       description: "Curvas OMS e percentil automático",     tone: "warning" },
   { icon: Dumbbell,    name: "Pilates",         description: "Avaliação funcional e 6 modelos",       tone: "primary" },
-  { icon: Ear,         name: "Fonoaudiologia",  description: "Avaliação e terapia",                   tone: "accent" },
 ];
 
 const Specialties = () => {
@@ -60,7 +58,7 @@ const Specialties = () => {
             Feito para a <span className="text-gradient-brand">sua especialidade</span>
           </h2>
           <p className="text-lg text-muted-foreground">
-            9 especialidades nativas com modelos de prontuário, anamnese e fluxos clínicos
+            8 especialidades nativas com modelos de prontuário, anamnese e fluxos clínicos
             específicos. Receita, evolução e PDFs prontos para usar.
           </p>
         </motion.div>
