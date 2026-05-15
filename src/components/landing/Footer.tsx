@@ -29,71 +29,36 @@ const Footer = () => {
   return (
     <footer className="bg-foreground text-background py-16">
       <div className="section-container">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
           {/* Brand */}
-          <div className="col-span-2 md:col-span-1">
+          <div className="col-span-2 md:col-span-2">
             <Link to="/" className="flex items-center mb-4">
               <img src={logoFull} alt="Yesclin" className="h-8 object-contain brightness-0 invert" />
             </Link>
-            <p className="text-sm text-background/60 leading-relaxed">
+            <p className="text-sm text-background/60 leading-relaxed max-w-xs">
               Sistema completo para gestão de clínicas e consultórios de saúde.
             </p>
           </div>
 
-          {/* Links */}
-          <div>
-            <h4 className="font-semibold text-sm uppercase tracking-wider text-background/80 mb-4">
-              Produto
-            </h4>
-            <ul className="space-y-2">
-              {links.produto.map((link) => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-sm text-background/60 hover:text-background transition-colors"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-semibold text-sm uppercase tracking-wider text-background/80 mb-4">
-              Empresa
-            </h4>
-            <ul className="space-y-2">
-              {links.empresa.map((link) => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-sm text-background/60 hover:text-background transition-colors"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-semibold text-sm uppercase tracking-wider text-background/80 mb-4">
-              Legal
-            </h4>
-            <ul className="space-y-2">
-              {links.legal.map((link) => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-sm text-background/60 hover:text-background transition-colors"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {(["produto", "conteudos", "empresa", "legal"] as const).map((key) => (
+            <div key={key}>
+              <h4 className="font-semibold text-sm uppercase tracking-wider text-background/80 mb-4">
+                {key === "produto" ? "Produto" : key === "conteudos" ? "Conteúdos" : key === "empresa" ? "Empresa" : "Legal"}
+              </h4>
+              <ul className="space-y-2">
+                {links[key].map((link) => (
+                  <li key={link.label}>
+                    <a
+                      href={link.href}
+                      className="text-sm text-background/60 hover:text-background transition-colors"
+                    >
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
 
         {/* Bottom */}
