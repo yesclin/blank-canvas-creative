@@ -32,6 +32,8 @@ const PreCadastro = lazyWithTimeout(() => import("./pages/PreCadastro"), "PreCad
 const Ajuda = lazyWithTimeout(() => import("./pages/Ajuda"), "Ajuda");
 const Privacidade = lazyWithTimeout(() => import("./pages/Privacidade"), "Privacidade");
 const Contato = lazyWithTimeout(() => import("./pages/Contato"), "Contato");
+const BlogIndex = lazyWithTimeout(() => import("./pages/Blog").then(m => ({ default: m.BlogIndex })), "BlogIndex");
+const BlogPost = lazyWithTimeout(() => import("./pages/Blog").then(m => ({ default: m.BlogPost })), "BlogPost");
 
 // Teleconsulta - Páginas Públicas
 const PrecheckPage = lazyWithTimeout(() => import("./pages/teleconsulta/PrecheckPage"), "PrecheckPage");
@@ -376,6 +378,8 @@ function AppRouter() {
                     <Route path="/ajuda" element={moduleRoute(<Ajuda />, "Ajuda")} />
                     <Route path="/privacidade" element={moduleRoute(<Privacidade />, "Privacidade")} />
                     <Route path="/contato" element={moduleRoute(<Contato />, "Contato")} />
+                    <Route path="/blog" element={moduleRoute(<BlogIndex />, "Blog")} />
+                    <Route path="/blog/:slug" element={moduleRoute(<BlogPost />, "Artigo")} />
 
                     {/* Teleconsulta - Páginas Públicas */}
                     <Route path="/teleconsulta/:token/precheck" element={moduleRoute(<PrecheckPage />, "Pré-check teleconsulta")} />
