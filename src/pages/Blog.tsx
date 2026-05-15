@@ -126,17 +126,29 @@ const BlogPost = () => {
             <Calendar size={14} /> {post.date} · {post.readTime} de leitura
           </p>
           <div className={`h-64 rounded-3xl bg-gradient-to-br ${post.cover} mb-10`} />
-          <div className="prose prose-lg max-w-none text-foreground/90 space-y-4 leading-relaxed">
+          <div className="max-w-none text-foreground/90 leading-relaxed space-y-5">
             <p className="text-xl text-muted-foreground">{post.excerpt}</p>
-            <p>
-              Em breve este conteúdo será preenchido com o artigo completo. Use este espaço para escrever
-              sua matéria, dicas práticas, estudos de caso e tutoriais sobre gestão clínica, tecnologia,
-              LGPD, marketing e operação.
-            </p>
-            <p>
-              Você pode editar este post em <code>src/components/landing/BlogTeaser.tsx</code> e o
-              corpo do artigo neste arquivo (<code>src/pages/Blog.tsx</code>).
-            </p>
+            {post.body?.map((block, i) => {
+              if (block.type === "h2")
+                return (
+                  <h2 key={i} className="font-display text-2xl lg:text-3xl font-bold text-foreground mt-10 mb-2">
+                    {block.text}
+                  </h2>
+                );
+              if (block.type === "ul")
+                return (
+                  <ul key={i} className="list-disc pl-6 space-y-2 text-foreground/90">
+                    {block.items.map((it, j) => <li key={j}>{it}</li>)}
+                  </ul>
+                );
+              if (block.type === "quote")
+                return (
+                  <blockquote key={i} className="border-l-4 border-primary pl-4 italic text-muted-foreground my-6">
+                    {block.text}
+                  </blockquote>
+                );
+              return <p key={i} className="text-base lg:text-lg">{block.text}</p>;
+            })}
           </div>
         </article>
       </main>
