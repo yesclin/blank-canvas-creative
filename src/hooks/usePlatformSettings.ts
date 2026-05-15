@@ -82,7 +82,7 @@ export const DEFAULTS: Record<string, any> = {
   'limits.default_max_appointments_monthly': 1000,
   'security.session_timeout_minutes': 60,
   'security.require_strong_password': true,
-  'security.require_email_confirmation': true,
+  'security.require_email_confirmation': false,
   'security.lock_after_invalid_attempts': true,
   'security.max_invalid_attempts': 5,
   'security.lock_duration_minutes': 15,
