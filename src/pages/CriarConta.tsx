@@ -156,6 +156,16 @@ const CriarConta = () => {
       return;
     }
 
+    if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      setIsLoading(false);
+      toast({
+        title: "Email já cadastrado",
+        description: "Este email já está cadastrado. Tente fazer login.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Caminho feliz: signUp já devolveu sessão.
     if (data?.session && data?.user) {
       await syncAuthenticatedSignup(data.session);
