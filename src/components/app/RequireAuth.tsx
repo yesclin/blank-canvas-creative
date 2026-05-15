@@ -5,6 +5,7 @@ import { AppLoadingFallback } from "./AppLoadingFallback";
 import { withTimeout } from "@/lib/asyncTimeout";
 import { clearAuthenticatedTab, ensureSessionMatchesTab } from "@/lib/authSessionIsolation";
 import { wasLogoutRequestedByUser, clearLogoutIntent } from "@/lib/authIntent";
+import { tryRecoverSession } from "@/lib/authSessionRecovery";
 
 type RequireAuthProps = {
   children: ReactNode;
