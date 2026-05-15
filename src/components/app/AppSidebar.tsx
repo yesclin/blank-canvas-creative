@@ -109,7 +109,6 @@ const receptionistMainMenu: MenuItem[] = [
   { title: "Agenda", url: "/app/agenda", icon: Calendar, tourId: "agenda" },
   { title: "Pacientes", url: "/app/pacientes", icon: Users, tourId: "patients" },
   { title: "Comercial", url: "/app/comercial", icon: Briefcase, tourId: "commercial", feature: "feature_crm" },
-  { title: "Suporte", url: "/app/suporte", icon: Headset },
 ];
 
 const receptionistGestaoMenu: MenuItem[] = [
