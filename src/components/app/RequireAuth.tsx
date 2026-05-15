@@ -96,38 +96,32 @@ export function RequireAuth({ children }: RequireAuthProps) {
         setIsLoading(false);
         return;
       }
-      // Sem intenção: não confiar cegamente. Tentar reconfirmar.
-      try {
-        // Pequeno delay permite que o supabase termine o ciclo interno antes
-        // de reler a sessão (evita ler estado intermediário).
-        await new Promise((r) => setTimeout(r, 250));
-        const { data } = await withTimeout<{ data: { session: any | null } }>(
-          supabase.auth.getSession(),
-          5000,
-          "getSession reconfirmação",
-        );
-        if (!mounted) return;
-        if (data?.session) {
-          if (import.meta.env.DEV) {
-            console.warn("[AUTH] SIGNED_OUT espúrio ignorado — sessão ainda válida", { event });
-          }
-          acceptSession(data.session, `${event}-reconfirm`);
-          return;
-        }
-        // Sessão realmente perdida.
+      // Sem intenção: jamais derrubar imediatamente. Tenta recuperar com
+      // múltiplas tentativas + refresh antes de declarar logout.
+      const result = await tryRecoverSession();
+      if (!mounted) return;
+      if (result.recovered === true) {
         if (import.meta.env.DEV) {
-          console.log("[AUTH] SIGNED_OUT confirmado após reconfirmação", { event });
+          console.warn("[AUTH] SIGNED_OUT espúrio ignorado — sessão recuperada", { event });
         }
-        clearAuthenticatedTab();
-        isAuthedRef.current = false;
-        setIsAuthed(false);
-        setIsLoading(false);
-      } catch (err) {
-        // Falha de rede ao reconfirmar: NÃO derrubar usuário.
-        // Mantemos isAuthed atual e deixamos o próximo evento decidir.
+        acceptSession(result.session, `${event}-recovered`);
+        return;
+      }
+      if (result.definitive === false) {
+        // Falha de rede: NÃO derrubar usuário. Mantém estado atual.
         if (import.meta.env.DEV) {
-          console.warn("[AUTH] Falha ao reconfirmar SIGNED_OUT — mantendo estado atual", err);
+          console.warn("[AUTH] SIGNED_OUT inconclusivo (rede) — preservando sessão", { event });
         }
+        return;
+      }
+      // Sessão definitivamente perdida.
+      if (import.meta.env.DEV) {
+        console.log("[AUTH] SIGNED_OUT confirmado após recuperação", { event });
+      }
+      clearAuthenticatedTab();
+      isAuthedRef.current = false;
+      setIsAuthed(false);
+      setIsLoading(false);
       }
     };
 
