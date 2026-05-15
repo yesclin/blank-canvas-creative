@@ -6,17 +6,22 @@ const Footer = () => {
 
   const links = {
     produto: [
-      { label: "Recursos", href: "#features" },
-      { label: "Especialidades", href: "#specialties" },
-      { label: "Preços", href: "#pricing" },
+      { label: "Recursos", href: "/#features" },
+      { label: "Especialidades", href: "/#specialties" },
+      { label: "Preços", href: "/#pricing" },
+    ],
+    conteudos: [
+      { label: "Blog", href: "/blog" },
+      { label: "Materiais educativos", href: "/blog" },
+      { label: "Central de Ajuda", href: "/ajuda" },
     ],
     empresa: [
-      { label: "Central de Ajuda", href: "/ajuda" },
       { label: "Contato", href: "/contato" },
+      { label: "Suporte", href: "/contato" },
     ],
     legal: [
       { label: "Privacidade", href: "/privacidade" },
-      { label: "Termos de Uso", href: "#" },
+      { label: "Termos de Uso", href: "/privacidade" },
       { label: "LGPD", href: "/privacidade" },
     ],
   };
