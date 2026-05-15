@@ -1,5 +1,5 @@
 import Header from "@/components/landing/Header";
-import HeroLead from "@/components/landing/HeroLead";
+import Hero from "@/components/landing/Hero";
 import Stats from "@/components/landing/Stats";
 import Screenshots from "@/components/landing/Screenshots";
 import Features from "@/components/landing/Features";
