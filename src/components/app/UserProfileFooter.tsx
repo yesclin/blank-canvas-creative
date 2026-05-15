@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LogOut, User, UserCog, ChevronUp, ArrowLeftRight, Crown, Loader2, ShieldCheck } from "lucide-react";
+import { LogOut, User, UserCog, ChevronUp, ArrowLeftRight, Crown, Loader2, ShieldCheck, Headset } from "lucide-react";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -233,6 +233,11 @@ export function UserProfileFooter() {
                 <span>Voltar para Proprietário</span>
               </DropdownMenuItem>
             )}
+
+            <DropdownMenuItem onClick={() => navigate("/app/suporte")} className="cursor-pointer">
+              <Headset className="mr-2 h-4 w-4" />
+              <span>Suporte</span>
+            </DropdownMenuItem>
 
             {isPlatformAdmin && (
               <>
