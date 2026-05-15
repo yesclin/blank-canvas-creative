@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LogOut, User, UserCog, ChevronUp, ArrowLeftRight, Crown, Loader2, ShieldCheck } from "lucide-react";
+import { LogOut, User, UserCog, ChevronUp, ArrowLeftRight, Crown, Loader2, ShieldCheck, Headset } from "lucide-react";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
