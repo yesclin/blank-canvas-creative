@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import { z } from "zod";
 import { maskPhone } from "@/lib/validators";
 import doctorImage from "@/assets/doctor-signup.jpg";
+import { emitIdentityChanged, rememberAuthenticatedUser } from "@/lib/authSessionIsolation";
 
 const signupSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
@@ -21,6 +22,67 @@ const signupSchema = z.object({
   ),
   password: z.string().min(8, "A senha deve conter no mínimo 8 caracteres."),
 });
+
+const normalizeAuthError = (message: string) => {
+  const lower = message.toLowerCase();
+
+  if (lower.includes("already registered") || lower.includes("user already") || lower.includes("already exists")) {
+    return "Este email já está cadastrado. Tente fazer login.";
+  }
+  if (
+    lower.includes("weak") ||
+    lower.includes("known to be weak") ||
+    lower.includes("compromised") ||
+    lower.includes("pwn")
+  ) {
+    return "Essa senha é considerada fraca ou muito comum. Use uma senha mais forte (mínimo 8 caracteres).";
+  }
+  if (lower.includes("minimum") && lower.includes("8")) {
+    return "A senha deve conter no mínimo 8 caracteres.";
+  }
+  if (lower.includes("invalid") && lower.includes("email")) {
+    return "Por favor, insira um email válido.";
+  }
+  if (lower.includes("network") || lower.includes("failed to fetch")) {
+    return "Falha de conexão. Verifique sua internet e tente novamente.";
+  }
+
+  return message;
+};
+
+const waitForSignupProvisioning = async (userId: string) => {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("clinic_id")
+      .eq("user_id", userId)
+      .limit(1)
+      .maybeSingle();
+
+    if (profile?.clinic_id) {
+      const { data: role } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("clinic_id", profile.clinic_id)
+        .limit(1)
+        .maybeSingle();
+
+      if (role?.role) return;
+    }
+
+    await new Promise((resolve) => window.setTimeout(resolve, 350));
+  }
+};
+
+const syncAuthenticatedSignup = async (session: any) => {
+  const userId = session?.user?.id;
+  if (!userId) return;
+
+  rememberAuthenticatedUser(userId);
+  emitIdentityChanged(null, userId, "signup");
+  await waitForSignupProvisioning(userId);
+};
 
 const CriarConta = () => {
   const [name, setName] = useState("");
@@ -68,13 +130,15 @@ const CriarConta = () => {
     const phoneDigits = whatsapp.replace(/\D/g, "");
     const redirectUrl = `${window.location.origin}/app`;
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: normalizedEmail,
       password,
       options: {
         emailRedirectTo: redirectUrl,
         data: {
-          full_name: name,
+          full_name: name.trim(),
           whatsapp: phoneDigits,
           phone: phoneDigits,
           signup_origin: "web",
@@ -84,30 +148,19 @@ const CriarConta = () => {
 
     if (error) {
       setIsLoading(false);
-      let message = error.message;
-      const lower = error.message.toLowerCase();
-
-      if (lower.includes("already registered") || lower.includes("user already")) {
-        message = "Este email já está cadastrado. Tente fazer login.";
-      } else if (
-        lower.includes("weak") ||
-        lower.includes("known to be weak") ||
-        lower.includes("compromised") ||
-        lower.includes("pwn")
-      ) {
-        message =
-          "Essa senha é considerada fraca ou muito comum. Use uma senha mais forte (mínimo 8 caracteres).";
-      } else if (lower.includes("minimum") && lower.includes("8")) {
-        message = "A senha deve conter no mínimo 8 caracteres.";
-      } else if (lower.includes("invalid") && lower.includes("email")) {
-        message = "Por favor, insira um email válido.";
-      } else if (lower.includes("network") || lower.includes("failed to fetch")) {
-        message = "Falha de conexão. Verifique sua internet e tente novamente.";
-      }
-
       toast({
         title: "Erro ao criar conta",
-        description: message,
+        description: normalizeAuthError(error.message),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      setIsLoading(false);
+      toast({
+        title: "Email já cadastrado",
+        description: "Este email já está cadastrado. Tente fazer login.",
         variant: "destructive",
       });
       return;
@@ -115,6 +168,7 @@ const CriarConta = () => {
 
     // Caminho feliz: signUp já devolveu sessão.
     if (data?.session && data?.user) {
+      await syncAuthenticatedSignup(data.session);
       setIsLoading(false);
       toast({
         title: "Conta criada com sucesso!",
@@ -124,36 +178,27 @@ const CriarConta = () => {
       return;
     }
 
-    // Sem sessão: tenta autenticar automaticamente para evitar a tela de
-    // "verifique seu e-mail". Se a confirmação de e-mail estiver habilitada
-    // no Supabase, o login falhará com "Email not confirmed" e mostramos
-    // mensagem técnica orientando a ajustar a configuração.
     const { data: signInData, error: signInError } =
-      await supabase.auth.signInWithPassword({ email, password });
+      await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
 
     setIsLoading(false);
 
     if (signInError) {
-      const lower = signInError.message.toLowerCase();
-      if (lower.includes("not confirmed") || lower.includes("email not confirmed")) {
-        toast({
-          title: "Confirmação de e-mail está ativa no Supabase",
-          description:
-            "Sua conta foi criada, mas o projeto exige confirmação de e-mail. Desative em Authentication > Providers > Email > Confirm email no Supabase para entrar direto.",
-          variant: "destructive",
+      if (import.meta.env.DEV) {
+        console.warn("[AUTH_SIGNUP] Login automático após cadastro falhou", {
+          message: signInError.message,
         });
-        return;
       }
       toast({
         title: "Conta criada, mas não foi possível entrar automaticamente",
-        description: "Tente fazer login com seu e-mail e senha.",
+        description: "Verifique as configurações de autenticação.",
         variant: "destructive",
       });
-      navigate("/login", { replace: true });
       return;
     }
 
     if (signInData?.session) {
+      await syncAuthenticatedSignup(signInData.session);
       toast({
         title: "Conta criada com sucesso!",
         description: "Vamos configurar sua clínica.",
@@ -162,8 +207,11 @@ const CriarConta = () => {
       return;
     }
 
-    // Fallback final — não deveria acontecer.
-    navigate("/login", { replace: true });
+    toast({
+      title: "Conta criada, mas não foi possível entrar automaticamente",
+      description: "Verifique as configurações de autenticação.",
+      variant: "destructive",
+    });
   };
 
 
