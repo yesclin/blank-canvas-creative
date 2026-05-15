@@ -168,7 +168,11 @@ const CriarConta = () => {
 
     // Caminho feliz: signUp já devolveu sessão.
     if (data?.session && data?.user) {
-      await syncAuthenticatedSignup(data.session);
+      // Marca identidade imediatamente; provisionamento roda em background
+      // para não atrasar a navegação (handle_new_user já cria profile/role).
+      rememberAuthenticatedUser(data.session.user.id);
+      emitIdentityChanged(null, data.session.user.id, "signup");
+      void waitForSignupProvisioning(data.session.user.id);
       setIsLoading(false);
       toast({
         title: "Conta criada com sucesso!",
