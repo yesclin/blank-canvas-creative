@@ -234,6 +234,11 @@ export function UserProfileFooter() {
               </DropdownMenuItem>
             )}
 
+            <DropdownMenuItem onClick={() => navigate("/app/suporte")} className="cursor-pointer">
+              <Headset className="mr-2 h-4 w-4" />
+              <span>Suporte</span>
+            </DropdownMenuItem>
+
             {isPlatformAdmin && (
               <>
                 <DropdownMenuSeparator />
