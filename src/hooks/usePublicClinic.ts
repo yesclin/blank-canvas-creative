@@ -17,11 +17,10 @@ export function usePublicClinic(slug: string | undefined) {
     queryFn: async () => {
       if (!slug) return null;
       const { data, error } = await supabase
-        .from("clinics")
+        .from("public_clinic_booking" as any)
         .select("id, name, slug, logo_url, phone, public_booking_enabled, public_booking_settings")
         .eq("slug", slug)
-        .eq("public_booking_enabled", true)
-        .single();
+        .maybeSingle();
       if (error || !data) return null;
       return data as PublicClinicData;
     },
