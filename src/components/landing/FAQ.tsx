@@ -20,6 +20,135 @@ const inlineLink = (to: string, label: string) => (
 // - a: rich answer (ReactNode) shown to users, may contain internal links
 const faqs: { q: string; aText: string; a: ReactNode }[] = [
   {
+    q: "Funciona para a minha especialidade?",
+    aText:
+      "Sim. O YesClin tem 9 especialidades nativas com modelos próprios de prontuário e anamnese: Clínico Geral, Dermatologia, Odontologia, Psicologia, Estética, Fisioterapia, Nutrição, Pediatria e Pilates. Clínicas multidisciplinares também são suportadas, e novos módulos chegam todo mês.",
+    a: (
+      <>
+        Sim. O YesClin tem 9 especialidades nativas com modelos próprios de
+        prontuário e anamnese: Clínico Geral, Dermatologia, Odontologia,
+        Psicologia, Estética, Fisioterapia, Nutrição, Pediatria e Pilates.
+        Clínicas multidisciplinares também são suportadas, e novos módulos
+        chegam todo mês.
+      </>
+    ),
+  },
+  {
+    q: "Eu uso planilha / papel hoje. Vocês ajudam na migração?",
+    aText:
+      "Sim. Importamos sua base de pacientes e profissionais a partir de planilha e te ajudamos a configurar agenda, modelos de prontuário e financeiro nos primeiros dias. Em geral, em 1 semana a clínica já está rodando 100% no sistema.",
+    a: (
+      <>
+        Sim. Importamos sua base de pacientes e profissionais a partir de
+        planilha e te ajudamos a configurar agenda, modelos de prontuário e
+        financeiro nos primeiros dias. Em geral, em 1 semana a clínica já
+        está rodando 100% no sistema.
+      </>
+    ),
+  },
+  {
+    q: "Tem agendamento online para o paciente marcar sozinho?",
+    aText:
+      "Sim. Cada profissional ganha um link público de agendamento que pode ser usado no Instagram, WhatsApp e site. O paciente escolhe horário, se cadastra e o agendamento já entra na sua agenda — sem retrabalho da recepção.",
+    a: (
+      <>
+        Sim. Cada profissional ganha um link público de agendamento que pode
+        ser usado no Instagram, WhatsApp e site. O paciente escolhe horário,
+        se cadastra e o agendamento já entra na sua agenda — sem retrabalho
+        da recepção.
+      </>
+    ),
+  },
+  {
+    q: "Funciona com WhatsApp para confirmar consultas?",
+    aText:
+      "Sim. Conectamos sua instância de WhatsApp (UAZAPI) por clínica e enviamos confirmações, lembretes e mensagens manuais com auditoria. Reduz drasticamente o no-show e centraliza o relacionamento no mesmo sistema.",
+    a: (
+      <>
+        Sim. Conectamos sua instância de WhatsApp (UAZAPI) por clínica e
+        enviamos confirmações, lembretes e mensagens manuais com auditoria.
+        Reduz drasticamente o no-show e centraliza o relacionamento no mesmo
+        sistema.
+      </>
+    ),
+  },
+  {
+    q: "Atende mais de um profissional / unidade?",
+    aText:
+      "Sim. O YesClin é multiusuário e multi-tenant: cada profissional tem sua agenda e prontuário, e cada papel (dono, admin, profissional, recepção) tem permissões diferentes. Os dados clínicos só aparecem para quem pode ver.",
+    a: (
+      <>
+        Sim. O YesClin é multiusuário e multi-tenant: cada profissional tem
+        sua agenda e prontuário, e cada papel (dono, admin, profissional,
+        recepção) tem permissões diferentes. Os dados clínicos só aparecem
+        para quem pode ver.
+      </>
+    ),
+  },
+  {
+    q: "O prontuário tem assinatura digital com validade?",
+    aText:
+      "Sim. Todos os documentos clínicos são assinados com assinatura eletrônica avançada (SHA-256, token de verificação e página pública de validação). Têm validade jurídica e ficam protegidos contra alteração depois de assinados.",
+    a: (
+      <>
+        Sim. Todos os documentos clínicos são assinados com assinatura
+        eletrônica avançada (SHA-256, token de verificação e página pública
+        de validação). Têm validade jurídica e ficam protegidos contra
+        alteração depois de assinados.
+      </>
+    ),
+  },
+  {
+    q: "Tem financeiro e controle de estoque?",
+    aText:
+      "Sim. O financeiro é integrado ao atendimento (cada consulta gera o recebimento certo, com método e fechamento diário) e o estoque usa FEFO com lote, validade, kits clínicos e baixa automática por procedimento. Sem planilha paralela.",
+    a: (
+      <>
+        Sim. O financeiro é integrado ao atendimento (cada consulta gera o
+        recebimento certo, com método e fechamento diário) e o estoque usa
+        FEFO com lote, validade, kits clínicos e baixa automática por
+        procedimento. Sem planilha paralela.
+      </>
+    ),
+  },
+  {
+    q: "A teleconsulta funciona de verdade dentro do sistema?",
+    aText:
+      "Sim. A teleconsulta é integrada ao prontuário e à agenda: você gera o link, atende pelo navegador (sem instalar nada), registra a evolução e emite receita ou atestado durante o atendimento.",
+    a: (
+      <>
+        Sim. A teleconsulta é integrada ao prontuário e à agenda: você gera
+        o link, atende pelo navegador (sem instalar nada), registra a
+        evolução e emite receita ou atestado durante o atendimento.
+      </>
+    ),
+  },
+  {
+    q: "Meus dados e os dos meus pacientes estão seguros?",
+    aText:
+      "Sim. Os dados são armazenados em infraestrutura criptografada, com isolamento por clínica, controle de acesso por papel, auditoria de ações e conformidade total com a LGPD. Veja detalhes na Política de Privacidade.",
+    a: (
+      <>
+        Sim. Os dados são armazenados em infraestrutura criptografada, com
+        isolamento por clínica, controle de acesso por papel, auditoria de
+        ações e conformidade total com a LGPD. Veja detalhes na nossa{" "}
+        {inlineLink("/privacidade", "Política de Privacidade")}.
+      </>
+    ),
+  },
+  {
+    q: "Funciona no celular e no tablet?",
+    aText:
+      "Sim. O YesClin é 100% web e responsivo: você acessa de qualquer navegador no computador, tablet ou celular, sem instalar nada. Ideal para atender em consultório, em casa ou em visita domiciliar.",
+    a: (
+      <>
+        Sim. O YesClin é 100% web e responsivo: você acessa de qualquer
+        navegador no computador, tablet ou celular, sem instalar nada. Ideal
+        para atender em consultório, em casa ou em visita domiciliar.
+      </>
+    ),
+  },
+  {
     q: "Como funciona o teste grátis de 7 dias?",
     aText:
       "Ao criar sua conta, você libera automaticamente 7 dias de acesso ao plano Profissional, sem precisar informar cartão de crédito. Pode testar todos os recursos com seus dados reais. Dúvidas no caminho? A Central de Ajuda tem tutoriais rápidos.",
@@ -33,94 +162,30 @@ const faqs: { q: string; aText: string; a: ReactNode }[] = [
     ),
   },
   {
-    q: "O que acontece quando os 7 dias acabam?",
-    aText:
-      "Após o período de teste, sua conta entra em modo de bloqueio: você ainda acessa os dados em modo leitura, mas não consegue criar novos pacientes ou agendamentos até escolher um plano. Nada é perdido — basta assinar para continuar de onde parou.",
-    a: (
-      <>
-        Após o período de teste, sua conta entra em modo de bloqueio: você
-        ainda acessa os dados em modo leitura, mas não consegue criar novos
-        pacientes ou agendamentos até escolher um plano. Nada é perdido —
-        basta assinar para continuar de onde parou.
-      </>
-    ),
-  },
-  {
     q: "Preciso assinar contrato ou fidelidade?",
     aText:
-      "Não. O YesClin funciona em modelo de assinatura mensal ou anual sem fidelidade. Você pode cancelar quando quiser, direto pelo painel ou falando com o nosso time pela página de contato.",
+      "Não. O YesClin funciona em modelo de assinatura mensal ou anual sem fidelidade. Você pode cancelar quando quiser, direto pelo painel ou falando com nosso time pela página de contato. Seus dados ficam disponíveis para exportação.",
     a: (
       <>
         Não. O YesClin funciona em modelo de assinatura mensal ou anual sem
         fidelidade. Você pode cancelar quando quiser, direto pelo painel ou
         falando com o nosso time pela página de{" "}
-        {inlineLink("/contato", "contato")}.
+        {inlineLink("/contato", "contato")}. Seus dados ficam disponíveis
+        para exportação.
       </>
     ),
   },
   {
-    q: "Como funciona o cancelamento?",
+    q: "Tem suporte humano de verdade?",
     aText:
-      "Você pode cancelar a qualquer momento. No plano mensal, o acesso permanece ativo até o fim do período já pago. Seus dados ficam disponíveis para exportação caso precise — fale com a gente em /contato para solicitar.",
+      "Sim. Suporte humano por WhatsApp e e-mail está incluído em todos os planos, com tempo de resposta rápido em horário comercial. O plano Clínica conta com suporte prioritário e onboarding guiado.",
     a: (
       <>
-        Você pode cancelar a qualquer momento. No plano mensal, o acesso
-        permanece ativo até o fim do período já pago. Seus dados ficam
-        disponíveis para exportação caso precise — fale com a gente em{" "}
-        {inlineLink("/contato", "/contato")} para solicitar.
-      </>
-    ),
-  },
-  {
-    q: "Meus dados e os dos meus pacientes estão seguros?",
-    aText:
-      "Sim. Os dados são armazenados em infraestrutura criptografada, com isolamento por clínica, controle de acesso por papel (médico, recepção, admin) e auditoria de ações. O sistema segue as exigências da LGPD — veja detalhes na nossa Política de Privacidade.",
-    a: (
-      <>
-        Sim. Os dados são armazenados em infraestrutura criptografada, com
-        isolamento por clínica, controle de acesso por papel (médico, recepção,
-        admin) e auditoria de ações. O sistema segue as exigências da LGPD —
-        veja detalhes na nossa{" "}
-        {inlineLink("/privacidade", "Política de Privacidade")}.
-      </>
-    ),
-  },
-  {
-    q: "A teleconsulta funciona de verdade dentro do sistema?",
-    aText:
-      "Sim. A teleconsulta é integrada ao prontuário e à agenda: você gera o link da consulta, atende pelo navegador (sem instalar nada), registra a evolução e emite receita ou atestado durante o atendimento.",
-    a: (
-      <>
-        Sim. A teleconsulta é integrada ao prontuário e à agenda: você gera o
-        link da consulta, atende pelo navegador (sem instalar nada), registra
-        a evolução e emite receita ou atestado durante o atendimento.
-      </>
-    ),
-  },
-  {
-    q: "Vocês oferecem suporte? Como falo com o time?",
-    aText:
-      "Sim, o suporte humano está incluído em todos os planos. Atendemos por WhatsApp e e-mail, com tempo de resposta rápido em horário comercial. Veja todos os canais na página de contato ou consulte a Central de Ajuda antes. O plano Clínica conta com suporte prioritário.",
-    a: (
-      <>
-        Sim, o suporte humano está incluído em todos os planos. Atendemos por
-        WhatsApp e e-mail, com tempo de resposta rápido em horário comercial.
-        Veja todos os canais na página de{" "}
-        {inlineLink("/contato", "contato")} ou consulte a{" "}
-        {inlineLink("/ajuda", "Central de Ajuda")} antes. O plano Clínica
-        conta com suporte prioritário.
-      </>
-    ),
-  },
-  {
-    q: "Funciona para qualquer especialidade?",
-    aText:
-      "Sim. O YesClin atende medicina, odontologia, psicologia, estética, fisioterapia, nutrição, fonoaudiologia, terapia ocupacional e clínicas multidisciplinares, com modelos clínicos próprios para cada área.",
-    a: (
-      <>
-        Sim. O YesClin atende medicina, odontologia, psicologia, estética,
-        fisioterapia, nutrição, fonoaudiologia, terapia ocupacional e clínicas
-        multidisciplinares, com modelos clínicos próprios para cada área.
+        Sim. Suporte humano por WhatsApp e e-mail está incluído em todos os
+        planos, com tempo de resposta rápido em horário comercial. Veja os
+        canais em {inlineLink("/contato", "contato")} ou use a{" "}
+        {inlineLink("/ajuda", "Central de Ajuda")}. O plano Clínica conta
+        com suporte prioritário e onboarding guiado.
       </>
     ),
   },
@@ -166,7 +231,7 @@ const FAQ = () => {
             Tire suas dúvidas antes de começar
           </h2>
           <p className="text-lg text-muted-foreground">
-            Respostas rápidas sobre teste grátis, cobrança, segurança e suporte.
+            Tudo o que clínicas perguntam antes de migrar — especialidades, agenda online, WhatsApp, financeiro, segurança e suporte.
           </p>
         </motion.div>
 
