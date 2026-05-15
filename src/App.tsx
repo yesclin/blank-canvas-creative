@@ -264,27 +264,83 @@ function ProviderShell() {
   );
 }
 
+/**
+ * Lê de forma SÍNCRONA (sem await) o user.id atualmente persistido pelo
+ * Supabase no localStorage. Isso evita o flicker boot→anonymous que
+ * desmontava /login e apagava os campos do formulário.
+ */
+function readPersistedUserIdSync(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const projectRef = (import.meta.env.VITE_SUPABASE_PROJECT_ID as string) || "";
+    const candidates = [
+      projectRef ? `sb-${projectRef}-auth-token` : "",
+      "supabase.auth.token",
+    ].filter(Boolean);
+    for (const key of candidates) {
+      const raw = window.localStorage.getItem(key);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw);
+      const uid =
+        parsed?.user?.id ??
+        parsed?.currentSession?.user?.id ??
+        parsed?.session?.user?.id ??
+        null;
+      if (uid && typeof uid === "string") return uid;
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
 function AuthScopedProviders() {
-  const [scopeKey, setScopeKey] = useState("auth:boot");
+  // Inicializa de forma síncrona com a identidade real persistida — nunca
+  // começamos com "auth:boot" e migramos para "auth:anonymous" depois,
+  // pois isso causaria remount do BrowserRouter/Login e perda de estado.
+  const initialUid = readPersistedUserIdSync();
+  const [scopeKey, setScopeKey] = useState<string>(
+    initialUid ? `auth:${initialUid}` : "auth:anonymous",
+  );
+  const currentUidRef = useRef<string | null>(initialUid);
 
   useEffect(() => {
     let mounted = true;
-    const setFromSession = (session: any) => {
+
+    const applyUid = (nextUid: string | null) => {
       if (!mounted) return;
-      setScopeKey(session?.user?.id ? `auth:${session.user.id}` : "auth:anonymous");
+      const prev = currentUidRef.current;
+      // Só remontamos quando a IDENTIDADE realmente muda entre dois
+      // usuários distintos, ou quando saímos de uma sessão autenticada
+      // para uma anônima de fato (logout confirmado). Boot→anonymous,
+      // SIGNED_IN repetido do MESMO usuário e refresh de token NÃO
+      // remontam — caso contrário o /login pisca e perde o que foi
+      // digitado.
+      if (prev === nextUid) return;
+      currentUidRef.current = nextUid;
+      setScopeKey(nextUid ? `auth:${nextUid}` : "auth:anonymous");
     };
 
-    supabase.auth.getSession().then(({ data }: any) => setFromSession(data?.session));
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED" || event === "INITIAL_SESSION") {
-        setFromSession(session);
+      const uid = session?.user?.id ?? null;
+      if (event === "SIGNED_IN" || event === "USER_UPDATED") {
+        if (uid) applyUid(uid);
+        return;
       }
+      if (event === "SIGNED_OUT") {
+        applyUid(null);
+        return;
+      }
+      if (event === "INITIAL_SESSION") {
+        // Só atualiza se diferente do que inferimos sincronicamente.
+        applyUid(uid);
+      }
+      // TOKEN_REFRESHED: ignorar — mesma identidade, sem remount.
     });
 
     const onIdentityChanged = (event: Event) => {
-      const detail = (event as CustomEvent).detail;
-      setScopeKey(detail?.next ? `auth:${detail.next}` : `auth:changed:${Date.now()}`);
+      const detail = (event as CustomEvent).detail as { next?: string | null };
+      applyUid(detail?.next ?? null);
     };
     window.addEventListener("yesclin:identity-changed", onIdentityChanged);
 
