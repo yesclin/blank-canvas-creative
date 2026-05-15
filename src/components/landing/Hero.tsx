@@ -76,33 +76,6 @@ const Hero = () => {
               </Button>
             </div>
 
-            {/* Social Proof */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.6 }}
-              className="mt-10 pt-8 border-t border-border/50"
-            >
-              <p className="text-sm text-muted-foreground mb-3">
-                Confiado por profissionais de saúde
-              </p>
-              <div className="flex items-center justify-center lg:justify-start gap-6">
-                <div className="text-center">
-                  <p className="font-display font-bold text-2xl text-foreground">500+</p>
-                  <p className="text-xs text-muted-foreground">Clínicas</p>
-                </div>
-                <div className="w-px h-10 bg-border" />
-                <div className="text-center">
-                  <p className="font-display font-bold text-2xl text-foreground">10k+</p>
-                  <p className="text-xs text-muted-foreground">Pacientes</p>
-                </div>
-                <div className="w-px h-10 bg-border" />
-                <div className="text-center">
-                  <p className="font-display font-bold text-2xl text-foreground">98%</p>
-                  <p className="text-xs text-muted-foreground">Satisfação</p>
-                </div>
-              </div>
-            </motion.div>
           </motion.div>
 
           {/* Visual */}
