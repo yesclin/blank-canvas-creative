@@ -378,6 +378,8 @@ function AppRouter() {
                     <Route path="/ajuda" element={moduleRoute(<Ajuda />, "Ajuda")} />
                     <Route path="/privacidade" element={moduleRoute(<Privacidade />, "Privacidade")} />
                     <Route path="/contato" element={moduleRoute(<Contato />, "Contato")} />
+                    <Route path="/blog" element={moduleRoute(<BlogIndex />, "Blog")} />
+                    <Route path="/blog/:slug" element={moduleRoute(<BlogPost />, "Artigo")} />
 
                     {/* Teleconsulta - Páginas Públicas */}
                     <Route path="/teleconsulta/:token/precheck" element={moduleRoute(<PrecheckPage />, "Pré-check teleconsulta")} />
