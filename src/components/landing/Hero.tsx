@@ -41,8 +41,7 @@ const Hero = () => {
             </motion.div>
 
             <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold text-foreground leading-tight mb-6">
-              Pare de perder tempo com agenda, financeiro e papelada.{" "}
-              <span className="text-gradient-brand">Centralize tudo</span> da sua clínica.
+              Sua clínica inteira em <span className="text-gradient-brand">um só lugar</span>.
             </h1>
 
             <p className="text-lg lg:text-xl text-muted-foreground mb-8 max-w-xl mx-auto lg:mx-0">
