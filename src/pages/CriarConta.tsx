@@ -130,13 +130,15 @@ const CriarConta = () => {
     const phoneDigits = whatsapp.replace(/\D/g, "");
     const redirectUrl = `${window.location.origin}/app`;
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: normalizedEmail,
       password,
       options: {
         emailRedirectTo: redirectUrl,
         data: {
-          full_name: name,
+          full_name: name.trim(),
           whatsapp: phoneDigits,
           phone: phoneDigits,
           signup_origin: "web",
@@ -146,30 +148,9 @@ const CriarConta = () => {
 
     if (error) {
       setIsLoading(false);
-      let message = error.message;
-      const lower = error.message.toLowerCase();
-
-      if (lower.includes("already registered") || lower.includes("user already")) {
-        message = "Este email já está cadastrado. Tente fazer login.";
-      } else if (
-        lower.includes("weak") ||
-        lower.includes("known to be weak") ||
-        lower.includes("compromised") ||
-        lower.includes("pwn")
-      ) {
-        message =
-          "Essa senha é considerada fraca ou muito comum. Use uma senha mais forte (mínimo 8 caracteres).";
-      } else if (lower.includes("minimum") && lower.includes("8")) {
-        message = "A senha deve conter no mínimo 8 caracteres.";
-      } else if (lower.includes("invalid") && lower.includes("email")) {
-        message = "Por favor, insira um email válido.";
-      } else if (lower.includes("network") || lower.includes("failed to fetch")) {
-        message = "Falha de conexão. Verifique sua internet e tente novamente.";
-      }
-
       toast({
         title: "Erro ao criar conta",
-        description: message,
+        description: normalizeAuthError(error.message),
         variant: "destructive",
       });
       return;
@@ -177,6 +158,7 @@ const CriarConta = () => {
 
     // Caminho feliz: signUp já devolveu sessão.
     if (data?.session && data?.user) {
+      await syncAuthenticatedSignup(data.session);
       setIsLoading(false);
       toast({
         title: "Conta criada com sucesso!",
@@ -186,36 +168,27 @@ const CriarConta = () => {
       return;
     }
 
-    // Sem sessão: tenta autenticar automaticamente para evitar a tela de
-    // "verifique seu e-mail". Se a confirmação de e-mail estiver habilitada
-    // no Supabase, o login falhará com "Email not confirmed" e mostramos
-    // mensagem técnica orientando a ajustar a configuração.
     const { data: signInData, error: signInError } =
-      await supabase.auth.signInWithPassword({ email, password });
+      await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
 
     setIsLoading(false);
 
     if (signInError) {
-      const lower = signInError.message.toLowerCase();
-      if (lower.includes("not confirmed") || lower.includes("email not confirmed")) {
-        toast({
-          title: "Confirmação de e-mail está ativa no Supabase",
-          description:
-            "Sua conta foi criada, mas o projeto exige confirmação de e-mail. Desative em Authentication > Providers > Email > Confirm email no Supabase para entrar direto.",
-          variant: "destructive",
+      if (import.meta.env.DEV) {
+        console.warn("[AUTH_SIGNUP] Login automático após cadastro falhou", {
+          message: signInError.message,
         });
-        return;
       }
       toast({
         title: "Conta criada, mas não foi possível entrar automaticamente",
-        description: "Tente fazer login com seu e-mail e senha.",
+        description: "Verifique as configurações de autenticação.",
         variant: "destructive",
       });
-      navigate("/login", { replace: true });
       return;
     }
 
     if (signInData?.session) {
+      await syncAuthenticatedSignup(signInData.session);
       toast({
         title: "Conta criada com sucesso!",
         description: "Vamos configurar sua clínica.",
@@ -224,8 +197,11 @@ const CriarConta = () => {
       return;
     }
 
-    // Fallback final — não deveria acontecer.
-    navigate("/login", { replace: true });
+    toast({
+      title: "Conta criada, mas não foi possível entrar automaticamente",
+      description: "Verifique as configurações de autenticação.",
+      variant: "destructive",
+    });
   };
 
 
