@@ -102,7 +102,6 @@ const professionalMainMenu: MenuItem[] = [
   { title: "Pacientes", url: "/app/pacientes", icon: Users, tourId: "patients" },
   { title: "Atendimento", url: "/app/atendimento", icon: Activity, tourId: "atendimento" },
   { title: "Meu Financeiro", url: "/app/meu-financeiro", icon: Wallet },
-  { title: "Suporte", url: "/app/suporte", icon: Headset },
 ];
 
 // Recepcionista - No clinical content, no configurations
