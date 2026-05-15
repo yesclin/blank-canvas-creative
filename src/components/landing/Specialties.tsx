@@ -63,7 +63,7 @@ const Specialties = () => {
             Feito para a <span className="text-gradient-brand">sua especialidade</span>
           </h2>
           <p className="text-lg text-muted-foreground">
-            10 especialidades nativas com modelos de prontuário, anamnese e fluxos clínicos
+            9 especialidades nativas com modelos de prontuário, anamnese e fluxos clínicos
             específicos — e novos módulos chegando a cada mês.
           </p>
         </motion.div>
