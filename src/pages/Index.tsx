@@ -1,11 +1,14 @@
 import Header from "@/components/landing/Header";
-import Hero from "@/components/landing/Hero";
+import HeroLead from "@/components/landing/HeroLead";
+import Stats from "@/components/landing/Stats";
 import Screenshots from "@/components/landing/Screenshots";
 import Features from "@/components/landing/Features";
 import WhyChoose from "@/components/landing/WhyChoose";
 import Specialties from "@/components/landing/Specialties";
 import Testimonials from "@/components/landing/Testimonials";
+import Security from "@/components/landing/Security";
 import Pricing from "@/components/landing/Pricing";
+import { BlogTeaser } from "@/components/landing/BlogTeaser";
 import FAQ from "@/components/landing/FAQ";
 import FAQCta from "@/components/landing/FAQCta";
 import CTA from "@/components/landing/CTA";
