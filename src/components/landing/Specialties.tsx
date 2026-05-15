@@ -8,6 +8,9 @@ import {
   Apple,
   Baby,
   Dumbbell,
+  HeartPulse,
+  Sun,
+  Rocket,
 } from "lucide-react";
 
 type Specialty = {
@@ -27,7 +30,9 @@ const tones: Record<Specialty["tone"], { bg: string; text: string; ring: string 
 };
 
 const specialties: Specialty[] = [
-  { icon: Stethoscope, name: "Medicina",        description: "Clínica geral e especialidades",        tone: "primary" },
+  { icon: HeartPulse,  name: "Clínico Geral",   description: "Consultas, evolução e prescrição",      tone: "primary" },
+  { icon: Stethoscope, name: "Medicina",        description: "Demais especialidades médicas",         tone: "primary" },
+  { icon: Sun,         name: "Dermatologia",    description: "Lesões, mapeamento e fotos clínicas",   tone: "warning" },
   { icon: Smile,       name: "Odontologia",     description: "Todas as áreas da odontologia",         tone: "info" },
   { icon: Brain,       name: "Psicologia",      description: "6 modelos de anamnese inclusos",        tone: "accent" },
   { icon: Sparkles,    name: "Estética",        description: "Mapa facial, antes/depois e PDF",       tone: "destructive" },
@@ -58,8 +63,8 @@ const Specialties = () => {
             Feito para a <span className="text-gradient-brand">sua especialidade</span>
           </h2>
           <p className="text-lg text-muted-foreground">
-            8 especialidades nativas com modelos de prontuário, anamnese e fluxos clínicos
-            específicos. Receita, evolução e PDFs prontos para usar.
+            10 especialidades nativas com modelos de prontuário, anamnese e fluxos clínicos
+            específicos — e novos módulos chegando a cada mês.
           </p>
         </motion.div>
 
@@ -91,6 +96,28 @@ const Specialties = () => {
               </motion.div>
             );
           })}
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.35, delay: 0.1 }}
+            className="group rounded-2xl p-6 border-2 border-dashed border-primary/40 bg-gradient-to-br from-primary/5 to-accent/5 hover:from-primary/10 hover:to-accent/10 transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground flex items-center justify-center shadow-md">
+                <Rocket size={26} />
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-display font-bold text-lg text-foreground leading-tight">
+                  Em breve
+                </h3>
+                <p className="text-sm text-muted-foreground leading-snug mt-0.5">
+                  Novas especialidades e funcionalidades chegando todo mês.
+                </p>
+              </div>
+            </div>
+          </motion.div>
         </div>
 
         <p className="text-center text-sm text-muted-foreground mt-10">
