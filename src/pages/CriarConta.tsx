@@ -202,7 +202,9 @@ const CriarConta = () => {
     }
 
     if (signInData?.session) {
-      await syncAuthenticatedSignup(signInData.session);
+      rememberAuthenticatedUser(signInData.session.user.id);
+      emitIdentityChanged(null, signInData.session.user.id, "signup");
+      void waitForSignupProvisioning(signInData.session.user.id);
       toast({
         title: "Conta criada com sucesso!",
         description: "Vamos configurar sua clínica.",
