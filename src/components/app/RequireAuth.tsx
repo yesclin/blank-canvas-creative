@@ -5,6 +5,7 @@ import { AppLoadingFallback } from "./AppLoadingFallback";
 import { withTimeout } from "@/lib/asyncTimeout";
 import { clearAuthenticatedTab, ensureSessionMatchesTab } from "@/lib/authSessionIsolation";
 import { wasLogoutRequestedByUser, clearLogoutIntent } from "@/lib/authIntent";
+import { tryRecoverSession } from "@/lib/authSessionRecovery";
 
 type RequireAuthProps = {
   children: ReactNode;
@@ -49,27 +50,22 @@ export function RequireAuth({ children }: RequireAuthProps) {
     let mismatchHandled = false;
 
     const rejectMismatchedSession = (source: string, userId: string, expectedUserId: string) => {
+      // Mismatch de identidade NÃO desloga automaticamente. Apenas registra
+      // e aceita a nova identidade real — o app irá re-renderizar com ela.
+      // Logout só deve ocorrer por ação explícita do usuário.
       if (mismatchHandled) return;
       mismatchHandled = true;
-      console.error("[AUTH_SECURITY] Sessão de outro usuário bloqueada", {
+      console.warn("[AUTH_SECURITY] Identidade divergente em RequireAuth — preservando sessão atual", {
         source,
         expectedUserId,
         receivedUserId: userId,
       });
-      clearAuthenticatedTab();
-      isAuthedRef.current = false;
-      setIsAuthed(false);
+      try {
+        window.sessionStorage.setItem("yc.auth.expectedUserId", userId);
+      } catch { /* ignore */ }
+      isAuthedRef.current = Boolean(userId);
+      setIsAuthed(Boolean(userId));
       setIsLoading(false);
-      setTimeout(() => {
-        // Logout intencional (segurança): marcar para evitar reverter.
-        try {
-          // dynamic import to avoid circular concerns
-          import("@/lib/authIntent").then(({ markUserLogout }) =>
-            markUserLogout("session-mismatch"),
-          );
-        } catch { /* ignore */ }
-        void supabase.auth.signOut();
-      }, 0);
     };
 
     const acceptSession = (session: unknown, source: string) => {
@@ -100,39 +96,32 @@ export function RequireAuth({ children }: RequireAuthProps) {
         setIsLoading(false);
         return;
       }
-      // Sem intenção: não confiar cegamente. Tentar reconfirmar.
-      try {
-        // Pequeno delay permite que o supabase termine o ciclo interno antes
-        // de reler a sessão (evita ler estado intermediário).
-        await new Promise((r) => setTimeout(r, 250));
-        const { data } = await withTimeout<{ data: { session: any | null } }>(
-          supabase.auth.getSession(),
-          5000,
-          "getSession reconfirmação",
-        );
-        if (!mounted) return;
-        if (data?.session) {
-          if (import.meta.env.DEV) {
-            console.warn("[AUTH] SIGNED_OUT espúrio ignorado — sessão ainda válida", { event });
-          }
-          acceptSession(data.session, `${event}-reconfirm`);
-          return;
-        }
-        // Sessão realmente perdida.
+      // Sem intenção: jamais derrubar imediatamente. Tenta recuperar com
+      // múltiplas tentativas + refresh antes de declarar logout.
+      const result = await tryRecoverSession();
+      if (!mounted) return;
+      if (result.recovered === true) {
         if (import.meta.env.DEV) {
-          console.log("[AUTH] SIGNED_OUT confirmado após reconfirmação", { event });
+          console.warn("[AUTH] SIGNED_OUT espúrio ignorado — sessão recuperada", { event });
         }
-        clearAuthenticatedTab();
-        isAuthedRef.current = false;
-        setIsAuthed(false);
-        setIsLoading(false);
-      } catch (err) {
-        // Falha de rede ao reconfirmar: NÃO derrubar usuário.
-        // Mantemos isAuthed atual e deixamos o próximo evento decidir.
-        if (import.meta.env.DEV) {
-          console.warn("[AUTH] Falha ao reconfirmar SIGNED_OUT — mantendo estado atual", err);
-        }
+        acceptSession(result.session, `${event}-recovered`);
+        return;
       }
+      if (result.definitive === false) {
+        // Falha de rede: NÃO derrubar usuário. Mantém estado atual.
+        if (import.meta.env.DEV) {
+          console.warn("[AUTH] SIGNED_OUT inconclusivo (rede) — preservando sessão", { event });
+        }
+        return;
+      }
+      // Sessão definitivamente perdida.
+      if (import.meta.env.DEV) {
+        console.log("[AUTH] SIGNED_OUT confirmado após recuperação", { event });
+      }
+      clearAuthenticatedTab();
+      isAuthedRef.current = false;
+      setIsAuthed(false);
+      setIsLoading(false);
     };
 
     // 1) Listener PRIMEIRO. O Supabase dispara INITIAL_SESSION assim que
