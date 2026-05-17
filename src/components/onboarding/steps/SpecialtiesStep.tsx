@@ -374,9 +374,9 @@ export function SpecialtiesStep({
                 >
                   <Icon className="h-5 w-5 text-white" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <span className={`font-medium text-sm block ${isSelected ? "text-primary" : ""}`}>{specialty.name}</span>
-                  <p className="text-xs text-muted-foreground mt-0.5">{specialty.description}</p>
+                <div className="flex-1 min-w-0 pr-6">
+                  <span className={`font-medium text-sm block break-words leading-snug ${isSelected ? "text-primary" : ""}`}>{specialty.name}</span>
+                  <p className="text-xs text-muted-foreground mt-1 break-words leading-snug">{specialty.description}</p>
                 </div>
                 {isSelected && (
                   <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
