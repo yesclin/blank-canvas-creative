@@ -15020,6 +15020,10 @@ export type Database = {
           reason: string
         }[]
       }
+      cancel_sale_transaction: {
+        Args: { p_reason?: string; p_sale_id: string; p_user_id: string }
+        Returns: Json
+      }
       check_slot_available: {
         Args: {
           _clinic_id: string
@@ -15054,6 +15058,10 @@ export type Database = {
       clinic_specialty_summary: { Args: { _clinic_id: string }; Returns: Json }
       count_active_super_admins: { Args: never; Returns: number }
       count_platform_admins: { Args: never; Returns: number }
+      create_sale_transaction: {
+        Args: { p_clinic_id: string; p_payload: Json; p_user_id: string }
+        Returns: Json
+      }
       current_professional_id_for_clinic: {
         Args: { p_clinic_id: string }
         Returns: string
