@@ -38,7 +38,7 @@ export async function loginAs(page: Page, role: Role) {
 }
 
 export async function logout(page: Page) {
-  await page.getByText(/E2E |Dra\. E2E|Recepção/i).last().click();
+  await page.locator('[data-tour="user-profile"]').getByRole("button").first().click();
   await page.getByText(/Sair do Sistema/i).click();
   await page.getByRole("button", { name: /^Sair$/i }).click();
   await page.waitForURL((url) => url.pathname.includes("/login") || url.pathname.includes("/auth"), { timeout: 20_000 });
