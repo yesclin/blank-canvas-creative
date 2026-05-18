@@ -321,6 +321,10 @@ function AuthScopedProviders() {
     };
   }, []);
 
+  if (scopeKey === "auth:boot") {
+    return <PageSkeleton />;
+  }
+
   return <ProviderShell key={scopeKey} />;
 }
 
