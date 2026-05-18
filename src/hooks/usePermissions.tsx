@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentViewRole } from "@/contexts/UserViewModeContext";
 import { withTimeout } from "@/lib/asyncTimeout";
 import { logAuthDiagnostic } from "@/lib/authDiagnostics";
+import { clearIdentityScopedState, clearUnsafeAuthCache } from "@/lib/authSessionIsolation";
 
 // Types
 export type AppModule = 
@@ -65,6 +66,14 @@ const PermissionsContext = createContext<PermissionsContextType | null>(null);
 // Provider Component
 export function PermissionsProvider({ children }: { children: ReactNode }) {
   const { viewedRole, isImpersonating } = useCurrentViewRole();
+  const emptyState: PermissionsState = {
+    permissions: [],
+    role: null,
+    isLoading: false,
+    isAdmin: false,
+    isOwner: false,
+    professionalId: null,
+  };
   const [state, setState] = useState<PermissionsState>({
     permissions: [],
     role: null,
@@ -121,6 +130,15 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       return { kind: "no-role" as const, userId: user.id };
     }
 
+    if (roleData.clinic_id && roleData.clinic_id !== profileData.clinic_id) {
+      console.error("[AUTH_SECURITY] role.clinic_id divergente do profile.clinic_id — descartado", {
+        authUid: user.id,
+        profileClinicId: profileData.clinic_id,
+        roleClinicId: roleData.clinic_id,
+      });
+      return { kind: "no-role" as const, userId: user.id };
+    }
+
     // Defesa final: a row TEM que ser do auth.uid() atual.
     if (roleData.user_id && roleData.user_id !== user.id) {
       console.error("[AUTH_SECURITY] user_roles.user_id divergente — descartado", {
@@ -158,17 +176,8 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
 
     let permissions: ModulePermission[];
     if (error) {
-      console.warn("[PERMISSIONS] RPC failed, falling back to templates", error);
-      const { data: templates } = await withTimeout<any>(supabase
-        .from("permission_templates")
-        .select("module, actions, restrictions")
-        .eq("role", role));
-      if (!stillCurrent(user.id)) return { kind: "stale" as const };
-      permissions = (templates || []).map((t: any) => ({
-        module: t.module as AppModule,
-        actions: (t.actions || []) as AppAction[],
-        restrictions: (t.restrictions || {}) as Record<string, boolean>,
-      }));
+      console.error("[PERMISSIONS] RPC failed — bloqueando permissões para evitar fallback inseguro", error);
+      throw error;
     } else {
       permissions = (permsData || []).map((p: any) => ({
         module: p.module as AppModule,
@@ -190,11 +199,13 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         if (reqId !== requestRef.current) return; // resposta obsoleta
         if (result.kind === "stale") return;
         if (result.kind === "no-user") {
-          setState({ permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null });
+          clearUnsafeAuthCache();
+          setState(emptyState);
           return;
         }
         if (result.kind === "no-role") {
-          setState({ permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null });
+          clearUnsafeAuthCache();
+          setState(emptyState);
           return;
         }
         // Última checagem antes de aplicar: o usuário não pode ter mudado.
@@ -220,7 +231,8 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     }
     if (reqId !== requestRef.current) return;
     console.error("[APP_ERROR] permissions fetch failed — estado limpo para evitar dados antigos", lastError);
-    setState({ permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null });
+    clearUnsafeAuthCache();
+    setState(emptyState);
   }, [fetchPermissionsOnce]);
 
   useEffect(() => {
