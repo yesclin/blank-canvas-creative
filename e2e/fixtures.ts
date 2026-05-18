@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export type Role = "owner" | "admin" | "professional" | "receptionist";
 
