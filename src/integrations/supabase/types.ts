@@ -15155,14 +15155,23 @@ export type Database = {
           registration_number: string
         }[]
       }
-      get_user_all_permissions: {
-        Args: { _user_id: string }
-        Returns: {
-          actions: Database["public"]["Enums"]["app_action"][]
-          module: Database["public"]["Enums"]["app_module"]
-          restrictions: Json
-        }[]
-      }
+      get_user_all_permissions:
+        | {
+            Args: { _user_id: string }
+            Returns: {
+              actions: Database["public"]["Enums"]["app_action"][]
+              module: Database["public"]["Enums"]["app_module"]
+              restrictions: Json
+            }[]
+          }
+        | {
+            Args: { _clinic_id?: string; _user_id: string }
+            Returns: {
+              actions: Database["public"]["Enums"]["app_action"][]
+              module: Database["public"]["Enums"]["app_module"]
+              restrictions: Json
+            }[]
+          }
       get_user_clinic_id_for_rls: { Args: never; Returns: string }
       has_role: {
         Args: {
