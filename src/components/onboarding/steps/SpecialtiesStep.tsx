@@ -129,6 +129,7 @@ export function SpecialtiesStep({
   const [newSpecialtyName, setNewSpecialtyName] = useState("");
   const [newSpecialtyDescription, setNewSpecialtyDescription] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [isAdvancing, setIsAdvancing] = useState(false);
   const { toast } = useToast();
 
   // Filter curated specialties by search term
