@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinicData } from "./useClinicData";
 import { toast } from "sonner";
+import { logAuthDiagnostic } from "@/lib/authDiagnostics";
 
 export type UserType = 'proprietario_admin' | 'profissional_saude' | 'recepcionista';
 export type AppRole = 'owner' | 'admin' | 'profissional' | 'recepcionista';
@@ -116,11 +117,20 @@ export const RECEPTIONIST_BLOCKED_MODULES = ['prontuario', 'configuracoes', 'rel
  */
 export function useClinicUsers() {
   const { clinic } = useClinicData();
+  const { data: authUserId } = useQuery({
+    queryKey: ["auth-user-id"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      return user?.id ?? null;
+    },
+    staleTime: 0,
+  });
   
   return useQuery({
-    queryKey: ["clinic-users", clinic?.id],
+    queryKey: ["clinic-users", authUserId, clinic?.id],
     queryFn: async () => {
-      if (!clinic?.id) return [];
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !authUserId || user.id !== authUserId || !clinic?.id) return [];
       
       // Fetch profiles with their roles
       const { data: profiles, error: profilesError } = await supabase
@@ -179,7 +189,7 @@ export function useClinicUsers() {
         } as SystemUser;
       });
     },
-    enabled: !!clinic?.id,
+    enabled: !!authUserId && !!clinic?.id,
   });
 }
 
@@ -202,7 +212,7 @@ export function useUpdateUserStatus() {
       if (error) throw error;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["clinic-users", clinic?.id] });
+      queryClient.invalidateQueries({ queryKey: ["clinic-users"] });
       toast.success(
         variables.isActive 
           ? "Usuário ativado com sucesso" 
@@ -296,6 +306,12 @@ export function useCurrentUser() {
 
       if (!profile) return null;
       if (profile.user_id !== user.id) return null;
+      logAuthDiagnostic("current-user-profile-loaded", {
+        authUid: user.id,
+        profileUserId: profile.user_id,
+        activeClinicId: profile.clinic_id,
+        displaySource: "profiles.full_name",
+      });
 
       const { data: roleData } = await supabase
         .from("user_roles")
@@ -305,8 +321,17 @@ export function useCurrentUser() {
         .maybeSingle();
 
       if (roleData && roleData.user_id !== user.id) return null;
+      logAuthDiagnostic("current-user-role-loaded", {
+        authUid: user.id,
+        profileUserId: profile.user_id,
+        roleUserId: roleData?.user_id ?? null,
+        activeClinicId: profile.clinic_id,
+        displaySource: "user_roles.role",
+      });
 
-      const appRole = (roleData?.role as AppRole) || 'recepcionista';
+      if (!roleData?.role) return null;
+
+      const appRole = roleData.role as AppRole;
 
       return {
         id: profile.id,
