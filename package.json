@@ -12,7 +12,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:ci": "vitest run --coverage --reporter=default"
+    "test:ci": "vitest run --coverage --reporter=default",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "e2e:bootstrap": "bun run e2e/bootstrap.ts",
+    "e2e:install": "playwright install chromium"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
