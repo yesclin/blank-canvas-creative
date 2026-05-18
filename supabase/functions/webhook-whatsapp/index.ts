@@ -52,16 +52,22 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verify webhook token if provided via apikey header
+    // REQUIRE webhook signature/token validation (Evolution API sends `apikey`).
+    // Without this, anyone who knows the clinic_id can spoof message status updates.
     const providedApiKey = req.headers.get("apikey") || url.searchParams.get("apikey");
-    if (providedApiKey && integration.access_token) {
-      if (providedApiKey !== integration.access_token) {
-        console.warn("Webhook rejected: invalid apikey for clinic", clinicId);
-        return new Response(
-          JSON.stringify({ error: "Unauthorized" }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+    if (!integration.access_token) {
+      console.warn("Webhook rejected: integration has no access_token configured", clinicId);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (!providedApiKey || providedApiKey !== integration.access_token) {
+      console.warn("Webhook rejected: missing or invalid apikey for clinic", clinicId);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const payload = await req.json();
