@@ -355,12 +355,14 @@ export function useCurrentUser() {
   useEffect(() => {
     let cancelled = false;
     let activeUserId: string | null = null;
+    let requestId = 0;
 
     async function loadUser() {
+      const reqId = ++requestId;
       try {
         setError(null);
         const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (cancelled) return;
+        if (cancelled || reqId !== requestId) return;
 
         if (!authUser) {
           activeUserId = null;
@@ -379,7 +381,7 @@ export function useCurrentUser() {
           .eq("user_id", requestedFor)
           .maybeSingle();
 
-        if (cancelled || activeUserId !== requestedFor) return;
+        if (cancelled || reqId !== requestId || activeUserId !== requestedFor) return;
         if (profileErr) throw profileErr;
         logAuthDiagnostic("sidebar-profile-loaded", {
           authUid: requestedFor,
@@ -404,7 +406,7 @@ export function useCurrentUser() {
             .eq("user_id", requestedFor)
             .eq("clinic_id", profile.clinic_id)
             .maybeSingle();
-          if (cancelled || activeUserId !== requestedFor) return;
+          if (cancelled || reqId !== requestId || activeUserId !== requestedFor) return;
           if (roleErr) throw roleErr;
           logAuthDiagnostic("sidebar-role-loaded", {
             authUid: requestedFor,
@@ -435,6 +437,7 @@ export function useCurrentUser() {
           return;
         }
 
+        if (cancelled || reqId !== requestId || activeUserId !== requestedFor) return;
         setUser({
           id: requestedFor,
           name: profile.full_name,
@@ -451,7 +454,7 @@ export function useCurrentUser() {
         });
         setIsLoading(false);
       } catch (err) {
-        if (cancelled) return;
+        if (cancelled || reqId !== requestId) return;
         console.error("[useCurrentUser] erro ao carregar", err);
         // Em erro, NUNCA manter usuário antigo nem inventar um novo.
         setUser(null);
@@ -467,6 +470,7 @@ export function useCurrentUser() {
       const newId = session?.user?.id ?? null;
 
       if (event === "SIGNED_OUT" || (!newId && event !== "INITIAL_SESSION")) {
+        requestId++;
         activeUserId = null;
         setUser(null);
         setError(null);
@@ -476,6 +480,8 @@ export function useCurrentUser() {
 
       // Trocou de usuário na mesma aba ou novo SIGNED_IN: limpa antes de recarregar
       if (newId && newId !== activeUserId) {
+        requestId++;
+        activeUserId = newId;
         setUser(null);
         setError(null);
         setIsLoading(true);
@@ -489,6 +495,7 @@ export function useCurrentUser() {
 
     // Reset imediato quando o AuthSessionGuard sinaliza troca de identidade
     const onIdentityChanged = () => {
+      requestId++;
       activeUserId = null;
       setUser(null);
       setError(null);
