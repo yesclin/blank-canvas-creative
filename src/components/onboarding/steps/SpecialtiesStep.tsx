@@ -494,8 +494,8 @@ export function SpecialtiesStep({
           <Button variant="ghost" onClick={handleSkip}>
             Pular etapa
           </Button>
-          <Button onClick={handleContinue} disabled={!hasSelection}>
-            Continuar
+          <Button onClick={handleContinue} disabled={!hasSelection || isAdvancing}>
+            {isAdvancing ? "Salvando..." : "Continuar"}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
