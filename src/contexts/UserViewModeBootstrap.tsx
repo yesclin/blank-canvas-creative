@@ -13,11 +13,13 @@ export function UserViewModeBootstrap({ children }: { children: ReactNode }) {
   // We never block rendering on this provider — children render immediately.
   // The role hydrates asynchronously and is non-essential for the initial boot.
   const cancelledRef = useRef(false);
+  const requestRef = useRef(0);
 
   useEffect(() => {
     cancelledRef.current = false;
 
     const load = async () => {
+      const reqId = ++requestRef.current;
       try {
         const { data: { user } } = await withTimeout<any>(
           supabase.auth.getUser(),
@@ -25,7 +27,7 @@ export function UserViewModeBootstrap({ children }: { children: ReactNode }) {
           "Tempo esgotado ao carregar sessão (UserViewMode).",
         );
         if (!user) {
-          if (!cancelledRef.current) setRealRole(null);
+          if (!cancelledRef.current && reqId === requestRef.current) setRealRole(null);
           return;
         }
         const { data } = await withTimeout<any>(supabase
@@ -33,19 +35,21 @@ export function UserViewModeBootstrap({ children }: { children: ReactNode }) {
           .select("role")
           .eq("user_id", user.id)
           .maybeSingle(), 8000, "Tempo esgotado ao carregar papel do usuário.");
-        if (cancelledRef.current) return;
+        if (cancelledRef.current || reqId !== requestRef.current) return;
         const role = (data?.role as ViewableRole | undefined) ?? null;
         setRealRole(role);
       } catch (error) {
         // NUNCA derrubar o boot por causa do view-mode.
         console.error("[PROVIDER_ERROR] UserViewModeBootstrap", error);
-        if (!cancelledRef.current) setRealRole(null);
+        if (!cancelledRef.current && reqId === requestRef.current) setRealRole(null);
       }
     };
 
     load();
     // Defer query execution out of the auth callback to avoid Supabase deadlocks.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      requestRef.current++;
+      setRealRole(null);
       setTimeout(() => {
         if (!cancelledRef.current) load();
       }, 0);
