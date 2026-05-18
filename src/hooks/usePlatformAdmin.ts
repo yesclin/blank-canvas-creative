@@ -4,7 +4,7 @@
  * Verifica se o usuário logado é um Platform Admin (tabela platform_admins).
  * Esta verificação é independente do RBAC de clínica (owner/admin/etc).
  */
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { withTimeout } from '@/lib/asyncTimeout';
 
@@ -18,6 +18,7 @@ interface PlatformAdminState {
 }
 
 export function usePlatformAdmin(): PlatformAdminState {
+  const requestRef = useRef(0);
   const [state, setState] = useState<Omit<PlatformAdminState, 'refresh'>>({
     isPlatformAdmin: false,
     loading: true,
@@ -27,11 +28,13 @@ export function usePlatformAdmin(): PlatformAdminState {
   });
 
   const load = useCallback(async () => {
+    const reqId = ++requestRef.current;
     setState((s) => ({ ...s, loading: true }));
     try {
       const { data: auth } = await withTimeout<any>(supabase.auth.getUser());
       const user = auth?.user;
       if (!user) {
+        if (reqId !== requestRef.current) return;
         setState({ isPlatformAdmin: false, loading: false, userId: null, email: null, totalAdmins: null });
         return;
       }
@@ -41,6 +44,7 @@ export function usePlatformAdmin(): PlatformAdminState {
         withTimeout<any>(supabase.rpc('count_platform_admins')),
       ]);
 
+      if (reqId !== requestRef.current) return;
       setState({
         isPlatformAdmin: isAdmin === true,
         loading: false,
@@ -49,14 +53,22 @@ export function usePlatformAdmin(): PlatformAdminState {
         totalAdmins: typeof total === 'number' ? total : 0,
       });
     } catch (e) {
+      if (reqId !== requestRef.current) return;
       console.error('[usePlatformAdmin] error:', e);
-      setState((s) => ({ ...s, loading: false }));
+      setState({ isPlatformAdmin: false, loading: false, userId: null, email: null, totalAdmins: null });
     }
   }, []);
 
   useEffect(() => {
     load();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        requestRef.current++;
+        setState({ isPlatformAdmin: false, loading: false, userId: null, email: null, totalAdmins: null });
+        return;
+      }
+      requestRef.current++;
+      setState({ isPlatformAdmin: false, loading: true, userId: null, email: null, totalAdmins: null });
       setTimeout(() => load(), 0);
     });
     return () => subscription.unsubscribe();

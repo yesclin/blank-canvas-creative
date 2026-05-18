@@ -175,7 +175,7 @@ async function main() {
     users: Object.fromEntries(
       USERS.map((u) => [
         u.role,
-        { id: userIds[u.role], email: process.env[u.envKey] ?? u.defaultEmail },
+        { id: userIds[u.role], email: process.env[u.envKey] ?? u.defaultEmail, fullName: u.fullName },
       ]),
     ),
     password,

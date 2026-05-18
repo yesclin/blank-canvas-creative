@@ -10,7 +10,7 @@ export interface E2EFixtures {
   patientId: string;
   professionalId: string;
   password: string;
-  users: Record<Role, { id: string; email: string }>;
+  users: Record<Role, { id: string; email: string; fullName?: string }>;
 }
 
 let cached: E2EFixtures | null = null;
@@ -35,4 +35,11 @@ export async function loginAs(page: Page, role: Role) {
   await page.getByRole("button", { name: /entrar|login/i }).click();
   // espera redirect pós-login
   await page.waitForURL((url) => !url.pathname.startsWith("/auth"), { timeout: 20_000 });
+}
+
+export async function logout(page: Page) {
+  await page.locator('[data-tour="user-profile"]').getByRole("button").first().click();
+  await page.getByText(/Sair do Sistema/i).click();
+  await page.getByRole("button", { name: /^Sair$/i }).click();
+  await page.waitForURL((url) => url.pathname.includes("/login") || url.pathname.includes("/auth"), { timeout: 20_000 });
 }
