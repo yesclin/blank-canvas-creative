@@ -32,12 +32,12 @@ export async function loginAs(page: Page, role: Role) {
   const fx = getFixtures();
   const { email } = fx.users[role];
 
-  await page.goto("/auth");
+  await page.goto("/login");
   await page.getByLabel(/e-?mail/i).fill(email);
   await page.getByLabel(/senha/i).fill(fx.password);
   await page.getByRole("button", { name: /entrar|login/i }).click();
   // espera redirect pós-login
-  await page.waitForURL((url) => !url.pathname.startsWith("/auth"), { timeout: 20_000 });
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 20_000 });
 }
 
 export async function logout(page: Page) {
