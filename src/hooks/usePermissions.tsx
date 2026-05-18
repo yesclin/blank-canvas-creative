@@ -254,12 +254,14 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       if (newUserId && newUserId !== activeUserIdRef.current) {
         requestRef.current++;
         activeUserIdRef.current = newUserId;
+        clearUnsafeAuthCache();
         setState({ permissions: [], role: null, isLoading: true, isAdmin: false, isOwner: false, professionalId: null });
       }
       if (event === "SIGNED_OUT") {
         requestRef.current++;
         activeUserIdRef.current = null;
-        setState({ permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null });
+        clearUnsafeAuthCache();
+        setState(EMPTY_PERMISSIONS_STATE);
         return;
       }
       if (event === "SIGNED_IN" || event === "USER_UPDATED" || event === "TOKEN_REFRESHED") {
@@ -270,6 +272,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     const onIdentityChanged = () => {
       requestRef.current++;
       activeUserIdRef.current = null;
+      clearUnsafeAuthCache();
       setState({ permissions: [], role: null, isLoading: true, isAdmin: false, isOwner: false, professionalId: null });
       setTimeout(() => fetchPermissions(), 0);
     };
