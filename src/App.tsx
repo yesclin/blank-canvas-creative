@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState, type ReactNode, type Compo
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { PermissionsProvider } from "@/hooks/usePermissions";
 import { UserViewModeBootstrap } from "@/contexts/UserViewModeBootstrap";
@@ -266,45 +266,10 @@ function ProviderShell() {
   );
 }
 
-/**
- * Lê de forma SÍNCRONA (sem await) o user.id atualmente persistido pelo
- * Supabase no localStorage. Isso evita o flicker boot→anonymous que
- * desmontava /login e apagava os campos do formulário.
- */
-function readPersistedUserIdSync(): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const projectRef = (import.meta.env.VITE_SUPABASE_PROJECT_ID as string) || "";
-    const candidates = [
-      projectRef ? `sb-${projectRef}-auth-token` : "",
-      "supabase.auth.token",
-    ].filter(Boolean);
-    for (const key of candidates) {
-      const raw = window.localStorage.getItem(key);
-      if (!raw) continue;
-      const parsed = JSON.parse(raw);
-      const uid =
-        parsed?.user?.id ??
-        parsed?.currentSession?.user?.id ??
-        parsed?.session?.user?.id ??
-        null;
-      if (uid && typeof uid === "string") return uid;
-    }
-  } catch {
-    /* ignore */
-  }
-  return null;
-}
-
 function AuthScopedProviders() {
-  // Inicializa de forma síncrona com a identidade real persistida — nunca
-  // começamos com "auth:boot" e migramos para "auth:anonymous" depois,
-  // pois isso causaria remount do BrowserRouter/Login e perda de estado.
-  const initialUid = readPersistedUserIdSync();
-  const [scopeKey, setScopeKey] = useState<string>(
-    initialUid ? `auth:${initialUid}` : "auth:anonymous",
-  );
-  const currentUidRef = useRef<string | null>(initialUid);
+  const queryClient = useQueryClient();
+  const [scopeKey, setScopeKey] = useState<string>("auth:boot");
+  const currentUidRef = useRef<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -312,32 +277,35 @@ function AuthScopedProviders() {
     const applyUid = (nextUid: string | null) => {
       if (!mounted) return;
       const prev = currentUidRef.current;
-      // Só remontamos quando a IDENTIDADE realmente muda entre dois
-      // usuários distintos, ou quando saímos de uma sessão autenticada
-      // para uma anônima de fato (logout confirmado). Boot→anonymous,
-      // SIGNED_IN repetido do MESMO usuário e refresh de token NÃO
-      // remontam — caso contrário o /login pisca e perde o que foi
-      // digitado.
       if (prev === nextUid) return;
       currentUidRef.current = nextUid;
+      try { queryClient.clear(); } catch { /* ignore */ }
       setScopeKey(nextUid ? `auth:${nextUid}` : "auth:anonymous");
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      const uid = session?.user?.id ?? null;
-      if (event === "SIGNED_IN" || event === "USER_UPDATED") {
-        if (uid) applyUid(uid);
-        return;
+    const resolveVerifiedUser = async (source: string) => {
+      try {
+        const { data, error } = await supabase.auth.getUser();
+        if (error) throw error;
+        applyUid(data.user?.id ?? null);
+      } catch (error) {
+        console.error("[AUTH_SCOPE] falha ao validar auth.uid()", { source, error });
+        applyUid(null);
       }
+    };
+
+    void resolveVerifiedUser("mount");
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT") {
         applyUid(null);
         return;
       }
-      if (event === "INITIAL_SESSION") {
-        // Só atualiza se diferente do que inferimos sincronicamente.
-        applyUid(uid);
+      if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "USER_UPDATED" || event === "TOKEN_REFRESHED") {
+        setTimeout(() => {
+          if (mounted) void resolveVerifiedUser(event);
+        }, 0);
       }
-      // TOKEN_REFRESHED: ignorar — mesma identidade, sem remount.
     });
 
     const onIdentityChanged = (event: Event) => {
