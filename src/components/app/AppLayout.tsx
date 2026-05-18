@@ -165,6 +165,7 @@ export function AppLayout() {
         <GuidedTour />
       </ErrorBoundary>
     )}
+    <AuthDebugOverlay />
     </GlobalActiveAppointmentProvider>
     </GlobalSpecialtyProvider>
   );
