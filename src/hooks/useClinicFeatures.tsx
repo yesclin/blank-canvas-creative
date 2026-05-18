@@ -16,6 +16,7 @@ import { createContext, ReactNode, useContext, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { withTimeout } from '@/lib/asyncTimeout';
+import { logAuthDiagnostic } from '@/lib/authDiagnostics';
 
 /**
  * Flags de plano (controlam módulos administrativos/comerciais).
@@ -72,10 +73,12 @@ const DEFAULT_LIMITS: Record<LimitKey, number | null> = {
   max_whatsapp_instances: null,
 };
 
-async function resolveActiveClinicId(): Promise<string | null> {
+type ClinicScope = { userId: string | null; clinicId: string | null };
+
+async function resolveActiveClinicScope(): Promise<ClinicScope> {
   const { data: auth } = await withTimeout<any>(supabase.auth.getUser());
   const userId = auth?.user?.id;
-  if (!userId) return null;
+  if (!userId) return { userId: null, clinicId: null };
 
   // Modo suporte (impersonação): se admin de plataforma e há clinic_id
   // em localStorage, usar essa clínica.
@@ -84,12 +87,16 @@ async function resolveActiveClinicId(): Promise<string | null> {
       typeof window !== 'undefined'
         ? window.localStorage.getItem('yesclin_support_clinic_id')
         : null;
+    const supportAdminUserId =
+      typeof window !== 'undefined'
+        ? window.localStorage.getItem('yesclin_support_admin_user_id')
+        : null;
 
-    if (supportClinicId) {
+    if (supportClinicId && supportAdminUserId === userId) {
       const { data: isAdmin } = await withTimeout<any>(supabase.rpc('is_platform_admin', {
         _user_id: userId,
       }));
-      if (isAdmin === true) return supportClinicId;
+      if (isAdmin === true) return { userId, clinicId: supportClinicId };
     }
   } catch {
     // ignora — segue para clinic_id natural
@@ -97,14 +104,16 @@ async function resolveActiveClinicId(): Promise<string | null> {
 
   const { data: profile } = await withTimeout<any>(supabase
     .from('profiles')
-    .select('clinic_id')
+    .select('clinic_id, user_id')
     .eq('user_id', userId)
     .maybeSingle());
 
-  return profile?.clinic_id ?? null;
+  const clinicId = profile?.user_id === userId ? profile?.clinic_id ?? null : null;
+  logAuthDiagnostic('clinic-features-scope', { authUid: userId, profileUserId: profile?.user_id ?? null, activeClinicId: clinicId });
+  return { userId, clinicId };
 }
 
-async function fetchClinicFeatures(): Promise<ClinicFeaturesData> {
+async function fetchClinicFeatures(scope: ClinicScope | null | undefined): Promise<ClinicFeaturesData> {
   const empty: ClinicFeaturesData = {
     features: { ...DEFAULT_FEATURES },
     limits: { ...DEFAULT_LIMITS },
@@ -114,7 +123,7 @@ async function fetchClinicFeatures(): Promise<ClinicFeaturesData> {
     clinic_id: null,
   };
 
-  const clinicId = await resolveActiveClinicId();
+  const clinicId = scope?.clinicId ?? null;
   if (!clinicId) return empty;
 
   const { data, error } = await withTimeout<any>(supabase
@@ -160,9 +169,19 @@ const ClinicFeaturesContext = createContext<ClinicFeaturesContextValue | null>(n
 export function ClinicFeaturesProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
 
+  const { data: scope } = useQuery({
+    queryKey: ['clinic-scope'],
+    queryFn: resolveActiveClinicScope,
+    staleTime: 0,
+    gcTime: 60 * 1000,
+    retry: 1,
+    throwOnError: false,
+  });
+
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['clinic-effective-features'],
-    queryFn: fetchClinicFeatures,
+    queryKey: ['clinic-effective-features', scope?.userId ?? null, scope?.clinicId ?? null],
+    queryFn: () => fetchClinicFeatures(scope),
+    enabled: !!scope?.userId,
     staleTime: 5 * 60 * 1000, // 5 min
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -172,8 +191,10 @@ export function ClinicFeaturesProvider({ children }: { children: ReactNode }) {
 
   // Reagir a mudanças de auth e de modo suporte
   useEffect(() => {
-    const invalidate = () =>
+    const invalidate = () => {
+      queryClient.invalidateQueries({ queryKey: ['clinic-scope'] });
       queryClient.invalidateQueries({ queryKey: ['clinic-effective-features'] });
+    };
 
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (

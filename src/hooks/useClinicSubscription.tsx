@@ -11,6 +11,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { differenceInCalendarDays, parseISO, startOfDay } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { withTimeout } from '@/lib/asyncTimeout';
+import { logAuthDiagnostic } from '@/lib/authDiagnostics';
 
 export type SubscriptionStatus =
   | 'trial'
@@ -31,23 +32,29 @@ export interface ClinicSubscriptionData {
   canMutate: boolean;
 }
 
-async function resolveClinicId(): Promise<string | null> {
+type ClinicScope = { userId: string | null; clinicId: string | null };
+
+async function resolveClinicScope(): Promise<ClinicScope> {
   const { data: auth } = await withTimeout<any>(supabase.auth.getUser(), 10000, 'Tempo esgotado ao carregar sessão.');
   const userId = auth?.user?.id;
-  if (!userId) return null;
+  if (!userId) return { userId: null, clinicId: null };
 
   try {
     const supportClinicId =
       typeof window !== 'undefined'
         ? window.localStorage.getItem('yesclin_support_clinic_id')
         : null;
-    if (supportClinicId) {
+    const supportAdminUserId =
+      typeof window !== 'undefined'
+        ? window.localStorage.getItem('yesclin_support_admin_user_id')
+        : null;
+    if (supportClinicId && supportAdminUserId === userId) {
       const { data: isAdmin } = await withTimeout<any>(
         supabase.rpc('is_platform_admin', { _user_id: userId }),
         10000,
         'Tempo esgotado ao validar suporte.'
       );
-      if (isAdmin === true) return supportClinicId;
+      if (isAdmin === true) return { userId, clinicId: supportClinicId };
     }
   } catch {
     /* noop */
@@ -55,13 +62,15 @@ async function resolveClinicId(): Promise<string | null> {
 
   const { data: profile } = await withTimeout<any>(supabase
     .from('profiles')
-    .select('clinic_id')
+    .select('clinic_id, user_id')
     .eq('user_id', userId)
     .maybeSingle(), 10000, 'Tempo esgotado ao carregar perfil.');
-  return profile?.clinic_id ?? null;
+  const clinicId = profile?.user_id === userId ? profile?.clinic_id ?? null : null;
+  logAuthDiagnostic('clinic-subscription-scope', { authUid: userId, profileUserId: profile?.user_id ?? null, activeClinicId: clinicId });
+  return { userId, clinicId };
 }
 
-async function fetchSubscription(): Promise<ClinicSubscriptionData> {
+async function fetchSubscription(scope: ClinicScope | null | undefined): Promise<ClinicSubscriptionData> {
   const empty: ClinicSubscriptionData = {
     clinic_id: null,
     status: null,
@@ -81,7 +90,7 @@ async function fetchSubscription(): Promise<ClinicSubscriptionData> {
     /* noop */
   }
 
-  const clinicId = await resolveClinicId();
+  const clinicId = scope?.clinicId ?? null;
   if (!clinicId) return empty;
 
   const { data, error } = await withTimeout<any>(supabase
@@ -125,9 +134,19 @@ async function fetchSubscription(): Promise<ClinicSubscriptionData> {
 export function useClinicSubscription() {
   const queryClient = useQueryClient();
 
+  const { data: scope } = useQuery({
+    queryKey: ['clinic-scope'],
+    queryFn: resolveClinicScope,
+    staleTime: 0,
+    gcTime: 60 * 1000,
+    retry: 1,
+    throwOnError: false,
+  });
+
   const query = useQuery({
-    queryKey: ['clinic-subscription'],
-    queryFn: fetchSubscription,
+    queryKey: ['clinic-subscription', scope?.userId ?? null, scope?.clinicId ?? null],
+    queryFn: () => fetchSubscription(scope),
+    enabled: !!scope?.userId,
     staleTime: 60 * 1000,
     refetchOnWindowFocus: true,
     retry: 1,
@@ -135,7 +154,10 @@ export function useClinicSubscription() {
   });
 
   useEffect(() => {
-    const invalidate = () => queryClient.invalidateQueries({ queryKey: ['clinic-subscription'] });
+    const invalidate = () => {
+      queryClient.invalidateQueries({ queryKey: ['clinic-scope'] });
+      queryClient.invalidateQueries({ queryKey: ['clinic-subscription'] });
+    };
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (['SIGNED_IN', 'SIGNED_OUT', 'TOKEN_REFRESHED', 'INITIAL_SESSION'].includes(event)) {
         setTimeout(() => invalidate(), 0);

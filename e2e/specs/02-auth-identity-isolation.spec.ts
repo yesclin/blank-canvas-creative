@@ -40,4 +40,41 @@ test.describe("Auth — isolamento de identidade entre sessões", () => {
     await page.reload();
     await expectSidebarIdentity(page, "owner");
   });
+
+  test("duas abas não misturam identidade visual", async ({ browser }) => {
+    const ownerContext = await browser.newContext();
+    const adminContext = await browser.newContext();
+    const ownerPage = await ownerContext.newPage();
+    const adminPage = await adminContext.newPage();
+
+    await loginAs(ownerPage, "owner");
+    await loginAs(adminPage, "admin");
+
+    await expectSidebarIdentity(ownerPage, "owner");
+    await expectSidebarIdentity(adminPage, "admin");
+    await expect(ownerPage.locator('[data-tour="user-profile"]')).not.toContainText(
+      getFixtures().users.admin.fullName ?? getFixtures().users.admin.email,
+    );
+    await expect(adminPage.locator('[data-tour="user-profile"]')).not.toContainText(
+      getFixtures().users.owner.fullName ?? getFixtures().users.owner.email,
+    );
+
+    await ownerContext.close();
+    await adminContext.close();
+  });
+
+  test("falha na query de permissões não reaproveita usuário anterior", async ({ page }) => {
+    await loginAs(page, "owner");
+    await expectSidebarIdentity(page, "owner");
+    await logout(page);
+
+    await page.route("**/rest/v1/rpc/get_user_all_permissions**", (route) =>
+      route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ message: "forced e2e failure" }) }),
+    );
+
+    await loginAs(page, "admin");
+    await expect(page.locator('[data-tour="user-profile"]')).not.toContainText(
+      getFixtures().users.owner.fullName ?? getFixtures().users.owner.email,
+    );
+  });
 });

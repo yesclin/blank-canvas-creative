@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { withTimeout } from "@/lib/asyncTimeout";
+import { logAuthDiagnostic } from "@/lib/authDiagnostics";
 
 export interface ClinicUser {
   id: string;
@@ -380,6 +381,12 @@ export function useCurrentUser() {
 
         if (cancelled || activeUserId !== requestedFor) return;
         if (profileErr) throw profileErr;
+        logAuthDiagnostic("sidebar-profile-loaded", {
+          authUid: requestedFor,
+          profileUserId: profile?.user_id ?? null,
+          activeClinicId: profile?.clinic_id ?? null,
+          displaySource: "profiles.full_name",
+        });
 
         // Sem perfil ou perfil de outro user: estado neutro, jamais inventar.
         if (!profile || profile.user_id !== requestedFor) {
@@ -399,6 +406,13 @@ export function useCurrentUser() {
             .maybeSingle();
           if (cancelled || activeUserId !== requestedFor) return;
           if (roleErr) throw roleErr;
+          logAuthDiagnostic("sidebar-role-loaded", {
+            authUid: requestedFor,
+            profileUserId: profile.user_id,
+            roleUserId: roleData?.user_id ?? null,
+            activeClinicId: profile.clinic_id,
+            displaySource: "user_roles.role",
+          });
           if (roleData && roleData.user_id === requestedFor && roleData.role) {
             roleValue = roleData.role as typeof roleValue;
           }
@@ -427,6 +441,13 @@ export function useCurrentUser() {
           email: authUser.email || "",
           role: roleValue,
           avatarUrl: profile.avatar_url || null,
+        });
+        logAuthDiagnostic("sidebar-display-applied", {
+          authUid: requestedFor,
+          profileUserId: profile.user_id,
+          roleUserId: requestedFor,
+          activeClinicId: profile.clinic_id,
+          displaySource: "useCurrentUser -> UserProfileFooter",
         });
         setIsLoading(false);
       } catch (err) {
