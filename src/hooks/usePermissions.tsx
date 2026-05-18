@@ -172,9 +172,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
           return;
         }
         if (result.kind === "no-role") {
-          setState((prev) => prev.role
-            ? { ...prev, isLoading: false }
-            : { permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null });
+          setState({ permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null });
           return;
         }
         // Última checagem antes de aplicar: o usuário não pode ter mudado.
@@ -199,14 +197,8 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       }
     }
     if (reqId !== requestRef.current) return;
-    setState((prev) => {
-      if (prev.role) {
-        console.warn("[PERMISSIONS] retries esgotados — mantendo estado anterior", lastError);
-        return { ...prev, isLoading: false };
-      }
-      console.error("[APP_ERROR] permissions fetch failed", lastError);
-      return { permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null };
-    });
+    console.error("[APP_ERROR] permissions fetch failed — estado limpo para evitar dados antigos", lastError);
+    setState({ permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null });
   }, [fetchPermissionsOnce]);
 
   useEffect(() => {
@@ -216,7 +208,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       setState((current) => {
         if (!current.isLoading) return current;
         console.error("[BOOT_TIMEOUT] PermissionsProvider demorou demais");
-        return { ...current, isLoading: false };
+        return { permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null };
       });
     }, 10000);
 
