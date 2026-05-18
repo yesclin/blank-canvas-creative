@@ -113,7 +113,7 @@ async function resolveActiveClinicScope(): Promise<ClinicScope> {
   return { userId, clinicId };
 }
 
-async function fetchClinicFeatures(scope: ClinicScope): Promise<ClinicFeaturesData> {
+async function fetchClinicFeatures(scope: ClinicScope | null | undefined): Promise<ClinicFeaturesData> {
   const empty: ClinicFeaturesData = {
     features: { ...DEFAULT_FEATURES },
     limits: { ...DEFAULT_LIMITS },
@@ -123,7 +123,7 @@ async function fetchClinicFeatures(scope: ClinicScope): Promise<ClinicFeaturesDa
     clinic_id: null,
   };
 
-  const clinicId = scope.clinicId;
+  const clinicId = scope?.clinicId ?? null;
   if (!clinicId) return empty;
 
   const { data, error } = await withTimeout<any>(supabase
@@ -169,9 +169,19 @@ const ClinicFeaturesContext = createContext<ClinicFeaturesContextValue | null>(n
 export function ClinicFeaturesProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
 
+  const { data: scope } = useQuery({
+    queryKey: ['clinic-scope'],
+    queryFn: resolveActiveClinicScope,
+    staleTime: 0,
+    gcTime: 60 * 1000,
+    retry: 1,
+    throwOnError: false,
+  });
+
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['clinic-effective-features'],
-    queryFn: fetchClinicFeatures,
+    queryKey: ['clinic-effective-features', scope?.userId ?? null, scope?.clinicId ?? null],
+    queryFn: () => fetchClinicFeatures(scope),
+    enabled: !!scope?.userId,
     staleTime: 5 * 60 * 1000, // 5 min
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -181,8 +191,10 @@ export function ClinicFeaturesProvider({ children }: { children: ReactNode }) {
 
   // Reagir a mudanças de auth e de modo suporte
   useEffect(() => {
-    const invalidate = () =>
+    const invalidate = () => {
+      queryClient.invalidateQueries({ queryKey: ['clinic-scope'] });
       queryClient.invalidateQueries({ queryKey: ['clinic-effective-features'] });
+    };
 
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (
