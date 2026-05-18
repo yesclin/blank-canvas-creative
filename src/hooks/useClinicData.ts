@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/asyncTimeout";
+import { clearUnsafeAuthCache } from "@/lib/authSessionIsolation";
 
 export interface ClinicData {
   id: string;
@@ -116,6 +117,8 @@ export function useClinicData() {
               expected: userId,
               received: profile.user_id,
             });
+            clearUnsafeAuthCache();
+            setClinic(null);
             setIsLoading(false);
             return;
           }
@@ -191,7 +194,9 @@ export function useClinicData() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       const newUserId = session?.user?.id ?? null;
       if (event === 'SIGNED_OUT' || (newUserId && newUserId !== activeUserIdRef.current)) {
+        requestRef.current++;
         activeUserIdRef.current = newUserId;
+        clearUnsafeAuthCache();
         setClinic(null);
         setIsLoading(true);
       }
@@ -211,6 +216,7 @@ export function useClinicData() {
       // para que nenhuma resposta em voo possa preencher o usuário antigo.
       requestRef.current++;
       activeUserIdRef.current = null;
+      clearUnsafeAuthCache();
       setClinic(null);
       setIsLoading(true);
       setTimeout(() => {
@@ -219,12 +225,13 @@ export function useClinicData() {
     };
 
     const onSupportToggle = () => fetchClinicData();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'yesclin_support_clinic_id') fetchClinicData();
+    };
     if (typeof window !== 'undefined') {
       window.addEventListener('yesclin:identity-changed', onIdentityChanged);
       window.addEventListener('yesclin:support-session-changed', onSupportToggle);
-      window.addEventListener('storage', (e) => {
-        if (e.key === 'yesclin_support_clinic_id') fetchClinicData();
-      });
+      window.addEventListener('storage', onStorage);
     }
 
     return () => {
@@ -233,6 +240,7 @@ export function useClinicData() {
       if (typeof window !== 'undefined') {
         window.removeEventListener('yesclin:identity-changed', onIdentityChanged);
         window.removeEventListener('yesclin:support-session-changed', onSupportToggle);
+        window.removeEventListener('storage', onStorage);
       }
     };
   }, []);
