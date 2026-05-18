@@ -332,6 +332,14 @@ export function useClinicUsers() {
 }
 
 // Lightweight hook just for current user (sidebar)
+//
+// CONTRATO DE SEGURANÇA:
+//  - Nome, role e clínica só são exibidos se vierem confirmados do banco
+//    para o auth.uid() atual.
+//  - Em qualquer falha/timeout/perfil-faltando, retorna user=null + error.
+//    NUNCA fabrica "Usuário/Administrador" a partir do prefixo do e-mail —
+//    isso causava o bug "Arthur Lopes vira yi4405/Administrador" quando
+//    a query de profile/role estourava timeout durante refresh de sessão.
 export function useCurrentUser() {
   const [user, setUser] = useState<{
     id: string;
@@ -341,6 +349,7 @@ export function useCurrentUser() {
     avatarUrl: string | null;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -348,6 +357,7 @@ export function useCurrentUser() {
 
     async function loadUser() {
       try {
+        setError(null);
         const { data: { user: authUser } } = await supabase.auth.getUser();
         if (cancelled) return;
 
@@ -361,55 +371,71 @@ export function useCurrentUser() {
         const requestedFor = authUser.id;
         activeUserId = requestedFor;
 
-        // Get profile estritamente pelo user_id da sessão
-        const { data: profile } = await supabase
+        // Perfil estritamente pelo user_id da sessão
+        const { data: profile, error: profileErr } = await supabase
           .from("profiles")
-          .select("full_name, avatar_url, clinic_id")
+          .select("full_name, avatar_url, clinic_id, user_id")
           .eq("user_id", requestedFor)
           .maybeSingle();
 
         if (cancelled || activeUserId !== requestedFor) return;
+        if (profileErr) throw profileErr;
 
-        let roleValue: "owner" | "admin" | "profissional" | "recepcionista" = "admin";
-        if (profile?.clinic_id) {
-          const { data: roleData } = await supabase
+        // Sem perfil ou perfil de outro user: estado neutro, jamais inventar.
+        if (!profile || profile.user_id !== requestedFor) {
+          setUser(null);
+          setIsLoading(false);
+          setError("profile-missing");
+          return;
+        }
+
+        let roleValue: "owner" | "admin" | "profissional" | "recepcionista" | null = null;
+        if (profile.clinic_id) {
+          const { data: roleData, error: roleErr } = await supabase
             .from("user_roles")
-            .select("role")
+            .select("role, user_id")
             .eq("user_id", requestedFor)
             .eq("clinic_id", profile.clinic_id)
             .maybeSingle();
           if (cancelled || activeUserId !== requestedFor) return;
-          if (roleData?.role) {
+          if (roleErr) throw roleErr;
+          if (roleData && roleData.user_id === requestedFor && roleData.role) {
             roleValue = roleData.role as typeof roleValue;
           }
         }
 
+        // Sem role confirmada NÃO podemos exibir o usuário com role default —
+        // isso era o que mostrava "Administrador" para qualquer um.
+        if (!roleValue) {
+          setUser(null);
+          setIsLoading(false);
+          setError("role-missing");
+          return;
+        }
+
+        if (!profile.full_name) {
+          // Sem nome confirmado também não exibimos placeholder do e-mail.
+          setUser(null);
+          setIsLoading(false);
+          setError("name-missing");
+          return;
+        }
+
         setUser({
           id: requestedFor,
-          name: profile?.full_name || authUser.email?.split("@")[0] || "Usuário",
+          name: profile.full_name,
           email: authUser.email || "",
           role: roleValue,
-          avatarUrl: profile?.avatar_url || null,
+          avatarUrl: profile.avatar_url || null,
         });
         setIsLoading(false);
       } catch (err) {
         if (cancelled) return;
         console.error("[useCurrentUser] erro ao carregar", err);
-        // Em erro, NUNCA manter user antigo: mostra fallback do auth atual ou nada
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (cancelled) return;
-        if (authUser) {
-          setUser({
-            id: authUser.id,
-            name: authUser.email?.split("@")[0] || "Usuário",
-            email: authUser.email || "",
-            role: "admin",
-            avatarUrl: null,
-          });
-        } else {
-          setUser(null);
-        }
+        // Em erro, NUNCA manter usuário antigo nem inventar um novo.
+        setUser(null);
         setIsLoading(false);
+        setError(err instanceof Error ? err.message : "load-failed");
       }
     }
 
@@ -422,6 +448,7 @@ export function useCurrentUser() {
       if (event === "SIGNED_OUT" || (!newId && event !== "INITIAL_SESSION")) {
         activeUserId = null;
         setUser(null);
+        setError(null);
         setIsLoading(false);
         return;
       }
@@ -429,6 +456,7 @@ export function useCurrentUser() {
       // Trocou de usuário na mesma aba ou novo SIGNED_IN: limpa antes de recarregar
       if (newId && newId !== activeUserId) {
         setUser(null);
+        setError(null);
         setIsLoading(true);
       }
 
@@ -442,6 +470,7 @@ export function useCurrentUser() {
     const onIdentityChanged = () => {
       activeUserId = null;
       setUser(null);
+      setError(null);
       setIsLoading(true);
       setTimeout(() => {
         if (!cancelled) loadUser();
@@ -456,6 +485,6 @@ export function useCurrentUser() {
     };
   }, []);
 
-  return { user, isLoading };
+  return { user, isLoading, error, reload: () => { /* trigger via auth event */ } };
 }
 
