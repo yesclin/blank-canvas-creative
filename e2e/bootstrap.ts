@@ -10,7 +10,10 @@
 import "dotenv/config";
 import { createClient } from "@supabase/supabase-js";
 import { writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const url = process.env.E2E_SUPABASE_URL!;
 const serviceKey = process.env.E2E_SUPABASE_SERVICE_ROLE_KEY!;
