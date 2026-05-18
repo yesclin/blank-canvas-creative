@@ -1,63 +1,101 @@
-## Diagnóstico
+# Plano de Refatoração — `src/pages/app/Prontuario.tsx`
 
-A tela `/super-admin/recursos` já existe (`SuperAdminFeatureOverrides.tsx`) e a infraestrutura backend está pronta:
+Arquivo atual: **2544 linhas**, ~60 hooks invocados, ~30 imports de ícones, mapeamentos enormes, `renderTabContent` com switch gigante (linhas 1169–2200) e toolbar/header/sidebar inline.
 
-- Tabela `clinic_feature_overrides` (clinic_id, feature_key, enabled, reason, expires_at, created_by) com RLS para super admin.
-- View `clinic_effective_features` que **já consolida plano + override e já ignora overrides expirados** (`expires_at IS NULL OR expires_at > now()`).
-- Hook `useClinicFeatures` lê dessa view.
-- Rotas dos módulos (Marketing, Convênios, Estoque, Comercial, Auditoria, Relatórios, Teleconsulta) já estão protegidas por `ProtectedFeatureRoute`, e a sidebar oculta os itens via `feature`.
-- Auditoria via `logPlatformAction` já grava em `platform_audit_logs`.
+Premissas inegociáveis:
+- Zero mudança de comportamento, rotas, queries, regras de negócio, banco.
+- Apenas extração (mover código existente). Sem reescrita lógica.
+- Etapas pequenas, cada uma compilável e testável isoladamente.
 
-O que **não está bom** hoje: textos em "meio inglês" (Override / Salvar override / Sem expiração / Overrides ativos), nenhum badge visual destacando override ativo no card do recurso, e nenhuma indicação de "expira em breve". Não há nada estrutural para refazer.
+---
 
-## Escopo do trabalho
+## Estrutura alvo
 
-**Apenas frontend, em `src/pages/super-admin/SuperAdminFeatureOverrides.tsx`:**
+```text
+src/pages/app/Prontuario.tsx                      (~250 linhas — orquestrador)
+src/pages/app/prontuario/
+  constants/
+    iconMap.ts                  ICON_MAP
+    tabKeyMap.ts                TAB_KEY_MAP
+    defaultNavItems.ts          DEFAULT_NAV_ITEMS
+  hooks/
+    useProntuarioContext.ts     patientId, searchParams, navigate, queryClient, params
+    useProntuarioData.ts        agrega patient, clinic, specialty, config, permissions
+    useProntuarioSessions.ts    activeAppointment, globalActive, finalize, bar state
+    useProntuarioTabsData.ts    todos os hooks "useXxxData" por aba (agrupa ~30 hooks)
+    useProntuarioNavigation.ts  navItems, urlTab, activeTab, handleTabChange, handleNavigateToTab
+    useProntuarioSearch.ts      searchFocus, handleSearchResultClick, clearSearchFocus, contextValue
+    useProntuarioPermissions.ts canViewTab/canEditTab/canExportTab/canSignTab/canPerformAction + flags derivadas
+  components/
+    ProntuarioHeader.tsx        topo: voltar, paciente, badges, ações (print/export/settings)
+    ProntuarioSidebar.tsx       ProntuarioTabNav + grouping
+    ProntuarioActiveSessionBar.tsx
+    ProntuarioDialogs.tsx       consentDialog + signatureDialog
+    ProntuarioTabContent.tsx    switch grande extraído de renderTabContent
+    tabs/                       (opcional fase 2) cada case do switch como sub-componente
+      ResumoTab.tsx, AnamneseTab.tsx, EvolucaoTab.tsx, ...
+```
 
-1. **Tradução completa** dos textos remanescentes:
-   - `Criar / atualizar override` → `Criar / atualizar liberação manual`
-   - `Salvar override` → `Salvar liberação manual`
-   - `Overrides ativos` → `Liberações manuais ativas`
-   - Vazio: `Nenhuma liberação manual ativa. A clínica está seguindo apenas as regras do plano.`
-   - Linha do card: `Plano: liberado/bloqueado · Liberação manual: liberado/bloqueado` (remove "Override")
-   - Tabela: colunas `Recurso`, `Tipo`, `Motivo`, `Expira em`
-   - Botão remover: tooltip `Remover liberação manual` / `Remover bloqueio manual` (depende do `enabled`).
-   - Toasts: `Liberação manual salva.`, `Liberação manual removida. A clínica voltou às regras do plano.`, `Erro ao salvar liberação manual.`, `Erro ao remover liberação manual.`
-   - Status final dos cards: `Ativo` / `Inativo` (já está ok).
-   - Sem expiração → `Sem expiração`.
+---
 
-2. **Validações no salvar**:
-   - Clínica obrigatória (já valida).
-   - Recurso obrigatório (já garantido pelo select).
-   - **Motivo obrigatório** (hoje aceita vazio) — bloquear com toast `Informe o motivo da liberação manual.`
+## Etapas (cada uma é um commit lógico)
 
-3. **Badges/indicação visual** nos cards de recurso:
-   - Verde (`default`) quando `effective = true`, cinza (`outline`) quando `false` (já está).
-   - Acrescentar segundo badge no card quando houver override ativo:
-     - Roxo `Liberação manual ativa` se `ov.enabled = true`
-     - Vermelho/âmbar `Bloqueio manual ativo` se `ov.enabled = false`
-     - Âmbar `Expira em X dias` quando `expires_at` faltam ≤ 7 dias.
-   - Filtra overrides exibidos para considerar apenas os **não expirados** (sem mexer em DB; tabela `Liberações manuais ativas` mostra só os com `expires_at IS NULL OR > now()`; expirados ficam ocultos — opcionalmente um collapsible "Expirados").
+**Etapa 1 — Constantes puras** (risco zero)
+- Mover `ICON_MAP` → `constants/iconMap.ts`
+- Mover `TAB_KEY_MAP` → `constants/tabKeyMap.ts`
+- Mover `DEFAULT_NAV_ITEMS` → `constants/defaultNavItems.ts`
+- Limpar imports de ícones no `Prontuario.tsx` (passam a viver no iconMap).
+- **Verificação:** build.
 
-4. **Refresh automático** após salvar/remover (já chama `loadDetails`, manter).
+**Etapa 2 — Header / ActiveSessionBar / Dialogs (UI sem lógica)**
+- `ProntuarioHeader.tsx`: recebe props (paciente, ações, flags). Move o JSX de cabeçalho.
+- `ProntuarioActiveSessionBar.tsx`: recebe `appointmentId`, `startedAt`, `onFinalize`, `shouldShow`.
+- `ProntuarioDialogs.tsx`: `ConsentDialog` + `SignatureDialog`, props controladas.
+- **Verificação:** build + smoke visual no preview.
 
-5. **Ajustes pequenos** no formulário:
-   - Label do switch já alterna texto — manter.
-   - Adicionar texto auxiliar `Quando expirar, a clínica volta a respeitar o plano automaticamente.` abaixo do campo "Expira em".
-   - `placeholder` do motivo em PT (já está).
+**Etapa 3 — Hook `useProntuarioPermissions`**
+- Extrai `canViewTab`, `canEditTab`, `canExportTab`, `canSignTab`, `canPerformAction`, `getStandardTabKey`, `canEditCurrentTab`, `canExportCurrentTab`, `canSignCurrentTab`.
+- Sem alterar lógica; só relocaliza.
 
-## Fora de escopo (não mexer)
+**Etapa 4 — Hook `useProntuarioNavigation`**
+- Move `navItems` (useMemo), `defaultNavLookup`, `urlTab`, `activeTab`, `loadedTabs`, `shouldLoadTab`, `handleTabChange`, `handleNavigateToTab`.
 
-- Banco: tabelas e view já existem e atendem 100% dos critérios; criar `platform_resources` / `plan_resources` seria duplicação — o catálogo de recursos vive como flags `feature_*` na view e a lista canônica está em `OVERRIDE_FEATURES` no front. Documentar isso na própria página.
-- Hook `useClinicFeatures`, `ProtectedFeatureRoute`, `FeatureGuard`: já funcionam e já são usados nos módulos listados — nada a mudar.
-- Auditoria: `logPlatformAction` já grava as ações `feature_override.enable/disable/remove` em `platform_audit_logs` com `clinic_id`, `metadata` (incluindo `feature_key`, `enabled`, `expires_at`, `reason`) e `actor_user_id` — atende ao critério.
+**Etapa 5 — Hook `useProntuarioSearch`**
+- Move `searchFocus`, `highlightedId`, `highlightTimeoutRef`, `handleSearchResultClick`, `clearSearchFocus`, `searchFocusContextValue`.
 
-## Critérios de aceite atendidos depois do ajuste
+**Etapa 6 — Hook `useProntuarioSessions`**
+- Move `useAutoPatientRedirect`, `useActiveAppointment*`, `globalActiveForCurrent`, `fallbackActiveSessionBar*`, `useFinalizeSession`, `handleFinalizeFromProntuario`.
 
-Todos os 17 itens da lista do usuário continuam atendidos: a infra de gating já bloqueia rotas, sidebar e ações reais; a expiração já é respeitada pela view; RLS continua intacto; nenhum mock; auditoria registrada; e a tela fica 100% em português com indicação visual clara de overrides ativos.
+**Etapa 7 — Hook `useProntuarioTabsData`**
+- Agrupa os ~30 hooks de dados por aba (sessoesPsico, fisioVisaoGeral, consent data, etc.). Retorna objeto único consumido pelo `TabContent`.
+- Cuidado: **manter ordem de hooks idêntica** (regras do React).
 
-## Detalhes técnicos
+**Etapa 8 — `ProntuarioTabContent.tsx`**
+- Move o `renderTabContent()` (switch case por `activeTab`) para componente próprio que recebe via props: `activeTab`, dados, permissões, handlers.
+- Reduz ~1000 linhas do arquivo principal.
 
-- Arquivo único alterado: `src/pages/super-admin/SuperAdminFeatureOverrides.tsx`.
-- Helpers locais: `isExpiringSoon(date)`, `isExpired(date)`.
-- Sem migrações novas, sem mudança de tipos, sem novos pacotes.
+**Etapa 9 — Sidebar**
+- `ProntuarioSidebar.tsx` envolvendo `ProntuarioTabNav` com agrupamento e filtros existentes.
+
+**Etapa 10 — Limpeza final**
+- `Prontuario.tsx` vira orquestrador: `ClinicalAccessGuard` + `ErrorBoundary` + `TooltipProvider` + composição dos componentes.
+- Remover imports não usados.
+
+---
+
+## Garantias
+
+- **Ordem dos hooks preservada** ao agrupar (cada hook agregador chama os internos na mesma sequência do original).
+- **Nenhuma query/mutation alterada.**
+- **Props drilling explícito** entre hooks → componentes (sem novo context global, exceto reuso do `searchFocusContextValue` já existente).
+- Após cada etapa: rodar build, abrir a rota `/app/prontuario/:patientId` e validar abas críticas (resumo, anamnese, evolução).
+
+---
+
+## Fora de escopo
+
+- Não fragmentar cada case do switch em arquivos individuais nesta passada (Etapa "fase 2" opcional, listada para futuro).
+- Não tocar em componentes filhos (`ProntuarioTabNav`, blocos de cada especialidade).
+- Não mexer em hooks de domínio (`useAnamnese`, `useEvolucao`, etc.).
+
+Confirma este plano? Posso começar pela Etapa 1.
