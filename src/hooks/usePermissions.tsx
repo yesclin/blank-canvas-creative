@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef, createContext, useCo
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentViewRole } from "@/contexts/UserViewModeContext";
 import { withTimeout } from "@/lib/asyncTimeout";
+import { logAuthDiagnostic } from "@/lib/authDiagnostics";
 
 // Types
 export type AppModule = 
@@ -93,11 +94,24 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     }
     activeUserIdRef.current = user.id;
 
+    const { data: profileData, error: profileErr } = await withTimeout<any>(supabase
+      .from("profiles")
+      .select("clinic_id, user_id")
+      .eq("user_id", user.id)
+      .maybeSingle());
+
+    if (!stillCurrent(user.id)) return { kind: "stale" as const };
+    if (profileErr) throw profileErr;
+    if (!profileData?.clinic_id || profileData.user_id !== user.id) {
+      return { kind: "no-role" as const, userId: user.id };
+    }
+
     // Get user role
     const { data: roleData, error: roleErr } = await withTimeout<any>(supabase
       .from("user_roles")
       .select("role, clinic_id, user_id")
       .eq("user_id", user.id)
+      .eq("clinic_id", profileData.clinic_id)
       .maybeSingle());
 
     if (!stillCurrent(user.id)) return { kind: "stale" as const };
@@ -116,6 +130,14 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       return { kind: "no-role" as const, userId: user.id };
     }
 
+    logAuthDiagnostic("permissions-role-loaded", {
+      authUid: user.id,
+      profileUserId: profileData.user_id,
+      roleUserId: roleData.user_id,
+      activeClinicId: profileData.clinic_id,
+      displaySource: "user_roles.role + get_user_all_permissions",
+    });
+
     const role = roleData.role;
     const isOwner = role === "owner";
     const isAdmin = ["owner", "admin"].includes(role);
@@ -130,7 +152,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     const professionalId = professionalData?.id || null;
 
     const { data: permsData, error } = await withTimeout<any>(
-      supabase.rpc("get_user_all_permissions", { _user_id: user.id })
+      supabase.rpc("get_user_all_permissions", { _user_id: user.id, _clinic_id: profileData.clinic_id })
     );
     if (!stillCurrent(user.id)) return { kind: "stale" as const };
 
