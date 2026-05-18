@@ -269,7 +269,7 @@ function ProviderShell() {
 function AuthScopedProviders() {
   const queryClient = useQueryClient();
   const [scopeKey, setScopeKey] = useState<string>("auth:boot");
-  const currentUidRef = useRef<string | null>(null);
+  const currentUidRef = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
     let mounted = true;
