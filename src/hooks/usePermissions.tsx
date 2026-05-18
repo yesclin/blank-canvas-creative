@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentViewRole } from "@/contexts/UserViewModeContext";
 import { withTimeout } from "@/lib/asyncTimeout";
 import { logAuthDiagnostic } from "@/lib/authDiagnostics";
-import { clearIdentityScopedState, clearUnsafeAuthCache } from "@/lib/authSessionIsolation";
+import { clearUnsafeAuthCache } from "@/lib/authSessionIsolation";
 
 // Types
 export type AppModule = 
@@ -63,17 +63,18 @@ interface PermissionsContextType extends PermissionsState {
 
 const PermissionsContext = createContext<PermissionsContextType | null>(null);
 
+const EMPTY_PERMISSIONS_STATE: PermissionsState = {
+  permissions: [],
+  role: null,
+  isLoading: false,
+  isAdmin: false,
+  isOwner: false,
+  professionalId: null,
+};
+
 // Provider Component
 export function PermissionsProvider({ children }: { children: ReactNode }) {
   const { viewedRole, isImpersonating } = useCurrentViewRole();
-  const emptyState: PermissionsState = {
-    permissions: [],
-    role: null,
-    isLoading: false,
-    isAdmin: false,
-    isOwner: false,
-    professionalId: null,
-  };
   const [state, setState] = useState<PermissionsState>({
     permissions: [],
     role: null,
@@ -200,12 +201,12 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         if (result.kind === "stale") return;
         if (result.kind === "no-user") {
           clearUnsafeAuthCache();
-          setState(emptyState);
+          setState(EMPTY_PERMISSIONS_STATE);
           return;
         }
         if (result.kind === "no-role") {
           clearUnsafeAuthCache();
-          setState(emptyState);
+          setState(EMPTY_PERMISSIONS_STATE);
           return;
         }
         // Última checagem antes de aplicar: o usuário não pode ter mudado.
@@ -232,7 +233,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     if (reqId !== requestRef.current) return;
     console.error("[APP_ERROR] permissions fetch failed — estado limpo para evitar dados antigos", lastError);
     clearUnsafeAuthCache();
-    setState(emptyState);
+    setState(EMPTY_PERMISSIONS_STATE);
   }, [fetchPermissionsOnce]);
 
   useEffect(() => {
