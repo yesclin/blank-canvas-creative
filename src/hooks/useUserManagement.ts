@@ -255,7 +255,7 @@ export function useUpdateUserRole() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["clinic-users", clinic?.id] });
+      queryClient.invalidateQueries({ queryKey: ["clinic-users"] });
       toast.success("Papel do usuário atualizado com sucesso");
     },
     onError: (error: Error) => {
