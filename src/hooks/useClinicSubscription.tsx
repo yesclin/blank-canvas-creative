@@ -8,6 +8,7 @@
  */
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { differenceInCalendarDays, parseISO, startOfDay } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { withTimeout } from '@/lib/asyncTimeout';
 
