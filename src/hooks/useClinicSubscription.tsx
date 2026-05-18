@@ -8,6 +8,7 @@
  */
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { differenceInCalendarDays, parseISO, startOfDay } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { withTimeout } from '@/lib/asyncTimeout';
 
@@ -92,16 +93,21 @@ async function fetchSubscription(): Promise<ClinicSubscriptionData> {
   if (error || !data) return { ...empty, clinic_id: clinicId };
 
   const status = data.status as SubscriptionStatus;
-  const ref =
+  // Dias restantes em dias-de-calendário locais.
+  // Usamos startOfDay para que o resultado NÃO dependa da hora atual:
+  // só muda quando o relógio cruza a meia-noite local.
+  const refIso =
     status === 'trial' && data.trial_ends_at
-      ? new Date(data.trial_ends_at)
-      : data.current_period_end
-        ? new Date(data.current_period_end)
-        : null;
-  const days =
-    ref && !Number.isNaN(ref.getTime())
-      ? Math.max(0, Math.ceil((ref.getTime() - Date.now()) / 86400000))
-      : null;
+      ? data.trial_ends_at
+      : data.current_period_end ?? null;
+
+  let days: number | null = null;
+  if (refIso) {
+    const refDate = parseISO(refIso);
+    if (!Number.isNaN(refDate.getTime())) {
+      days = Math.max(0, differenceInCalendarDays(startOfDay(refDate), startOfDay(new Date())));
+    }
+  }
 
   return {
     clinic_id: clinicId,
