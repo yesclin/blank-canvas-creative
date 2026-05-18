@@ -27,10 +27,22 @@ const LEGACY_UNSAFE_KEYS = [
   "activeProfile",
   "selectedClinic",
   "selectedClinicId",
+  "activeClinic",
+  "activeClinicId",
+  "currentClinic",
+  "currentClinicId",
+  "clinic",
+  "clinicId",
+  "permissions",
+  "userPermissions",
+  "currentPermissions",
   "currentProfile",
   "yc.currentUser",
   "yc.profile",
   "yc.role",
+  "yc.clinic",
+  "yc.clinicId",
+  "yc.permissions",
 ];
 
 export function clearUnsafeAuthCache() {
