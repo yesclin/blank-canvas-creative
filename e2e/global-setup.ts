@@ -1,6 +1,10 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default async function globalSetup() {
   const envFile = resolve(__dirname, ".env.local");
