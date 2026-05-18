@@ -18,6 +18,7 @@ import { PageSkeleton } from "@/components/app/PageSkeleton";
 import CookieConsent from "@/components/CookieConsent";
 import { supabase } from "@/integrations/supabase/client";
 import { usePageResumeRecovery } from "@/hooks/usePageResumeRecovery";
+import { clearIdentityScopedState, clearUnsafeAuthCache } from "@/lib/authSessionIsolation";
 
 // Páginas Públicas — lazy para não pesar no boot inicial.
 const Index = lazyWithTimeout(() => import("./pages/Index"), "Index");
@@ -279,6 +280,8 @@ function AuthScopedProviders() {
       const prev = currentUidRef.current;
       if (prev === nextUid) return;
       currentUidRef.current = nextUid;
+      clearUnsafeAuthCache();
+      if (prev && prev !== nextUid) clearIdentityScopedState();
       try { queryClient.clear(); } catch { /* ignore */ }
       setScopeKey(nextUid ? `auth:${nextUid}` : "auth:anonymous");
     };
