@@ -8,12 +8,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export type Role = "owner" | "admin" | "professional" | "receptionist";
 
 export interface E2EFixtures {
+  mode?: "bootstrap" | "existing-users";
   clinicId: string;
   clinicSlug: string;
   patientId: string;
   professionalId: string;
   password: string;
-  users: Record<Role, { id: string; email: string; fullName?: string }>;
+  users: Record<Role, { id: string; email: string; fullName?: string; password?: string }>;
 }
 
 let cached: E2EFixtures | null = null;
