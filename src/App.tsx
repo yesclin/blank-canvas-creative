@@ -18,7 +18,7 @@ import { PageSkeleton } from "@/components/app/PageSkeleton";
 import CookieConsent from "@/components/CookieConsent";
 import { supabase } from "@/integrations/supabase/client";
 import { usePageResumeRecovery } from "@/hooks/usePageResumeRecovery";
-import { clearIdentityScopedState, clearUnsafeAuthCache } from "@/lib/authSessionIsolation";
+import { clearAuthenticatedTab, clearIdentityScopedState, clearUnsafeAuthCache } from "@/lib/authSessionIsolation";
 
 // Páginas Públicas — lazy para não pesar no boot inicial.
 const Index = lazyWithTimeout(() => import("./pages/Index"), "Index");
@@ -271,6 +271,7 @@ function AuthScopedProviders() {
   const queryClient = useQueryClient();
   const [scopeKey, setScopeKey] = useState<string>("auth:boot");
   const currentUidRef = useRef<string | null | undefined>(undefined);
+  const requestRef = useRef(0);
 
   useEffect(() => {
     let mounted = true;
@@ -281,17 +282,21 @@ function AuthScopedProviders() {
       if (prev === nextUid) return;
       currentUidRef.current = nextUid;
       clearUnsafeAuthCache();
-      if (prev && prev !== nextUid) clearIdentityScopedState();
+      if (!nextUid) clearAuthenticatedTab();
+      else if (prev && prev !== nextUid) clearIdentityScopedState();
       try { queryClient.clear(); } catch { /* ignore */ }
       setScopeKey(nextUid ? `auth:${nextUid}` : "auth:anonymous");
     };
 
     const resolveVerifiedUser = async (source: string) => {
+      const reqId = ++requestRef.current;
       try {
         const { data, error } = await supabase.auth.getUser();
+        if (!mounted || reqId !== requestRef.current) return;
         if (error) throw error;
         applyUid(data.user?.id ?? null);
       } catch (error) {
+        if (!mounted || reqId !== requestRef.current) return;
         console.error("[AUTH_SCOPE] falha ao validar auth.uid()", { source, error });
         applyUid(null);
       }
@@ -301,6 +306,7 @@ function AuthScopedProviders() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT") {
+        requestRef.current++;
         applyUid(null);
         return;
       }
@@ -312,6 +318,7 @@ function AuthScopedProviders() {
     });
 
     const onIdentityChanged = (event: Event) => {
+      requestRef.current++;
       const detail = (event as CustomEvent).detail as { next?: string | null };
       applyUid(detail?.next ?? null);
     };

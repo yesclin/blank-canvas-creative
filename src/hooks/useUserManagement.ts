@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useClinicData } from "./useClinicData";
 import { toast } from "sonner";
 import { logAuthDiagnostic } from "@/lib/authDiagnostics";
+import { withTimeout } from "@/lib/asyncTimeout";
 
 export type UserType = 'proprietario_admin' | 'profissional_saude' | 'recepcionista';
 export type AppRole = 'owner' | 'admin' | 'profissional' | 'recepcionista';
@@ -120,7 +121,7 @@ export function useClinicUsers() {
   const { data: authUserId } = useQuery({
     queryKey: ["auth-user-id"],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await withTimeout<any>(supabase.auth.getUser());
       return user?.id ?? null;
     },
     staleTime: 0,
@@ -129,8 +130,9 @@ export function useClinicUsers() {
   return useQuery({
     queryKey: ["clinic-users", authUserId, clinic?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await withTimeout<any>(supabase.auth.getUser());
       if (!user || !authUserId || user.id !== authUserId || !clinic?.id) return [];
+      const expectedUserId = user.id;
       
       // Fetch profiles with their roles
       const { data: profiles, error: profilesError } = await supabase
@@ -150,6 +152,8 @@ export function useClinicUsers() {
       
       if (profilesError) throw profilesError;
       if (!profiles) return [];
+      const { data: { user: afterProfilesUser } } = await withTimeout<any>(supabase.auth.getUser());
+      if (afterProfilesUser?.id !== expectedUserId) return [];
       
       // Fetch roles for these users
       const userIds = profiles.map(p => p.user_id);
@@ -160,6 +164,8 @@ export function useClinicUsers() {
         .in("user_id", userIds);
       
       if (rolesError) throw rolesError;
+      const { data: { user: afterRolesUser } } = await withTimeout<any>(supabase.auth.getUser());
+      if (afterRolesUser?.id !== expectedUserId) return [];
       
       // Fetch professional info
       const { data: professionals } = await supabase
@@ -167,6 +173,8 @@ export function useClinicUsers() {
         .select("id, user_id")
         .eq("clinic_id", clinic.id)
         .in("user_id", userIds);
+      const { data: { user: afterProfessionalsUser } } = await withTimeout<any>(supabase.auth.getUser());
+      if (afterProfessionalsUser?.id !== expectedUserId) return [];
       
       // Map to SystemUser format
       return profiles.map(profile => {
@@ -306,6 +314,8 @@ export function useCurrentUser() {
 
       if (!profile) return null;
       if (profile.user_id !== user.id) return null;
+      const { data: { user: afterProfileUser } } = await withTimeout<any>(supabase.auth.getUser());
+      if (afterProfileUser?.id !== user.id) return null;
       logAuthDiagnostic("current-user-profile-loaded", {
         authUid: user.id,
         profileUserId: profile.user_id,
@@ -321,6 +331,8 @@ export function useCurrentUser() {
         .maybeSingle();
 
       if (roleData && roleData.user_id !== user.id) return null;
+      const { data: { user: afterRoleUser } } = await withTimeout<any>(supabase.auth.getUser());
+      if (afterRoleUser?.id !== user.id) return null;
       logAuthDiagnostic("current-user-role-loaded", {
         authUid: user.id,
         profileUserId: profile.user_id,

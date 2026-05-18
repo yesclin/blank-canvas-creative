@@ -29,6 +29,8 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { useCurrentViewRole } from "@/contexts/UserViewModeContext";
 import { RoleSwitcherDialog } from "./RoleSwitcherDialog";
+import { useQueryClient } from "@tanstack/react-query";
+import { clearAuthenticatedTab } from "@/lib/authSessionIsolation";
 
 type UserRole = "admin" | "owner" | "profissional" | "recepcionista";
 
@@ -48,6 +50,7 @@ const roleColors: Record<UserRole, string> = {
 
 export function UserProfileFooter() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user, isLoading } = useCurrentUser();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -74,6 +77,8 @@ export function UserProfileFooter() {
       markUserLogout("user-logout");
       // Clear simulated role before signing out
       resetViewedRole();
+      clearAuthenticatedTab();
+      try { queryClient.clear(); } catch { /* ignore */ }
       window.dispatchEvent(new Event("yc:signout"));
       await supabase.auth.signOut();
       toast.success("Sessão encerrada com sucesso");

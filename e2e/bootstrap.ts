@@ -7,10 +7,14 @@
  *
  * Requer e2e/.env.local com E2E_SUPABASE_URL e E2E_SUPABASE_SERVICE_ROLE_KEY.
  */
-import "dotenv/config";
+import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 import { writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+config({ path: resolve(__dirname, ".env.local") });
 
 const url = process.env.E2E_SUPABASE_URL!;
 const serviceKey = process.env.E2E_SUPABASE_SERVICE_ROLE_KEY!;
@@ -28,6 +32,14 @@ const admin = createClient(url, serviceKey, {
 });
 
 type Role = "owner" | "admin" | "professional" | "receptionist";
+type DbRole = "owner" | "admin" | "profissional" | "recepcionista";
+
+const DB_ROLE_BY_FIXTURE_ROLE: Record<Role, DbRole> = {
+  owner: "owner",
+  admin: "admin",
+  professional: "profissional",
+  receptionist: "recepcionista",
+};
 
 const USERS: Array<{ role: Role; envKey: string; defaultEmail: string; fullName: string }> = [
   { role: "owner", envKey: "E2E_OWNER_EMAIL", defaultEmail: "e2e-owner@example.test", fullName: "E2E Owner" },
@@ -78,17 +90,44 @@ async function ensureClinic(ownerId: string): Promise<string> {
   return created.id;
 }
 
-async function ensureClinicUser(clinicId: string, userId: string, role: Role) {
+async function ensureProfile(clinicId: string, userId: string, email: string, fullName: string) {
   const { data: existing } = await admin
-    .from("clinic_users")
+    .from("profiles")
     .select("id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (existing?.id) {
+    const { error } = await admin
+      .from("profiles")
+      .update({ clinic_id: clinicId, email, full_name: fullName, is_active: true })
+      .eq("id", existing.id);
+    if (error) throw error;
+    return;
+  }
+  const { error } = await admin
+    .from("profiles")
+    .insert({ clinic_id: clinicId, user_id: userId, email, full_name: fullName, is_active: true });
+  if (error) throw error;
+}
+
+async function ensureUserRole(clinicId: string, userId: string, role: Role) {
+  const dbRole = DB_ROLE_BY_FIXTURE_ROLE[role];
+  const { data: existing } = await admin
+    .from("user_roles")
+    .select("id, role")
     .eq("clinic_id", clinicId)
     .eq("user_id", userId)
     .maybeSingle();
-  if (existing) return;
+  if (existing?.id) {
+    if (existing.role !== dbRole) {
+      const { error } = await admin.from("user_roles").update({ role: dbRole }).eq("id", existing.id);
+      if (error) throw error;
+    }
+    return;
+  }
   const { error } = await admin
-    .from("clinic_users")
-    .insert({ clinic_id: clinicId, user_id: userId, role, status: "active" });
+    .from("user_roles")
+    .insert({ clinic_id: clinicId, user_id: userId, role: dbRole });
   if (error) throw error;
 }
 
@@ -153,9 +192,11 @@ async function main() {
   console.log(`  ✓ clinic: ${clinicId}`);
 
   for (const u of USERS) {
-    await ensureClinicUser(clinicId, userIds[u.role], u.role);
+    const email = process.env[u.envKey] ?? u.defaultEmail;
+    await ensureProfile(clinicId, userIds[u.role], email, u.fullName);
+    await ensureUserRole(clinicId, userIds[u.role], u.role);
   }
-  console.log("  ✓ clinic_users vinculados");
+  console.log("  ✓ profiles/user_roles vinculados");
 
   const professionalId = await ensureProfessional(
     clinicId,
