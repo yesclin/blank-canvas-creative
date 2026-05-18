@@ -31,11 +31,12 @@ export function getFixtures(): E2EFixtures {
  */
 export async function loginAs(page: Page, role: Role) {
   const fx = getFixtures();
-  const { email } = fx.users[role];
+  const u = fx.users[role];
+  const password = u.password ?? fx.password;
 
   await page.goto("/login");
-  await page.getByLabel(/e-?mail/i).fill(email);
-  await page.getByLabel(/senha/i).fill(fx.password);
+  await page.getByLabel(/e-?mail/i).fill(u.email);
+  await page.getByLabel(/senha/i).fill(password);
   await page.getByRole("button", { name: /entrar|login/i }).click();
   // espera redirect pós-login
   await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 20_000 });
