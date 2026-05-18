@@ -129,6 +129,7 @@ export function SpecialtiesStep({
   const [newSpecialtyName, setNewSpecialtyName] = useState("");
   const [newSpecialtyDescription, setNewSpecialtyDescription] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [isAdvancing, setIsAdvancing] = useState(false);
   const { toast } = useToast();
 
   // Filter curated specialties by search term
@@ -220,9 +221,14 @@ export function SpecialtiesStep({
     }
   };
 
-  const handleContinue = () => {
-    // STEP A: Validate selection
-    if (!selectedId) {
+  const handleContinue = async () => {
+    if (isAdvancing) return;
+
+    // Snapshot current selection synchronously to avoid stale state from re-renders
+    const currentSelectedId = selectedId;
+    console.info("[ONBOARDING_SPECIALTIES] handleContinue", { currentSelectedId });
+
+    if (!currentSelectedId) {
       toast({
         title: "Selecione uma especialidade",
         description: "Escolha uma especialidade principal para continuar.",
@@ -231,35 +237,44 @@ export function SpecialtiesStep({
       return;
     }
 
-    // STEP B: Save to temporary onboarding state using SLUG as primary reference
-    const curatedSpecialty = CURATED_SPECIALTIES.find((s) => s.id === selectedId);
-    
-    if (curatedSpecialty) {
-      // Standard specialty - use slug as primary reference
-      onUpdatePreferences?.({
-        primary_specialty_slug: curatedSpecialty.id, // This IS the slug (e.g., "clinica-geral")
-        primary_specialty_curated_id: curatedSpecialty.id, // Legacy compat
-        primary_specialty_name: curatedSpecialty.name,
-        primary_specialty_id: undefined, // Will be resolved on final save
-      });
-    } else if (selectedId.startsWith("custom-")) {
-      // Custom specialty - already created, store the real UUID and generate slug
-      const realId = selectedId.replace("custom-", "");
-      const customSpec = customSpecialties.find(s => `custom-${s.id}` === selectedId);
-      const customSlug = customSpec 
-        ? `personalizada:${customSpec.name.toLowerCase().replace(/\s+/g, "-")}` 
-        : `personalizada:${realId}`;
-      
-      onUpdatePreferences?.({
-        primary_specialty_slug: customSlug,
-        primary_specialty_id: realId,
-        primary_specialty_name: customSpec?.name || "",
-        primary_specialty_curated_id: undefined,
-      });
-    }
+    setIsAdvancing(true);
+    try {
+      const curatedSpecialty = CURATED_SPECIALTIES.find((s) => s.id === currentSelectedId);
 
-    // STEP C: Navigate to next step (no database persistence here)
-    onNext();
+      if (curatedSpecialty) {
+        await onUpdatePreferences?.({
+          primary_specialty_slug: curatedSpecialty.id,
+          primary_specialty_curated_id: curatedSpecialty.id,
+          primary_specialty_name: curatedSpecialty.name,
+          primary_specialty_id: undefined,
+        });
+      } else if (currentSelectedId.startsWith("custom-")) {
+        const realId = currentSelectedId.replace("custom-", "");
+        const customSpec = customSpecialties.find((s) => `custom-${s.id}` === currentSelectedId);
+        const customSlug = customSpec
+          ? `personalizada:${customSpec.name.toLowerCase().replace(/\s+/g, "-")}`
+          : `personalizada:${realId}`;
+
+        await onUpdatePreferences?.({
+          primary_specialty_slug: customSlug,
+          primary_specialty_id: realId,
+          primary_specialty_name: customSpec?.name || "",
+          primary_specialty_curated_id: undefined,
+        });
+      }
+
+      console.info("[ONBOARDING_SPECIALTIES] preferences saved, navigating");
+      onNext();
+    } catch (err) {
+      console.error("[ONBOARDING_SPECIALTIES] failed to advance", err);
+      toast({
+        title: "Erro ao avançar",
+        description: "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAdvancing(false);
+    }
   };
 
   const handleSkip = () => {
@@ -479,8 +494,8 @@ export function SpecialtiesStep({
           <Button variant="ghost" onClick={handleSkip}>
             Pular etapa
           </Button>
-          <Button onClick={handleContinue} disabled={!hasSelection}>
-            Continuar
+          <Button onClick={handleContinue} disabled={!hasSelection || isAdvancing}>
+            {isAdvancing ? "Salvando..." : "Continuar"}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>

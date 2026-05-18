@@ -159,6 +159,15 @@ export function useOnboarding() {
       ? progress.completed_steps
       : [...progress.completed_steps, step - 1];
 
+    // Optimistic update via functional setState to avoid stale-closure races
+    // with concurrent updatePreferences calls (both wrote setProgress({ ...progress, ... }),
+    // causing the later one to overwrite the other's field).
+    setProgress((prev) => prev ? {
+      ...prev,
+      current_step: step,
+      completed_steps: newCompletedSteps,
+    } : prev);
+
     const { error } = await supabase
       .from("onboarding_progress")
       .update({
@@ -173,21 +182,19 @@ export function useOnboarding() {
         description: "Tente novamente.",
         variant: "destructive",
       });
-      return;
     }
-
-    setProgress({
-      ...progress,
-      current_step: step,
-      completed_steps: newCompletedSteps,
-    });
   }, [progress, toast]);
 
   const updatePreferences = useCallback(async (preferences: Partial<OnboardingProgress["preferences"]>) => {
     if (!progress) return;
 
-    const newPreferences = { ...progress.preferences, ...preferences };
+    // Functional update: merge into latest preferences, never overwrite current_step.
+    setProgress((prev) => prev ? {
+      ...prev,
+      preferences: { ...prev.preferences, ...preferences },
+    } : prev);
 
+    const newPreferences = { ...progress.preferences, ...preferences };
     const { error } = await supabase
       .from("onboarding_progress")
       .update({ preferences: newPreferences })
@@ -195,10 +202,7 @@ export function useOnboarding() {
 
     if (error) {
       console.error("Error updating preferences:", error);
-      return;
     }
-
-    setProgress({ ...progress, preferences: newPreferences });
   }, [progress]);
 
   const skipOnboarding = useCallback(async () => {
