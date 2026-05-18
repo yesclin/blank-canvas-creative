@@ -8,12 +8,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export type Role = "owner" | "admin" | "professional" | "receptionist";
 
 export interface E2EFixtures {
+  mode?: "bootstrap" | "existing-users";
   clinicId: string;
   clinicSlug: string;
   patientId: string;
   professionalId: string;
   password: string;
-  users: Record<Role, { id: string; email: string; fullName?: string }>;
+  users: Record<Role, { id: string; email: string; fullName?: string; password?: string }>;
 }
 
 let cached: E2EFixtures | null = null;
@@ -30,11 +31,12 @@ export function getFixtures(): E2EFixtures {
  */
 export async function loginAs(page: Page, role: Role) {
   const fx = getFixtures();
-  const { email } = fx.users[role];
+  const u = fx.users[role];
+  const password = u.password ?? fx.password;
 
   await page.goto("/login");
-  await page.getByLabel(/e-?mail/i).fill(email);
-  await page.getByLabel(/senha/i).fill(fx.password);
+  await page.getByLabel(/e-?mail/i).fill(u.email);
+  await page.getByLabel(/senha/i).fill(password);
   await page.getByRole("button", { name: /entrar|login/i }).click();
   // espera redirect pós-login
   await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 20_000 });
