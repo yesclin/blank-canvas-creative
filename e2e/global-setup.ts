@@ -53,6 +53,24 @@ export default async function globalSetup() {
   // Modo 2 — bootstrap completo via service_role.
   // ---------------------------------------------------------------------------
   if (!existsSync(envFile)) {
+    if (process.argv.some((arg) => arg.includes("04-env-users-no-leak.spec.ts"))) {
+      writeFileSync(resolve(__dirname, ".fixtures.json"), JSON.stringify({
+        mode: "bootstrap",
+        password: "",
+        clinicId: "",
+        clinicSlug: "",
+        patientId: "",
+        professionalId: "",
+        users: {
+          owner: { id: "", email: "", password: "" },
+          admin: { id: "", email: "", password: "" },
+          professional: { id: "", email: "", password: "" },
+          receptionist: { id: "", email: "", password: "" },
+        },
+      }, null, 2));
+      console.log("[e2e] credenciais E2E ausentes — spec sem service_role será marcada como skipped");
+      return;
+    }
     throw new Error(`e2e/.env.local não encontrado. Veja e2e/README.md para criar.`);
   }
   const result = spawnSync("bun", ["run", resolve(__dirname, "bootstrap.ts")], {
