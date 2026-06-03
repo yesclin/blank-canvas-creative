@@ -463,8 +463,10 @@ export function useReactivatePatient() {
 
 // Get patient appointment history
 export function usePatientAppointments(patientId: string | null) {
+  const { clinic } = useClinicData();
+
   return useQuery({
-    queryKey: ["patient-appointments", patientId],
+    queryKey: ["patient-appointments", clinic?.id, patientId],
     queryFn: async () => {
       if (!patientId) return [];
       
@@ -481,46 +483,61 @@ export function usePatientAppointments(patientId: string | null) {
           procedures(name)
         `)
         .eq("patient_id", patientId)
+        .eq("clinic_id", clinic!.id)
         .order("scheduled_date", { ascending: false })
         .limit(20);
       
       if (error) throw error;
       return data;
     },
-    enabled: !!patientId,
+    enabled: !!patientId && !!clinic?.id,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
 // Fetch insurances for dropdown
 export function useInsurances() {
+  const { clinic } = useClinicData();
+
   return useQuery({
-    queryKey: ["insurances"],
+    queryKey: ["insurances", clinic?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insurances")
         .select("id, name")
+        .eq("clinic_id", clinic!.id)
         .eq("is_active", true)
         .order("name");
       
       if (error) throw error;
       return data;
     },
+    enabled: !!clinic?.id,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
 // Fetch professionals for dropdown
 export function useProfessionals() {
+  const { clinic } = useClinicData();
+
   return useQuery({
-    queryKey: ["professionals"],
+    queryKey: ["professionals", clinic?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("professionals")
         .select("id, full_name, specialties(name)")
+        .eq("clinic_id", clinic!.id)
         .eq("is_active", true)
         .order("full_name");
       
       if (error) throw error;
       return data;
     },
+    enabled: !!clinic?.id,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
