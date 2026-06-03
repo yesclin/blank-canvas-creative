@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { usePlanLimitGate } from "@/hooks/usePlanLimitGate";
+import { useClinicData } from "@/hooks/useClinicData";
 
 export interface PatientInsurance {
   id: string;
@@ -121,8 +122,10 @@ async function getClinicId(): Promise<string> {
 
 // Fetch all patients
 export function usePatients() {
+  const { clinic } = useClinicData();
+
   return useQuery({
-    queryKey: ["patients"],
+    queryKey: ["patients", clinic?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patients")
@@ -132,19 +135,25 @@ export function usePatients() {
           patient_clinical_data(*),
           patient_guardians(*)
         `)
+        .eq("clinic_id", clinic!.id)
         .eq("is_active", true)
         .order("full_name");
       
       if (error) throw error;
       return data as Patient[];
     },
+    enabled: !!clinic?.id,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
 // Fetch all patients including inactive
 export function useAllPatients() {
+  const { clinic } = useClinicData();
+
   return useQuery({
-    queryKey: ["patients", "all"],
+    queryKey: ["patients", "all", clinic?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patients")
@@ -154,18 +163,24 @@ export function useAllPatients() {
           patient_clinical_data(*),
           patient_guardians(*)
         `)
+        .eq("clinic_id", clinic!.id)
         .order("full_name");
       
       if (error) throw error;
       return data as Patient[];
     },
+    enabled: !!clinic?.id,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
 // Fetch single patient
 export function usePatient(id: string | null) {
+  const { clinic } = useClinicData();
+
   return useQuery({
-    queryKey: ["patients", id],
+    queryKey: ["patients", clinic?.id, id],
     queryFn: async () => {
       if (!id) return null;
       
@@ -178,12 +193,15 @@ export function usePatient(id: string | null) {
           patient_guardians(*)
         `)
         .eq("id", id)
+        .eq("clinic_id", clinic!.id)
         .single();
       
       if (error) throw error;
       return data as Patient;
     },
-    enabled: !!id,
+    enabled: !!id && !!clinic?.id,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -191,6 +209,7 @@ export function usePatient(id: string | null) {
 export function useCreatePatient() {
   const queryClient = useQueryClient();
   const { ensureCanCreate } = usePlanLimitGate();
+  const { clinic } = useClinicData();
 
   return useMutation({
     mutationFn: async (data: PatientFormData) => {
@@ -285,7 +304,8 @@ export function useCreatePatient() {
       return patient;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      queryClient.invalidateQueries({ queryKey: ["patients", clinic?.id] });
+      queryClient.invalidateQueries({ queryKey: ["patients", "all", clinic?.id] });
       toast.success("Paciente cadastrado com sucesso!");
     },
     onError: (error: Error) => {
@@ -304,6 +324,7 @@ export function useCreatePatient() {
 // Update patient
 export function useUpdatePatient() {
   const queryClient = useQueryClient();
+  const { clinic } = useClinicData();
   
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: PatientFormData }) => {
@@ -381,8 +402,9 @@ export function useUpdatePatient() {
       return { id };
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["patients"] });
-      queryClient.invalidateQueries({ queryKey: ["patients", result.id] });
+      queryClient.invalidateQueries({ queryKey: ["patients", clinic?.id] });
+      queryClient.invalidateQueries({ queryKey: ["patients", "all", clinic?.id] });
+      queryClient.invalidateQueries({ queryKey: ["patients", clinic?.id, result.id] });
       queryClient.invalidateQueries({ queryKey: ["patients-list"] });
       queryClient.invalidateQueries({ queryKey: ["patient-clinical-data"] });
       queryClient.invalidateQueries({ queryKey: ["attended-patients"] });
@@ -398,6 +420,7 @@ export function useUpdatePatient() {
 // Deactivate patient (soft delete)
 export function useDeactivatePatient() {
   const queryClient = useQueryClient();
+  const { clinic } = useClinicData();
   
   return useMutation({
     mutationFn: async (id: string) => {
@@ -410,7 +433,8 @@ export function useDeactivatePatient() {
       return { id };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      queryClient.invalidateQueries({ queryKey: ["patients", clinic?.id] });
+      queryClient.invalidateQueries({ queryKey: ["patients", "all", clinic?.id] });
       toast.success("Paciente inativado com sucesso!");
     },
     onError: (error: Error) => {
@@ -422,6 +446,7 @@ export function useDeactivatePatient() {
 // Reactivate patient
 export function useReactivatePatient() {
   const queryClient = useQueryClient();
+  const { clinic } = useClinicData();
   
   return useMutation({
     mutationFn: async (id: string) => {
@@ -434,7 +459,8 @@ export function useReactivatePatient() {
       return { id };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      queryClient.invalidateQueries({ queryKey: ["patients", clinic?.id] });
+      queryClient.invalidateQueries({ queryKey: ["patients", "all", clinic?.id] });
       toast.success("Paciente reativado com sucesso!");
     },
     onError: (error: Error) => {
@@ -445,8 +471,10 @@ export function useReactivatePatient() {
 
 // Get patient appointment history
 export function usePatientAppointments(patientId: string | null) {
+  const { clinic } = useClinicData();
+
   return useQuery({
-    queryKey: ["patient-appointments", patientId],
+    queryKey: ["patient-appointments", clinic?.id, patientId],
     queryFn: async () => {
       if (!patientId) return [];
       
@@ -463,46 +491,61 @@ export function usePatientAppointments(patientId: string | null) {
           procedures(name)
         `)
         .eq("patient_id", patientId)
+        .eq("clinic_id", clinic!.id)
         .order("scheduled_date", { ascending: false })
         .limit(20);
       
       if (error) throw error;
       return data;
     },
-    enabled: !!patientId,
+    enabled: !!patientId && !!clinic?.id,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
 // Fetch insurances for dropdown
 export function useInsurances() {
+  const { clinic } = useClinicData();
+
   return useQuery({
-    queryKey: ["insurances"],
+    queryKey: ["insurances", clinic?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insurances")
         .select("id, name")
+        .eq("clinic_id", clinic!.id)
         .eq("is_active", true)
         .order("name");
       
       if (error) throw error;
       return data;
     },
+    enabled: !!clinic?.id,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
 // Fetch professionals for dropdown
 export function useProfessionals() {
+  const { clinic } = useClinicData();
+
   return useQuery({
-    queryKey: ["professionals"],
+    queryKey: ["professionals", clinic?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("professionals")
         .select("id, full_name, specialties(name)")
+        .eq("clinic_id", clinic!.id)
         .eq("is_active", true)
         .order("full_name");
       
       if (error) throw error;
       return data;
     },
+    enabled: !!clinic?.id,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }

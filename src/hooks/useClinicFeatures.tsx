@@ -177,6 +177,8 @@ export function ClinicFeaturesProvider({ children }: { children: ReactNode }) {
     enabled: !authIdentityLoading && !!authUserId,
     staleTime: 0,
     gcTime: 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     retry: 1,
     throwOnError: false,
   });
@@ -188,6 +190,7 @@ export function ClinicFeaturesProvider({ children }: { children: ReactNode }) {
     staleTime: 5 * 60 * 1000, // 5 min
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     retry: 1,
     throwOnError: false,
   });

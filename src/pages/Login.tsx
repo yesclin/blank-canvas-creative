@@ -73,7 +73,7 @@ const Login = () => {
     // 2) Evento posterior (SIGNED_IN, INITIAL_SESSION com sessão)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
-      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") && session?.user?.id) {
+      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user?.id) {
         void goTo(session.user.id, event);
       }
     });

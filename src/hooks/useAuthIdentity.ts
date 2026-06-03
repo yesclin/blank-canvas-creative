@@ -40,7 +40,7 @@ export function useAuthIdentity(): AuthIdentityState {
 
     void resolve();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT") {
         requestId++;
         setUserId(null);
@@ -48,13 +48,10 @@ export function useAuthIdentity(): AuthIdentityState {
         return;
       }
 
-      if (session?.user?.id) {
-        setUserId(session.user.id);
-        setIsLoading(false);
-      }
-
       // TOKEN_REFRESHED não troca identidade — re-resolver propaga refetch
       // a todos os hooks dependentes ("sistema atualiza sozinho").
+      if (event === "TOKEN_REFRESHED") return;
+
       if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "USER_UPDATED") {
         setTimeout(() => {
           if (!cancelled) void resolve();

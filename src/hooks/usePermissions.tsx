@@ -248,6 +248,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     }, 10000);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "TOKEN_REFRESHED") return;
       const newUserId = session?.user?.id ?? null;
       // Identidade trocou no meio da sessão: derruba estado IMEDIATAMENTE
       // para não deixar role/permissões antigas vazarem para o novo usuário.

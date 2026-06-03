@@ -192,6 +192,10 @@ export function useClinicUsers() {
       });
     },
     enabled: !authIdentityLoading && !!authUserId && !!clinic?.id,
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -202,6 +206,7 @@ export function useClinicUsers() {
 export function useUpdateUserStatus() {
   const queryClient = useQueryClient();
   const { clinic } = useClinicData();
+  const { userId: authUserId } = useAuthIdentity();
   
   return useMutation({
     mutationFn: async ({ userId, isActive }: { userId: string; isActive: boolean }) => {
@@ -214,7 +219,7 @@ export function useUpdateUserStatus() {
       if (error) throw error;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["clinic-users"] });
+      queryClient.invalidateQueries({ queryKey: ["clinic-users", authUserId, clinic?.id] });
       toast.success(
         variables.isActive 
           ? "Usuário ativado com sucesso" 
@@ -235,6 +240,7 @@ export function useUpdateUserStatus() {
 export function useUpdateUserRole() {
   const queryClient = useQueryClient();
   const { clinic } = useClinicData();
+  const { userId: authUserId } = useAuthIdentity();
   
   return useMutation({
     mutationFn: async ({ userId, newRole }: { userId: string; newRole: AppRole }) => {
@@ -257,7 +263,7 @@ export function useUpdateUserRole() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["clinic-users"] });
+      queryClient.invalidateQueries({ queryKey: ["clinic-users", authUserId, clinic?.id] });
       toast.success("Papel do usuário atualizado com sucesso");
     },
     onError: (error: Error) => {
@@ -278,6 +284,10 @@ export function useCurrentUser() {
   return useQuery({
     queryKey: ["current-user", authUserId],
     enabled: !authIdentityLoading && !!authUserId,
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;

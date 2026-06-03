@@ -491,6 +491,7 @@ export function useCurrentUser() {
 
     // Reset IMEDIATO em mudanças de sessão para impedir mistura de identidade
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "TOKEN_REFRESHED") return;
       const newId = session?.user?.id ?? null;
 
       if (event === "SIGNED_OUT" || (!newId && event !== "INITIAL_SESSION")) {
