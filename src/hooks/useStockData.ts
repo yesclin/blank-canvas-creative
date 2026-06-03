@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { InventoryItem } from "@/types/inventory-items";
+import { useClinicData } from "@/hooks/useClinicData";
 
 // =============================================
 // STOCK CATEGORIES (derived from inventory_items)
@@ -13,12 +14,15 @@ export interface StockCategory {
 }
 
 export function useStockCategories() {
+  const { clinic } = useClinicData();
+
   return useQuery({
-    queryKey: ["stock-categories"],
+    queryKey: ["stock-categories", clinic?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("inventory_items")
         .select("category")
+        .eq("clinic_id", clinic!.id)
         .eq("is_active", true)
         .eq("controls_stock", true);
       
@@ -36,6 +40,9 @@ export function useStockCategories() {
         product_count: count,
       })) as StockCategory[];
     },
+    enabled: !!clinic?.id,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -95,12 +102,15 @@ export function useStockProducts(filters?: {
   status?: 'all' | 'active' | 'inactive' | 'low' | 'out';
   search?: string;
 }) {
+  const { clinic } = useClinicData();
+
   return useQuery({
-    queryKey: ["stock-products", filters?.category, filters?.status, filters?.search],
+    queryKey: ["stock-products", clinic?.id, filters?.category, filters?.status, filters?.search],
     queryFn: async () => {
       let query = supabase
         .from("inventory_items")
         .select("*")
+        .eq("clinic_id", clinic!.id)
         .eq("controls_stock", true)
         .order("name");
       
@@ -135,6 +145,9 @@ export function useStockProducts(filters?: {
       
       return products;
     },
+    enabled: !!clinic?.id,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -151,12 +164,15 @@ export interface StockStats {
 }
 
 export function useStockStats() {
+  const { clinic } = useClinicData();
+
   return useQuery({
-    queryKey: ["stock-stats"],
+    queryKey: ["stock-stats", clinic?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("inventory_items")
         .select("default_cost_price, is_active, controls_stock")
+        .eq("clinic_id", clinic!.id)
         .eq("controls_stock", true);
       
       if (error) throw error;
@@ -171,7 +187,10 @@ export function useStockStats() {
         totalValue: 0,
       } as StockStats;
     },
-    refetchInterval: 30000,
+    enabled: !!clinic?.id,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
