@@ -63,7 +63,9 @@ export function usePlatformAdmin(): PlatformAdminState {
 
   const query = useQuery({
     queryKey: [...PLATFORM_ADMIN_KEY, authUserId],
-    queryFn: () => fetchPlatformAdmin(authUserId!),
+    queryFn: () => authUserId
+      ? fetchPlatformAdmin(authUserId)
+      : Promise.resolve({ isPlatformAdmin: false, userId: null, email: null, totalAdmins: null }),
     enabled: !authIdentityLoading && !!authUserId,
     staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,
