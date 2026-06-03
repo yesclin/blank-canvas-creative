@@ -1,6 +1,6 @@
 import { ReactNode, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePermissions, AppModule, AppAction } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,6 +8,7 @@ import { ShieldX, UserX, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { withTimeout } from "@/lib/asyncTimeout";
 import { useAuthIdentity } from "@/hooks/useAuthIdentity";
+import { clearAuthenticatedTab } from "@/lib/authSessionIsolation";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -187,9 +188,12 @@ function PermissionsLoadFailedPage({ onRetry }: { onRetry: () => void | Promise<
 }
 
 function InactiveUserPage() {
+  const queryClient = useQueryClient();
   const handleLogout = async () => {
     const { markUserLogout } = await import("@/lib/authIntent");
     markUserLogout("inactive-account");
+    clearAuthenticatedTab();
+    try { queryClient.clear(); } catch { /* ignore */ }
     await supabase.auth.signOut();
     window.location.href = "/login";
   };
