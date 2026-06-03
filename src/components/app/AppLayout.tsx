@@ -133,7 +133,7 @@ export function AppLayout() {
           <div className="flex-1 overflow-auto">
             <SubscriptionGate>
               <div className="p-6">
-                <ErrorBoundary key={location.pathname} scope={getModuleScope(location.pathname)}>
+                <ErrorBoundary scope={getModuleScope(location.pathname)}>
                   <Outlet />
                 </ErrorBoundary>
               </div>
