@@ -53,7 +53,9 @@ export function useAuthIdentity(): AuthIdentityState {
         setIsLoading(false);
       }
 
-      if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "USER_UPDATED" || event === "TOKEN_REFRESHED") {
+      // TOKEN_REFRESHED não troca identidade — re-resolver propaga refetch
+      // a todos os hooks dependentes ("sistema atualiza sozinho").
+      if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "USER_UPDATED") {
         setTimeout(() => {
           if (!cancelled) void resolve();
         }, 0);
