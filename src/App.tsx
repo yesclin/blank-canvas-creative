@@ -239,7 +239,7 @@ function ProviderShell() {
     <SafeProvider
       scope="UserViewModeBootstrap"
       fallbackChildren={
-        <UserViewModeProvider realRole={null}>
+        <UserViewModeProvider realRole={null} userId={null}>
           <SafeProvider scope="PermissionsProvider" fallbackChildren={<AppRouter />}>
             <PermissionsProvider>
               <SafeProvider scope="ClinicFeaturesProvider" fallbackChildren={<AppRouter />}>
