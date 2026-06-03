@@ -9,6 +9,7 @@ export function usePublicProfessionalAvailability(
     queryFn: () => getPublicAvailabilityWithDetails(params!),
     enabled: !!params?.clinicId && !!params?.professionalId && !!params?.dateStart && !!params?.dateEnd,
     staleTime: 30_000,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
