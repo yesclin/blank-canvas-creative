@@ -137,7 +137,7 @@ export function useClinicSubscription() {
   const { userId: authUserId, isLoading: authIdentityLoading } = useAuthIdentity();
 
   const { data: scope } = useQuery({
-    queryKey: ['clinic-scope', authUserId],
+    queryKey: ['clinic-subscription-scope', authUserId],
     queryFn: () => resolveClinicScope(authUserId!),
     enabled: !authIdentityLoading && !!authUserId,
     staleTime: 0,
@@ -158,7 +158,7 @@ export function useClinicSubscription() {
 
   useEffect(() => {
     const invalidate = () => {
-      queryClient.invalidateQueries({ queryKey: ['clinic-scope'] });
+      queryClient.invalidateQueries({ queryKey: ['clinic-subscription-scope'] });
       queryClient.invalidateQueries({ queryKey: ['clinic-subscription'] });
     };
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
