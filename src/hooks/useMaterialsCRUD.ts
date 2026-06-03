@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Material, MaterialFormData, MaterialCategory } from '@/types/cadastros-clinicos';
+import { useClinicData } from '@/hooks/useClinicData';
 
 // =============================================
 // HELPER: Get clinic_id from current user
@@ -26,15 +27,15 @@ async function getClinicId(): Promise<string> {
 // =============================================
 
 export function useMaterialsList(includeInactive: boolean = false) {
+  const { clinic } = useClinicData();
+
   return useQuery({
-    queryKey: ['materials-list', includeInactive],
+    queryKey: ['materials-list', clinic?.id, includeInactive],
     queryFn: async () => {
-      const clinicId = await getClinicId();
-      
       let query = supabase
         .from('products')
         .select('*')
-        .eq('clinic_id', clinicId)
+        .eq('clinic_id', clinic!.id)
         .eq('product_type', 'material_clinico')
         .order('name');
         
@@ -61,12 +62,17 @@ export function useMaterialsList(includeInactive: boolean = false) {
         updated_at: p.updated_at,
       }));
     },
+    enabled: !!clinic?.id,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
 export function useMaterial(id: string | null) {
+  const { clinic } = useClinicData();
+
   return useQuery({
-    queryKey: ['material', id],
+    queryKey: ['material', clinic?.id, id],
     queryFn: async () => {
       if (!id) return null;
       
@@ -74,6 +80,7 @@ export function useMaterial(id: string | null) {
         .from('products')
         .select('*')
         .eq('id', id)
+        .eq('clinic_id', clinic!.id)
         .single();
         
       if (error) throw error;
@@ -93,7 +100,9 @@ export function useMaterial(id: string | null) {
         updated_at: p.updated_at,
       } as Material;
     },
-    enabled: !!id,
+    enabled: !!id && !!clinic?.id,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
