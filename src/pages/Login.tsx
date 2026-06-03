@@ -9,7 +9,7 @@ import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import logoFull from "@/assets/logo-full.png";
 import logoIcon from "@/assets/logo-icon.png";
 import { motion } from "framer-motion";
-import { clearAuthenticatedTab, rememberAuthenticatedUser } from "@/lib/authSessionIsolation";
+import { clearAuthenticatedTab, clearAuthQuarantine, hasRecentAuthQuarantine, rememberAuthenticatedUser } from "@/lib/authSessionIsolation";
 
 /**
  * Decide para onde mandar o usuário autenticado.
@@ -50,6 +50,10 @@ const Login = () => {
     let mounted = true;
 
     const goTo = async (userId: string, source: string) => {
+      if (hasRecentAuthQuarantine()) {
+        if (import.meta.env.DEV) console.warn("[AUTH] redirect ignorado: sessão em quarentena", { source, userId });
+        return;
+      }
       if (navigatedRef.current) return;
       navigatedRef.current = true;
       const dest = await resolveRedirectPath(userId, fromPath || "/app");
@@ -95,6 +99,7 @@ const Login = () => {
 
     setIsLoading(true);
     clearAuthenticatedTab();
+    clearAuthQuarantine();
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
