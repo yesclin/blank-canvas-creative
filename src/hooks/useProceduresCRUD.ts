@@ -232,6 +232,7 @@ export function useUpdateProcedure() {
           updated_at: new Date().toISOString(),
         })
         .eq("id", id)
+        .eq("clinic_id", clinicId)
         .select()
         .single();
       
@@ -293,6 +294,7 @@ export function useToggleProcedureStatus() {
           updated_at: new Date().toISOString(),
         })
         .eq("id", id)
+        .eq("clinic_id", await getUserClinicId())
         .select()
         .single();
       
