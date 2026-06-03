@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from 'react';
+import { ReactNode } from 'react';
 import { Outlet } from 'react-router-dom';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { SuperAdminSidebar } from './SuperAdminSidebar';
@@ -17,11 +17,6 @@ interface Props {
 }
 
 export function SuperAdminLayout({ children }: Props) {
-  useEffect(() => {
-    console.count("SuperAdminLayout mounted");
-    console.count("Header mounted");
-  }, []);
-
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { email } = usePlatformAdmin();

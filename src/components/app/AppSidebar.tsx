@@ -47,7 +47,7 @@ import { UserProfileFooter } from "./UserProfileFooter";
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useClinicFeatures, type FeatureKey } from "@/hooks/useClinicFeatures";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import logoIcon from "@/assets/logo-icon.png";
 import logoFull from "@/assets/logo-full.png";
 
@@ -116,10 +116,6 @@ const receptionistGestaoMenu: MenuItem[] = [
 ];
 
 export function AppSidebar() {
-  useEffect(() => {
-    console.count("Sidebar mounted");
-  }, []);
-
   const location = useLocation();
   const currentPath = location.pathname;
   const { state } = useSidebar();

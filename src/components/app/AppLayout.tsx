@@ -26,7 +26,6 @@ import { ErrorBoundary } from "./ErrorBoundary";
 import { SubscriptionGate } from "./SubscriptionGate";
 import { FloatingSupportButton } from "./FloatingSupportButton";
 import { AuthDebugOverlay } from "@/components/dev/AuthDebugOverlay";
-import { useEffect } from "react";
 
 function getModuleScope(pathname: string): string {
   if (pathname.startsWith("/app/prontuario")) return "Prontuário";
@@ -42,11 +41,6 @@ function getModuleScope(pathname: string): string {
 }
 
 export function AppLayout() {
-  useEffect(() => {
-    console.count("AppLayout mounted");
-    console.count("Header mounted");
-  }, []);
-
   const location = useLocation();
   const navigate = useNavigate();
   const { clinic, isLoading } = useClinicData();

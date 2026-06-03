@@ -1,5 +1,4 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
 import {
   LayoutDashboard,
   Building2,
@@ -46,10 +45,6 @@ const items = [
 ];
 
 export function SuperAdminSidebar() {
-  useEffect(() => {
-    console.count("Sidebar mounted");
-  }, []);
-
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const location = useLocation();
