@@ -142,6 +142,8 @@ export function useClinicSubscription() {
     enabled: !authIdentityLoading && !!authUserId,
     staleTime: 0,
     gcTime: 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     retry: 1,
     throwOnError: false,
   });

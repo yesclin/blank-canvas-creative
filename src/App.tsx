@@ -152,6 +152,7 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
       // Cache básico: evita refetch em remontagens rápidas (ex.: troca de aba)
       staleTime: 30_000,
       gcTime: 5 * 60_000,
