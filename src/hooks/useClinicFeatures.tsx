@@ -200,12 +200,9 @@ export function ClinicFeaturesProvider({ children }: { children: ReactNode }) {
     };
 
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (
-        event === 'SIGNED_IN' ||
-        event === 'SIGNED_OUT' ||
-        event === 'TOKEN_REFRESHED'
-      ) {
-        // Defer to avoid Supabase auth deadlocks
+      // TOKEN_REFRESHED não muda identidade nem clínica — invalidar aqui
+      // causa refetch em background enquanto o usuário usa o sistema.
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
         setTimeout(() => invalidate(), 0);
       }
     });

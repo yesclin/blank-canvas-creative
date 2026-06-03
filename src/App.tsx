@@ -319,7 +319,10 @@ function AuthScopedProviders() {
         applyUid(null);
         return;
       }
-      if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "USER_UPDATED" || event === "TOKEN_REFRESHED") {
+      // TOKEN_REFRESHED NUNCA troca identidade — apenas renova o JWT.
+      // Re-resolver aqui causaria invalidação em cascata de profile/clinic
+      // e a UI piscaria em segundo plano enquanto o usuário digita.
+      if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "USER_UPDATED") {
         setTimeout(() => {
           if (mounted) void resolveVerifiedUser(event);
         }, 0);

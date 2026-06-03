@@ -192,9 +192,9 @@ export function useActiveAppointment(patientId: string | null | undefined, prefe
       return mapActiveAppointmentWithFallback(data);
     },
     enabled: !!patientId || !!preferredAppointmentId,
-    refetchOnMount: "always",
-    refetchOnReconnect: true,
-    refetchOnWindowFocus: true,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
     refetchInterval: preferredAppointmentId ? 5000 : 30000,
   });
 }

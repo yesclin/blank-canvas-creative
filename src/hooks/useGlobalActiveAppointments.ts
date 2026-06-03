@@ -119,8 +119,8 @@ export function useGlobalActiveAppointments() {
     },
     enabled: !!clinicId && !permLoading && !clinicLoading,
     refetchInterval: 15000,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     // Keep previous data during refetch to prevent UI flicker
     placeholderData: (prev) => prev,
   });

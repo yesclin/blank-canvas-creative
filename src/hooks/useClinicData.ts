@@ -200,7 +200,10 @@ export function useClinicData() {
         setClinic(null);
         setIsLoading(true);
       }
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+      // TOKEN_REFRESHED não troca clínica nem usuário — refetch aqui causa
+      // re-render em background ("sistema atualiza sozinho") enquanto o
+      // usuário digita. Só refetch em SIGNED_IN/INITIAL_SESSION.
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
         setTimeout(() => {
           if (!cancelled) fetchClinicData();
         }, 0);
