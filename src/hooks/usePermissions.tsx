@@ -264,7 +264,9 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         setState(EMPTY_PERMISSIONS_STATE);
         return;
       }
-      if (event === "SIGNED_IN" || event === "USER_UPDATED" || event === "TOKEN_REFRESHED") {
+      // TOKEN_REFRESHED não troca papel/permissões — refetch aqui faz a
+      // sidebar piscar enquanto o usuário usa o sistema.
+      if (event === "SIGNED_IN" || event === "USER_UPDATED") {
         setTimeout(() => fetchPermissions(), 0);
       }
     });
