@@ -15,8 +15,6 @@ interface Props {
 }
 
 export function SuperAdminLayout({ children }: Props) {
-  // TEMP DEBUG: medir se SuperAdminLayout remonta a cada navegação interna.
-  if (import.meta.env.DEV) console.count("SuperAdminLayout mounted");
   const navigate = useNavigate();
   const { email } = usePlatformAdmin();
 
