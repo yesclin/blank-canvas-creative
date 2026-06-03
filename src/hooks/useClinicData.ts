@@ -192,6 +192,7 @@ export function useClinicData() {
     // Re-fetch when auth state changes. Em SIGNED_OUT/identidade-trocada,
     // limpamos imediatamente o estado para nunca exibir a clínica anterior.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'TOKEN_REFRESHED') return;
       const newUserId = session?.user?.id ?? null;
       if (event === 'SIGNED_OUT' || (newUserId && newUserId !== activeUserIdRef.current)) {
         requestRef.current++;

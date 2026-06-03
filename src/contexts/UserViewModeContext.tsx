@@ -72,7 +72,7 @@ export function UserViewModeProvider({ children, realRole, userId }: ProviderPro
 
   const setViewedRole = useCallback(
     (role: ViewableRole) => {
-      if (!canSwitchView) return;
+      if (!canSwitchView || !userId) return;
       try {
         if (role === "owner") {
           localStorage.removeItem(STORAGE_KEY);
