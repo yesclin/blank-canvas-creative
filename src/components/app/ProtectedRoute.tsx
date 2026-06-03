@@ -1,5 +1,6 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useState } from "react";
 import { Navigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { usePermissions, AppModule, AppAction } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,6 +28,10 @@ interface ProtectedRouteProps {
  *     NÃO redirecionar para /login e NÃO deslogar.
  *  4. Apenas exibir AccessDeniedPage quando o role EXISTE e realmente
  *     não tem permissão para o módulo solicitado.
+ *
+ * O check de `is_active` é cacheado via React Query por user.id, de modo
+ * que navegar entre rotas /app/* NÃO refaz o fetch nem mostra skeleton
+ * a cada clique — o sidebar/header ficam fixos e só o conteúdo troca.
  */
 export function ProtectedRoute({
   children,
@@ -35,66 +40,34 @@ export function ProtectedRoute({
   redirectTo,
 }: ProtectedRouteProps) {
   const { can, isLoading, isOwner, isAdmin, role, refetch } = usePermissions();
-  const [isActive, setIsActive] = useState<boolean | null>(null);
-  const [checkingActive, setCheckingActive] = useState(true);
 
-  // Check if user is active
-  useEffect(() => {
-    let mounted = true;
+  const activeQuery = useQuery({
+    queryKey: ["protected-route", "is-active"],
+    queryFn: async (): Promise<boolean> => {
+      const { data: { user } } = await withTimeout<any>(supabase.auth.getUser());
+      if (!user) return false;
+      const { data: profile } = await withTimeout<any>(
+        supabase.from("profiles").select("is_active").eq("user_id", user.id).maybeSingle()
+      );
+      // Profile ainda não criado (race no signup) → trata como ativo.
+      if (!profile) return true;
+      return profile.is_active ?? true;
+    },
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    retry: 1,
+    // Em erro, não bloqueamos — default ativo. Tratado abaixo.
+  });
 
-    async function checkUserActive() {
-      try {
-        const { data: { user } } = await withTimeout<any>(supabase.auth.getUser());
-        if (!user) {
-          if (mounted) {
-            setIsActive(false);
-            setCheckingActive(false);
-          }
-          return;
-        }
+  const isActive: boolean | null =
+    activeQuery.isError ? true : activeQuery.data ?? null;
 
-        const { data: profile } = await withTimeout<any>(supabase
-          .from("profiles")
-          .select("is_active")
-          .eq("user_id", user.id)
-          .maybeSingle());
-
-        // CRITICAL: If profile doesn't exist yet (race condition during signup),
-        // treat as active — the handle_new_user trigger will create it shortly.
-        // Only show "Conta Desativada" when profile EXISTS and is_active is explicitly false.
-        if (!mounted) return;
-        if (!profile) {
-          // Profile not found — new user, treat as active
-          setIsActive(true);
-        } else {
-          setIsActive(profile.is_active ?? true);
-        }
-      } catch (error) {
-        console.error("[APP_ERROR]", error);
-        // On error, don't block the user — default to active
-        if (mounted) setIsActive(true);
-      } finally {
-        if (mounted) setCheckingActive(false);
-      }
-    }
-
-    checkUserActive();
-
-    const bootTimeout = window.setTimeout(() => {
-      if (!mounted) return;
-      console.error("[BOOT_TIMEOUT] ProtectedRoute demorou demais");
-      setIsActive(true);
-      setCheckingActive(false);
-    }, 10000);
-
-    return () => {
-      mounted = false;
-      window.clearTimeout(bootTimeout);
-    };
-  }, []);
-
-  // Show skeleton while loading
-  if (isLoading || checkingActive) {
+  // Só mostra skeleton no primeiro carregamento. Em navegações
+  // subsequentes (cache quente) cai direto no conteúdo.
+  if (isLoading || (activeQuery.isLoading && activeQuery.data === undefined)) {
     return (
       <div className="space-y-6 p-6">
         <Skeleton className="h-8 w-64" />
