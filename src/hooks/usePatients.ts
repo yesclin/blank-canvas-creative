@@ -209,6 +209,7 @@ export function usePatient(id: string | null) {
 export function useCreatePatient() {
   const queryClient = useQueryClient();
   const { ensureCanCreate } = usePlanLimitGate();
+  const { clinic } = useClinicData();
 
   return useMutation({
     mutationFn: async (data: PatientFormData) => {
@@ -303,7 +304,8 @@ export function useCreatePatient() {
       return patient;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      queryClient.invalidateQueries({ queryKey: ["patients", clinic?.id] });
+      queryClient.invalidateQueries({ queryKey: ["patients", "all", clinic?.id] });
       toast.success("Paciente cadastrado com sucesso!");
     },
     onError: (error: Error) => {
@@ -322,6 +324,7 @@ export function useCreatePatient() {
 // Update patient
 export function useUpdatePatient() {
   const queryClient = useQueryClient();
+  const { clinic } = useClinicData();
   
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: PatientFormData }) => {
@@ -399,8 +402,9 @@ export function useUpdatePatient() {
       return { id };
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["patients"] });
-      queryClient.invalidateQueries({ queryKey: ["patients", result.id] });
+      queryClient.invalidateQueries({ queryKey: ["patients", clinic?.id] });
+      queryClient.invalidateQueries({ queryKey: ["patients", "all", clinic?.id] });
+      queryClient.invalidateQueries({ queryKey: ["patients", clinic?.id, result.id] });
       queryClient.invalidateQueries({ queryKey: ["patients-list"] });
       queryClient.invalidateQueries({ queryKey: ["patient-clinical-data"] });
       queryClient.invalidateQueries({ queryKey: ["attended-patients"] });
@@ -416,6 +420,7 @@ export function useUpdatePatient() {
 // Deactivate patient (soft delete)
 export function useDeactivatePatient() {
   const queryClient = useQueryClient();
+  const { clinic } = useClinicData();
   
   return useMutation({
     mutationFn: async (id: string) => {
@@ -428,7 +433,8 @@ export function useDeactivatePatient() {
       return { id };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      queryClient.invalidateQueries({ queryKey: ["patients", clinic?.id] });
+      queryClient.invalidateQueries({ queryKey: ["patients", "all", clinic?.id] });
       toast.success("Paciente inativado com sucesso!");
     },
     onError: (error: Error) => {
@@ -440,6 +446,7 @@ export function useDeactivatePatient() {
 // Reactivate patient
 export function useReactivatePatient() {
   const queryClient = useQueryClient();
+  const { clinic } = useClinicData();
   
   return useMutation({
     mutationFn: async (id: string) => {
@@ -452,7 +459,8 @@ export function useReactivatePatient() {
       return { id };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      queryClient.invalidateQueries({ queryKey: ["patients", clinic?.id] });
+      queryClient.invalidateQueries({ queryKey: ["patients", "all", clinic?.id] });
       toast.success("Paciente reativado com sucesso!");
     },
     onError: (error: Error) => {
