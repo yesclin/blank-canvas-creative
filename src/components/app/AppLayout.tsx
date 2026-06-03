@@ -41,6 +41,8 @@ function getModuleScope(pathname: string): string {
 }
 
 export function AppLayout() {
+  // TEMP DEBUG: medir se AppLayout remonta a cada navegação interna.
+  if (import.meta.env.DEV) console.count("AppLayout mounted");
   const location = useLocation();
   const navigate = useNavigate();
   const { clinic, isLoading } = useClinicData();
