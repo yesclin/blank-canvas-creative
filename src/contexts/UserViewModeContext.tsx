@@ -22,9 +22,10 @@ const UserViewModeContext = createContext<UserViewModeContextType | null>(null);
 interface ProviderProps {
   children: ReactNode;
   realRole: ViewableRole | null;
+  userId: string | null;
 }
 
-export function UserViewModeProvider({ children, realRole }: ProviderProps) {
+export function UserViewModeProvider({ children, realRole, userId }: ProviderProps) {
   const [viewedRoleState, setViewedRoleState] = useState<ViewableRole | null>(null);
 
   // Only owner can switch view
@@ -32,7 +33,7 @@ export function UserViewModeProvider({ children, realRole }: ProviderProps) {
 
   // Load persisted viewed role on mount / when realRole resolves
   useEffect(() => {
-    if (!realRole) {
+    if (!realRole || !userId) {
       setViewedRoleState(null);
       return;
     }
@@ -43,14 +44,19 @@ export function UserViewModeProvider({ children, realRole }: ProviderProps) {
       return;
     }
     try {
-      const stored = localStorage.getItem(STORAGE_KEY) as ViewableRole | null;
+      const storedRaw = localStorage.getItem(STORAGE_KEY);
+      const stored = storedRaw?.startsWith(`${userId}:`)
+        ? (storedRaw.slice(userId.length + 1) as ViewableRole)
+        : null;
       if (stored && ["owner", "admin", "profissional", "recepcionista"].includes(stored)) {
         setViewedRoleState(stored === "owner" ? null : stored);
+      } else if (storedRaw) {
+        localStorage.removeItem(STORAGE_KEY);
       }
     } catch {
       // ignore
     }
-  }, [realRole]);
+  }, [realRole, userId]);
 
   // Listen for explicit signout to clear simulation
   useEffect(() => {
@@ -71,12 +77,12 @@ export function UserViewModeProvider({ children, realRole }: ProviderProps) {
         if (role === "owner") {
           localStorage.removeItem(STORAGE_KEY);
         } else {
-          localStorage.setItem(STORAGE_KEY, role);
+          localStorage.setItem(STORAGE_KEY, `${userId}:${role}`);
         }
       } catch {}
       setViewedRoleState(role === "owner" ? null : role);
     },
-    [canSwitchView]
+    [canSwitchView, userId]
   );
 
   const resetViewedRole = useCallback(() => {
