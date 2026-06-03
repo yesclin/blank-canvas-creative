@@ -172,7 +172,7 @@ export function ClinicFeaturesProvider({ children }: { children: ReactNode }) {
   const { userId: authUserId, isLoading: authIdentityLoading } = useAuthIdentity();
 
   const { data: scope } = useQuery({
-    queryKey: ['clinic-scope', authUserId],
+    queryKey: ['clinic-features-scope', authUserId],
     queryFn: () => resolveActiveClinicScope(authUserId!),
     enabled: !authIdentityLoading && !!authUserId,
     staleTime: 0,
@@ -195,7 +195,7 @@ export function ClinicFeaturesProvider({ children }: { children: ReactNode }) {
   // Reagir a mudanças de auth e de modo suporte
   useEffect(() => {
     const invalidate = () => {
-      queryClient.invalidateQueries({ queryKey: ['clinic-scope'] });
+      queryClient.invalidateQueries({ queryKey: ['clinic-features-scope'] });
       queryClient.invalidateQueries({ queryKey: ['clinic-effective-features'] });
     };
 
