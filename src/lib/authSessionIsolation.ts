@@ -1,3 +1,5 @@
+import { supabase } from "@/integrations/supabase/client";
+
 const TAB_USER_KEY = "yc.auth.expectedUserId";
 const VIEW_ROLE_KEY = "yc.viewedRole";
 const SUPPORT_CLINIC_KEY = "yesclin_support_clinic_id";
@@ -138,6 +140,11 @@ export function quarantineMismatchedAuthSession(reason: string, expectedUserId: 
   clearAuthenticatedTab();
   clearSupabaseAuthStorage();
   emitIdentityChanged(expectedUserId, null, reason);
+  setTimeout(() => {
+    void supabase.auth.signOut({ scope: "local" }).catch((error: unknown) => {
+      console.error("[AUTH_SECURITY] falha ao encerrar sessão local divergente", error);
+    });
+  }, 0);
 }
 
 export function rememberAuthenticatedUser(userId: string | null | undefined) {
