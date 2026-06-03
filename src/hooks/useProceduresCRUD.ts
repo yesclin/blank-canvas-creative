@@ -140,6 +140,7 @@ async function checkDuplicateName(name: string, clinicId: string, excludeId?: st
 // Create procedure mutation
 export function useCreateProcedure() {
   const queryClient = useQueryClient();
+  const { clinic } = useClinicData();
   
   return useMutation({
     mutationFn: async (formData: ProcedureFormData) => {
@@ -182,8 +183,8 @@ export function useCreateProcedure() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["procedures-list"] });
-      queryClient.invalidateQueries({ queryKey: ["procedures"] });
+      queryClient.invalidateQueries({ queryKey: ["procedures-list", clinic?.id] });
+      queryClient.invalidateQueries({ queryKey: ["procedures", clinic?.id] });
       toast.success("Procedimento criado com sucesso!");
     },
     onError: (error: Error) => {
@@ -196,6 +197,7 @@ export function useCreateProcedure() {
 // Update procedure mutation
 export function useUpdateProcedure() {
   const queryClient = useQueryClient();
+  const { clinic } = useClinicData();
   
   return useMutation({
     mutationFn: async ({ id, formData }: { id: string; formData: ProcedureFormData }) => {
@@ -240,8 +242,8 @@ export function useUpdateProcedure() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["procedures-list"] });
-      queryClient.invalidateQueries({ queryKey: ["procedures"] });
+      queryClient.invalidateQueries({ queryKey: ["procedures-list", clinic?.id] });
+      queryClient.invalidateQueries({ queryKey: ["procedures", clinic?.id] });
       toast.success("Procedimento atualizado com sucesso!");
     },
     onError: (error: Error) => {
@@ -284,6 +286,7 @@ export function useProcedureUsage(procedureId: string | null) {
 // Toggle procedure active status mutation
 export function useToggleProcedureStatus() {
   const queryClient = useQueryClient();
+  const { clinic } = useClinicData();
   
   return useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
@@ -302,8 +305,8 @@ export function useToggleProcedureStatus() {
       return data;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["procedures-list"] });
-      queryClient.invalidateQueries({ queryKey: ["procedures"] });
+      queryClient.invalidateQueries({ queryKey: ["procedures-list", clinic?.id] });
+      queryClient.invalidateQueries({ queryKey: ["procedures", clinic?.id] });
       toast.success(
         variables.isActive 
           ? "Procedimento ativado com sucesso!" 
