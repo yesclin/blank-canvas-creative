@@ -12,6 +12,7 @@ import { differenceInCalendarDays, parseISO, startOfDay } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { withTimeout } from '@/lib/asyncTimeout';
 import { logAuthDiagnostic } from '@/lib/authDiagnostics';
+import { useAuthIdentity } from '@/hooks/useAuthIdentity';
 
 export type SubscriptionStatus =
   | 'trial'
@@ -34,10 +35,10 @@ export interface ClinicSubscriptionData {
 
 type ClinicScope = { userId: string | null; clinicId: string | null };
 
-async function resolveClinicScope(): Promise<ClinicScope> {
+async function resolveClinicScope(expectedUserId: string): Promise<ClinicScope> {
   const { data: auth } = await withTimeout<any>(supabase.auth.getUser(), 10000, 'Tempo esgotado ao carregar sessão.');
   const userId = auth?.user?.id;
-  if (!userId) return { userId: null, clinicId: null };
+  if (!userId || userId !== expectedUserId) return { userId: null, clinicId: null };
 
   try {
     const supportClinicId =
@@ -133,10 +134,12 @@ async function fetchSubscription(scope: ClinicScope | null | undefined): Promise
 
 export function useClinicSubscription() {
   const queryClient = useQueryClient();
+  const { userId: authUserId, isLoading: authIdentityLoading } = useAuthIdentity();
 
   const { data: scope } = useQuery({
-    queryKey: ['clinic-scope'],
-    queryFn: resolveClinicScope,
+    queryKey: ['clinic-scope', authUserId],
+    queryFn: () => resolveClinicScope(authUserId!),
+    enabled: !authIdentityLoading && !!authUserId,
     staleTime: 0,
     gcTime: 60 * 1000,
     retry: 1,
@@ -192,7 +195,7 @@ export function useClinicSubscription() {
       days_remaining: null,
       canMutate: true,
     } satisfies ClinicSubscriptionData)),
-    loading: query.isLoading,
+    loading: authIdentityLoading || query.isLoading,
     refetch: () => void query.refetch(),
   };
 }
