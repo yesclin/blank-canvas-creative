@@ -153,6 +153,7 @@ export function useUpdateMaterial() {
   
   return useMutation({
     mutationFn: async ({ id, ...formData }: MaterialFormData & { id: string }) => {
+      const clinicId = await getClinicId();
       const { data, error } = await supabase
         .from('products')
         .update({
@@ -164,6 +165,7 @@ export function useUpdateMaterial() {
           description: formData.description,
         })
         .eq('id', id)
+        .eq('clinic_id', clinicId)
         .select()
         .single();
       
@@ -186,10 +188,12 @@ export function useToggleMaterialStatus() {
   
   return useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
+      const clinicId = await getClinicId();
       const { error } = await supabase
         .from('products')
         .update({ is_active })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('clinic_id', clinicId);
       
       if (error) throw error;
     },
@@ -209,11 +213,13 @@ export function useDeleteMaterial() {
   
   return useMutation({
     mutationFn: async (id: string) => {
+      const clinicId = await getClinicId();
       // Soft delete by deactivating
       const { error } = await supabase
         .from('products')
         .update({ is_active: false })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('clinic_id', clinicId);
       
       if (error) throw error;
     },
