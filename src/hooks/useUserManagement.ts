@@ -284,6 +284,10 @@ export function useCurrentUser() {
   return useQuery({
     queryKey: ["current-user", authUserId],
     enabled: !authIdentityLoading && !!authUserId,
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
