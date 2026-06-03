@@ -8,6 +8,7 @@ import {
   emitIdentityChanged,
   ensureSessionMatchesTab,
   getTabExpectedUserId,
+  quarantineMismatchedAuthSession,
 } from "@/lib/authSessionIsolation";
 import { clearSupportSessionIfMismatch } from "@/lib/supportSession";
 import { wasLogoutRequestedByUser } from "@/lib/authIntent";
@@ -53,20 +54,12 @@ export function AuthSessionGuard() {
 
       const expected = explicitPrevious ?? getTabExpectedUserId();
       if (expected && expected !== newUserId) {
-        // Mismatch detectado: NÃO deslogar automaticamente.
-        // Apenas higieniza cache local; o app irá re-renderizar com a
-        // nova identidade real. Logout só deve ocorrer por ação explícita.
-        console.warn("[AUTH_SECURITY] Identidade divergente — apenas limpando cache local", {
-          eventLabel,
-          expectedUserId: expected,
-          receivedUserId: newUserId,
-        });
-        hardReset(`${eventLabel} user divergente`, expected, newUserId);
-        // Atualiza tab para o novo usuário real para evitar loops.
-        try {
-          window.sessionStorage.setItem("yc.auth.expectedUserId", newUserId);
-        } catch { /* ignore */ }
-        currentUserIdRef.current = newUserId;
+        // Mismatch detectado: bloquear a sessão local divergente. Aceitar a
+        // nova identidade automaticamente é justamente o vazamento reportado:
+        // a UI pode passar a mostrar B para uma aba que esperava A.
+        quarantineMismatchedAuthSession(`${eventLabel} user divergente`, expected, newUserId);
+        try { qc.clear(); } catch { /* ignore */ }
+        currentUserIdRef.current = null;
         return;
       }
 

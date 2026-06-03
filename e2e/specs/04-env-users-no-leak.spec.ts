@@ -83,4 +83,24 @@ test.describe("Identidade — usuários reais via env (sem service role)", () =>
     await waitForSidebar(page);
     await expectNoTraceOf(page, [emailB, localB]);
   });
+
+  test("ciclo A → B → A: não reaproveita cache, sidebar ou storage entre contas", async ({ page }) => {
+    await loginAs(page, "owner"); // A
+    await waitForSidebar(page);
+    await expectNoTraceOf(page, [emailB, localB]);
+
+    await logout(page);
+    await loginAs(page, "admin"); // B
+    await waitForSidebar(page);
+    await expectNoTraceOf(page, [emailA, localA]);
+
+    await logout(page);
+    await loginAs(page, "owner"); // A novamente
+    await waitForSidebar(page);
+    await expectNoTraceOf(page, [emailB, localB]);
+
+    await page.reload();
+    await waitForSidebar(page);
+    await expectNoTraceOf(page, [emailB, localB]);
+  });
 });

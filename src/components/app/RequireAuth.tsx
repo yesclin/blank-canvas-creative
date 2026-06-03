@@ -3,7 +3,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLoadingFallback } from "./AppLoadingFallback";
 import { withTimeout } from "@/lib/asyncTimeout";
-import { clearAuthenticatedTab, ensureSessionMatchesTab } from "@/lib/authSessionIsolation";
+import { clearAuthenticatedTab, ensureSessionMatchesTab, quarantineMismatchedAuthSession } from "@/lib/authSessionIsolation";
 import { wasLogoutRequestedByUser, clearLogoutIntent } from "@/lib/authIntent";
 import { tryRecoverSession } from "@/lib/authSessionRecovery";
 
@@ -50,21 +50,14 @@ export function RequireAuth({ children }: RequireAuthProps) {
     let mismatchHandled = false;
 
     const rejectMismatchedSession = (source: string, userId: string, expectedUserId: string) => {
-      // Mismatch de identidade NÃO desloga automaticamente. Apenas registra
-      // e aceita a nova identidade real — o app irá re-renderizar com ela.
-      // Logout só deve ocorrer por ação explícita do usuário.
+      // Mismatch de identidade é falha crítica: não aceitar a nova identidade
+      // em uma aba que esperava outro auth.uid(). Remove o token local e volta
+      // para login, impedindo sidebar/header de renderizarem dados cruzados.
       if (mismatchHandled) return;
       mismatchHandled = true;
-      console.warn("[AUTH_SECURITY] Identidade divergente em RequireAuth — preservando sessão atual", {
-        source,
-        expectedUserId,
-        receivedUserId: userId,
-      });
-      try {
-        window.sessionStorage.setItem("yc.auth.expectedUserId", userId);
-      } catch { /* ignore */ }
-      isAuthedRef.current = Boolean(userId);
-      setIsAuthed(Boolean(userId));
+      quarantineMismatchedAuthSession(`RequireAuth:${source}`, expectedUserId, userId);
+      isAuthedRef.current = false;
+      setIsAuthed(false);
       setIsLoading(false);
     };
 

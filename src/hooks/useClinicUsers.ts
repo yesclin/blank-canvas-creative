@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { withTimeout } from "@/lib/asyncTimeout";
@@ -42,8 +42,14 @@ export function useClinicUsers() {
   const [clinicId, setClinicId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const requestRef = useRef(0);
+  const activeUserIdRef = useRef<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
+    const reqId = ++requestRef.current;
+    const stillCurrent = (expectedUserId: string | null) =>
+      reqId === requestRef.current && (expectedUserId === null || activeUserIdRef.current === expectedUserId);
+
     try {
       setIsLoading(true);
       setError(null);
@@ -51,19 +57,29 @@ export function useClinicUsers() {
       // Get current user
       const { data: { user } } = await withTimeout<any>(supabase.auth.getUser());
       if (!user) {
-        setError("Usuário não autenticado");
-        setIsLoading(false);
+        activeUserIdRef.current = null;
+        if (stillCurrent(null)) {
+          setUsers([]);
+          setCurrentUser(null);
+          setClinicId(null);
+          setError("Usuário não autenticado");
+          setIsLoading(false);
+        }
         return;
       }
+      const expectedUserId = user.id;
+      activeUserIdRef.current = expectedUserId;
 
       // Get user's clinic
       const { data: profile } = await withTimeout<any>(supabase
         .from("profiles")
-        .select("clinic_id, full_name, avatar_url")
+        .select("clinic_id, user_id, full_name, avatar_url")
         .eq("user_id", user.id)
-        .single());
+        .maybeSingle());
 
-      if (!profile?.clinic_id) {
+      if (!stillCurrent(expectedUserId)) return;
+
+      if (!profile?.clinic_id || profile.user_id !== expectedUserId) {
         setError("Clínica não encontrada");
         setIsLoading(false);
         return;
@@ -77,7 +93,9 @@ export function useClinicUsers() {
         .select("role")
         .eq("user_id", user.id)
         .eq("clinic_id", profile.clinic_id)
-        .single());
+        .maybeSingle());
+
+      if (!stillCurrent(expectedUserId)) return;
 
       // Get all profiles in the same clinic
       const { data: clinicProfiles, error: profilesError } = await withTimeout<any>(supabase
@@ -102,12 +120,16 @@ export function useClinicUsers() {
             .in("user_id", userIds))
         : { data: [] };
 
+      if (!stillCurrent(expectedUserId)) return;
+
       // Get clinic creation info to identify primary admin
       const { data: clinic } = await withTimeout<any>(supabase
         .from("clinics")
         .select("created_at")
         .eq("id", profile.clinic_id)
-        .single());
+        .maybeSingle());
+
+      if (!stillCurrent(expectedUserId)) return;
 
       // Get user emails from auth (we need to get this differently)
       // For now, we'll use a placeholder - in production this would come from a secure function
@@ -146,6 +168,7 @@ export function useClinicUsers() {
         return a.full_name.localeCompare(b.full_name);
       });
 
+      if (!stillCurrent(expectedUserId)) return;
       setUsers(userList);
 
       // Set current user info
@@ -158,8 +181,9 @@ export function useClinicUsers() {
         });
       }
 
-      setIsLoading(false);
+      if (stillCurrent(expectedUserId)) setIsLoading(false);
     } catch (err) {
+      if (reqId !== requestRef.current) return;
       console.error("Error in fetchUsers:", err);
       setError("Erro ao carregar usuários");
       setIsLoading(false);

@@ -4,6 +4,7 @@ import { useClinicData } from "./useClinicData";
 import { toast } from "sonner";
 import { logAuthDiagnostic } from "@/lib/authDiagnostics";
 import { withTimeout } from "@/lib/asyncTimeout";
+import { useAuthIdentity } from "@/hooks/useAuthIdentity";
 
 export type UserType = 'proprietario_admin' | 'profissional_saude' | 'recepcionista';
 export type AppRole = 'owner' | 'admin' | 'profissional' | 'recepcionista';
@@ -118,14 +119,7 @@ export const RECEPTIONIST_BLOCKED_MODULES = ['prontuario', 'configuracoes', 'rel
  */
 export function useClinicUsers() {
   const { clinic } = useClinicData();
-  const { data: authUserId } = useQuery({
-    queryKey: ["auth-user-id"],
-    queryFn: async () => {
-      const { data: { user } } = await withTimeout<any>(supabase.auth.getUser());
-      return user?.id ?? null;
-    },
-    staleTime: 0,
-  });
+  const { userId: authUserId, isLoading: authIdentityLoading } = useAuthIdentity();
   
   return useQuery({
     queryKey: ["clinic-users", authUserId, clinic?.id],
@@ -197,7 +191,7 @@ export function useClinicUsers() {
         } as SystemUser;
       });
     },
-    enabled: !!authUserId && !!clinic?.id,
+    enabled: !authIdentityLoading && !!authUserId && !!clinic?.id,
   });
 }
 
@@ -279,18 +273,11 @@ export function useUpdateUserRole() {
  * que o cache de um usuário anterior vaze para outro usuário no mesmo tab.
  */
 export function useCurrentUser() {
-  const { data: authUserId } = useQuery({
-    queryKey: ["auth-user-id"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      return user?.id ?? null;
-    },
-    staleTime: 0,
-  });
+  const { userId: authUserId, isLoading: authIdentityLoading } = useAuthIdentity();
 
   return useQuery({
     queryKey: ["current-user", authUserId],
-    enabled: !!authUserId,
+    enabled: !authIdentityLoading && !!authUserId,
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;

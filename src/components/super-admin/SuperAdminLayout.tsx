@@ -9,6 +9,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { usePlatformAdmin } from '@/hooks/usePlatformAdmin';
 import { markUserLogout } from '@/lib/authIntent';
+import { clearAuthenticatedTab } from '@/lib/authSessionIsolation';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface Props {
   children?: ReactNode;
@@ -16,10 +18,13 @@ interface Props {
 
 export function SuperAdminLayout({ children }: Props) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { email } = usePlatformAdmin();
 
   const handleLogout = async () => {
     markUserLogout("super-admin-logout");
+    clearAuthenticatedTab();
+    try { queryClient.clear(); } catch { /* ignore */ }
     await supabase.auth.signOut();
     navigate('/login', { replace: true });
   };

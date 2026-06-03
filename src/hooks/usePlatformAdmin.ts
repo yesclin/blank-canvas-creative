@@ -8,10 +8,11 @@
  * (Layout, ProtectedRoute, páginas) compartilhem o mesmo cache. Isso evita
  * o spinner central reaparecer a cada navegação interna do /super-admin.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { withTimeout } from '@/lib/asyncTimeout';
+import { useAuthIdentity } from '@/hooks/useAuthIdentity';
 
 interface PlatformAdminState {
   isPlatformAdmin: boolean;
@@ -29,10 +30,16 @@ interface PlatformAdminData {
   totalAdmins: number | null;
 }
 
-async function fetchPlatformAdmin(): Promise<PlatformAdminData> {
+async function fetchPlatformAdmin(expectedUserId: string): Promise<PlatformAdminData> {
   const { data: auth } = await withTimeout<any>(supabase.auth.getUser());
   const user = auth?.user;
-  if (!user) {
+  if (!user || user.id !== expectedUserId) {
+    if (user?.id && user.id !== expectedUserId) {
+      console.error('[AUTH_SECURITY] platform-admin descartado por auth.uid divergente', {
+        queryUserId: expectedUserId,
+        currentUserId: user.id,
+      });
+    }
     return { isPlatformAdmin: false, userId: null, email: null, totalAdmins: null };
   }
   const [{ data: isAdmin }, { data: total }] = await Promise.all([
@@ -52,13 +59,14 @@ const PLATFORM_ADMIN_KEY = ['platform-admin', 'me'] as const;
 
 export function usePlatformAdmin(): PlatformAdminState {
   const queryClient = useQueryClient();
-  // Bumpamos quando a identidade muda (SIGNED_OUT, identity-changed),
-  // forçando o React Query a reavaliar — sem disparar loading global.
-  const [authVersion, setAuthVersion] = useState(0);
+  const { userId: authUserId, isLoading: authIdentityLoading } = useAuthIdentity();
 
   const query = useQuery({
-    queryKey: [...PLATFORM_ADMIN_KEY, authVersion],
-    queryFn: fetchPlatformAdmin,
+    queryKey: [...PLATFORM_ADMIN_KEY, authUserId],
+    queryFn: () => authUserId
+      ? fetchPlatformAdmin(authUserId)
+      : Promise.resolve({ isPlatformAdmin: false, userId: null, email: null, totalAdmins: null }),
+    enabled: !authIdentityLoading && !!authUserId,
     staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,
     refetchOnWindowFocus: false,
@@ -70,10 +78,7 @@ export function usePlatformAdmin(): PlatformAdminState {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT' || event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-        // Invalida apenas; mantém os dados antigos visíveis até o refetch
-        // terminar, evitando "blink" central com spinner.
-        queryClient.invalidateQueries({ queryKey: PLATFORM_ADMIN_KEY });
-        setAuthVersion((v) => v + 1);
+        queryClient.removeQueries({ queryKey: PLATFORM_ADMIN_KEY });
       }
       // TOKEN_REFRESHED / INITIAL_SESSION: ignorar — não invalidar nem
       // mostrar loading global; o cache atual continua válido.
@@ -89,7 +94,7 @@ export function usePlatformAdmin(): PlatformAdminState {
   const data = query.data;
   return {
     isPlatformAdmin: data?.isPlatformAdmin ?? false,
-    loading: query.isLoading && !data,
+    loading: authIdentityLoading || (query.isLoading && !!authUserId && !data),
     userId: data?.userId ?? null,
     email: data?.email ?? null,
     totalAdmins: data?.totalAdmins ?? null,

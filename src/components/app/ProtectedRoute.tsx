@@ -1,12 +1,14 @@
 import { ReactNode, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePermissions, AppModule, AppAction } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShieldX, UserX, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { withTimeout } from "@/lib/asyncTimeout";
+import { useAuthIdentity } from "@/hooks/useAuthIdentity";
+import { clearAuthenticatedTab } from "@/lib/authSessionIsolation";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -40,19 +42,29 @@ export function ProtectedRoute({
   redirectTo,
 }: ProtectedRouteProps) {
   const { can, isLoading, isOwner, isAdmin, role, refetch } = usePermissions();
+  const { userId: authUserId, isLoading: authIdentityLoading } = useAuthIdentity();
 
   const activeQuery = useQuery({
-    queryKey: ["protected-route", "is-active"],
+    queryKey: ["protected-route", "is-active", authUserId],
     queryFn: async (): Promise<boolean> => {
       const { data: { user } } = await withTimeout<any>(supabase.auth.getUser());
       if (!user) return false;
+      if (user.id !== authUserId) {
+        console.error("[AUTH_SECURITY] is-active descartado por auth.uid divergente", {
+          queryUserId: authUserId,
+          currentUserId: user.id,
+        });
+        return false;
+      }
       const { data: profile } = await withTimeout<any>(
-        supabase.from("profiles").select("is_active").eq("user_id", user.id).maybeSingle()
+        supabase.from("profiles").select("is_active, user_id").eq("user_id", user.id).maybeSingle()
       );
       // Profile ainda não criado (race no signup) → trata como ativo.
       if (!profile) return true;
+      if (profile.user_id !== user.id) return false;
       return profile.is_active ?? true;
     },
+    enabled: !authIdentityLoading && !!authUserId,
     staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,
     refetchOnWindowFocus: false,
@@ -67,7 +79,7 @@ export function ProtectedRoute({
 
   // Só mostra skeleton no primeiro carregamento. Em navegações
   // subsequentes (cache quente) cai direto no conteúdo.
-  if (isLoading || (activeQuery.isLoading && activeQuery.data === undefined)) {
+  if (authIdentityLoading || isLoading || (activeQuery.isLoading && activeQuery.data === undefined)) {
     return (
       <div className="space-y-6 p-6">
         <Skeleton className="h-8 w-64" />
@@ -176,9 +188,12 @@ function PermissionsLoadFailedPage({ onRetry }: { onRetry: () => void | Promise<
 }
 
 function InactiveUserPage() {
+  const queryClient = useQueryClient();
   const handleLogout = async () => {
     const { markUserLogout } = await import("@/lib/authIntent");
     markUserLogout("inactive-account");
+    clearAuthenticatedTab();
+    try { queryClient.clear(); } catch { /* ignore */ }
     await supabase.auth.signOut();
     window.location.href = "/login";
   };

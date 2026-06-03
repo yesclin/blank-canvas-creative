@@ -18,7 +18,7 @@ import { PageSkeleton } from "@/components/app/PageSkeleton";
 import CookieConsent from "@/components/CookieConsent";
 import { supabase } from "@/integrations/supabase/client";
 import { usePageResumeRecovery } from "@/hooks/usePageResumeRecovery";
-import { clearAuthenticatedTab, clearIdentityScopedState, clearUnsafeAuthCache } from "@/lib/authSessionIsolation";
+import { clearAuthenticatedTab, clearIdentityScopedState, clearUnsafeAuthCache, getTabExpectedUserId, quarantineMismatchedAuthSession } from "@/lib/authSessionIsolation";
 
 // Páginas Públicas — lazy para não pesar no boot inicial.
 const Index = lazyWithTimeout(() => import("./pages/Index"), "Index");
@@ -280,6 +280,15 @@ function AuthScopedProviders() {
       if (!mounted) return;
       const prev = currentUidRef.current;
       if (prev === nextUid) return;
+      const expected = getTabExpectedUserId();
+      if (nextUid && expected && expected !== nextUid) {
+        requestRef.current++;
+        try { queryClient.clear(); } catch { /* ignore */ }
+        quarantineMismatchedAuthSession("AuthScopedProviders user divergente", expected, nextUid);
+        currentUidRef.current = null;
+        setScopeKey("auth:anonymous");
+        return;
+      }
       currentUidRef.current = nextUid;
       clearUnsafeAuthCache();
       if (!nextUid) clearAuthenticatedTab();

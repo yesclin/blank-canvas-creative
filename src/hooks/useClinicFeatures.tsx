@@ -17,6 +17,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { withTimeout } from '@/lib/asyncTimeout';
 import { logAuthDiagnostic } from '@/lib/authDiagnostics';
+import { useAuthIdentity } from '@/hooks/useAuthIdentity';
 
 /**
  * Flags de plano (controlam módulos administrativos/comerciais).
@@ -75,10 +76,10 @@ const DEFAULT_LIMITS: Record<LimitKey, number | null> = {
 
 type ClinicScope = { userId: string | null; clinicId: string | null };
 
-async function resolveActiveClinicScope(): Promise<ClinicScope> {
+async function resolveActiveClinicScope(expectedUserId: string): Promise<ClinicScope> {
   const { data: auth } = await withTimeout<any>(supabase.auth.getUser());
   const userId = auth?.user?.id;
-  if (!userId) return { userId: null, clinicId: null };
+  if (!userId || userId !== expectedUserId) return { userId: null, clinicId: null };
 
   // Modo suporte (impersonação): se admin de plataforma e há clinic_id
   // em localStorage, usar essa clínica.
@@ -168,10 +169,12 @@ const ClinicFeaturesContext = createContext<ClinicFeaturesContextValue | null>(n
 
 export function ClinicFeaturesProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  const { userId: authUserId, isLoading: authIdentityLoading } = useAuthIdentity();
 
   const { data: scope } = useQuery({
-    queryKey: ['clinic-scope'],
-    queryFn: resolveActiveClinicScope,
+    queryKey: ['clinic-features-scope', authUserId],
+    queryFn: () => resolveActiveClinicScope(authUserId!),
+    enabled: !authIdentityLoading && !!authUserId,
     staleTime: 0,
     gcTime: 60 * 1000,
     retry: 1,
@@ -192,7 +195,7 @@ export function ClinicFeaturesProvider({ children }: { children: ReactNode }) {
   // Reagir a mudanças de auth e de modo suporte
   useEffect(() => {
     const invalidate = () => {
-      queryClient.invalidateQueries({ queryKey: ['clinic-scope'] });
+      queryClient.invalidateQueries({ queryKey: ['clinic-features-scope'] });
       queryClient.invalidateQueries({ queryKey: ['clinic-effective-features'] });
     };
 
@@ -233,7 +236,7 @@ export function ClinicFeaturesProvider({ children }: { children: ReactNode }) {
     plan_name: data?.plan_name ?? null,
     plan_slug: data?.plan_slug ?? null,
     clinic_id: data?.clinic_id ?? null,
-    loading: isLoading,
+    loading: authIdentityLoading || isLoading,
     hasFeature: (key) => Boolean(data?.features?.[key]),
     refetch: () => {
       void refetch();

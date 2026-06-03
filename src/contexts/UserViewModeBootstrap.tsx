@@ -30,10 +30,22 @@ export function UserViewModeBootstrap({ children }: { children: ReactNode }) {
           if (!cancelledRef.current && reqId === requestRef.current) setRealRole(null);
           return;
         }
+        const userId = user.id;
+        const { data: profile } = await withTimeout<any>(supabase
+          .from("profiles")
+          .select("clinic_id, user_id")
+          .eq("user_id", userId)
+          .maybeSingle(), 8000, "Tempo esgotado ao carregar perfil do usuário.");
+        if (cancelledRef.current || reqId !== requestRef.current) return;
+        if (!profile?.clinic_id || profile.user_id !== userId) {
+          setRealRole(null);
+          return;
+        }
         const { data } = await withTimeout<any>(supabase
           .from("user_roles")
           .select("role")
-          .eq("user_id", user.id)
+          .eq("user_id", userId)
+          .eq("clinic_id", profile.clinic_id)
           .maybeSingle(), 8000, "Tempo esgotado ao carregar papel do usuário.");
         if (cancelledRef.current || reqId !== requestRef.current) return;
         const role = (data?.role as ViewableRole | undefined) ?? null;
