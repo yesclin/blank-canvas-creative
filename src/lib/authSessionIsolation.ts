@@ -113,6 +113,33 @@ export function clearAuthenticatedTab() {
   clearIdentityScopedState();
 }
 
+export function clearSupabaseAuthStorage() {
+  if (typeof window === "undefined") return;
+  try {
+    for (const store of [window.localStorage, window.sessionStorage]) {
+      const keys: string[] = [];
+      for (let i = 0; i < store.length; i++) {
+        const key = store.key(i);
+        if (key && /^sb-.+-auth-token$/.test(key)) keys.push(key);
+      }
+      keys.forEach((key) => store.removeItem(key));
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+export function quarantineMismatchedAuthSession(reason: string, expectedUserId: string, receivedUserId: string) {
+  console.error("[AUTH_SECURITY] Sessão divergente bloqueada — removendo token local", {
+    reason,
+    expectedUserId,
+    receivedUserId,
+  });
+  clearAuthenticatedTab();
+  clearSupabaseAuthStorage();
+  emitIdentityChanged(expectedUserId, null, reason);
+}
+
 export function rememberAuthenticatedUser(userId: string | null | undefined) {
   if (userId) setTabExpectedUserId(userId);
 }
