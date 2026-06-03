@@ -15,9 +15,16 @@ import { useCurrentUser } from "@/hooks/useClinicUsers";
  * auth.uid() na sidebar.
  */
 export function AuthDebugOverlay() {
-  const enabled =
-    import.meta.env.DEV ||
-    (typeof window !== "undefined" && window.sessionStorage.getItem("yc.auth.debug") === "1");
+  // Estritamente opt-in. Nunca aparece em preview/produção para clientes.
+  // Para ativar localmente: definir VITE_ENABLE_AUTH_DEBUG="true" no .env.local
+  // e, opcionalmente, sessionStorage.setItem("yc.auth.debug","1") em DEV.
+  const envEnabled = import.meta.env.VITE_ENABLE_AUTH_DEBUG === "true";
+  const devOptIn =
+    import.meta.env.DEV &&
+    typeof window !== "undefined" &&
+    window.sessionStorage.getItem("yc.auth.debug") === "1";
+  const enabled = envEnabled || devOptIn;
+
 
   const { user } = useCurrentUser();
   const [collapsed, setCollapsed] = useState(false);
