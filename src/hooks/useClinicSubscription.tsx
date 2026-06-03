@@ -150,8 +150,9 @@ export function useClinicSubscription() {
     queryKey: ['clinic-subscription', scope?.userId ?? null, scope?.clinicId ?? null],
     queryFn: () => fetchSubscription(scope),
     enabled: !!scope?.userId,
-    staleTime: 60 * 1000,
-    refetchOnWindowFocus: true,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     retry: 1,
     throwOnError: false,
   });
@@ -162,7 +163,9 @@ export function useClinicSubscription() {
       queryClient.invalidateQueries({ queryKey: ['clinic-subscription'] });
     };
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (['SIGNED_IN', 'SIGNED_OUT', 'TOKEN_REFRESHED', 'INITIAL_SESSION'].includes(event)) {
+      // TOKEN_REFRESHED / INITIAL_SESSION não trocam clínica — ignorar para
+      // evitar refetch em background da assinatura enquanto o usuário usa o app.
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
         setTimeout(() => invalidate(), 0);
       }
     });
