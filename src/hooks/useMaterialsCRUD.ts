@@ -112,6 +112,7 @@ export function useMaterial(id: string | null) {
 
 export function useCreateMaterial() {
   const queryClient = useQueryClient();
+  const { clinic } = useClinicData();
   
   return useMutation({
     mutationFn: async (formData: MaterialFormData) => {
@@ -138,8 +139,8 @@ export function useCreateMaterial() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['materials-list'] });
-      queryClient.invalidateQueries({ queryKey: ['stock-products'] });
+      queryClient.invalidateQueries({ queryKey: ['materials-list', clinic?.id] });
+      queryClient.invalidateQueries({ queryKey: ['stock-products', clinic?.id] });
       toast.success('Material cadastrado com sucesso');
     },
     onError: (error) => {
@@ -150,6 +151,7 @@ export function useCreateMaterial() {
 
 export function useUpdateMaterial() {
   const queryClient = useQueryClient();
+  const { clinic } = useClinicData();
   
   return useMutation({
     mutationFn: async ({ id, ...formData }: MaterialFormData & { id: string }) => {
@@ -173,8 +175,8 @@ export function useUpdateMaterial() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['materials-list'] });
-      queryClient.invalidateQueries({ queryKey: ['stock-products'] });
+      queryClient.invalidateQueries({ queryKey: ['materials-list', clinic?.id] });
+      queryClient.invalidateQueries({ queryKey: ['stock-products', clinic?.id] });
       toast.success('Material atualizado com sucesso');
     },
     onError: (error) => {
@@ -185,6 +187,7 @@ export function useUpdateMaterial() {
 
 export function useToggleMaterialStatus() {
   const queryClient = useQueryClient();
+  const { clinic } = useClinicData();
   
   return useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
@@ -198,8 +201,8 @@ export function useToggleMaterialStatus() {
       if (error) throw error;
     },
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['materials-list'] });
-      queryClient.invalidateQueries({ queryKey: ['stock-products'] });
+      queryClient.invalidateQueries({ queryKey: ['materials-list', clinic?.id] });
+      queryClient.invalidateQueries({ queryKey: ['stock-products', clinic?.id] });
       toast.success(vars.is_active ? 'Material ativado' : 'Material desativado');
     },
     onError: (error) => {
@@ -210,6 +213,7 @@ export function useToggleMaterialStatus() {
 
 export function useDeleteMaterial() {
   const queryClient = useQueryClient();
+  const { clinic } = useClinicData();
   
   return useMutation({
     mutationFn: async (id: string) => {
@@ -224,8 +228,8 @@ export function useDeleteMaterial() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['materials-list'] });
-      queryClient.invalidateQueries({ queryKey: ['stock-products'] });
+      queryClient.invalidateQueries({ queryKey: ['materials-list', clinic?.id] });
+      queryClient.invalidateQueries({ queryKey: ['stock-products', clinic?.id] });
       toast.success('Material removido com sucesso');
     },
     onError: (error) => {
