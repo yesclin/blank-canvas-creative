@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useClinicData } from "@/hooks/useClinicData";
 
 export interface Procedure {
   id: string;
@@ -33,13 +34,16 @@ export interface ProcedureFormData {
 
 // Fetch all procedures (including inactive for admin view)
 export function useProceduresList(includeInactive: boolean = true) {
+  const { clinic } = useClinicData();
+
   return useQuery({
-    queryKey: ["procedures-list", includeInactive],
+    queryKey: ["procedures-list", clinic?.id, includeInactive],
     queryFn: async () => {
       // Try with join first
       let query = supabase
         .from("procedures")
         .select(`*, specialties(name)`)
+        .eq("clinic_id", clinic!.id)
         .order("is_active", { ascending: false })
         .order("name");
 
@@ -55,6 +59,7 @@ export function useProceduresList(includeInactive: boolean = true) {
         let fallbackQuery = supabase
           .from("procedures")
           .select("*")
+          .eq("clinic_id", clinic!.id)
           .order("is_active", { ascending: false })
           .order("name");
 
@@ -79,6 +84,9 @@ export function useProceduresList(includeInactive: boolean = true) {
         specialty_name: (p as any).specialties?.name || null,
       })) as Procedure[];
     },
+    enabled: !!clinic?.id,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     retry: 1,
   });
 }
