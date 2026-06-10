@@ -55,6 +55,12 @@ export function clearUnsafeAuthCache() {
       window.localStorage.removeItem(key);
       window.sessionStorage.removeItem(key);
     }
+    const localAuthKeys: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i);
+      if (key && /^sb-.+-auth-token$/.test(key)) localAuthKeys.push(key);
+    }
+    localAuthKeys.forEach((key) => window.localStorage.removeItem(key));
   } catch {
     /* ignore */
   }
