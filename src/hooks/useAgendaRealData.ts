@@ -394,31 +394,24 @@ export function useAppointmentsForPeriod(
 }
 
 // ============= CLINIC SCHEDULE =============
-export function useClinicSchedule() {
+export function useClinicSchedule(clinicId?: string | null) {
   return useQuery({
-    queryKey: ["clinic-schedule"],
+    queryKey: ["clinic-schedule", clinicId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("clinic_id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (!profile?.clinic_id) return null;
-
       const { data, error } = await supabase
         .from("clinics")
         .select("opening_hours")
-        .eq("id", profile.clinic_id)
+        .eq("id", clinicId!)
         .single();
       
       if (error || !data?.opening_hours) return getDefaultWeekSchedule();
       
       return data.opening_hours as unknown as WeekSchedule;
     },
+    enabled: !!clinicId,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -430,25 +423,14 @@ export interface ProfessionalScheduleConfig {
   default_duration_minutes: number;
 }
 
-export function useProfessionalSchedulesMap() {
+export function useProfessionalSchedulesMap(clinicId?: string | null) {
   return useQuery({
-    queryKey: ["professional-schedules-map"],
+    queryKey: ["professional-schedules-map", clinicId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return new Map<string, ProfessionalScheduleConfig>();
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("clinic_id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (!profile?.clinic_id) return new Map<string, ProfessionalScheduleConfig>();
-
       const { data, error } = await supabase
         .from("professional_schedule_config")
         .select("*")
-        .eq("clinic_id", profile.clinic_id);
+        .eq("clinic_id", clinicId!);
       
       if (error) {
         console.error("Error fetching professional schedules:", error);
@@ -468,6 +450,10 @@ export function useProfessionalSchedulesMap() {
       
       return scheduleMap;
     },
+    enabled: !!clinicId,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -667,22 +653,27 @@ export function useAgendaInsights(
 }
 
 // ============= SCHEDULE BLOCKS =============
-function useScheduleBlocksForPeriod(rangeStart: Date, rangeEnd: Date) {
+function useScheduleBlocksForPeriod(rangeStart: Date, rangeEnd: Date, clinicId?: string | null) {
   const startStr = format(rangeStart, "yyyy-MM-dd");
   const endStr = format(rangeEnd, "yyyy-MM-dd");
 
   return useQuery({
-    queryKey: ["schedule-blocks", startStr, endStr],
+    queryKey: ["schedule-blocks", clinicId, startStr, endStr],
     queryFn: async (): Promise<ScheduleBlock[]> => {
       const { data, error } = await supabase
         .from("schedule_blocks")
         .select("id, clinic_id, professional_id, title, reason, start_date, end_date, start_time, end_time, all_day")
+        .eq("clinic_id", clinicId!)
         .lte("start_date", endStr)
         .gte("end_date", startStr);
 
       if (error) throw error;
       return (data || []) as ScheduleBlock[];
     },
+    enabled: !!clinicId,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
