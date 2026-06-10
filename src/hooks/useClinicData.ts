@@ -182,7 +182,7 @@ export function useClinicData() {
       } finally {
         if (stillCurrent(activeUserIdRef.current)) {
           if (import.meta.env.DEV) {
-            console.log("[CLINIC] carregada", { hasClinic: loadedClinic, clinicId: loadedClinic ? activeUserIdRef.current : null });
+            console.log("[CLINIC] carregada", { hasClinic: loadedClinic, userId: activeUserIdRef.current });
           }
           setIsLoading(false);
         }
