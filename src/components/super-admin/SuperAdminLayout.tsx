@@ -11,6 +11,7 @@ import { usePlatformAdmin } from '@/hooks/usePlatformAdmin';
 import { markUserLogout } from '@/lib/authIntent';
 import { clearAuthenticatedTab } from '@/lib/authSessionIsolation';
 import { useQueryClient } from '@tanstack/react-query';
+import { clearReactQueryCache } from '@/lib/queryClientDiagnostics';
 
 interface Props {
   children?: ReactNode;
@@ -24,7 +25,7 @@ export function SuperAdminLayout({ children }: Props) {
   const handleLogout = async () => {
     markUserLogout("super-admin-logout");
     clearAuthenticatedTab();
-    try { queryClient.clear(); } catch { /* ignore */ }
+    try { clearReactQueryCache(queryClient, "super-admin-logout"); } catch { /* ignore */ }
     await supabase.auth.signOut();
     navigate('/login', { replace: true });
   };
