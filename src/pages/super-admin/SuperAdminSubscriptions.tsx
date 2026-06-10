@@ -9,6 +9,20 @@ import { toast } from 'sonner';
 import { logPlatformAction } from '@/lib/superAdminAudit';
 
 const STATUSES = ['trial', 'active', 'overdue', 'blocked', 'canceled'];
+const STATUS_LABELS: Record<string, string> = {
+  trial: 'Teste',
+  active: 'Ativa',
+  overdue: 'Em atraso',
+  blocked: 'Bloqueada',
+  canceled: 'Cancelada',
+};
+const CYCLE_LABELS: Record<string, string> = {
+  monthly: 'Mensal',
+  quarterly: 'Trimestral',
+  semiannual: 'Semestral',
+  yearly: 'Anual',
+  annual: 'Anual',
+};
 
 export default function SuperAdminSubscriptions() {
   const [rows, setRows] = useState<any[]>([]);
