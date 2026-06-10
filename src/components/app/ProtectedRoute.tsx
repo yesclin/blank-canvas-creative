@@ -1,5 +1,5 @@
 import { ReactNode, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePermissions, AppModule, AppAction } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { withTimeout } from "@/lib/asyncTimeout";
 import { useAuthIdentity } from "@/hooks/useAuthIdentity";
 import { clearAuthenticatedTab } from "@/lib/authSessionIsolation";
+import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -175,27 +176,23 @@ function PermissionsLoadFailedPage({ onRetry }: { onRetry: () => void | Promise<
         Sua sessão continua ativa, mas tivemos um problema temporário ao buscar
         os dados da sua clínica. Tente novamente em instantes.
       </p>
-      <div className="flex gap-2">
-        <Button onClick={handleRetry} disabled={retrying}>
-          {retrying ? "Tentando..." : "Tentar novamente"}
-        </Button>
-        <Button variant="outline" onClick={() => window.location.reload()}>
-          Recarregar página
-        </Button>
-      </div>
+      <Button onClick={handleRetry} disabled={retrying}>
+        {retrying ? "Tentando..." : "Tentar novamente"}
+      </Button>
     </div>
   );
 }
 
 function InactiveUserPage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const handleLogout = async () => {
     const { markUserLogout } = await import("@/lib/authIntent");
     markUserLogout("inactive-account");
     clearAuthenticatedTab();
-    try { queryClient.clear(); } catch { /* ignore */ }
+    try { clearReactQueryCache(queryClient, "inactive-account-logout"); } catch { /* ignore */ }
     await supabase.auth.signOut();
-    window.location.href = "/login";
+    navigate("/login", { replace: true });
   };
 
   return (
