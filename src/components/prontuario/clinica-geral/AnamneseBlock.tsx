@@ -277,6 +277,7 @@ export function AnamneseBlock({
   const { records: v2Records, saveRecord: saveV2Record, isSaving: savingV2 } = useAnamnesisRecords(patientIdForRecords, null, specialtyId);
 
   useEffect(() => {
+    if (!import.meta.env.DEV) return;
     console.log('[YesClin][AnamneseBlock] receivedSpecialty', {
       specialtyId,
       specialtyName,
@@ -290,6 +291,7 @@ export function AnamneseBlock({
   }, [v2Templates]);
 
   useEffect(() => {
+    if (!import.meta.env.DEV) return;
     console.log('[YesClin][AnamneseBlock] resolvedTemplatesAndRecords', {
       specialtyId,
       specialtyName,

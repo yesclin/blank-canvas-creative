@@ -181,7 +181,9 @@ export function useClinicData() {
         console.error("[APP_ERROR]", error);
       } finally {
         if (stillCurrent(activeUserIdRef.current)) {
-          console.log("[CLINIC] carregada", { hasClinic: loadedClinic });
+          if (import.meta.env.DEV) {
+            console.log("[CLINIC] carregada", { hasClinic: loadedClinic, clinicId: loadedClinic ? activeUserIdRef.current : null });
+          }
           setIsLoading(false);
         }
       }
