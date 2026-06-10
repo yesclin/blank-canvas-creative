@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuthIdentity } from "@/hooks/useAuthIdentity";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import type { 
   Appointment, 
@@ -15,9 +16,9 @@ import type {
 import { WeekSchedule, getDefaultWeekSchedule } from "@/components/config/EnhancedWorkingHoursCard";
 
 // ============= PROFESSIONALS =============
-export function useProfessionals() {
+export function useProfessionals(clinicId?: string | null) {
   return useQuery({
-    queryKey: ["professionals"],
+    queryKey: ["professionals", clinicId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("professionals")
@@ -35,6 +36,7 @@ export function useProfessionals() {
           color,
           is_active
         `)
+        .eq("clinic_id", clinicId!)
         .eq("is_active", true)
         .order("full_name");
       
@@ -61,13 +63,17 @@ export function useProfessionals() {
         is_active: p.is_active,
       })) as Professional[];
     },
+    enabled: !!clinicId,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
 // ============= PATIENTS =============
-export function usePatientsList() {
+export function usePatientsList(clinicId?: string | null) {
   return useQuery({
-    queryKey: ["patients-list"],
+    queryKey: ["patients-list", clinicId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patients")
@@ -84,29 +90,39 @@ export function usePatientsList() {
           clinical_alert_text,
           is_active
         `)
+        .eq("clinic_id", clinicId!)
         .eq("is_active", true)
         .order("full_name");
       
       if (error) throw error;
       return (data || []) as Patient[];
     },
+    enabled: !!clinicId,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
 // ============= ROOMS =============
-export function useRoomsList() {
+export function useRoomsList(clinicId?: string | null) {
   return useQuery({
-    queryKey: ["rooms-list"],
+    queryKey: ["rooms-list", clinicId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rooms")
         .select("id, clinic_id, name, description, is_active")
+        .eq("clinic_id", clinicId!)
         .eq("is_active", true)
         .order("name");
       
       if (error) throw error;
       return (data || []) as Room[];
     },
+    enabled: !!clinicId,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
