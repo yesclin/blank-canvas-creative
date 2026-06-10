@@ -683,15 +683,15 @@ export function useAgendaRealData(selectedDate: Date, viewMode: "daily" | "weekl
   const { data: clinicId } = useClinicId();
   
   // Fetch all base data
-  const { data: professionals = [], isLoading: profLoading } = useProfessionals();
-  const { data: patients = [], isLoading: patientsLoading } = usePatientsList();
-  const { data: rooms = [], isLoading: roomsLoading } = useRoomsList();
+  const { data: professionals = [], isLoading: profLoading } = useProfessionals(clinicId);
+  const { data: patients = [], isLoading: patientsLoading } = usePatientsList(clinicId);
+  const { data: rooms = [], isLoading: roomsLoading } = useRoomsList(clinicId);
   const { data: specialties = [], isLoading: specialtiesLoading } = useSpecialtiesList(clinicId || undefined);
-  const { data: insurances = [], isLoading: insurancesLoading } = useInsurancesList();
+  const { data: insurances = [], isLoading: insurancesLoading } = useInsurancesList(clinicId);
   
   // Fetch schedules
-  const { data: clinicSchedule = null, isLoading: clinicScheduleLoading } = useClinicSchedule();
-  const { data: professionalSchedulesMap = new Map(), isLoading: profSchedulesLoading } = useProfessionalSchedulesMap();
+  const { data: clinicSchedule = null, isLoading: clinicScheduleLoading } = useClinicSchedule(clinicId);
+  const { data: professionalSchedulesMap = new Map(), isLoading: profSchedulesLoading } = useProfessionalSchedulesMap(clinicId);
   
   // Calculate date range
   let rangeStart = selectedDate;
@@ -706,10 +706,10 @@ export function useAgendaRealData(selectedDate: Date, viewMode: "daily" | "weekl
   }
   
   const { data: appointments = [], isLoading: appointmentsLoading, refetch: refetchAppointments } = 
-    useAppointmentsForPeriod(rangeStart, rangeEnd, viewMode);
+    useAppointmentsForPeriod(rangeStart, rangeEnd, viewMode, clinicId);
   
   const { data: scheduleBlocks = [], isLoading: blocksLoading } = 
-    useScheduleBlocksForPeriod(rangeStart, rangeEnd);
+    useScheduleBlocksForPeriod(rangeStart, rangeEnd, clinicId);
   
   // Calculate stats and insights from real data (now with schedules)
   const stats = useAgendaStats(selectedDate, appointments, professionals, clinicSchedule, professionalSchedulesMap);
