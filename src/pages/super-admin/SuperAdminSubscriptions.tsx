@@ -9,6 +9,20 @@ import { toast } from 'sonner';
 import { logPlatformAction } from '@/lib/superAdminAudit';
 
 const STATUSES = ['trial', 'active', 'overdue', 'blocked', 'canceled'];
+const STATUS_LABELS: Record<string, string> = {
+  trial: 'Teste',
+  active: 'Ativa',
+  overdue: 'Em atraso',
+  blocked: 'Bloqueada',
+  canceled: 'Cancelada',
+};
+const CYCLE_LABELS: Record<string, string> = {
+  monthly: 'Mensal',
+  quarterly: 'Trimestral',
+  semiannual: 'Semestral',
+  yearly: 'Anual',
+  annual: 'Anual',
+};
 
 export default function SuperAdminSubscriptions() {
   const [rows, setRows] = useState<any[]>([]);
@@ -71,10 +85,10 @@ export default function SuperAdminSubscriptions() {
                     <TableCell>
                       <Select defaultValue={s.status} onValueChange={(v) => update(s.id, { status: v }, `subscription.status.${v}`)}>
                         <SelectTrigger className="h-8 w-32"><SelectValue /></SelectTrigger>
-                        <SelectContent>{STATUSES.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}</SelectContent>
+                        <SelectContent>{STATUSES.map(st => <SelectItem key={st} value={st}>{STATUS_LABELS[st] ?? st}</SelectItem>)}</SelectContent>
                       </Select>
                     </TableCell>
-                    <TableCell><Badge variant="outline">{s.cycle}</Badge></TableCell>
+                    <TableCell><Badge variant="outline">{CYCLE_LABELS[s.cycle] ?? s.cycle}</Badge></TableCell>
                     <TableCell className="text-sm text-muted-foreground">{s.current_period_end ? new Date(s.current_period_end).toLocaleDateString('pt-BR') : '—'}</TableCell>
                     <TableCell className="text-sm">{s.contracted_amount ? `R$ ${Number(s.contracted_amount).toFixed(2)}` : '—'}</TableCell>
                   </TableRow>
