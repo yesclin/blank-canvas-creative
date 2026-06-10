@@ -140,8 +140,8 @@ export function useClinicSubscription() {
     queryKey: ['clinic-subscription-scope', authUserId],
     queryFn: () => resolveClinicScope(authUserId!),
     enabled: !authIdentityLoading && !!authUserId,
-    staleTime: 0,
-    gcTime: 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     retry: 1,
@@ -168,6 +168,7 @@ export function useClinicSubscription() {
       // TOKEN_REFRESHED / INITIAL_SESSION não trocam clínica — ignorar para
       // evitar refetch em background da assinatura enquanto o usuário usa o app.
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        if (import.meta.env.DEV) console.log('[CLINIC_SUBSCRIPTION] invalidando por auth', { event });
         setTimeout(() => invalidate(), 0);
       }
     });
