@@ -13,6 +13,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { startSupportSession } from '@/lib/supportSession';
 import { logPlatformAction } from '@/lib/superAdminAudit';
+import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface ClinicRow {
   id: string;
@@ -34,6 +36,8 @@ const STATUS_LABELS: Record<string, { label: string; variant: 'default' | 'secon
 };
 
 export default function SuperAdminClinics() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [rows, setRows] = useState<ClinicRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -108,11 +112,14 @@ export default function SuperAdminClinics() {
     setWorking(true);
     try {
       await startSupportSession({ clinicId: supportOpen.id, reason });
+      queryClient.removeQueries({ queryKey: ['clinic-features-scope'] });
+      queryClient.removeQueries({ queryKey: ['clinic-effective-features'] });
+      queryClient.removeQueries({ queryKey: ['clinic-subscription-scope'] });
+      queryClient.removeQueries({ queryKey: ['clinic-subscription'] });
       toast.success('Modo suporte iniciado.');
       setSupportOpen(null);
       setReason('');
-      // Vai para o app no contexto da clínica impersonada
-      window.location.assign('/app');
+      navigate('/app', { replace: true });
     } catch (e: any) {
       toast.error(e?.message ?? 'Erro ao iniciar modo suporte.');
     } finally {

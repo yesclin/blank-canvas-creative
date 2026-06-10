@@ -514,6 +514,7 @@ export function useAnamnesisTemplatesV2(options?: {
     templates: templatesQuery.data || [],
     isLoading: templatesQuery.isLoading,
     error: templatesQuery.error,
+    refetch: templatesQuery.refetch,
     createTemplate: createMutation.mutateAsync,
     updateTemplate: updateMutation.mutateAsync,
     cloneTemplate: cloneMutation.mutateAsync,

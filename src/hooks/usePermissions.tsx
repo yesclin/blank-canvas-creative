@@ -219,7 +219,9 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
           isOwner: result.isOwner,
           professionalId: result.professionalId,
         });
-        console.log("[PERMISSIONS] carregadas", { role: result.role, permissions: result.permissions.length, attempt });
+        if (import.meta.env.DEV) {
+          console.log("[PERMISSIONS] carregadas", { role: result.role, permissions: result.permissions.length, attempt });
+        }
         return;
       } catch (error) {
         lastError = error;

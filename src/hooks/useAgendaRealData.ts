@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuthIdentity } from "@/hooks/useAuthIdentity";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import type { 
   Appointment, 
@@ -15,9 +16,9 @@ import type {
 import { WeekSchedule, getDefaultWeekSchedule } from "@/components/config/EnhancedWorkingHoursCard";
 
 // ============= PROFESSIONALS =============
-export function useProfessionals() {
+export function useProfessionals(clinicId?: string | null) {
   return useQuery({
-    queryKey: ["professionals"],
+    queryKey: ["professionals", clinicId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("professionals")
@@ -35,6 +36,7 @@ export function useProfessionals() {
           color,
           is_active
         `)
+        .eq("clinic_id", clinicId!)
         .eq("is_active", true)
         .order("full_name");
       
@@ -61,13 +63,17 @@ export function useProfessionals() {
         is_active: p.is_active,
       })) as Professional[];
     },
+    enabled: !!clinicId,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
 // ============= PATIENTS =============
-export function usePatientsList() {
+export function usePatientsList(clinicId?: string | null) {
   return useQuery({
-    queryKey: ["patients-list"],
+    queryKey: ["patients-list", clinicId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patients")
@@ -84,29 +90,39 @@ export function usePatientsList() {
           clinical_alert_text,
           is_active
         `)
+        .eq("clinic_id", clinicId!)
         .eq("is_active", true)
         .order("full_name");
       
       if (error) throw error;
       return (data || []) as Patient[];
     },
+    enabled: !!clinicId,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
 // ============= ROOMS =============
-export function useRoomsList() {
+export function useRoomsList(clinicId?: string | null) {
   return useQuery({
-    queryKey: ["rooms-list"],
+    queryKey: ["rooms-list", clinicId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rooms")
         .select("id, clinic_id, name, description, is_active")
+        .eq("clinic_id", clinicId!)
         .eq("is_active", true)
         .order("name");
       
       if (error) throw error;
       return (data || []) as Room[];
     },
+    enabled: !!clinicId,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -132,8 +148,9 @@ export function useSpecialtiesList(clinicId?: string) {
 
 // Helper hook to get clinic_id without useClinicData (avoids hook order issues)
 function useClinicId() {
+  const { userId, isLoading } = useAuthIdentity();
   return useQuery({
-    queryKey: ["clinic-id-only"],
+    queryKey: ["clinic-id-only", userId],
     queryFn: async () => {
       const { data: authData, error: authError } = await supabase.auth.getUser();
       if (authError) throw authError;
@@ -148,23 +165,32 @@ function useClinicId() {
         .maybeSingle();
       return profile?.clinic_id || null;
     },
+    enabled: !isLoading && !!userId,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
 // ============= INSURANCES =============
-export function useInsurancesList() {
+export function useInsurancesList(clinicId?: string | null) {
   return useQuery({
-    queryKey: ["insurances-list"],
+    queryKey: ["insurances-list", clinicId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insurances")
         .select("id, clinic_id, name, ans_code, is_active")
+        .eq("clinic_id", clinicId!)
         .eq("is_active", true)
         .order("name");
       
       if (error) throw error;
       return (data || []) as Insurance[];
     },
+    enabled: !!clinicId,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -172,7 +198,8 @@ export function useInsurancesList() {
 export function useAppointmentsForPeriod(
   startDate: Date, 
   endDate: Date,
-  viewMode: "daily" | "weekly" | "monthly" = "daily"
+  viewMode: "daily" | "weekly" | "monthly" = "daily",
+  clinicId?: string | null
 ) {
   // Calculate date range based on view mode
   let rangeStart = startDate;
@@ -190,7 +217,7 @@ export function useAppointmentsForPeriod(
   const end = format(rangeEnd, "yyyy-MM-dd");
   
   return useQuery({
-    queryKey: ["appointments", start, end],
+    queryKey: ["appointments", clinicId, start, end],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appointments")
@@ -250,6 +277,7 @@ export function useAppointmentsForPeriod(
           insurances(id, name, ans_code),
           procedures(id, name, duration_minutes, price)
         `)
+        .eq("clinic_id", clinicId!)
         .gte("scheduled_date", start)
         .lte("scheduled_date", end)
         .order("scheduled_date")
@@ -357,36 +385,33 @@ export function useAppointmentsForPeriod(
         teleconsultation_notes: (apt as any).teleconsultation_notes,
       })) as Appointment[];
     },
+    enabled: !!clinicId,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     refetchInterval: 30000, // Refetch every 30 seconds for real-time updates
   });
 }
 
 // ============= CLINIC SCHEDULE =============
-export function useClinicSchedule() {
+export function useClinicSchedule(clinicId?: string | null) {
   return useQuery({
-    queryKey: ["clinic-schedule"],
+    queryKey: ["clinic-schedule", clinicId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("clinic_id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (!profile?.clinic_id) return null;
-
       const { data, error } = await supabase
         .from("clinics")
         .select("opening_hours")
-        .eq("id", profile.clinic_id)
+        .eq("id", clinicId!)
         .single();
       
       if (error || !data?.opening_hours) return getDefaultWeekSchedule();
       
       return data.opening_hours as unknown as WeekSchedule;
     },
+    enabled: !!clinicId,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -398,25 +423,14 @@ export interface ProfessionalScheduleConfig {
   default_duration_minutes: number;
 }
 
-export function useProfessionalSchedulesMap() {
+export function useProfessionalSchedulesMap(clinicId?: string | null) {
   return useQuery({
-    queryKey: ["professional-schedules-map"],
+    queryKey: ["professional-schedules-map", clinicId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return new Map<string, ProfessionalScheduleConfig>();
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("clinic_id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (!profile?.clinic_id) return new Map<string, ProfessionalScheduleConfig>();
-
       const { data, error } = await supabase
         .from("professional_schedule_config")
         .select("*")
-        .eq("clinic_id", profile.clinic_id);
+        .eq("clinic_id", clinicId!);
       
       if (error) {
         console.error("Error fetching professional schedules:", error);
@@ -436,6 +450,10 @@ export function useProfessionalSchedulesMap() {
       
       return scheduleMap;
     },
+    enabled: !!clinicId,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -635,22 +653,27 @@ export function useAgendaInsights(
 }
 
 // ============= SCHEDULE BLOCKS =============
-function useScheduleBlocksForPeriod(rangeStart: Date, rangeEnd: Date) {
+function useScheduleBlocksForPeriod(rangeStart: Date, rangeEnd: Date, clinicId?: string | null) {
   const startStr = format(rangeStart, "yyyy-MM-dd");
   const endStr = format(rangeEnd, "yyyy-MM-dd");
 
   return useQuery({
-    queryKey: ["schedule-blocks", startStr, endStr],
+    queryKey: ["schedule-blocks", clinicId, startStr, endStr],
     queryFn: async (): Promise<ScheduleBlock[]> => {
       const { data, error } = await supabase
         .from("schedule_blocks")
         .select("id, clinic_id, professional_id, title, reason, start_date, end_date, start_time, end_time, all_day")
+        .eq("clinic_id", clinicId!)
         .lte("start_date", endStr)
         .gte("end_date", startStr);
 
       if (error) throw error;
       return (data || []) as ScheduleBlock[];
     },
+    enabled: !!clinicId,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -660,15 +683,15 @@ export function useAgendaRealData(selectedDate: Date, viewMode: "daily" | "weekl
   const { data: clinicId } = useClinicId();
   
   // Fetch all base data
-  const { data: professionals = [], isLoading: profLoading } = useProfessionals();
-  const { data: patients = [], isLoading: patientsLoading } = usePatientsList();
-  const { data: rooms = [], isLoading: roomsLoading } = useRoomsList();
+  const { data: professionals = [], isLoading: profLoading } = useProfessionals(clinicId);
+  const { data: patients = [], isLoading: patientsLoading } = usePatientsList(clinicId);
+  const { data: rooms = [], isLoading: roomsLoading } = useRoomsList(clinicId);
   const { data: specialties = [], isLoading: specialtiesLoading } = useSpecialtiesList(clinicId || undefined);
-  const { data: insurances = [], isLoading: insurancesLoading } = useInsurancesList();
+  const { data: insurances = [], isLoading: insurancesLoading } = useInsurancesList(clinicId);
   
   // Fetch schedules
-  const { data: clinicSchedule = null, isLoading: clinicScheduleLoading } = useClinicSchedule();
-  const { data: professionalSchedulesMap = new Map(), isLoading: profSchedulesLoading } = useProfessionalSchedulesMap();
+  const { data: clinicSchedule = null, isLoading: clinicScheduleLoading } = useClinicSchedule(clinicId);
+  const { data: professionalSchedulesMap = new Map(), isLoading: profSchedulesLoading } = useProfessionalSchedulesMap(clinicId);
   
   // Calculate date range
   let rangeStart = selectedDate;
@@ -683,10 +706,10 @@ export function useAgendaRealData(selectedDate: Date, viewMode: "daily" | "weekl
   }
   
   const { data: appointments = [], isLoading: appointmentsLoading, refetch: refetchAppointments } = 
-    useAppointmentsForPeriod(rangeStart, rangeEnd, viewMode);
+    useAppointmentsForPeriod(rangeStart, rangeEnd, viewMode, clinicId);
   
   const { data: scheduleBlocks = [], isLoading: blocksLoading } = 
-    useScheduleBlocksForPeriod(rangeStart, rangeEnd);
+    useScheduleBlocksForPeriod(rangeStart, rangeEnd, clinicId);
   
   // Calculate stats and insights from real data (now with schedules)
   const stats = useAgendaStats(selectedDate, appointments, professionals, clinicSchedule, professionalSchedulesMap);

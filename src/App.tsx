@@ -19,6 +19,7 @@ import CookieConsent from "@/components/CookieConsent";
 import { supabase } from "@/integrations/supabase/client";
 import { usePageResumeRecovery } from "@/hooks/usePageResumeRecovery";
 import { clearAuthenticatedTab, clearIdentityScopedState, clearUnsafeAuthCache, getTabExpectedUserId, quarantineMismatchedAuthSession } from "@/lib/authSessionIsolation";
+import { clearReactQueryCache, logReactQueryEvent } from "@/lib/queryClientDiagnostics";
 
 // Páginas Públicas — lazy para não pesar no boot inicial.
 const Index = lazyWithTimeout(() => import("./pages/Index"), "Index");
@@ -160,6 +161,10 @@ const queryClient = new QueryClient({
   },
 });
 
+if (import.meta.env.DEV) {
+  queryClient.getQueryCache().subscribe(logReactQueryEvent);
+}
+
 function RouteBoundary({ children, scope }: { children: ReactNode; scope: string }) {
   return (
     <ErrorBoundary scope={scope} showHome={false}>
@@ -215,9 +220,11 @@ function RouterReadyLog() {
 }
 
 const App = () => {
-  if (import.meta.env.DEV) {
-    console.log("[APP_INIT] App renderizando");
-  }
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    console.log("[APP_MOUNT] App montado", { route: window.location.pathname });
+    return () => console.warn("[APP_MOUNT] App desmontado", { route: window.location.pathname });
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -284,7 +291,7 @@ function AuthScopedProviders() {
       const expected = getTabExpectedUserId();
       if (nextUid && expected && expected !== nextUid) {
         requestRef.current++;
-        try { queryClient.clear(); } catch { /* ignore */ }
+        try { clearReactQueryCache(queryClient, "auth-scope-mismatch", { expected, nextUid }); } catch { /* ignore */ }
         quarantineMismatchedAuthSession("AuthScopedProviders user divergente", expected, nextUid);
         currentUidRef.current = null;
         setScopeKey("auth:anonymous");
@@ -294,7 +301,7 @@ function AuthScopedProviders() {
       clearUnsafeAuthCache();
       if (!nextUid) clearAuthenticatedTab();
       else if (prev && prev !== nextUid) clearIdentityScopedState();
-      try { queryClient.clear(); } catch { /* ignore */ }
+      try { clearReactQueryCache(queryClient, "auth-scope-changed", { prev: prev ?? null, next: nextUid }); } catch { /* ignore */ }
       setScopeKey(nextUid ? `auth:${nextUid}` : "auth:anonymous");
     };
 
@@ -314,7 +321,10 @@ function AuthScopedProviders() {
 
     void resolveVerifiedUser("mount");
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (import.meta.env.DEV) {
+        console.log("[AUTH_SCOPE] evento", { event, userId: session?.user?.id ?? null });
+      }
       if (event === "SIGNED_OUT") {
         requestRef.current++;
         applyUid(null);
@@ -323,6 +333,11 @@ function AuthScopedProviders() {
       // TOKEN_REFRESHED NUNCA troca identidade — apenas renova o JWT.
       // Re-resolver aqui causaria invalidação em cascata de profile/clinic
       // e a UI piscaria em segundo plano enquanto o usuário digita.
+      if ((event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "USER_UPDATED") && session?.user?.id) {
+        applyUid(session.user.id);
+        return;
+      }
+
       if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "USER_UPDATED") {
         setTimeout(() => {
           if (mounted) void resolveVerifiedUser(event);

@@ -29,6 +29,7 @@ export function useClinicData() {
   const [isLoading, setIsLoading] = useState(true);
   const requestRef = useRef(0);
   const activeUserIdRef = useRef<string | null>(null);
+  const activeClinicIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -174,6 +175,10 @@ export function useClinicData() {
             }
           }
           if (stillCurrent(userId)) {
+            if (import.meta.env.DEV && activeClinicIdRef.current !== clinicData.id) {
+              console.log("[CLINIC] clinic_id mudou", { prev: activeClinicIdRef.current, next: clinicData.id, userId });
+            }
+            activeClinicIdRef.current = clinicData.id;
             setClinic({ ...clinicData, logo_url: signedLogoUrl });
           }
         }
@@ -181,7 +186,9 @@ export function useClinicData() {
         console.error("[APP_ERROR]", error);
       } finally {
         if (stillCurrent(activeUserIdRef.current)) {
-          console.log("[CLINIC] carregada", { hasClinic: loadedClinic });
+          if (import.meta.env.DEV) {
+            console.log("[CLINIC] carregada", { hasClinic: loadedClinic, userId: activeUserIdRef.current });
+          }
           setIsLoading(false);
         }
       }

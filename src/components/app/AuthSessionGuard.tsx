@@ -13,6 +13,7 @@ import {
 import { clearSupportSessionIfMismatch } from "@/lib/supportSession";
 import { wasLogoutRequestedByUser } from "@/lib/authIntent";
 import { tryRecoverSession } from "@/lib/authSessionRecovery";
+import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
 
 /**
  * Guard de seguranca contra mistura de contas.
@@ -36,7 +37,7 @@ export function AuthSessionGuard() {
       }
       clearIdentityScopedState();
       try {
-        qc.clear();
+        clearReactQueryCache(qc, reason, { prev, next });
       } catch {
         /* ignore */
       }
@@ -58,7 +59,7 @@ export function AuthSessionGuard() {
         // nova identidade automaticamente é justamente o vazamento reportado:
         // a UI pode passar a mostrar B para uma aba que esperava A.
         quarantineMismatchedAuthSession(`${eventLabel} user divergente`, expected, newUserId);
-        try { qc.clear(); } catch { /* ignore */ }
+        try { clearReactQueryCache(qc, "auth-guard-mismatch", { expected, newUserId }); } catch { /* ignore */ }
         currentUserIdRef.current = null;
         return;
       }
@@ -77,7 +78,7 @@ export function AuthSessionGuard() {
         if (wasLogoutRequestedByUser()) {
           if (currentUserIdRef.current) hardReset("SIGNED_OUT (intencional)", currentUserIdRef.current, null);
           clearAuthenticatedTab();
-          try { qc.clear(); } catch { /* ignore */ }
+          try { clearReactQueryCache(qc, "SIGNED_OUT intencional", { prev: currentUserIdRef.current, next: null }); } catch { /* ignore */ }
           currentUserIdRef.current = null;
           return;
         }
@@ -98,7 +99,7 @@ export function AuthSessionGuard() {
           }
           if (currentUserIdRef.current) hardReset("SIGNED_OUT confirmado", currentUserIdRef.current, null);
           clearAuthenticatedTab();
-          try { qc.clear(); } catch { /* ignore */ }
+          try { clearReactQueryCache(qc, "SIGNED_OUT confirmado", { prev: currentUserIdRef.current, next: null }); } catch { /* ignore */ }
           currentUserIdRef.current = null;
         })();
         return;
@@ -115,11 +116,6 @@ export function AuthSessionGuard() {
 
       const match = ensureSessionMatchesTab(session);
       handleUserId(match.userId, event, match.ok ? undefined : match.expectedUserId);
-
-      if (event === "SIGNED_IN") {
-        // SIGNED_IN explícito limpa cache de query para evitar vazamento.
-        try { qc.clear(); } catch { /* ignore */ }
-      }
     });
 
     return () => {

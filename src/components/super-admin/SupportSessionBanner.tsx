@@ -9,8 +9,12 @@ import { Button } from '@/components/ui/button';
 import { getActiveSupportSession, endSupportSession } from '@/lib/supportSession';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 
 export function SupportSessionBanner() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [active, setActive] = useState(getActiveSupportSession());
   const [clinicName, setClinicName] = useState<string | null>(null);
   const [ending, setEnding] = useState(false);
@@ -46,9 +50,12 @@ export function SupportSessionBanner() {
     setEnding(true);
     try {
       await endSupportSession();
+      queryClient.removeQueries({ queryKey: ['clinic-features-scope'] });
+      queryClient.removeQueries({ queryKey: ['clinic-effective-features'] });
+      queryClient.removeQueries({ queryKey: ['clinic-subscription-scope'] });
+      queryClient.removeQueries({ queryKey: ['clinic-subscription'] });
       toast.success('Modo suporte encerrado.');
-      // Forçar reload para limpar todos os caches/queries da sessão impersonada
-      setTimeout(() => window.location.assign('/super-admin/clinicas'), 200);
+      navigate('/super-admin/clinicas', { replace: true });
     } catch (e) {
       toast.error('Erro ao encerrar modo suporte.');
     } finally {

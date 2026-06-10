@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
 
 interface PageSkeletonProps {
   /** Tempo (ms) para exibir o aviso "está demorando mais que o normal". */
@@ -61,14 +60,8 @@ export function PageSkeleton({ slowAfterMs = 3000 }: PageSkeletonProps) {
       {isSlow && (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-md border border-dashed bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
           <span>Essa tela está demorando mais que o normal…</span>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => window.location.reload()}
-            className="self-start sm:self-auto"
-          >
-            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-            Tentar novamente
+          <Button size="sm" variant="outline" onClick={() => setIsSlow(false)} className="self-start sm:self-auto">
+            Continuar aguardando
           </Button>
         </div>
       )}

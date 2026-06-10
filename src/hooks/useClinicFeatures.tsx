@@ -175,8 +175,8 @@ export function ClinicFeaturesProvider({ children }: { children: ReactNode }) {
     queryKey: ['clinic-features-scope', authUserId],
     queryFn: () => resolveActiveClinicScope(authUserId!),
     enabled: !authIdentityLoading && !!authUserId,
-    staleTime: 0,
-    gcTime: 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     retry: 1,
@@ -206,6 +206,7 @@ export function ClinicFeaturesProvider({ children }: { children: ReactNode }) {
       // TOKEN_REFRESHED não muda identidade nem clínica — invalidar aqui
       // causa refetch em background enquanto o usuário usa o sistema.
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        if (import.meta.env.DEV) console.log('[CLINIC_FEATURES] invalidando por auth', { event });
         setTimeout(() => invalidate(), 0);
       }
     });

@@ -59,6 +59,7 @@ import {
   Plus,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -239,6 +240,7 @@ export function AnamneseBlock({
   professionalRegistration,
 }: AnamneseBlockProps) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { generateAnamnesisPdf, generating } = useInstitutionalPdf();
 
 
@@ -265,7 +267,7 @@ export function AnamneseBlock({
   const editingInitialData = useRef<string>('{}');
 
   // ─── Fetch clinic templates from DB (V2) ──────────────────────────
-  const { templates: v2Templates, isLoading: loadingTemplates } = useAnamnesisTemplatesV2({
+  const { templates: v2Templates, isLoading: loadingTemplates, refetch: refetchTemplates } = useAnamnesisTemplatesV2({
     specialtyId: specialtyId,
     activeOnly: true
   });
@@ -275,6 +277,7 @@ export function AnamneseBlock({
   const { records: v2Records, saveRecord: saveV2Record, isSaving: savingV2 } = useAnamnesisRecords(patientIdForRecords, null, specialtyId);
 
   useEffect(() => {
+    if (!import.meta.env.DEV) return;
     console.log('[YesClin][AnamneseBlock] receivedSpecialty', {
       specialtyId,
       specialtyName,
@@ -288,6 +291,7 @@ export function AnamneseBlock({
   }, [v2Templates]);
 
   useEffect(() => {
+    if (!import.meta.env.DEV) return;
     console.log('[YesClin][AnamneseBlock] resolvedTemplatesAndRecords', {
       specialtyId,
       specialtyName,
@@ -474,7 +478,8 @@ export function AnamneseBlock({
           if (provisionError) throw provisionError;
         }
 
-        window.location.reload();
+        await queryClient.invalidateQueries({ queryKey: ['anamnesis-templates-v2', clinic.id, specialtyId, true] });
+        await refetchTemplates?.();
         return;
       }
       const { error: provisionError } = await supabase.rpc('provision_specialty', {
@@ -484,14 +489,15 @@ export function AnamneseBlock({
 
       if (provisionError) throw provisionError;
 
-      window.location.reload();
+      await queryClient.invalidateQueries({ queryKey: ['anamnesis-templates-v2', clinic.id, specialtyId, true] });
+      await refetchTemplates?.();
     } catch (err: any) {
       console.error('Erro ao criar modelo padrão:', err);
       toast.error(`Erro ao criar modelo: ${err?.message || 'Erro desconhecido'}`);
     } finally {
       setCreatingDefault(false);
     }
-  }, [specialtyId, specialtyName, clinic?.id, creatingDefault]);
+  }, [specialtyId, specialtyName, clinic?.id, creatingDefault, queryClient, refetchTemplates]);
 
   // ─── Auto-provision default template if none exist ──────────────
   const autoProvisionTriggered = useRef(false);

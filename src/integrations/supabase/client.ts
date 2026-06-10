@@ -4,12 +4,29 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+const perTabAuthStorage = {
+  getItem: (key: string) => {
+    if (typeof window === 'undefined') return null;
+    return window.sessionStorage.getItem(key);
+  },
+  setItem: (key: string, value: string) => {
+    if (typeof window === 'undefined') return;
+    window.sessionStorage.setItem(key, value);
+  },
+  removeItem: (key: string) => {
+    if (typeof window === 'undefined') return;
+    window.sessionStorage.removeItem(key);
+  },
+};
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
 const _supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
+    // Isolamento por aba: evita que o login de B em outra aba sobrescreva o
+    // JWT de A via localStorage compartilhado e gere janela de race no cache.
+    storage: perTabAuthStorage,
     persistSession: true,
     autoRefreshToken: true,
     // CRÍTICO para o fluxo de auth não voltar para /login após login/recovery:

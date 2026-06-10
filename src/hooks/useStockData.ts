@@ -199,23 +199,35 @@ export function useStockStats() {
 // =============================================
 
 export function useLowStockAlerts() {
+  const { clinic } = useClinicData();
   return useQuery({
-    queryKey: ["stock-alerts", "low"],
+    queryKey: ["stock-alerts", clinic?.id, "low"],
     queryFn: async () => [] as StockProduct[],
+    enabled: !!clinic?.id,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
 export function useOutOfStockAlerts() {
+  const { clinic } = useClinicData();
   return useQuery({
-    queryKey: ["stock-alerts", "out"],
+    queryKey: ["stock-alerts", clinic?.id, "out"],
     queryFn: async () => [] as StockProduct[],
+    enabled: !!clinic?.id,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
 export function useExpiringProducts(_daysThreshold = 30) {
+  const { clinic } = useClinicData();
   return useQuery({
-    queryKey: ["stock-alerts", "expiring", _daysThreshold],
+    queryKey: ["stock-alerts", clinic?.id, "expiring", _daysThreshold],
     queryFn: async () => [] as StockProduct[],
+    enabled: !!clinic?.id,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -224,18 +236,23 @@ export function useExpiringProducts(_daysThreshold = 30) {
 // =============================================
 
 export function useRecentStockMovements(limit = 50) {
+  const { clinic } = useClinicData();
   return useQuery({
-    queryKey: ["stock-movements", "recent", limit],
+    queryKey: ["stock-movements", "recent", clinic?.id, limit],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("inventory_movements")
         .select(`*, inventory_items(id, name, unit_of_measure)`)
+        .eq("clinic_id", clinic!.id)
         .order("created_at", { ascending: false })
         .limit(limit);
       
       if (error) throw error;
       return data || [];
     },
+    enabled: !!clinic?.id,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 

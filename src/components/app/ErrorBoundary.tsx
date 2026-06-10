@@ -1,5 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from "react";
-import { AlertTriangle, RefreshCw, Home, RotateCw } from "lucide-react";
+import { AlertTriangle, RefreshCw, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -64,15 +64,13 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   goHome = () => {
-    window.location.href = "/app";
-  };
-
-  reload = () => {
-    window.location.reload();
+    window.history.pushState({}, "", "/app");
+    window.dispatchEvent(new PopStateEvent("popstate"));
   };
 
   goLogin = () => {
-    window.location.href = "/login";
+    window.history.pushState({}, "", "/login");
+    window.dispatchEvent(new PopStateEvent("popstate"));
   };
 
   render() {
@@ -154,10 +152,6 @@ export class ErrorBoundary extends Component<Props, State> {
                   Dashboard
                 </Button>
               )}
-              <Button onClick={this.reload} variant="ghost" className="flex-1">
-                <RotateCw className="h-4 w-4 mr-2" />
-                Recarregar
-              </Button>
               <Button onClick={this.goLogin} variant="ghost" className="flex-1">
                 Login
               </Button>
