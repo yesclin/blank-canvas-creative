@@ -148,8 +148,9 @@ export function useSpecialtiesList(clinicId?: string) {
 
 // Helper hook to get clinic_id without useClinicData (avoids hook order issues)
 function useClinicId() {
+  const { userId, isLoading } = useAuthIdentity();
   return useQuery({
-    queryKey: ["clinic-id-only"],
+    queryKey: ["clinic-id-only", userId],
     queryFn: async () => {
       const { data: authData, error: authError } = await supabase.auth.getUser();
       if (authError) throw authError;
@@ -164,23 +165,32 @@ function useClinicId() {
         .maybeSingle();
       return profile?.clinic_id || null;
     },
+    enabled: !isLoading && !!userId,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
 // ============= INSURANCES =============
-export function useInsurancesList() {
+export function useInsurancesList(clinicId?: string | null) {
   return useQuery({
-    queryKey: ["insurances-list"],
+    queryKey: ["insurances-list", clinicId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insurances")
         .select("id, clinic_id, name, ans_code, is_active")
+        .eq("clinic_id", clinicId!)
         .eq("is_active", true)
         .order("name");
       
       if (error) throw error;
       return (data || []) as Insurance[];
     },
+    enabled: !!clinicId,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -188,7 +198,8 @@ export function useInsurancesList() {
 export function useAppointmentsForPeriod(
   startDate: Date, 
   endDate: Date,
-  viewMode: "daily" | "weekly" | "monthly" = "daily"
+  viewMode: "daily" | "weekly" | "monthly" = "daily",
+  clinicId?: string | null
 ) {
   // Calculate date range based on view mode
   let rangeStart = startDate;
@@ -206,7 +217,7 @@ export function useAppointmentsForPeriod(
   const end = format(rangeEnd, "yyyy-MM-dd");
   
   return useQuery({
-    queryKey: ["appointments", start, end],
+    queryKey: ["appointments", clinicId, start, end],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appointments")
@@ -266,6 +277,7 @@ export function useAppointmentsForPeriod(
           insurances(id, name, ans_code),
           procedures(id, name, duration_minutes, price)
         `)
+        .eq("clinic_id", clinicId!)
         .gte("scheduled_date", start)
         .lte("scheduled_date", end)
         .order("scheduled_date")
@@ -373,6 +385,10 @@ export function useAppointmentsForPeriod(
         teleconsultation_notes: (apt as any).teleconsultation_notes,
       })) as Appointment[];
     },
+    enabled: !!clinicId,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     refetchInterval: 30000, // Refetch every 30 seconds for real-time updates
   });
 }
