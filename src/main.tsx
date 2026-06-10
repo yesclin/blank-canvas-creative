@@ -16,7 +16,9 @@ declare global {
 }
 
 if (typeof window !== "undefined") {
-  console.log("[APP_INIT] iniciado", { route: window.location.pathname });
+  if (import.meta.env.DEV) {
+    console.log("[APP_INIT] iniciado", { route: window.location.pathname });
+  }
   ["click", "keydown", "submit", "popstate"].forEach((eventName) => {
     window.addEventListener(
       eventName,
