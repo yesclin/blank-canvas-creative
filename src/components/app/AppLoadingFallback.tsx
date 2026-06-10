@@ -43,22 +43,13 @@ export function AppLoadingFallback({
             <p className="text-xs text-muted-foreground">
               Não foi possível carregar o preview automaticamente.
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <button
-                type="button"
-                onClick={handleRetry}
-                className="rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent hover:text-accent-foreground"
-              >
-                Tentar novamente
-              </button>
-              <button
-                type="button"
-                onClick={() => window.location.reload()}
-                className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
-              >
-                Recarregar página
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleRetry}
+              className="rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent hover:text-accent-foreground"
+            >
+              Tentar novamente
+            </button>
           </div>
         )}
       </div>
