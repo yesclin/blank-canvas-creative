@@ -7,9 +7,12 @@ export interface AppointmentType {
   id: string;
   clinic_id: string;
   name: string;
+  slug?: string | null;
   description: string | null;
   color: string;
   duration_minutes: number;
+  default_price: number | null;
+  default_specialty_id: string | null;
   is_active: boolean;
   display_order: number;
   created_at: string;
@@ -21,8 +24,11 @@ export interface AppointmentTypeFormData {
   description?: string;
   color: string;
   duration_minutes: number;
+  default_price?: number | null;
+  default_specialty_id?: string | null;
   is_active?: boolean;
 }
+
 
 export function useAppointmentTypes() {
   const { clinic } = useClinicData();
@@ -72,11 +78,14 @@ export function useAppointmentTypes() {
           description: data.description || null,
           color: data.color,
           duration_minutes: data.duration_minutes,
+          default_price: data.default_price ?? null,
+          default_specialty_id: data.default_specialty_id ?? null,
           is_active: data.is_active ?? true,
           display_order: maxOrder,
-        })
+        } as any)
         .select()
         .single();
+
 
       if (error) throw error;
       
@@ -102,9 +111,12 @@ export function useAppointmentTypes() {
           description: data.description,
           color: data.color,
           duration_minutes: data.duration_minutes,
+          default_price: data.default_price ?? null,
+          default_specialty_id: data.default_specialty_id ?? null,
           is_active: data.is_active,
-        })
+        } as any)
         .eq('id', id);
+
 
       if (error) throw error;
       
