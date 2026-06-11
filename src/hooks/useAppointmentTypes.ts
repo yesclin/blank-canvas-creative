@@ -11,8 +11,6 @@ export interface AppointmentType {
   description: string | null;
   color: string;
   duration_minutes: number;
-  default_price: number | null;
-  default_specialty_id: string | null;
   is_active: boolean;
   display_order: number;
   created_at: string;
@@ -24,10 +22,9 @@ export interface AppointmentTypeFormData {
   description?: string;
   color: string;
   duration_minutes: number;
-  default_price?: number | null;
-  default_specialty_id?: string | null;
   is_active?: boolean;
 }
+
 
 
 export function useAppointmentTypes() {
