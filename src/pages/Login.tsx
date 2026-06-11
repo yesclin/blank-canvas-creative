@@ -12,6 +12,7 @@ import { motion } from "framer-motion";
 import { clearAuthenticatedTab, clearAuthQuarantine, clearSupabaseAuthStorage, hasRecentAuthQuarantine, rememberAuthenticatedUser } from "@/lib/authSessionIsolation";
 import { useQueryClient } from "@tanstack/react-query";
 import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
+import { withTimeout } from "@/lib/asyncTimeout";
 
 /**
  * Decide para onde mandar o usuário autenticado.
@@ -22,7 +23,11 @@ import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
  */
 async function resolveRedirectPath(userId: string, fallback: string): Promise<string> {
   try {
-    const { data } = await supabase.rpc("is_platform_admin", { _user_id: userId });
+    const { data } = await withTimeout<any>(
+      supabase.rpc("is_platform_admin", { _user_id: userId }),
+      2500,
+      "Tempo esgotado ao verificar painel administrativo.",
+    );
     if (data === true) return "/super-admin";
   } catch (err) {
     console.warn("[AUTH] is_platform_admin falhou — usando destino padrão", err);
@@ -41,6 +46,8 @@ const createDiagnosticState = (): DiagnosticState => ({
   role: { status: "idle", message: "Aguardando clínica" },
   redirect: { status: "idle", message: "Aguardando validações" },
 });
+
+const POST_AUTH_QUERY_TIMEOUT_MS = 6000;
 
 function getAuthErrorMessage(error: any): string {
   const rawMsg = (typeof error?.message === "string" && error.message !== "{}" ? error.message : "") as string;
