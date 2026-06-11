@@ -236,10 +236,11 @@ export function useToggleInsuranceStatus() {
 // =============================================
 
 export function usePatientInsurances() {
+  const clinicId = useActiveClinicId();
   return useQuery({
-    queryKey: ['patient-insurances'],
+    queryKey: ['patient-insurances', clinicId],
     queryFn: async () => {
-      const clinicId = await getClinicId();
+      if (!clinicId) return [];
       
       const { data, error } = await supabase
         .from('patient_insurances')
@@ -262,6 +263,7 @@ export function usePatientInsurances() {
         insurance_name: item.insurances?.name || 'Convênio não encontrado',
       })) as PatientInsurance[];
     },
+    ...stableClinicQuery(clinicId),
   });
 }
 
@@ -270,10 +272,11 @@ export function usePatientInsurances() {
 // =============================================
 
 export function useAuthorizations() {
+  const clinicId = useActiveClinicId();
   return useQuery({
-    queryKey: ['insurance-authorizations'],
+    queryKey: ['insurance-authorizations', clinicId],
     queryFn: async () => {
-      const clinicId = await getClinicId();
+      if (!clinicId) return [];
       
       const { data, error } = await supabase
         .from('insurance_authorizations')
@@ -299,6 +302,7 @@ export function useAuthorizations() {
         procedure_name: item.procedures?.name || '',
       })) as InsuranceAuthorization[];
     },
+    ...stableClinicQuery(clinicId),
   });
 }
 
@@ -307,10 +311,11 @@ export function useAuthorizations() {
 // =============================================
 
 export function useTissGuides() {
+  const clinicId = useActiveClinicId();
   return useQuery({
-    queryKey: ['tiss-guides'],
+    queryKey: ['tiss-guides', clinicId],
     queryFn: async () => {
-      const clinicId = await getClinicId();
+      if (!clinicId) return [];
       
       const { data, error } = await supabase
         .from('tiss_guides')
@@ -354,6 +359,7 @@ export function useTissGuides() {
         })),
       })) as TissGuide[];
     },
+    ...stableClinicQuery(clinicId),
   });
 }
 
