@@ -14,6 +14,19 @@ import { useQueryClient } from "@tanstack/react-query";
 import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
 import { withTimeout } from "@/lib/asyncTimeout";
 
+type AuthErrorLike = { message?: unknown; code?: unknown; status?: unknown; name?: unknown };
+type QueryResult<T> = { data: T | null; error: unknown };
+type AuthUserLike = { id: string; email?: string | null };
+type AuthSessionLike = { user?: AuthUserLike | null } | null;
+type AuthSignInResult = { data: { session: AuthSessionLike; user: AuthUserLike | null }; error: unknown };
+type ProfileRow = { clinic_id: string | null; user_id: string | null; full_name: string | null; is_active: boolean | null };
+type ClinicRow = { id: string; name: string | null };
+type RoleRow = { role: string; clinic_id: string | null; user_id: string | null };
+
+function errorField(error: unknown, field: keyof AuthErrorLike): unknown {
+  return typeof error === "object" && error !== null ? (error as AuthErrorLike)[field] : undefined;
+}
+
 /**
  * Decide para onde mandar o usuário autenticado.
  *
@@ -23,8 +36,8 @@ import { withTimeout } from "@/lib/asyncTimeout";
  */
 async function resolveRedirectPath(userId: string, fallback: string): Promise<string> {
   try {
-    const { data } = await withTimeout<any>(
-      supabase.rpc("is_platform_admin", { _user_id: userId }),
+    const { data } = await withTimeout<QueryResult<boolean>>(
+      supabase.rpc("is_platform_admin", { _user_id: userId }) as PromiseLike<QueryResult<boolean>>,
       2500,
       "Tempo esgotado ao verificar painel administrativo.",
     );
@@ -49,11 +62,12 @@ const createDiagnosticState = (): DiagnosticState => ({
 
 const POST_AUTH_QUERY_TIMEOUT_MS = 6000;
 
-function getAuthErrorMessage(error: any): string {
-  const rawMsg = (typeof error?.message === "string" && error.message !== "{}" ? error.message : "") as string;
-  const code = (error?.code || "").toString().toLowerCase();
-  const status = Number(error?.status ?? 0);
-  const name = (error?.name || "").toString();
+function getAuthErrorMessage(error: unknown): string {
+  const message = errorField(error, "message");
+  const rawMsg = typeof message === "string" && message !== "{}" ? message : "";
+  const code = String(errorField(error, "code") || "").toLowerCase();
+  const status = Number(errorField(error, "status") ?? 0);
+  const name = String(errorField(error, "name") || "");
   const msgLower = rawMsg.toLowerCase();
 
   if (
@@ -99,8 +113,9 @@ function getAuthErrorMessage(error: any): string {
   return rawMsg || "Auth: erro inesperado ao entrar. Tente novamente.";
 }
 
-function getQueryErrorMessage(error: any, fallback: string): string {
-  const rawMsg = typeof error?.message === "string" && error.message !== "{}" ? error.message : "";
+function getQueryErrorMessage(error: unknown, fallback: string): string {
+  const message = errorField(error, "message");
+  const rawMsg = typeof message === "string" && message !== "{}" ? message : "";
   return rawMsg || fallback;
 }
 
