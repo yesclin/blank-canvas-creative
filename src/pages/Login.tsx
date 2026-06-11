@@ -12,6 +12,20 @@ import { motion } from "framer-motion";
 import { clearAuthenticatedTab, clearAuthQuarantine, clearSupabaseAuthStorage, hasRecentAuthQuarantine, rememberAuthenticatedUser } from "@/lib/authSessionIsolation";
 import { useQueryClient } from "@tanstack/react-query";
 import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
+import { withTimeout } from "@/lib/asyncTimeout";
+
+type AuthErrorLike = { message?: unknown; code?: unknown; status?: unknown; name?: unknown };
+type QueryResult<T> = { data: T | null; error: unknown };
+type AuthUserLike = { id: string; email?: string | null };
+type AuthSessionLike = { user?: AuthUserLike | null } | null;
+type AuthSignInResult = { data: { session: AuthSessionLike; user: AuthUserLike | null }; error: unknown };
+type ProfileRow = { clinic_id: string | null; user_id: string | null; full_name: string | null; is_active: boolean | null };
+type ClinicRow = { id: string; name: string | null };
+type RoleRow = { role: string; clinic_id: string | null; user_id: string | null };
+
+function errorField(error: unknown, field: keyof AuthErrorLike): unknown {
+  return typeof error === "object" && error !== null ? (error as AuthErrorLike)[field] : undefined;
+}
 
 /**
  * Decide para onde mandar o usuário autenticado.
@@ -22,7 +36,11 @@ import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
  */
 async function resolveRedirectPath(userId: string, fallback: string): Promise<string> {
   try {
-    const { data } = await supabase.rpc("is_platform_admin", { _user_id: userId });
+    const { data } = await withTimeout<QueryResult<boolean>>(
+      supabase.rpc("is_platform_admin", { _user_id: userId }) as PromiseLike<QueryResult<boolean>>,
+      2500,
+      "Tempo esgotado ao verificar painel administrativo.",
+    );
     if (data === true) return "/super-admin";
   } catch (err) {
     console.warn("[AUTH] is_platform_admin falhou — usando destino padrão", err);
@@ -42,11 +60,14 @@ const createDiagnosticState = (): DiagnosticState => ({
   redirect: { status: "idle", message: "Aguardando validações" },
 });
 
-function getAuthErrorMessage(error: any): string {
-  const rawMsg = (typeof error?.message === "string" && error.message !== "{}" ? error.message : "") as string;
-  const code = (error?.code || "").toString().toLowerCase();
-  const status = Number(error?.status ?? 0);
-  const name = (error?.name || "").toString();
+const POST_AUTH_QUERY_TIMEOUT_MS = 6000;
+
+function getAuthErrorMessage(error: unknown): string {
+  const message = errorField(error, "message");
+  const rawMsg = typeof message === "string" && message !== "{}" ? message : "";
+  const code = String(errorField(error, "code") || "").toLowerCase();
+  const status = Number(errorField(error, "status") ?? 0);
+  const name = String(errorField(error, "name") || "");
   const msgLower = rawMsg.toLowerCase();
 
   if (
@@ -92,8 +113,9 @@ function getAuthErrorMessage(error: any): string {
   return rawMsg || "Auth: erro inesperado ao entrar. Tente novamente.";
 }
 
-function getQueryErrorMessage(error: any, fallback: string): string {
-  const rawMsg = typeof error?.message === "string" && error.message !== "{}" ? error.message : "";
+function getQueryErrorMessage(error: unknown, fallback: string): string {
+  const message = errorField(error, "message");
+  const rawMsg = typeof message === "string" && message !== "{}" ? message : "";
   return rawMsg || fallback;
 }
 
@@ -147,7 +169,7 @@ const Login = () => {
     };
 
     // 1) Sessão já existente ao abrir /login
-    supabase.auth.getSession().then(({ data }: any) => {
+    supabase.auth.getSession().then(({ data }: { data?: { session?: AuthSessionLike } }) => {
       const uid = data?.session?.user?.id;
       if (uid && mounted) void goTo(uid, "getSession");
     });
@@ -193,13 +215,17 @@ const Login = () => {
     try { clearReactQueryCache(queryClient, "login-before", { email: cleanEmail }); } catch { /* ignore */ }
     updateDiagnostic("auth", "pending", "Autenticando no Supabase");
 
-    let data: Awaited<ReturnType<typeof supabase.auth.signInWithPassword>>["data"] | null = null;
-    let error: any = null;
+    let data: AuthSignInResult["data"] | null = null;
+    let error: unknown = null;
     try {
-      const res = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password: cleanPassword,
-      });
+      const res = await withTimeout<AuthSignInResult>(
+        supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password: cleanPassword,
+        }) as PromiseLike<AuthSignInResult>,
+        10000,
+        "Auth: tempo esgotado ao autenticar no Supabase.",
+      );
       data = res.data;
       error = res.error;
     } catch (thrown) {
@@ -245,12 +271,16 @@ const Login = () => {
     try { clearReactQueryCache(queryClient, "login-after-auth", { userId: data.user.id }); } catch { /* ignore */ }
 
     updateDiagnostic("profile", "pending", "Buscando profile por auth.uid");
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("clinic_id, user_id, full_name, is_active")
-      .eq("user_id", data.user.id)
-      .limit(1)
-      .maybeSingle();
+    const { data: profile, error: profileError } = await withTimeout<QueryResult<ProfileRow>>(
+      supabase
+        .from("profiles")
+        .select("clinic_id, user_id, full_name, is_active")
+        .eq("user_id", data.user.id)
+        .limit(1)
+        .maybeSingle() as PromiseLike<QueryResult<ProfileRow>>,
+      POST_AUTH_QUERY_TIMEOUT_MS,
+      "Profile: tempo esgotado ao consultar perfil; seguindo com sessão autenticada.",
+    ).catch((error: unknown): QueryResult<ProfileRow> => ({ data: null, error }));
     if (import.meta.env.DEV) console.log("PROFILE:", profile);
 
     if (profileError) {
@@ -298,14 +328,18 @@ const Login = () => {
       return;
     }
 
-    let roles: any[] | null = null;
+    let roles: RoleRow[] | null = null;
     if (clinicId) {
-      const { data: clinic, error: clinicError } = await supabase
-        .from("clinics")
-        .select("id, name")
-        .eq("id", clinicId)
-        .limit(1)
-        .maybeSingle();
+      const { data: clinic, error: clinicError } = await withTimeout<QueryResult<ClinicRow>>(
+        supabase
+          .from("clinics")
+          .select("id, name")
+          .eq("id", clinicId)
+          .limit(1)
+          .maybeSingle() as PromiseLike<QueryResult<ClinicRow>>,
+        POST_AUTH_QUERY_TIMEOUT_MS,
+        "Clinic: tempo esgotado ao consultar clínica; seguindo com sessão autenticada.",
+      ).catch((error: unknown): QueryResult<ClinicRow> => ({ data: null, error }));
       if (import.meta.env.DEV) console.log("CLINIC:", clinic);
       if (clinicError) {
         const msg = getQueryErrorMessage(clinicError, "Clinic: falha ao consultar clínica; seguindo com sessão autenticada.");
@@ -327,11 +361,15 @@ const Login = () => {
       }
 
       updateDiagnostic("role", "pending", "Buscando papéis do usuário");
-      const { data: rolesData, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("role, clinic_id, user_id")
-        .eq("user_id", data.user.id)
-        .eq("clinic_id", clinicId);
+      const { data: rolesData, error: rolesError } = await withTimeout<QueryResult<RoleRow[]>>(
+        supabase
+          .from("user_roles")
+          .select("role, clinic_id, user_id")
+          .eq("user_id", data.user.id)
+          .eq("clinic_id", clinicId) as PromiseLike<QueryResult<RoleRow[]>>,
+        POST_AUTH_QUERY_TIMEOUT_MS,
+        "Role: tempo esgotado ao consultar permissões; seguindo com sessão autenticada.",
+      ).catch((error: unknown): QueryResult<RoleRow[]> => ({ data: null, error }));
       roles = rolesData ?? null;
       if (import.meta.env.DEV) console.log("ROLES:", roles);
       if (rolesError) {
@@ -341,7 +379,7 @@ const Login = () => {
       } else if (!rolesData?.length) {
         updateDiagnostic("role", "warning", "Role não encontrada; o app abrirá e mostrará o bloqueio de permissões se necessário.");
       } else {
-        updateDiagnostic("role", "success", rolesData.map((item: any) => item.role).join(", "));
+        updateDiagnostic("role", "success", rolesData.map((item) => item.role).join(", "));
       }
     } else if (profileError) {
       updateDiagnostic("clinic", "warning", "Clinic não validada porque a consulta de profile falhou.");
@@ -352,7 +390,11 @@ const Login = () => {
     // (evita race com o RequireAuth no destino).
     try {
       for (let i = 0; i < 10; i += 1) {
-        const { data: sessionData } = await supabase.auth.getSession();
+        const { data: sessionData } = await withTimeout<{ data?: { session?: AuthSessionLike } }>(
+          supabase.auth.getSession() as PromiseLike<{ data?: { session?: AuthSessionLike } }>,
+          1000,
+          "Tempo esgotado ao confirmar sessão local.",
+        );
         if (sessionData?.session) break;
         await new Promise((r) => setTimeout(r, 100));
       }
