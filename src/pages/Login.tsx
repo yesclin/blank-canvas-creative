@@ -10,6 +10,8 @@ import logoFull from "@/assets/logo-full.png";
 import logoIcon from "@/assets/logo-icon.png";
 import { motion } from "framer-motion";
 import { clearAuthenticatedTab, clearAuthQuarantine, clearSupabaseAuthStorage, hasRecentAuthQuarantine, rememberAuthenticatedUser } from "@/lib/authSessionIsolation";
+import { useQueryClient } from "@tanstack/react-query";
+import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
 
 /**
  * Decide para onde mandar o usuário autenticado.
@@ -26,6 +28,73 @@ async function resolveRedirectPath(userId: string, fallback: string): Promise<st
     console.warn("[AUTH] is_platform_admin falhou — usando destino padrão", err);
   }
   return fallback || "/app";
+}
+
+type DiagnosticStepKey = "auth" | "profile" | "clinic" | "role" | "redirect";
+type DiagnosticStatus = "idle" | "pending" | "success" | "fail" | "warning";
+type DiagnosticState = Record<DiagnosticStepKey, { status: DiagnosticStatus; message: string }>;
+
+const createDiagnosticState = (): DiagnosticState => ({
+  auth: { status: "idle", message: "Aguardando login" },
+  profile: { status: "idle", message: "Aguardando autenticação" },
+  clinic: { status: "idle", message: "Aguardando perfil" },
+  role: { status: "idle", message: "Aguardando clínica" },
+  redirect: { status: "idle", message: "Aguardando validações" },
+});
+
+function getAuthErrorMessage(error: any): string {
+  const rawMsg = (typeof error?.message === "string" && error.message !== "{}" ? error.message : "") as string;
+  const code = (error?.code || "").toString().toLowerCase();
+  const status = Number(error?.status ?? 0);
+  const name = (error?.name || "").toString();
+  const msgLower = rawMsg.toLowerCase();
+
+  if (
+    code === "invalid_credentials" ||
+    msgLower.includes("invalid login credentials") ||
+    msgLower.includes("invalid_grant") ||
+    msgLower.includes("unauthorized") ||
+    status === 400 ||
+    status === 401
+  ) {
+    return "Email ou senha inválidos.";
+  }
+  if (code === "user_not_found" || msgLower.includes("user not found")) {
+    return "Usuário não encontrado.";
+  }
+  if (
+    code === "email_not_confirmed" ||
+    msgLower.includes("email not confirmed") ||
+    msgLower.includes("email_change_requires_confirmation")
+  ) {
+    return "Email não confirmado. Verifique sua caixa de entrada.";
+  }
+  if (
+    msgLower.includes("blocked") ||
+    msgLower.includes("disabled") ||
+    msgLower.includes("banned") ||
+    msgLower.includes("inactive")
+  ) {
+    return "Conta bloqueada ou inativa. Contate o administrador.";
+  }
+  if (
+    name === "AuthRetryableFetchError" ||
+    status === 0 ||
+    status === 502 ||
+    status === 503 ||
+    status === 504 ||
+    msgLower.includes("failed to fetch") ||
+    msgLower.includes("network") ||
+    msgLower.includes("timeout")
+  ) {
+    return "Auth: falha de conexão com o Supabase. Tente novamente em instantes.";
+  }
+  return rawMsg || "Auth: erro inesperado ao entrar. Tente novamente.";
+}
+
+function getQueryErrorMessage(error: any, fallback: string): string {
+  const rawMsg = typeof error?.message === "string" && error.message !== "{}" ? error.message : "";
+  return rawMsg || fallback;
 }
 
 const Login = () => {
