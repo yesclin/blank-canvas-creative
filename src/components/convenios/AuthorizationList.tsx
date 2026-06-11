@@ -19,15 +19,19 @@ import type { InsuranceAuthorization, AuthorizationStatus, Insurance } from "@/t
 import { authorizationStatusLabels, authorizationStatusColors } from "@/types/convenios";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useCreateAuthorization } from "@/hooks/useConveniosData";
+import { useConveniosClinicId, useCreateAuthorization } from "@/hooks/useConveniosData";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
-const useProcedureOptions = () => useQuery({
-  queryKey: ["procedures-options"],
+const useProcedureOptions = (clinicId: string | null) => useQuery({
+  queryKey: ["procedures-options", clinicId],
+  enabled: !!clinicId,
+  staleTime: 60_000,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
   queryFn: async () => {
-    const { data } = await supabase.from("procedures").select("id, name").eq("is_active", true).order("name");
+    const { data } = await supabase.from("procedures").select("id, name").eq("clinic_id", clinicId!).eq("is_active", true).order("name");
     return (data || []).map(p => ({ id: p.id, name: p.name }));
   },
 });
@@ -39,7 +43,8 @@ interface AuthorizationListProps {
 }
 
 export function AuthorizationList({ authorizations, insurances, patients }: AuthorizationListProps) {
-  const { data: procedureOptions = [] } = useProcedureOptions();
+  const clinicId = useConveniosClinicId();
+  const { data: procedureOptions = [] } = useProcedureOptions(clinicId);
   const createAuth = useCreateAuthorization();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
