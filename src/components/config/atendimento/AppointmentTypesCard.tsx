@@ -253,6 +253,28 @@ export function AppointmentTypesCard() {
               </Select>
             </div>
             <div className="grid gap-2">
+              <Label htmlFor="type_price">Valor padrão (R$)</Label>
+              <Input
+                id="type_price"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="Ex: 500,00 (deixe vazio se variar)"
+                value={formData.default_price ?? ""}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  setFormData({
+                    ...formData,
+                    default_price: raw === "" ? null : Number(raw),
+                  });
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                Quando definido, este valor é puxado automaticamente para o agendamento ao selecionar este tipo.
+              </p>
+            </div>
+
+            <div className="grid gap-2">
               <Label htmlFor="type_color">Cor</Label>
               <Select
                 value={formData.color}
