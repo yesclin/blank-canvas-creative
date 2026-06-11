@@ -473,10 +473,10 @@ export default function ConfigClinica() {
       <TeleconsultaSettingsSection />
 
       <div className="flex justify-end">
-        <Button 
-          size="lg" 
-          onClick={handleSave} 
-          disabled={isSaving || !isFiscalValid}
+        <Button
+          size="lg"
+          onClick={handleSave}
+          disabled={isSaving}
         >
           <Save className="h-4 w-4 mr-2" />
           {isSaving ? "Salvando..." : "Salvar Configurações"}
