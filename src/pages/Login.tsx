@@ -169,7 +169,7 @@ const Login = () => {
     };
 
     // 1) Sessão já existente ao abrir /login
-    supabase.auth.getSession().then(({ data }: any) => {
+    supabase.auth.getSession().then(({ data }: { data?: { session?: AuthSessionLike } }) => {
       const uid = data?.session?.user?.id;
       if (uid && mounted) void goTo(uid, "getSession");
     });
@@ -215,14 +215,14 @@ const Login = () => {
     try { clearReactQueryCache(queryClient, "login-before", { email: cleanEmail }); } catch { /* ignore */ }
     updateDiagnostic("auth", "pending", "Autenticando no Supabase");
 
-    let data: Awaited<ReturnType<typeof supabase.auth.signInWithPassword>>["data"] | null = null;
-    let error: any = null;
+    let data: AuthSignInResult["data"] | null = null;
+    let error: unknown = null;
     try {
-      const res = await withTimeout<any>(
+      const res = await withTimeout<AuthSignInResult>(
         supabase.auth.signInWithPassword({
           email: cleanEmail,
           password: cleanPassword,
-        }),
+        }) as PromiseLike<AuthSignInResult>,
         10000,
         "Auth: tempo esgotado ao autenticar no Supabase.",
       );
@@ -271,16 +271,16 @@ const Login = () => {
     try { clearReactQueryCache(queryClient, "login-after-auth", { userId: data.user.id }); } catch { /* ignore */ }
 
     updateDiagnostic("profile", "pending", "Buscando profile por auth.uid");
-    const { data: profile, error: profileError } = await withTimeout<any>(
+    const { data: profile, error: profileError } = await withTimeout<QueryResult<ProfileRow>>(
       supabase
         .from("profiles")
         .select("clinic_id, user_id, full_name, is_active")
         .eq("user_id", data.user.id)
         .limit(1)
-        .maybeSingle(),
+        .maybeSingle() as PromiseLike<QueryResult<ProfileRow>>,
       POST_AUTH_QUERY_TIMEOUT_MS,
       "Profile: tempo esgotado ao consultar perfil; seguindo com sessão autenticada.",
-    ).catch((error) => ({ data: null, error }));
+    ).catch((error: unknown): QueryResult<ProfileRow> => ({ data: null, error }));
     if (import.meta.env.DEV) console.log("PROFILE:", profile);
 
     if (profileError) {
@@ -328,18 +328,18 @@ const Login = () => {
       return;
     }
 
-    let roles: any[] | null = null;
+    let roles: RoleRow[] | null = null;
     if (clinicId) {
-      const { data: clinic, error: clinicError } = await withTimeout<any>(
+      const { data: clinic, error: clinicError } = await withTimeout<QueryResult<ClinicRow>>(
         supabase
           .from("clinics")
           .select("id, name")
           .eq("id", clinicId)
           .limit(1)
-          .maybeSingle(),
+          .maybeSingle() as PromiseLike<QueryResult<ClinicRow>>,
         POST_AUTH_QUERY_TIMEOUT_MS,
         "Clinic: tempo esgotado ao consultar clínica; seguindo com sessão autenticada.",
-      ).catch((error) => ({ data: null, error }));
+      ).catch((error: unknown): QueryResult<ClinicRow> => ({ data: null, error }));
       if (import.meta.env.DEV) console.log("CLINIC:", clinic);
       if (clinicError) {
         const msg = getQueryErrorMessage(clinicError, "Clinic: falha ao consultar clínica; seguindo com sessão autenticada.");
@@ -361,15 +361,15 @@ const Login = () => {
       }
 
       updateDiagnostic("role", "pending", "Buscando papéis do usuário");
-      const { data: rolesData, error: rolesError } = await withTimeout<any>(
+      const { data: rolesData, error: rolesError } = await withTimeout<QueryResult<RoleRow[]>>(
         supabase
           .from("user_roles")
           .select("role, clinic_id, user_id")
           .eq("user_id", data.user.id)
-          .eq("clinic_id", clinicId),
+          .eq("clinic_id", clinicId) as PromiseLike<QueryResult<RoleRow[]>>,
         POST_AUTH_QUERY_TIMEOUT_MS,
         "Role: tempo esgotado ao consultar permissões; seguindo com sessão autenticada.",
-      ).catch((error) => ({ data: null, error }));
+      ).catch((error: unknown): QueryResult<RoleRow[]> => ({ data: null, error }));
       roles = rolesData ?? null;
       if (import.meta.env.DEV) console.log("ROLES:", roles);
       if (rolesError) {
@@ -379,7 +379,7 @@ const Login = () => {
       } else if (!rolesData?.length) {
         updateDiagnostic("role", "warning", "Role não encontrada; o app abrirá e mostrará o bloqueio de permissões se necessário.");
       } else {
-        updateDiagnostic("role", "success", rolesData.map((item: any) => item.role).join(", "));
+        updateDiagnostic("role", "success", rolesData.map((item) => item.role).join(", "));
       }
     } else if (profileError) {
       updateDiagnostic("clinic", "warning", "Clinic não validada porque a consulta de profile falhou.");
