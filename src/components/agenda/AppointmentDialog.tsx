@@ -324,32 +324,47 @@ export function AppointmentDialog({
     }
   }, [watchProcedureId, procedures, form, availableSpecialties]);
 
-  // Auto-fill duration & expected_value from appointment_types when type changes
-  // (only for non-procedure types). For 'procedimento', the procedure selection drives the values.
+  // Auto-fill duration, expected_value & procedure_id from procedures table
+  // when type changes (Consulta / Retorno / Encaixe). For 'procedimento',
+  // the procedure selection drives the values (handled by the effect above).
   useEffect(() => {
     if (!watchAppointmentType || isReschedule) return;
-    if (isProcedureType) return; // procedure flow handles it
+    if (isProcedureType) return;
 
-    // Clear any previously selected procedure when switching to non-procedure type
-    const currentProcId = form.getValues("procedure_id");
-    if (currentProcId && currentProcId !== "none" && currentProcId !== "") {
-      form.setValue("procedure_id", "none");
-      setSelectedProcedure(null);
-    }
+    const labelByType: Record<string, string> = {
+      consulta: "consulta",
+      retorno: "retorno",
+      encaixe: "encaixe",
+    };
+    const targetName = labelByType[watchAppointmentType.toLowerCase()];
+    if (!targetName) return;
 
-    const typeRow = appointmentTypes.find(t => (t.slug || "").toLowerCase() === watchAppointmentType.toLowerCase());
-    if (!typeRow) return;
+    const proc = procedures.find(
+      p => p.is_active && (p.name || "").trim().toLowerCase() === targetName
+    );
 
-    if (typeRow.duration_minutes) {
-      form.setValue("duration_minutes", String(typeRow.duration_minutes));
-    }
-    if (typeRow.default_price != null) {
-      form.setValue("expected_value", Number(typeRow.default_price));
+    if (proc) {
+      const currentProcId = form.getValues("procedure_id");
+      if (currentProcId !== proc.id) {
+        form.setValue("procedure_id", proc.id);
+        setSelectedProcedure(proc);
+      }
+      if (proc.duration_minutes) {
+        form.setValue("duration_minutes", String(proc.duration_minutes));
+      }
+      form.setValue("expected_value", proc.price ? Number(proc.price) : 0);
     } else {
-      // No default price configured for this type — reset to 0 so the user notices
+      // Fallback: no matching procedure registered yet
+      const currentProcId = form.getValues("procedure_id");
+      if (currentProcId && currentProcId !== "none") {
+        form.setValue("procedure_id", "none");
+        setSelectedProcedure(null);
+      }
       form.setValue("expected_value", 0);
     }
-  }, [watchAppointmentType, isProcedureType, isReschedule, appointmentTypes, form]);
+  }, [watchAppointmentType, isProcedureType, isReschedule, procedures, form]);
+
+
 
 
   // Get professional schedule for slot suggestions
