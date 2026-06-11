@@ -20,9 +20,9 @@ export interface ActiveSupportSession {
 
 export function getActiveSupportSession(): ActiveSupportSession | null {
   if (typeof window === 'undefined') return null;
-  const clinicId = window.localStorage.getItem(STORAGE_KEY);
-  const sessionId = window.localStorage.getItem(SESSION_ID_KEY);
-  const adminUserId = window.localStorage.getItem(SUPPORT_ADMIN_USER_KEY);
+  const clinicId = window.sessionStorage.getItem(STORAGE_KEY);
+  const sessionId = window.sessionStorage.getItem(SESSION_ID_KEY);
+  const adminUserId = window.sessionStorage.getItem(SUPPORT_ADMIN_USER_KEY);
   if (!clinicId || !sessionId || !adminUserId) return null;
   return { clinicId, sessionId, adminUserId };
 }
@@ -34,12 +34,12 @@ export function getActiveSupportSession(): ActiveSupportSession | null {
  */
 export function clearSupportSessionIfMismatch(currentUserId: string | null) {
   if (typeof window === 'undefined') return;
-  const owner = window.localStorage.getItem(SUPPORT_ADMIN_USER_KEY);
+  const owner = window.sessionStorage.getItem(SUPPORT_ADMIN_USER_KEY);
   if (!owner) return;
   if (!currentUserId || owner !== currentUserId) {
-    window.localStorage.removeItem(STORAGE_KEY);
-    window.localStorage.removeItem(SESSION_ID_KEY);
-    window.localStorage.removeItem(SUPPORT_ADMIN_USER_KEY);
+    window.sessionStorage.removeItem(STORAGE_KEY);
+    window.sessionStorage.removeItem(SESSION_ID_KEY);
+    window.sessionStorage.removeItem(SUPPORT_ADMIN_USER_KEY);
     window.dispatchEvent(new CustomEvent('yesclin:support-session-changed'));
   }
 }
@@ -86,9 +86,9 @@ export async function startSupportSession(params: {
   });
 
   if (typeof window !== 'undefined') {
-    window.localStorage.setItem(STORAGE_KEY, params.clinicId);
-    window.localStorage.setItem(SESSION_ID_KEY, data.id);
-    window.localStorage.setItem(SUPPORT_ADMIN_USER_KEY, user.id);
+    window.sessionStorage.setItem(STORAGE_KEY, params.clinicId);
+    window.sessionStorage.setItem(SESSION_ID_KEY, data.id);
+    window.sessionStorage.setItem(SUPPORT_ADMIN_USER_KEY, user.id);
   }
   emitChange();
   return { sessionId: data.id };
@@ -97,9 +97,9 @@ export async function startSupportSession(params: {
 export async function endSupportSession(): Promise<void> {
   const active = getActiveSupportSession();
   if (typeof window !== 'undefined') {
-    window.localStorage.removeItem(STORAGE_KEY);
-    window.localStorage.removeItem(SESSION_ID_KEY);
-    window.localStorage.removeItem(SUPPORT_ADMIN_USER_KEY);
+    window.sessionStorage.removeItem(STORAGE_KEY);
+    window.sessionStorage.removeItem(SESSION_ID_KEY);
+    window.sessionStorage.removeItem(SUPPORT_ADMIN_USER_KEY);
   }
   emitChange();
 
