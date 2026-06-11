@@ -65,7 +65,6 @@ export function AppointmentTypesCard() {
     description: "",
     color: "bg-blue-500",
     duration_minutes: 30,
-    default_price: null,
     is_active: true,
   });
 
@@ -75,7 +74,6 @@ export function AppointmentTypesCard() {
       description: "",
       color: "bg-blue-500",
       duration_minutes: 30,
-      default_price: null,
       is_active: true,
     });
     setEditingType(null);
@@ -93,11 +91,11 @@ export function AppointmentTypesCard() {
       description: type.description || "",
       color: type.color,
       duration_minutes: type.duration_minutes,
-      default_price: type.default_price ?? null,
       is_active: type.is_active,
     });
     setIsDialogOpen(true);
   };
+
 
 
   const handleSave = async () => {
