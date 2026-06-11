@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useClinicData } from '@/hooks/useClinicData';
+import { useAuthIdentity } from '@/hooks/useAuthIdentity';
 import type {
   Insurance,
   PatientInsurance,
@@ -80,8 +80,39 @@ async function getClinicId(): Promise<string> {
 }
 
 function useActiveClinicId() {
-  const { clinic } = useClinicData();
-  return clinic?.id ?? null;
+  const { userId, isLoading } = useAuthIdentity();
+  const { data } = useQuery({
+    queryKey: ['convenios-clinic-scope', userId],
+    enabled: !isLoading && !!userId,
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    queryFn: async () => {
+      if (!userId) return null;
+      const { data: auth } = await supabase.auth.getUser();
+      if (auth.user?.id !== userId) return null;
+
+      try {
+        const supportClinicId = typeof window !== 'undefined' ? window.sessionStorage.getItem('yesclin_support_clinic_id') : null;
+        const supportAdminUserId = typeof window !== 'undefined' ? window.sessionStorage.getItem('yesclin_support_admin_user_id') : null;
+        if (supportClinicId && supportAdminUserId === userId) {
+          const { data: isAdmin } = await supabase.rpc('is_platform_admin', { _user_id: userId });
+          if (isAdmin === true) return supportClinicId;
+        }
+      } catch {
+        /* segue para clínica natural */
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('clinic_id, user_id')
+        .eq('user_id', userId)
+        .maybeSingle();
+      return profile?.user_id === userId ? profile?.clinic_id ?? null : null;
+    },
+  });
+  return data ?? null;
 }
 
 const stableClinicQuery = (clinicId: string | null) => ({
