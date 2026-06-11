@@ -234,6 +234,107 @@ const Login = () => {
     updateDiagnostic("auth", "success", `Auth OK: ${data.user.email ?? data.user.id}`);
 
     rememberAuthenticatedUser(data.user.id);
+    try { clearReactQueryCache(queryClient, "login-after-auth", { userId: data.user.id }); } catch { /* ignore */ }
+
+    updateDiagnostic("profile", "pending", "Buscando profile por auth.uid");
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("clinic_id, user_id, full_name, is_active")
+      .eq("user_id", data.user.id)
+      .limit(1)
+      .maybeSingle();
+    if (import.meta.env.DEV) console.log("PROFILE:", profile);
+
+    if (profileError) {
+      const msg = getQueryErrorMessage(profileError, "Profile: falha ao consultar perfil; seguindo com sessão autenticada.");
+      console.warn("[AUTH] PROFILE query failed", profileError);
+      updateDiagnostic("profile", "warning", msg);
+    } else if (!profile || profile.user_id !== data.user.id) {
+      const description = "Conta encontrada, mas sem perfil vinculado. Contate o administrador.";
+      updateDiagnostic("profile", "fail", description);
+      toast({ title: "Cadastro incompleto", description, variant: "destructive" });
+      await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+      clearAuthenticatedTab();
+      clearSupabaseAuthStorage();
+      try { clearReactQueryCache(queryClient, "login-no-profile", { userId: data.user.id }); } catch { /* ignore */ }
+      setIsLoading(false);
+      return;
+    } else if (profile.is_active === false) {
+      const description = "Conta bloqueada ou inativa. Contate o administrador.";
+      updateDiagnostic("profile", "fail", description);
+      toast({ title: "Acesso bloqueado", description, variant: "destructive" });
+      await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+      clearAuthenticatedTab();
+      clearSupabaseAuthStorage();
+      try { clearReactQueryCache(queryClient, "login-inactive-profile", { userId: data.user.id }); } catch { /* ignore */ }
+      setIsLoading(false);
+      return;
+    } else {
+      updateDiagnostic("profile", "success", `Profile OK: ${profile.full_name ?? data.user.email ?? data.user.id}`);
+    }
+
+    const clinicId = profile?.clinic_id ?? null;
+    updateDiagnostic("clinic", "pending", "Buscando clínica vinculada");
+    if (!clinicId && !profileError) {
+      const description = "Conta encontrada, mas sem clínica vinculada. Contate o administrador.";
+      updateDiagnostic("clinic", "fail", description);
+      toast({ title: "Clínica não vinculada", description, variant: "destructive" });
+      await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+      clearAuthenticatedTab();
+      clearSupabaseAuthStorage();
+      try { clearReactQueryCache(queryClient, "login-no-clinic", { userId: data.user.id }); } catch { /* ignore */ }
+      setIsLoading(false);
+      return;
+    }
+
+    let roles: any[] | null = null;
+    if (clinicId) {
+      const { data: clinic, error: clinicError } = await supabase
+        .from("clinics")
+        .select("id, name")
+        .eq("id", clinicId)
+        .limit(1)
+        .maybeSingle();
+      if (import.meta.env.DEV) console.log("CLINIC:", clinic);
+      if (clinicError) {
+        const msg = getQueryErrorMessage(clinicError, "Clinic: falha ao consultar clínica; seguindo com sessão autenticada.");
+        console.warn("[AUTH] CLINIC query failed", clinicError);
+        updateDiagnostic("clinic", "warning", msg);
+      } else if (!clinic) {
+        const description = "Conta encontrada, mas sem clínica vinculada. Contate o administrador.";
+        updateDiagnostic("clinic", "fail", description);
+        toast({ title: "Clínica não encontrada", description, variant: "destructive" });
+        await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+        clearAuthenticatedTab();
+        clearSupabaseAuthStorage();
+        try { clearReactQueryCache(queryClient, "login-clinic-not-found", { userId: data.user.id, clinicId }); } catch { /* ignore */ }
+        setIsLoading(false);
+        return;
+      } else {
+        updateDiagnostic("clinic", "success", `Clinic OK: ${clinic.name ?? clinic.id}`);
+      }
+
+      updateDiagnostic("role", "pending", "Buscando papéis do usuário");
+      const { data: rolesData, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("role, clinic_id, user_id")
+        .eq("user_id", data.user.id)
+        .eq("clinic_id", clinicId);
+      roles = rolesData ?? null;
+      if (import.meta.env.DEV) console.log("ROLES:", roles);
+      if (rolesError) {
+        const msg = getQueryErrorMessage(rolesError, "Role: falha ao consultar permissões; seguindo com sessão autenticada.");
+        console.warn("[AUTH] ROLES query failed", rolesError);
+        updateDiagnostic("role", "warning", msg);
+      } else if (!rolesData?.length) {
+        updateDiagnostic("role", "warning", "Role não encontrada; o app abrirá e mostrará o bloqueio de permissões se necessário.");
+      } else {
+        updateDiagnostic("role", "success", rolesData.map((item: any) => item.role).join(", "));
+      }
+    } else if (profileError) {
+      updateDiagnostic("clinic", "warning", "Clinic não validada porque a consulta de profile falhou.");
+      updateDiagnostic("role", "warning", "Role não validada porque a consulta de profile falhou.");
+    }
 
     // Aguarda a sessão estar persistida no storage antes de navegar
     // (evita race com o RequireAuth no destino).
@@ -257,7 +358,9 @@ const Login = () => {
     // useEffect acima cobre a navegação no novo mount.
     if (!navigatedRef.current) {
       navigatedRef.current = true;
-      const dest = await resolveRedirectPath(data.user.id, fromPath || "/app");
+      updateDiagnostic("redirect", "pending", "Redirecionando para o app");
+      const dest = await resolveRedirectPath(data.user.id, fromPath || "/app/dashboard");
+      updateDiagnostic("redirect", "success", dest);
       navigate(dest, { replace: true });
     }
 
