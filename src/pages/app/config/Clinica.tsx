@@ -319,12 +319,10 @@ export default function ConfigClinica() {
       updateData.inscricao_municipal = formData.fiscal_type === "pj" ? formData.inscricao_municipal : null;
     }
 
-    const { error, count } = await supabase
+    const { error } = await supabase
       .from("clinics")
       .update(updateData)
-      .eq("id", clinicId)
-      .select("id")
-      .single();
+      .eq("id", clinicId);
 
     if (error) {
       console.error("Error saving clinic settings:", error);
@@ -473,10 +471,10 @@ export default function ConfigClinica() {
       <TeleconsultaSettingsSection />
 
       <div className="flex justify-end">
-        <Button 
-          size="lg" 
-          onClick={handleSave} 
-          disabled={isSaving || !isFiscalValid}
+        <Button
+          size="lg"
+          onClick={handleSave}
+          disabled={isSaving}
         >
           <Save className="h-4 w-4 mr-2" />
           {isSaving ? "Salvando..." : "Salvar Configurações"}
