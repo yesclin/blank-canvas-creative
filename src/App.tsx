@@ -282,129 +282,17 @@ function ProviderShell() {
 
 function AuthScopedProviders() {
   const queryClient = useQueryClient();
-  const [authReady, setAuthReady] = useState(false);
-  const currentUidRef = useRef<string | null | undefined>(undefined);
-  const authReadyRef = useRef(false);
-  const requestRef = useRef(0);
+  const { isLoading } = useAuthIdentity();
+  const previousLoadingRef = useRef<boolean | null>(null);
 
   useEffect(() => {
-    let mounted = true;
+    if (!import.meta.env.DEV) return;
+    if (previousLoadingRef.current === isLoading) return;
+    previousLoadingRef.current = isLoading;
+    console.log(isLoading ? "GLOBAL LOADING ON" : "GLOBAL LOADING OFF", { source: "AuthIdentityProvider" });
+  }, [isLoading]);
 
-    const trace = (message: string, payload?: Record<string, unknown>) => {
-      if (import.meta.env.DEV || (typeof window !== "undefined" && window.sessionStorage.getItem("yc.auth.trace") === "1")) {
-        console.log(message, payload ?? {});
-      }
-    };
-
-    trace("GLOBAL LOADING ON", { source: "auth-bootstrap" });
-
-    const markReady = () => {
-      if (!authReadyRef.current) {
-        authReadyRef.current = true;
-        trace("GLOBAL LOADING OFF", { source: "auth-bootstrap" });
-      }
-      setAuthReady(true);
-    };
-
-    const applyUid = (nextUid: string | null, reason: string) => {
-      if (!mounted) return;
-      const prev = currentUidRef.current;
-      trace("AUTH STATE CHANGE", { userId: nextUid, prevUserId: prev ?? null, reason });
-      if (prev === nextUid) {
-        markReady();
-        return;
-      }
-      const expected = getTabExpectedUserId();
-      if (nextUid && expected && expected !== nextUid) {
-        requestRef.current++;
-        try { clearReactQueryCache(queryClient, "auth-scope-mismatch", { expected, nextUid }); } catch { /* ignore */ }
-        quarantineMismatchedAuthSession("AuthScopedProviders user divergente", expected, nextUid);
-        currentUidRef.current = null;
-        markReady();
-        return;
-      }
-      currentUidRef.current = nextUid;
-      clearUnsafeAuthCache();
-      const isInitialResolution = prev === undefined;
-      const isLogout = Boolean(prev && !nextUid);
-      const isRealUserSwitch = Boolean(prev && nextUid && prev !== nextUid);
-
-      if (isLogout) clearAuthenticatedTab();
-      if (isRealUserSwitch) clearIdentityScopedState();
-      if (isLogout || isRealUserSwitch) {
-        try { clearReactQueryCache(queryClient, "auth-scope-changed", { prev: prev ?? null, next: nextUid }); } catch { /* ignore */ }
-      }
-      if (isInitialResolution) {
-        trace("[AUTH_SCOPE] resolução inicial sem limpeza global de cache", { userId: nextUid });
-      }
-      markReady();
-    };
-
-    const resolveVerifiedUser = async (source: string) => {
-      const reqId = ++requestRef.current;
-      try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (!mounted || reqId !== requestRef.current) return;
-        if (!sessionData.session) {
-          applyUid(null, source);
-          return;
-        }
-        const { data, error } = await supabase.auth.getUser();
-        if (!mounted || reqId !== requestRef.current) return;
-        if (error) throw error;
-        applyUid(data.user?.id ?? null, source);
-      } catch (error) {
-        if (!mounted || reqId !== requestRef.current) return;
-        console.error("[AUTH_SCOPE] falha ao validar auth.uid()", { source, error });
-        applyUid(null, `${source}:error`);
-      }
-    };
-
-    void resolveVerifiedUser("mount");
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      trace("AUTH STATE CHANGE", { event, userId: session?.user?.id ?? null });
-      if (event === "SIGNED_OUT") {
-        requestRef.current++;
-        applyUid(null, event);
-        return;
-      }
-      // TOKEN_REFRESHED NUNCA troca identidade — apenas renova o JWT.
-      // Re-resolver aqui causaria invalidação em cascata de profile/clinic
-      // e a UI piscaria em segundo plano enquanto o usuário digita.
-      if ((event === "INITIAL_SESSION" || event === "SIGNED_IN") && session?.user?.id) {
-        applyUid(session.user.id, event);
-        return;
-      }
-
-      if (event === "USER_UPDATED") {
-        const next = session?.user?.id ?? null;
-        if (next && currentUidRef.current && next !== currentUidRef.current) applyUid(next, event);
-        return;
-      }
-
-      if (event === "INITIAL_SESSION" || event === "SIGNED_IN") {
-        setTimeout(() => {
-          if (mounted) void resolveVerifiedUser(event);
-        }, 0);
-      }
-    });
-
-    const onIdentityChanged = (event: Event) => {
-      requestRef.current++;
-      const detail = (event as CustomEvent).detail as { next?: string | null };
-      applyUid(detail?.next ?? null, "yesclin:identity-changed");
-    };
-    window.addEventListener("yesclin:identity-changed", onIdentityChanged);
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-      window.removeEventListener("yesclin:identity-changed", onIdentityChanged);
-    };
-  }, []);
-
-  if (!authReady) {
+  if (isLoading) {
     return <PageSkeleton />;
   }
 
