@@ -1,68 +1,46 @@
-## Objetivo
+# Reorganizar Tipo de Atendimento × Procedimento
 
-Hoje a tela "Receber Pagamento" mostra **R$ 0,00** porque o valor do agendamento (`expected_value` / `amount_due`) só é preenchido quando um **Procedimento com preço** é selecionado. "Consulta" e "Retorno" existem apenas como `appointment_types` (tipos de evento), que não têm campo de preço.
+## Comportamento desejado no Novo Agendamento
 
-A solução é deixar **Consulta** e **Retorno** já cadastradas como **Procedimentos** em toda clínica — sem preço definido — para que o dono/admin abra Configurações › Procedimentos, defina o valor (ex.: R$ 500,00), a duração, a especialidade etc., e a partir daí o valor flua automaticamente para o agendamento e para a tela de recebimento.
+- O campo **Procedimento** só aparece quando **Tipo de Atendimento = Procedimento**.
+- Para **Consulta**, **Retorno** e **Encaixe**, a duração e o valor previsto vêm direto do cadastro do tipo (Configurações › Tipos de Atendimento), sem precisar selecionar procedimento.
+- Para **Procedimento**, mantém o fluxo atual: aparece o seletor de procedimento e o valor/duração vêm do procedimento escolhido.
 
-## Escopo
+## Mudanças
 
-### 1. Banco de dados (migration)
-- Inserir, para **toda clínica existente** que ainda não tenha, duas linhas em `public.procedures`:
-  - `Consulta` — `duration_minutes = 30`, `price = NULL`, `is_active = true`, `allows_return = true`, `return_days = 30`.
-  - `Retorno` — `duration_minutes = 20`, `price = NULL`, `is_active = true`, `allows_return = false`.
-  - Inserção idempotente: usar `WHERE NOT EXISTS (SELECT 1 FROM procedures WHERE clinic_id = c.id AND lower(name) IN ('consulta','retorno'))` por nome, para não duplicar em clínicas que já criaram manualmente.
-- Atualizar a função de provisionamento de clínica (mesma function que hoje semeia `appointment_types` em `20260515014919_…`) para também inserir esses dois procedimentos padrão no momento da criação da clínica. Sem preço — a clínica define.
+### 1. Banco de dados (migração)
+- Adicionar duas colunas em `appointment_types`:
+  - `default_price numeric(10,2) NULL`
+  - `default_specialty_id uuid NULL` (opcional, para Consulta puxar a especialidade do profissional, mas sem obrigatoriedade)
+- Garantir que toda clínica tem os 4 tipos: `consulta`, `retorno`, `procedimento`, `encaixe` (insert idempotente; já existem `consulta` e `retorno` para clínicas atuais — apenas adicionar `procedimento` e `encaixe` onde faltarem).
+- Atualizar `handle_new_user` para seedar os 4 tipos em clínicas novas (com `default_price = NULL`).
+- Remover o seed anterior de "Consulta"/"Retorno" como linhas em `procedures` (migração da resposta anterior), já que o preço agora mora em `appointment_types`. Manter apagamento só das linhas seed que não foram editadas (preço NULL e sem uso em agendamentos), para não destruir dados de quem já configurou.
 
-### 2. UI — Configurações › Procedimentos
-- Não muda fluxo: os dois procedimentos aparecem na listagem como qualquer outro, com badge "Sem preço definido" quando `price IS NULL`, para chamar atenção do usuário a configurar.
-- Permitir edição normal (preço, duração, especialidade, descrição). Não bloquear exclusão — se a clínica quiser remover, pode.
+### 2. Configurações › Tipos de Atendimento (nova tela ou seção)
+- Lista os 4 tipos da clínica com colunas: Nome, Duração padrão (min), Valor padrão (R$), Cor, Ativo.
+- Cada linha editável (dialog simples): duração, preço, cor.
+- Acesso: owner/admin (mesma regra de Procedimentos).
+- Badge "Sem preço definido" quando `default_price IS NULL`.
 
-### 3. UI — Agendamento
-- Sem mudança estrutural. Quando a recepcionista escolher o procedimento "Consulta" (já com R$ 500 cadastrados), o efeito existente em `AppointmentDialog.tsx:299-301` preenche `expected_value`, e a tela "Receber Pagamento" passa a mostrar Previsto = R$ 500,00 e Pendente = R$ 500,00.
+### 3. `AppointmentDialog.tsx`
+- Carregar `appointment_types` da clínica via hook `useAppointmentTypes`.
+- Esconder o bloco "Procedimento" (linhas ~500–550) quando `watchAppointmentType !== 'procedimento'`.
+- Novo `useEffect` que reage a `watchAppointmentType`:
+  - Se for `consulta`/`retorno`/`encaixe`: localizar o `appointment_type` pelo `slug`, preencher `duration_minutes` e `expected_value` (se `default_price` definido); limpar `procedure_id` para `"none"`.
+  - Se for `procedimento`: manter o `useEffect` atual que reage ao `procedure_id`.
+- Manter o aviso âmbar no `AppointmentReceivePaymentDialog` quando `amountExpected === 0` (já implementado).
 
-### 4. Aviso visual (pequeno)
-- No diálogo "Receber Pagamento" (`AppointmentReceivePaymentDialog.tsx`), quando `amountExpected === 0`, exibir uma mensagem curta abaixo do bloco de resumo:
-  > "Nenhum valor definido para este agendamento. Defina o preço no procedimento em Configurações › Procedimentos, ou digite o valor manualmente abaixo."
-- O campo "Valor a receber agora" continua editável, então o usuário pode digitar 500 manualmente nessa cobrança específica se quiser.
+### 4. Roteamento e navegação
+- Adicionar item "Tipos de Atendimento" na sidebar de Configurações ao lado de "Procedimentos".
 
 ## Detalhes técnicos
 
-**Migration (resumo do SQL):**
-```sql
--- Backfill clínicas existentes
-INSERT INTO public.procedures (clinic_id, name, duration_minutes, allows_return, return_days, is_active)
-SELECT c.id, 'Consulta', 30, true, 30, true
-FROM public.clinics c
-WHERE NOT EXISTS (
-  SELECT 1 FROM public.procedures p
-  WHERE p.clinic_id = c.id AND lower(p.name) = 'consulta'
-);
+- Migração: `ALTER TABLE public.appointment_types ADD COLUMN default_price numeric(10,2);` + `ADD COLUMN default_specialty_id uuid;`.
+- RLS de `appointment_types` já existe (3 policies); apenas conferir que `UPDATE` é permitido a owner/admin da clínica.
+- Hook `useAppointmentTypes` já retorna a lista; adicionar mutation `updateAppointmentType({ id, duration_minutes, default_price, color })`.
+- Schema do form em `AppointmentDialog`: `procedure_id` continua opcional — quando tipo ≠ procedimento, sempre `"none"`.
 
-INSERT INTO public.procedures (clinic_id, name, duration_minutes, allows_return, is_active)
-SELECT c.id, 'Retorno', 20, false, true
-FROM public.clinics c
-WHERE NOT EXISTS (
-  SELECT 1 FROM public.procedures p
-  WHERE p.clinic_id = c.id AND lower(p.name) = 'retorno'
-);
+## Fora de escopo
 
--- Atualizar a função seed_clinic_defaults (ou equivalente) para inserir
--- essas duas linhas no momento da criação de novas clínicas.
-```
-
-**Arquivos a editar:**
-- `supabase/migrations/<nova>_seed_default_procedures.sql` — backfill + atualização da function de provisionamento.
-- `src/components/agenda/AppointmentReceivePaymentDialog.tsx` — aviso quando `amountExpected === 0`.
-- (Opcional) `src/pages/...Procedures...` — badge "Sem preço definido" na listagem. Confirmo o arquivo exato no momento da implementação.
-
-**Não muda:**
-- Estrutura da tabela `procedures` (price já é nullable).
-- `appointment_types` — continua existindo para categorizar visualmente o evento na agenda.
-- Lógica de cálculo financeira (`useAppointmentFinancialStatus`).
-
-## Resultado para o usuário
-
-1. Abre Configurações › Procedimentos → vê "Consulta" e "Retorno" já listadas.
-2. Edita "Consulta", define R$ 500,00, salva.
-3. Cria/abre um agendamento, seleciona procedimento "Consulta" → Valor previsto vira R$ 500,00.
-4. Clica "Receber Pagamento" → Previsto: R$ 500,00, Pendente: R$ 500,00, campo já pré-preenchido com 500,00.
+- Não mexe na lógica de pacotes, convênio, faturamento ou pagamento.
+- Não mexe no fluxo clínico (prontuário/atendimento).

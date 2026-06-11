@@ -39,6 +39,8 @@ import { toast } from "sonner";
 import type { Professional, Patient, Room, Specialty, Insurance, Appointment } from "@/types/agenda";
 import { typeLabels, careModeLabels } from "@/types/agenda";
 import { useProceduresList, Procedure } from "@/hooks/useProceduresCRUD";
+import { useAppointmentTypes } from "@/hooks/useAppointmentTypes";
+
 import { useSlotSuggestions } from "@/hooks/useSlotSuggestions";
 import { useConflictDetection } from "@/hooks/useConflictDetection";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -139,6 +141,8 @@ export function AppointmentDialog({
   
   // Fetch procedures from database
   const { data: procedures = [], isLoading: proceduresLoading } = useProceduresList(false);
+  const { types: appointmentTypes } = useAppointmentTypes();
+
 
   const form = useForm<AppointmentFormData>({
     resolver: zodResolver(appointmentSchema),
@@ -222,6 +226,9 @@ export function AppointmentDialog({
   const watchIsFitIn = form.watch("is_fit_in");
   const watchSpecialtyId = form.watch("specialty_id");
   const watchCareMode = form.watch("care_mode");
+  const watchAppointmentType = form.watch("appointment_type");
+  const isProcedureType = watchAppointmentType === "procedimento";
+
 
   // Fetch professional-specific specialties — ALWAYS filter by selected professional
   const selectedProfId = lockedProfessionalId || watchProfessionalId || null;
@@ -316,6 +323,34 @@ export function AppointmentDialog({
       setSelectedProcedure(null);
     }
   }, [watchProcedureId, procedures, form, availableSpecialties]);
+
+  // Auto-fill duration & expected_value from appointment_types when type changes
+  // (only for non-procedure types). For 'procedimento', the procedure selection drives the values.
+  useEffect(() => {
+    if (!watchAppointmentType || isReschedule) return;
+    if (isProcedureType) return; // procedure flow handles it
+
+    // Clear any previously selected procedure when switching to non-procedure type
+    const currentProcId = form.getValues("procedure_id");
+    if (currentProcId && currentProcId !== "none" && currentProcId !== "") {
+      form.setValue("procedure_id", "none");
+      setSelectedProcedure(null);
+    }
+
+    const typeRow = appointmentTypes.find(t => (t.slug || "").toLowerCase() === watchAppointmentType.toLowerCase());
+    if (!typeRow) return;
+
+    if (typeRow.duration_minutes) {
+      form.setValue("duration_minutes", String(typeRow.duration_minutes));
+    }
+    if (typeRow.default_price != null) {
+      form.setValue("expected_value", Number(typeRow.default_price));
+    } else {
+      // No default price configured for this type — reset to 0 so the user notices
+      form.setValue("expected_value", 0);
+    }
+  }, [watchAppointmentType, isProcedureType, isReschedule, appointmentTypes, form]);
+
 
   // Get professional schedule for slot suggestions
   const professionalScheduleData = useMemo(() => {
@@ -496,8 +531,9 @@ export function AppointmentDialog({
                 }}
               />
 
-              {/* Procedure Selection */}
-              {!isReschedule && (
+              {/* Procedure Selection — only when Tipo de Atendimento = Procedimento */}
+              {!isReschedule && isProcedureType && (
+
               <FormField
                 control={form.control}
                 name="procedure_id"

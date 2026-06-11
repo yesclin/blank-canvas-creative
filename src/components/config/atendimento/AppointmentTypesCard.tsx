@@ -65,6 +65,7 @@ export function AppointmentTypesCard() {
     description: "",
     color: "bg-blue-500",
     duration_minutes: 30,
+    default_price: null,
     is_active: true,
   });
 
@@ -74,6 +75,7 @@ export function AppointmentTypesCard() {
       description: "",
       color: "bg-blue-500",
       duration_minutes: 30,
+      default_price: null,
       is_active: true,
     });
     setEditingType(null);
@@ -91,10 +93,12 @@ export function AppointmentTypesCard() {
       description: type.description || "",
       color: type.color,
       duration_minutes: type.duration_minutes,
+      default_price: type.default_price ?? null,
       is_active: type.is_active,
     });
     setIsDialogOpen(true);
   };
+
 
   const handleSave = async () => {
     if (!formData.name.trim()) return;
@@ -172,9 +176,14 @@ export function AppointmentTypesCard() {
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {type.description || "Sem descrição"} • {type.duration_minutes} min
+                        {" • "}
+                        {type.default_price != null
+                          ? type.default_price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+                          : <span className="text-amber-600">Sem preço definido</span>}
                       </div>
                     </div>
                   </div>
+
                   <div className="flex items-center gap-1">
                     <Button variant="ghost" size="icon" onClick={() => openEditDialog(type)}>
                       <Edit className="h-4 w-4" />
@@ -243,6 +252,28 @@ export function AppointmentTypesCard() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="grid gap-2">
+              <Label htmlFor="type_price">Valor padrão (R$)</Label>
+              <Input
+                id="type_price"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="Ex: 500,00 (deixe vazio se variar)"
+                value={formData.default_price ?? ""}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  setFormData({
+                    ...formData,
+                    default_price: raw === "" ? null : Number(raw),
+                  });
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                Quando definido, este valor é puxado automaticamente para o agendamento ao selecionar este tipo.
+              </p>
+            </div>
+
             <div className="grid gap-2">
               <Label htmlFor="type_color">Cor</Label>
               <Select
