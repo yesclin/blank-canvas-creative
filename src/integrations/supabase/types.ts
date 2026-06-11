@@ -15241,6 +15241,10 @@ export type Database = {
         Args: { p_clinic_id: string; p_user_id: string }
         Returns: undefined
       }
+      restore_system_anamnesis_templates: {
+        Args: { p_clinic_id: string; p_specialty_id?: string }
+        Returns: number
+      }
       seed_default_payment_methods: {
         Args: { _clinic_id: string }
         Returns: undefined
