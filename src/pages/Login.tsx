@@ -98,13 +98,17 @@ const Login = () => {
     }
 
     setIsLoading(true);
+    // Antes de iniciar novo login, garante que a aba não carrega resíduo de
+    // sessão antiga (chave Supabase + binding de identidade).
     clearAuthenticatedTab();
+    clearSupabaseAuthStorage();
     clearAuthQuarantine();
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+
 
     if (error) {
       setIsLoading(false);
