@@ -342,7 +342,7 @@ export function useAuthorizations() {
 // =============================================
 
 export function useTissGuides() {
-  const clinicId = useActiveClinicId();
+  const clinicId = useConveniosClinicId();
   return useQuery({
     queryKey: ['tiss-guides', clinicId],
     queryFn: async () => {
@@ -516,7 +516,7 @@ export function useUpdateTissGuideStatus() {
 // =============================================
 
 export function useFeeRules() {
-  const clinicId = useActiveClinicId();
+  const clinicId = useConveniosClinicId();
   return useQuery({
     queryKey: ['insurance-fee-rules', clinicId],
     queryFn: async () => {
@@ -609,7 +609,7 @@ export function useCreateFeeRule() {
 // =============================================
 
 export function useFeeCalculations() {
-  const clinicId = useActiveClinicId();
+  const clinicId = useConveniosClinicId();
   return useQuery({
     queryKey: ['insurance-fee-calculations', clinicId],
     queryFn: async () => {
@@ -651,7 +651,7 @@ export function useFeeCalculations() {
 // =============================================
 
 export function useInsuranceProcedures() {
-  const clinicId = useActiveClinicId();
+  const clinicId = useConveniosClinicId();
   return useQuery({
     queryKey: ['insurance-procedures', clinicId],
     queryFn: async () => {
@@ -822,7 +822,7 @@ export function useCreateAuthorization() {
 // =============================================
 
 export function useConveniosStats() {
-  const clinicId = useActiveClinicId();
+  const clinicId = useConveniosClinicId();
   return useQuery({
     queryKey: ['convenios-stats', clinicId],
     queryFn: async () => {
@@ -940,7 +940,7 @@ export function useFinancialSummary() {
 // =============================================
 
 export function usePatients() {
-  const clinicId = useActiveClinicId();
+  const clinicId = useConveniosClinicId();
   return useQuery({
     queryKey: ['patients-reference', clinicId],
     queryFn: async () => {
@@ -965,7 +965,7 @@ export function usePatients() {
 }
 
 export function useProfessionals() {
-  const clinicId = useActiveClinicId();
+  const clinicId = useConveniosClinicId();
   return useQuery({
     queryKey: ['professionals-reference', clinicId],
     queryFn: async () => {
