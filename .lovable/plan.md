@@ -1,101 +1,47 @@
-# Plano de Refatoração — `src/pages/app/Prontuario.tsx`
+# Correção: nomes das clínicas aparecem como "—" em Assinaturas
 
-Arquivo atual: **2544 linhas**, ~60 hooks invocados, ~30 imports de ícones, mapeamentos enormes, `renderTabContent` com switch gigante (linhas 1169–2200) e toolbar/header/sidebar inline.
+## Causa raiz
 
-Premissas inegociáveis:
-- Zero mudança de comportamento, rotas, queries, regras de negócio, banco.
-- Apenas extração (mover código existente). Sem reescrita lógica.
-- Etapas pequenas, cada uma compilável e testável isoladamente.
+A página `SuperAdminSubscriptions.tsx` faz:
 
----
-
-## Estrutura alvo
-
-```text
-src/pages/app/Prontuario.tsx                      (~250 linhas — orquestrador)
-src/pages/app/prontuario/
-  constants/
-    iconMap.ts                  ICON_MAP
-    tabKeyMap.ts                TAB_KEY_MAP
-    defaultNavItems.ts          DEFAULT_NAV_ITEMS
-  hooks/
-    useProntuarioContext.ts     patientId, searchParams, navigate, queryClient, params
-    useProntuarioData.ts        agrega patient, clinic, specialty, config, permissions
-    useProntuarioSessions.ts    activeAppointment, globalActive, finalize, bar state
-    useProntuarioTabsData.ts    todos os hooks "useXxxData" por aba (agrupa ~30 hooks)
-    useProntuarioNavigation.ts  navItems, urlTab, activeTab, handleTabChange, handleNavigateToTab
-    useProntuarioSearch.ts      searchFocus, handleSearchResultClick, clearSearchFocus, contextValue
-    useProntuarioPermissions.ts canViewTab/canEditTab/canExportTab/canSignTab/canPerformAction + flags derivadas
-  components/
-    ProntuarioHeader.tsx        topo: voltar, paciente, badges, ações (print/export/settings)
-    ProntuarioSidebar.tsx       ProntuarioTabNav + grouping
-    ProntuarioActiveSessionBar.tsx
-    ProntuarioDialogs.tsx       consentDialog + signatureDialog
-    ProntuarioTabContent.tsx    switch grande extraído de renderTabContent
-    tabs/                       (opcional fase 2) cada case do switch como sub-componente
-      ResumoTab.tsx, AnamneseTab.tsx, EvolucaoTab.tsx, ...
+```ts
+supabase.from('clinic_subscriptions')
+  .select('*, clinics(name), subscription_plans(name, slug)')
 ```
 
----
+A tabela `public.clinics` tem apenas **uma** policy de SELECT:
 
-## Etapas (cada uma é um commit lógico)
+```
+"Users can view their own clinic"  USING (id = user_clinic_id(auth.uid()))
+```
 
-**Etapa 1 — Constantes puras** (risco zero)
-- Mover `ICON_MAP` → `constants/iconMap.ts`
-- Mover `TAB_KEY_MAP` → `constants/tabKeyMap.ts`
-- Mover `DEFAULT_NAV_ITEMS` → `constants/defaultNavItems.ts`
-- Limpar imports de ícones no `Prontuario.tsx` (passam a viver no iconMap).
-- **Verificação:** build.
+Ou seja, o usuário logado (Platform Admin) só consegue ler a própria clínica. Para todas as outras assinaturas, o embed `clinics(name)` volta `null` e o componente renderiza `'—'`. Por isso só a linha da clínica "Yesclin" (a do próprio admin logado) aparece com nome — todas as outras ficam como traço.
 
-**Etapa 2 — Header / ActiveSessionBar / Dialogs (UI sem lógica)**
-- `ProntuarioHeader.tsx`: recebe props (paciente, ações, flags). Move o JSX de cabeçalho.
-- `ProntuarioActiveSessionBar.tsx`: recebe `appointmentId`, `startedAt`, `onFinalize`, `shouldShow`.
-- `ProntuarioDialogs.tsx`: `ConsentDialog` + `SignatureDialog`, props controladas.
-- **Verificação:** build + smoke visual no preview.
+Não é bug de UI nem do componente; é RLS.
 
-**Etapa 3 — Hook `useProntuarioPermissions`**
-- Extrai `canViewTab`, `canEditTab`, `canExportTab`, `canSignTab`, `canPerformAction`, `getStandardTabKey`, `canEditCurrentTab`, `canExportCurrentTab`, `canSignCurrentTab`.
-- Sem alterar lógica; só relocaliza.
+## Correção proposta
 
-**Etapa 4 — Hook `useProntuarioNavigation`**
-- Move `navItems` (useMemo), `defaultNavLookup`, `urlTab`, `activeTab`, `loadedTabs`, `shouldLoadTab`, `handleTabChange`, `handleNavigateToTab`.
+Adicionar uma policy de SELECT em `public.clinics` que permita Platform Admins lerem todas as clínicas, sem afetar a isolação atual de usuários comuns.
 
-**Etapa 5 — Hook `useProntuarioSearch`**
-- Move `searchFocus`, `highlightedId`, `highlightTimeoutRef`, `handleSearchResultClick`, `clearSearchFocus`, `searchFocusContextValue`.
+### Migration
 
-**Etapa 6 — Hook `useProntuarioSessions`**
-- Move `useAutoPatientRedirect`, `useActiveAppointment*`, `globalActiveForCurrent`, `fallbackActiveSessionBar*`, `useFinalizeSession`, `handleFinalizeFromProntuario`.
+```sql
+CREATE POLICY "Platform admins can view all clinics"
+ON public.clinics
+FOR SELECT
+TO authenticated
+USING (public.is_platform_admin(auth.uid()));
+```
 
-**Etapa 7 — Hook `useProntuarioTabsData`**
-- Agrupa os ~30 hooks de dados por aba (sessoesPsico, fisioVisaoGeral, consent data, etc.). Retorna objeto único consumido pelo `TabContent`.
-- Cuidado: **manter ordem de hooks idêntica** (regras do React).
+`is_platform_admin` já existe e é `SECURITY DEFINER`, então não há risco de recursão. Usuários comuns continuam restritos à própria clínica via a policy existente; policies em RLS são aditivas (OR), e essa nova só concede leitura a quem está em `platform_admins`.
 
-**Etapa 8 — `ProntuarioTabContent.tsx`**
-- Move o `renderTabContent()` (switch case por `activeTab`) para componente próprio que recebe via props: `activeTab`, dados, permissões, handlers.
-- Reduz ~1000 linhas do arquivo principal.
+## Validação
 
-**Etapa 9 — Sidebar**
-- `ProntuarioSidebar.tsx` envolvendo `ProntuarioTabNav` com agrupamento e filtros existentes.
-
-**Etapa 10 — Limpeza final**
-- `Prontuario.tsx` vira orquestrador: `ClinicalAccessGuard` + `ErrorBoundary` + `TooltipProvider` + composição dos componentes.
-- Remover imports não usados.
-
----
-
-## Garantias
-
-- **Ordem dos hooks preservada** ao agrupar (cada hook agregador chama os internos na mesma sequência do original).
-- **Nenhuma query/mutation alterada.**
-- **Props drilling explícito** entre hooks → componentes (sem novo context global, exceto reuso do `searchFocusContextValue` já existente).
-- Após cada etapa: rodar build, abrir a rota `/app/prontuario/:patientId` e validar abas críticas (resumo, anamnese, evolução).
-
----
+1. Logar como Platform Admin → `/super-admin/assinaturas` deve mostrar o nome real de cada clínica em vez de "—".
+2. Logar como usuário comum de uma clínica → continuar enxergando apenas a própria clínica em qualquer query a `clinics` (sem vazamento).
+3. Conferir `/super-admin/clinicas` continua funcionando normalmente.
 
 ## Fora de escopo
 
-- Não fragmentar cada case do switch em arquivos individuais nesta passada (Etapa "fase 2" opcional, listada para futuro).
-- Não tocar em componentes filhos (`ProntuarioTabNav`, blocos de cada especialidade).
-- Não mexer em hooks de domínio (`useAnamnese`, `useEvolucao`, etc.).
-
-Confirma este plano? Posso começar pela Etapa 1.
+- Nada de mudanças visuais, de negócio ou em outras telas.
+- Não mexer no fluxo de autenticação/sessão que foi estabilizado nas iterações anteriores.
