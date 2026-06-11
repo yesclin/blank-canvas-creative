@@ -181,8 +181,9 @@ export function AppointmentTypesCard() {
                           ? type.default_price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
                           : <span className="text-amber-600">Sem preço definido</span>}
                       </div>
-
+                    </div>
                   </div>
+
                   <div className="flex items-center gap-1">
                     <Button variant="ghost" size="icon" onClick={() => openEditDialog(type)}>
                       <Edit className="h-4 w-4" />
