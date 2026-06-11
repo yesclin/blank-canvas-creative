@@ -168,6 +168,8 @@ export function AnamneseEsteticaBlock({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const [restoringTemplates, setRestoringTemplates] = useState(false);
+  const queryClient = useQueryClient();
 
   // Classify, filter incomplete, sort locked first then by catalog display order
   const selectableTemplates = useMemo(() => {
