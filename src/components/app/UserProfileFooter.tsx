@@ -79,6 +79,7 @@ export function UserProfileFooter() {
       // Clear simulated role before signing out
       resetViewedRole();
       clearAuthenticatedTab();
+      clearSupabaseAuthStorage();
       try { clearReactQueryCache(queryClient, "user-logout"); } catch { /* ignore */ }
       window.dispatchEvent(new Event("yc:signout"));
       await supabase.auth.signOut();
@@ -88,6 +89,7 @@ export function UserProfileFooter() {
       toast.error("Erro ao encerrar sessão");
     }
   };
+
 
   const handleViewProfile = () => {
     navigate("/app/config/usuarios");
