@@ -86,11 +86,11 @@ async function resolveActiveClinicScope(expectedUserId: string): Promise<ClinicS
   try {
     const supportClinicId =
       typeof window !== 'undefined'
-        ? window.localStorage.getItem('yesclin_support_clinic_id')
+        ? window.sessionStorage.getItem('yesclin_support_clinic_id')
         : null;
     const supportAdminUserId =
       typeof window !== 'undefined'
-        ? window.localStorage.getItem('yesclin_support_admin_user_id')
+        ? window.sessionStorage.getItem('yesclin_support_admin_user_id')
         : null;
 
     if (supportClinicId && supportAdminUserId === userId) {
@@ -212,20 +212,14 @@ export function ClinicFeaturesProvider({ children }: { children: ReactNode }) {
     });
 
     const onSupport = () => invalidate();
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === 'yesclin_support_clinic_id') invalidate();
-    };
-
     if (typeof window !== 'undefined') {
       window.addEventListener('yesclin:support-session-changed', onSupport);
-      window.addEventListener('storage', onStorage);
     }
 
     return () => {
       sub.subscription.unsubscribe();
       if (typeof window !== 'undefined') {
         window.removeEventListener('yesclin:support-session-changed', onSupport);
-        window.removeEventListener('storage', onStorage);
       }
     };
   }, [queryClient]);
