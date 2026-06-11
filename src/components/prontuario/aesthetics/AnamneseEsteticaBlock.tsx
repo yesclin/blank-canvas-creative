@@ -646,9 +646,38 @@ export function AnamneseEsteticaBlock({
         <CardContent className="p-10 text-center">
           <FileText className="h-10 w-10 mx-auto mb-4 text-muted-foreground opacity-50" />
           <h3 className="font-semibold mb-2">Nenhum modelo de anamnese disponível</h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground mb-4">
             Não foram encontrados modelos de anamnese para a especialidade estética.
           </p>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={restoringTemplates}
+            onClick={async () => {
+              if (!clinicId) return;
+              try {
+                setRestoringTemplates(true);
+                const { data, error } = await supabase.rpc('restore_system_anamnesis_templates', {
+                  p_clinic_id: clinicId,
+                  p_specialty_id: specialtyId ?? null,
+                });
+                if (error) throw error;
+                await queryClient.invalidateQueries({ queryKey: ['anamnesis-templates-v2'] });
+                toast.success(
+                  data && Number(data) > 0
+                    ? `${data} modelo(s) restaurado(s) com sucesso.`
+                    : 'Modelos verificados — nenhum precisava ser restaurado.'
+                );
+              } catch (err) {
+                console.error('Erro ao restaurar modelos:', err);
+                toast.error('Não foi possível restaurar os modelos padrão.');
+              } finally {
+                setRestoringTemplates(false);
+              }
+            }}
+          >
+            {restoringTemplates ? 'Restaurando...' : 'Restaurar modelos padrão'}
+          </Button>
         </CardContent>
       </Card>
     );
