@@ -203,10 +203,14 @@ const Login = () => {
     let data: Awaited<ReturnType<typeof supabase.auth.signInWithPassword>>["data"] | null = null;
     let error: any = null;
     try {
-      const res = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password: cleanPassword,
-      });
+      const res = await withTimeout<any>(
+        supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password: cleanPassword,
+        }),
+        10000,
+        "Auth: tempo esgotado ao autenticar no Supabase.",
+      );
       data = res.data;
       error = res.error;
     } catch (thrown) {
@@ -252,12 +256,16 @@ const Login = () => {
     try { clearReactQueryCache(queryClient, "login-after-auth", { userId: data.user.id }); } catch { /* ignore */ }
 
     updateDiagnostic("profile", "pending", "Buscando profile por auth.uid");
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("clinic_id, user_id, full_name, is_active")
-      .eq("user_id", data.user.id)
-      .limit(1)
-      .maybeSingle();
+    const { data: profile, error: profileError } = await withTimeout<any>(
+      supabase
+        .from("profiles")
+        .select("clinic_id, user_id, full_name, is_active")
+        .eq("user_id", data.user.id)
+        .limit(1)
+        .maybeSingle(),
+      POST_AUTH_QUERY_TIMEOUT_MS,
+      "Profile: tempo esgotado ao consultar perfil; seguindo com sessão autenticada.",
+    ).catch((error) => ({ data: null, error }));
     if (import.meta.env.DEV) console.log("PROFILE:", profile);
 
     if (profileError) {
@@ -307,12 +315,16 @@ const Login = () => {
 
     let roles: any[] | null = null;
     if (clinicId) {
-      const { data: clinic, error: clinicError } = await supabase
-        .from("clinics")
-        .select("id, name")
-        .eq("id", clinicId)
-        .limit(1)
-        .maybeSingle();
+      const { data: clinic, error: clinicError } = await withTimeout<any>(
+        supabase
+          .from("clinics")
+          .select("id, name")
+          .eq("id", clinicId)
+          .limit(1)
+          .maybeSingle(),
+        POST_AUTH_QUERY_TIMEOUT_MS,
+        "Clinic: tempo esgotado ao consultar clínica; seguindo com sessão autenticada.",
+      ).catch((error) => ({ data: null, error }));
       if (import.meta.env.DEV) console.log("CLINIC:", clinic);
       if (clinicError) {
         const msg = getQueryErrorMessage(clinicError, "Clinic: falha ao consultar clínica; seguindo com sessão autenticada.");
@@ -334,11 +346,15 @@ const Login = () => {
       }
 
       updateDiagnostic("role", "pending", "Buscando papéis do usuário");
-      const { data: rolesData, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("role, clinic_id, user_id")
-        .eq("user_id", data.user.id)
-        .eq("clinic_id", clinicId);
+      const { data: rolesData, error: rolesError } = await withTimeout<any>(
+        supabase
+          .from("user_roles")
+          .select("role, clinic_id, user_id")
+          .eq("user_id", data.user.id)
+          .eq("clinic_id", clinicId),
+        POST_AUTH_QUERY_TIMEOUT_MS,
+        "Role: tempo esgotado ao consultar permissões; seguindo com sessão autenticada.",
+      ).catch((error) => ({ data: null, error }));
       roles = rolesData ?? null;
       if (import.meta.env.DEV) console.log("ROLES:", roles);
       if (rolesError) {
