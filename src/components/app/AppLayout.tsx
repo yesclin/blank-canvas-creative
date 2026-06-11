@@ -1,4 +1,5 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { useEffect, useRef } from "react";
 import { AppSidebar } from "./AppSidebar";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
@@ -46,6 +47,26 @@ export function AppLayout() {
   const { clinic, isLoading } = useClinicData();
   const subscription = useClinicSubscription();
   const { user: currentUser } = useCurrentUser();
+  const previousClinicIdRef = useRef<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const w = window as typeof window & { __ycAppLayoutMountCount?: number };
+      w.__ycAppLayoutMountCount = (w.__ycAppLayoutMountCount ?? 0) + 1;
+    }
+    if (!import.meta.env.DEV) return;
+    console.log("APP LAYOUT MOUNT", { route: location.pathname });
+    return () => console.warn("APP LAYOUT UNMOUNT", { route: window.location.pathname });
+  }, []);
+
+  useEffect(() => {
+    const nextClinicId = clinic?.id ?? null;
+    if (previousClinicIdRef.current === nextClinicId) return;
+    if (import.meta.env.DEV) {
+      console.log("CLINIC CHANGE", { prev: previousClinicIdRef.current ?? null, clinicId: nextClinicId });
+    }
+    previousClinicIdRef.current = nextClinicId;
+  }, [clinic?.id]);
 
   // Bloqueio TOTAL: trial expirado / assinatura cancelada / bloqueada.
   // A única rota acessível é /app/assinatura (planos). Qualquer outra rota

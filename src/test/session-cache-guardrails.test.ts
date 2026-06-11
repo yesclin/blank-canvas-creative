@@ -57,4 +57,20 @@ describe("session/cache guardrails", () => {
     expect(guard).not.toMatch(/event === "SIGNED_IN"[\s\S]{0,180}clearReactQueryCache/);
     expect(guard).not.toMatch(/event === "SIGNED_IN"[\s\S]{0,180}qc\.clear/);
   });
+
+  it("não remonta o shell principal por key dinâmica de auth/clínica", () => {
+    const app = read("src/App.tsx");
+    expect(app).not.toMatch(/<ProviderShell\s+key=/);
+    expect(app).not.toMatch(/key=\{[^}]*scopeKey/);
+    expect(app).not.toMatch(/key=\{[^}]*clinicId/);
+    expect(app).not.toMatch(/key=\{[^}]*location\.pathname/);
+  });
+
+  it("não limpa cache global no boot ou token refresh", () => {
+    const app = read("src/App.tsx");
+    const guard = read("src/components/app/AuthSessionGuard.tsx");
+    expect(app).not.toMatch(/isInitialResolution[\s\S]{0,240}clearReactQueryCache/);
+    expect(app).not.toMatch(/TOKEN_REFRESHED[\s\S]{0,240}clearReactQueryCache/);
+    expect(guard).not.toMatch(/TOKEN_REFRESHED[\s\S]{0,240}clearReactQueryCache/);
+  });
 });

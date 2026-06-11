@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { SuperAdminSidebar } from './SuperAdminSidebar';
@@ -21,6 +21,16 @@ export function SuperAdminLayout({ children }: Props) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { email } = usePlatformAdmin();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const w = window as typeof window & { __ycSuperAdminLayoutMountCount?: number };
+      w.__ycSuperAdminLayoutMountCount = (w.__ycSuperAdminLayoutMountCount ?? 0) + 1;
+    }
+    if (!import.meta.env.DEV) return;
+    console.log('SUPER ADMIN LAYOUT MOUNT');
+    return () => console.warn('SUPER ADMIN LAYOUT UNMOUNT', { route: window.location.pathname });
+  }, []);
 
   const handleLogout = async () => {
     markUserLogout("super-admin-logout");
