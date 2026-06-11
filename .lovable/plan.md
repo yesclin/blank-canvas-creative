@@ -1,71 +1,68 @@
 ## Objetivo
-Impedir definitivamente que uma aba logada como usuário A aceite/restaure sessão do usuário B após atualização automática, reload do preview, retorno de aba ou perda de `sessionStorage`.
 
-## Diagnóstico inicial
-O ponto mais perigoso está no storage customizado do Supabase em `src/integrations/supabase/client.ts`:
+Hoje a tela "Receber Pagamento" mostra **R$ 0,00** porque o valor do agendamento (`expected_value` / `amount_due`) só é preenchido quando um **Procedimento com preço** é selecionado. "Consulta" e "Retorno" existem apenas como `appointment_types` (tipos de evento), que não têm campo de preço.
 
-- Foi criado um backup em `localStorage` por `tabId` para evitar logout quando o iframe/reload perde `sessionStorage`.
-- Porém, quando não existe `expectedUserId` em `sessionStorage`, a função de migração tenta restaurar automaticamente a “única sessão YesClin” encontrada em `localStorage`.
-- Isso resolve logout em alguns casos, mas abre o risco crítico: se a única sessão restante no navegador for de outro usuário, a aba pode hidratar como esse outro usuário.
+A solução é deixar **Consulta** e **Retorno** já cadastradas como **Procedimentos** em toda clínica — sem preço definido — para que o dono/admin abra Configurações › Procedimentos, defina o valor (ex.: R$ 500,00), a duração, a especialidade etc., e a partir daí o valor flua automaticamente para o agendamento e para a tela de recebimento.
 
-Ou seja: o sistema está tentando recuperar sessão sem uma prova forte de identidade da aba.
+## Escopo
 
-## Plano de correção
+### 1. Banco de dados (migration)
+- Inserir, para **toda clínica existente** que ainda não tenha, duas linhas em `public.procedures`:
+  - `Consulta` — `duration_minutes = 30`, `price = NULL`, `is_active = true`, `allows_return = true`, `return_days = 30`.
+  - `Retorno` — `duration_minutes = 20`, `price = NULL`, `is_active = true`, `allows_return = false`.
+  - Inserção idempotente: usar `WHERE NOT EXISTS (SELECT 1 FROM procedures WHERE clinic_id = c.id AND lower(name) IN ('consulta','retorno'))` por nome, para não duplicar em clínicas que já criaram manualmente.
+- Atualizar a função de provisionamento de clínica (mesma function que hoje semeia `appointment_types` em `20260515014919_…`) para também inserir esses dois procedimentos padrão no momento da criação da clínica. Sem preço — a clínica define.
 
-1. **Bloquear restauração ambígua de sessão**
-   - Remover a lógica que escolhe automaticamente “a única sessão” em `localStorage` quando `sessionStorage` foi perdido.
-   - Regra nova: se a aba não consegue provar qual `userId` era esperado, não restaura nenhuma sessão.
-   - Resultado esperado: no pior caso a pessoa fica no login, mas nunca entra como outro usuário.
+### 2. UI — Configurações › Procedimentos
+- Não muda fluxo: os dois procedimentos aparecem na listagem como qualquer outro, com badge "Sem preço definido" quando `price IS NULL`, para chamar atenção do usuário a configurar.
+- Permitir edição normal (preço, duração, especialidade, descrição). Não bloquear exclusão — se a clínica quiser remover, pode.
 
-2. **Criar vínculo persistente e seguro por aba**
-   - Manter um `tabId` estável via `window.name`.
-   - Criar um binding persistente por aba/projeto contendo o `expectedUserId` daquela aba.
-   - O backup em `localStorage` só poderá ser usado quando:
-     - a chave pertencer ao `tabId` atual;
-     - existir binding esperado para esse mesmo `tabId`;
-     - o `user.id` dentro do token/session bater exatamente com esse binding.
+### 3. UI — Agendamento
+- Sem mudança estrutural. Quando a recepcionista escolher o procedimento "Consulta" (já com R$ 500 cadastrados), o efeito existente em `AppointmentDialog.tsx:299-301` preenche `expected_value`, e a tela "Receber Pagamento" passa a mostrar Previsto = R$ 500,00 e Pendente = R$ 500,00.
 
-3. **Endurecer o adapter de storage do Supabase**
-   - Em `getItem`, não devolver backup de `localStorage` se o usuário dentro da sessão não bater com o usuário esperado da aba.
-   - Em `setItem`, salvar o binding do usuário autenticado junto com a sessão.
-   - Em `removeItem`, limpar sessão e binding da aba atual.
+### 4. Aviso visual (pequeno)
+- No diálogo "Receber Pagamento" (`AppointmentReceivePaymentDialog.tsx`), quando `amountExpected === 0`, exibir uma mensagem curta abaixo do bloco de resumo:
+  > "Nenhum valor definido para este agendamento. Defina o preço no procedimento em Configurações › Procedimentos, ou digite o valor manualmente abaixo."
+- O campo "Valor a receber agora" continua editável, então o usuário pode digitar 500 manualmente nessa cobrança específica se quiser.
 
-4. **Corrigir limpeza de logout/login**
-   - Garantir que logout intencional remova também a sessão Supabase da aba atual, não apenas caches auxiliares.
-   - Antes de login novo, limpar a sessão Supabase atual da aba para impedir reaproveitamento de token antigo.
-   - Ajustar fluxos de logout que hoje chamam `signOut()` sem limpar storage completo.
+## Detalhes técnicos
 
-5. **Evitar `signOut` global em reautenticação clínica**
-   - Em fluxos de assinatura/reautenticação (`signInWithPassword` usado para confirmar senha), se houver divergência de usuário, trocar `signOut()` por encerramento local/quarentena da sessão divergente.
-   - Isso evita que uma validação de senha impacte outras abas/contas.
+**Migration (resumo do SQL):**
+```sql
+-- Backfill clínicas existentes
+INSERT INTO public.procedures (clinic_id, name, duration_minutes, allows_return, return_days, is_active)
+SELECT c.id, 'Consulta', 30, true, 30, true
+FROM public.clinics c
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.procedures p
+  WHERE p.clinic_id = c.id AND lower(p.name) = 'consulta'
+);
 
-6. **Testes de guardrail**
-   - Atualizar `src/test/session-cache-guardrails.test.ts` para cobrir:
-     - não existe mais restauração por “única sessão encontrada”;
-     - backup só hidrata se `tabId + expectedUserId + session.user.id` baterem;
-     - `TOKEN_REFRESHED` não troca identidade;
-     - mismatch chama quarentena e não aceita o novo usuário;
-     - logout/login limpam storage da aba atual.
+INSERT INTO public.procedures (clinic_id, name, duration_minutes, allows_return, is_active)
+SELECT c.id, 'Retorno', 20, false, true
+FROM public.clinics c
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.procedures p
+  WHERE p.clinic_id = c.id AND lower(p.name) = 'retorno'
+);
 
-## Arquivos previstos
-- `src/integrations/supabase/client.ts`
-- `src/lib/authSessionIsolation.ts`
-- `src/components/app/AuthSessionGuard.tsx` se necessário para alinhar limpeza/quarentena
-- `src/hooks/useAuthIdentity.ts` se necessário para alinhar eventos de auth
-- `src/pages/Login.tsx`
-- `src/pages/AceitarConvite.tsx`
-- `src/pages/CriarConta.tsx` se necessário
-- `src/components/app/UserProfileFooter.tsx`
-- `src/components/super-admin/SuperAdminLayout.tsx`
-- `src/components/app/TrialExpiredBlocker.tsx`
-- `src/hooks/useUnifiedDocumentSigning.ts`
-- `src/hooks/useDocumentGovernance.ts`
-- `src/test/session-cache-guardrails.test.ts`
+-- Atualizar a função seed_clinic_defaults (ou equivalente) para inserir
+-- essas duas linhas no momento da criação de novas clínicas.
+```
 
-## Critérios de aceite
-- Uma aba nunca deve restaurar sessão de outro usuário quando `sessionStorage` some.
-- `TOKEN_REFRESHED` nunca deve alterar `auth.uid()` aceito pela UI.
-- Se houver mismatch de identidade, a sessão local deve ser bloqueada/quarentenada, não aceita.
-- O sistema pode pedir login novamente se não houver vínculo confiável, mas nunca pode entrar em outra conta.
-- Header/sidebar/layout não devem desmontar por troca de identidade espúria.
-- O debug de auth deve continuar fora da interface normal.
+**Arquivos a editar:**
+- `supabase/migrations/<nova>_seed_default_procedures.sql` — backfill + atualização da function de provisionamento.
+- `src/components/agenda/AppointmentReceivePaymentDialog.tsx` — aviso quando `amountExpected === 0`.
+- (Opcional) `src/pages/...Procedures...` — badge "Sem preço definido" na listagem. Confirmo o arquivo exato no momento da implementação.
+
+**Não muda:**
+- Estrutura da tabela `procedures` (price já é nullable).
+- `appointment_types` — continua existindo para categorizar visualmente o evento na agenda.
+- Lógica de cálculo financeira (`useAppointmentFinancialStatus`).
+
+## Resultado para o usuário
+
+1. Abre Configurações › Procedimentos → vê "Consulta" e "Retorno" já listadas.
+2. Edita "Consulta", define R$ 500,00, salva.
+3. Cria/abre um agendamento, seleciona procedimento "Consulta" → Valor previsto vira R$ 500,00.
+4. Clica "Receber Pagamento" → Previsto: R$ 500,00, Pendente: R$ 500,00, campo já pré-preenchido com 500,00.
