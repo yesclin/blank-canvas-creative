@@ -1,8 +1,8 @@
-import { lazy, Suspense, useEffect, useRef, useState, type ReactNode, type ComponentType } from "react";
+import { lazy, Suspense, useEffect, useRef, type ReactNode, type ComponentType } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { PermissionsProvider } from "@/hooks/usePermissions";
 import { UserViewModeBootstrap } from "@/contexts/UserViewModeBootstrap";
@@ -18,7 +18,7 @@ import { PageSkeleton } from "@/components/app/PageSkeleton";
 import CookieConsent from "@/components/CookieConsent";
 import { usePageResumeRecovery } from "@/hooks/usePageResumeRecovery";
 import { AuthIdentityProvider, useAuthIdentity } from "@/hooks/useAuthIdentity";
-import { clearReactQueryCache, logReactQueryEvent } from "@/lib/queryClientDiagnostics";
+import { logReactQueryEvent } from "@/lib/queryClientDiagnostics";
 
 // Páginas Públicas — lazy para não pesar no boot inicial.
 const Index = lazyWithTimeout(() => import("./pages/Index"), "Index");
@@ -281,7 +281,6 @@ function ProviderShell() {
 }
 
 function AuthScopedProviders() {
-  const queryClient = useQueryClient();
   const { isLoading } = useAuthIdentity();
   const previousLoadingRef = useRef<boolean | null>(null);
 
