@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import logoFull from "@/assets/logo-full.png";
 import Assinatura from "@/pages/app/Assinatura";
+import { useQueryClient } from "@tanstack/react-query";
+import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
 
 type Role = "owner" | "admin" | "profissional" | "recepcionista" | string | null;
 
@@ -21,6 +23,7 @@ interface Props {
  */
 export function TrialExpiredBlocker({ status, role, clinicName }: Props) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const handleLogout = async () => {
     try {
@@ -29,6 +32,7 @@ export function TrialExpiredBlocker({ status, role, clinicName }: Props) {
       markUserLogout("trial-expired-logout");
       clearAuthenticatedTab();
       clearSupabaseAuthStorage();
+      try { clearReactQueryCache(queryClient, "trial-expired-logout"); } catch { /* ignore */ }
       await supabase.auth.signOut();
       navigate("/login", { replace: true });
     } catch {
