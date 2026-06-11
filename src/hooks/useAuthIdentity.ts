@@ -45,11 +45,11 @@ export function AuthIdentityProvider({ children }: { children: ReactNode }) {
 
       if (nextUserId && expectedUserId && expectedUserId !== nextUserId) {
         requestId++;
-        quarantineMismatchedAuthSession(`AuthIdentityProvider:${reason}`, expectedUserId, nextUserId);
-        try { clearReactQueryCache(queryClient, "auth-identity-mismatch", { expectedUserId, nextUserId }); } catch { /* ignore */ }
         userIdRef.current = null;
         setUserId(null);
         setIsLoading(false);
+        quarantineMismatchedAuthSession(`AuthIdentityProvider:${reason}`, expectedUserId, nextUserId);
+        try { clearReactQueryCache(queryClient, "auth-identity-mismatch", { expectedUserId, nextUserId }); } catch { /* ignore */ }
         return;
       }
 
@@ -67,14 +67,14 @@ export function AuthIdentityProvider({ children }: { children: ReactNode }) {
       if (isUserSwitch) clearIdentityScopedState();
       clearUnsafeAuthCache();
 
+      userIdRef.current = nextUserId;
+      setUserId(nextUserId);
+      setIsLoading(false);
+
       if (!isInitial && (isLogout || isUserSwitch)) {
         try { clearReactQueryCache(queryClient, "auth-identity-changed", { prevUserId, nextUserId }); } catch { /* ignore */ }
         emitIdentityChanged(prevUserId ?? null, nextUserId, reason);
       }
-
-      userIdRef.current = nextUserId;
-      setUserId(nextUserId);
-      setIsLoading(false);
     };
 
     const resolve = async () => {
