@@ -102,11 +102,18 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [diagnostics, setDiagnostics] = useState<DiagnosticState>(() => createDiagnosticState());
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const navigatedRef = useRef(false);
   const fromPath = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
+
+  const updateDiagnostic = (key: DiagnosticStepKey, status: DiagnosticStatus, message: string) => {
+    if (!import.meta.env.DEV) return;
+    setDiagnostics((current) => ({ ...current, [key]: { status, message } }));
+  };
 
   /**
    * Se o usuário já estiver autenticado ao montar /login (ou se o evento
@@ -125,11 +132,12 @@ const Login = () => {
       }
       if (navigatedRef.current) return;
       navigatedRef.current = true;
-      const dest = await resolveRedirectPath(userId, fromPath || "/app");
+      const dest = await resolveRedirectPath(userId, fromPath || "/app/dashboard");
       if (!mounted) return;
       if (import.meta.env.DEV) {
         console.log("[AUTH] Login redirect", { source, dest, userId });
       }
+      updateDiagnostic("redirect", "success", dest);
       navigate(dest, { replace: true });
     };
 
@@ -170,11 +178,14 @@ const Login = () => {
     }
 
     setIsLoading(true);
+    setDiagnostics(createDiagnosticState());
     // Antes de iniciar novo login, garante que a aba não carrega resíduo de
     // sessão antiga (chave Supabase + binding de identidade).
     clearAuthenticatedTab();
     clearSupabaseAuthStorage();
     clearAuthQuarantine();
+    try { clearReactQueryCache(queryClient, "login-before", { email: cleanEmail }); } catch { /* ignore */ }
+    updateDiagnostic("auth", "pending", "Autenticando no Supabase");
 
     let data: Awaited<ReturnType<typeof supabase.auth.signInWithPassword>>["data"] | null = null;
     let error: any = null;
@@ -194,50 +205,8 @@ const Login = () => {
       if (import.meta.env.DEV) {
         console.error("Login error:", error);
       }
-      const rawMsg = (error?.message && error.message !== "{}" ? error.message : "") as string;
-      const code = (error?.code || "").toString().toLowerCase();
-      const status = Number(error?.status ?? 0);
-      const name = (error?.name || "").toString();
-      const msgLower = rawMsg.toLowerCase();
-
-      let description = "Erro inesperado ao entrar. Tente novamente.";
-      if (
-        code === "invalid_credentials" ||
-        msgLower.includes("invalid login credentials") ||
-        msgLower.includes("invalid_grant") ||
-        msgLower.includes("unauthorized")
-      ) {
-        description = "Email ou senha inválidos.";
-      } else if (code === "user_not_found" || msgLower.includes("user not found")) {
-        description = "Usuário não encontrado.";
-      } else if (
-        code === "email_not_confirmed" ||
-        msgLower.includes("email not confirmed") ||
-        msgLower.includes("email_change_requires_confirmation")
-      ) {
-        description = "Email não confirmado. Verifique sua caixa de entrada.";
-      } else if (
-        msgLower.includes("blocked") ||
-        msgLower.includes("disabled") ||
-        msgLower.includes("banned") ||
-        msgLower.includes("inactive")
-      ) {
-        description = "Conta bloqueada ou inativa. Contate o administrador.";
-      } else if (
-        name === "AuthRetryableFetchError" ||
-        status === 0 ||
-        status === 502 ||
-        status === 503 ||
-        status === 504 ||
-        msgLower.includes("failed to fetch") ||
-        msgLower.includes("network")
-      ) {
-        description = "Falha de conexão. Verifique sua internet e tente novamente.";
-      } else if (status === 400 || status === 401) {
-        description = "Email ou senha inválidos.";
-      } else if (rawMsg) {
-        description = rawMsg;
-      }
+      const description = getAuthErrorMessage(error);
+      updateDiagnostic("auth", "fail", description);
 
       toast({
         title: "Erro ao entrar",
@@ -251,15 +220,18 @@ const Login = () => {
       setIsLoading(false);
       toast({
         title: "Não foi possível iniciar a sessão",
-        description: "Tente novamente em instantes.",
+        description: "Auth: sessão não retornada pelo Supabase. Tente novamente.",
         variant: "destructive",
       });
+      updateDiagnostic("auth", "fail", "Auth: sessão não retornada pelo Supabase");
       return;
     }
 
     if (import.meta.env.DEV) {
-      console.log("[AUTH] signIn ok", { userId: data.user.id });
+      console.log("AUTH USER:", data.user);
+      console.log("AUTH SESSION:", data.session);
     }
+    updateDiagnostic("auth", "success", `Auth OK: ${data.user.email ?? data.user.id}`);
 
     rememberAuthenticatedUser(data.user.id);
 
