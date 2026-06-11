@@ -39,6 +39,8 @@ import { toast } from "sonner";
 import type { Professional, Patient, Room, Specialty, Insurance, Appointment } from "@/types/agenda";
 import { typeLabels, careModeLabels } from "@/types/agenda";
 import { useProceduresList, Procedure } from "@/hooks/useProceduresCRUD";
+import { useAppointmentTypes } from "@/hooks/useAppointmentTypes";
+
 import { useSlotSuggestions } from "@/hooks/useSlotSuggestions";
 import { useConflictDetection } from "@/hooks/useConflictDetection";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -139,6 +141,8 @@ export function AppointmentDialog({
   
   // Fetch procedures from database
   const { data: procedures = [], isLoading: proceduresLoading } = useProceduresList(false);
+  const { types: appointmentTypes } = useAppointmentTypes();
+
 
   const form = useForm<AppointmentFormData>({
     resolver: zodResolver(appointmentSchema),
@@ -222,6 +226,9 @@ export function AppointmentDialog({
   const watchIsFitIn = form.watch("is_fit_in");
   const watchSpecialtyId = form.watch("specialty_id");
   const watchCareMode = form.watch("care_mode");
+  const watchAppointmentType = form.watch("appointment_type");
+  const isProcedureType = watchAppointmentType === "procedimento";
+
 
   // Fetch professional-specific specialties — ALWAYS filter by selected professional
   const selectedProfId = lockedProfessionalId || watchProfessionalId || null;
