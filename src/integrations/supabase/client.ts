@@ -16,6 +16,9 @@ export const LEGACY_SUPABASE_AUTH_STORAGE_KEY = `sb-${SUPABASE_PROJECT_REF}-auth
 
 const TAB_ID_SESSION_KEY = 'yc.auth.tabId';
 const TAB_ID_WINDOW_NAME_PREFIX = 'yesclin-auth-tab:';
+// Binding persistente por aba — guarda o userId esperado para que o backup em
+// localStorage só seja aceito se bater EXATAMENTE com este userId.
+const TAB_BINDING_PREFIX = 'yc.auth.bind.';
 
 function createTabId() {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
@@ -28,7 +31,11 @@ function getStableTabId() {
   if (typeof window === 'undefined') return 'server';
   try {
     const nameMatch = window.name.match(new RegExp(`${TAB_ID_WINDOW_NAME_PREFIX}([a-zA-Z0-9-]+)`));
-    if (nameMatch?.[1]) return nameMatch[1];
+    if (nameMatch?.[1]) {
+      // Mantém em sessionStorage também (alguns browsers limpam window.name em navegação cross-origin)
+      try { window.sessionStorage.setItem(TAB_ID_SESSION_KEY, nameMatch[1]); } catch { /* ignore */ }
+      return nameMatch[1];
+    }
 
     const sessionTabId = window.sessionStorage.getItem(TAB_ID_SESSION_KEY);
     if (sessionTabId) {
@@ -73,75 +80,106 @@ function extractSessionUserId(rawSession: string | null) {
   }
 }
 
-function migrateTrustedLegacyAuthStorage(scopedKey: string) {
-  if (typeof window === 'undefined') return;
-  try {
-    if (window.localStorage.getItem(scopedKey)) return;
-    const expectedUserId = window.sessionStorage.getItem('yc.auth.expectedUserId');
-
-    // O preview do Lovable pode recriar o iframe ao enviar uma mensagem no
-    // chat. Nesse caso o sessionStorage da aba some, mas o localStorage fica.
-    // Restauramos somente quando existe UMA única sessão YesClin escopada no
-    // navegador; com múltiplas contas/tabs não escolhemos automaticamente.
-    if (!expectedUserId) {
-      const scopedSessions: Array<{ key: string; value: string; userId: string }> = [];
-      for (let i = 0; i < window.localStorage.length; i++) {
-        const key = window.localStorage.key(i);
-        if (!key || !key.startsWith(`yc.auth.${SUPABASE_PROJECT_REF}.`)) continue;
-        const value = window.localStorage.getItem(key);
-        const userId = extractSessionUserId(value);
-        if (value && userId) scopedSessions.push({ key, value, userId });
-      }
-
-      const uniqueUserIds = new Set(scopedSessions.map((session) => session.userId));
-      if (scopedSessions.length === 1 && uniqueUserIds.size === 1) {
-        window.localStorage.setItem(scopedKey, scopedSessions[0].value);
-        window.sessionStorage.setItem('yc.auth.expectedUserId', scopedSessions[0].userId);
-      }
-      return;
-    }
-
-    if (!expectedUserId) return;
-    const legacyValue = window.localStorage.getItem(LEGACY_SUPABASE_AUTH_STORAGE_KEY);
-    const legacyUserId = extractSessionUserId(legacyValue);
-    if (legacyValue && legacyUserId && legacyUserId === expectedUserId) {
-      window.localStorage.setItem(scopedKey, legacyValue);
-    }
-  } catch {
-    /* ignore */
-  }
-}
-
 const CURRENT_TAB_ID = getStableTabId();
 export const CURRENT_AUTH_STORAGE_KEY = `yc.auth.${SUPABASE_PROJECT_REF}.${CURRENT_TAB_ID}`;
-migrateTrustedLegacyAuthStorage(CURRENT_AUTH_STORAGE_KEY);
+const CURRENT_TAB_BINDING_KEY = `${TAB_BINDING_PREFIX}${SUPABASE_PROJECT_REF}.${CURRENT_TAB_ID}`;
 
 export function isYesclinScopedAuthStorageKey(key: string) {
   return key.startsWith(`yc.auth.${SUPABASE_PROJECT_REF}.`);
 }
 
+function readTabBinding(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    // Prioriza sessionStorage (vivo durante a sessão da aba); cai para
+    // localStorage com a mesma chave de aba (persistente entre reloads/iframe).
+    return (
+      window.sessionStorage.getItem(CURRENT_TAB_BINDING_KEY) ||
+      window.localStorage.getItem(CURRENT_TAB_BINDING_KEY)
+    );
+  } catch {
+    return null;
+  }
+}
+
+function writeTabBinding(userId: string) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(CURRENT_TAB_BINDING_KEY, userId);
+    window.localStorage.setItem(CURRENT_TAB_BINDING_KEY, userId);
+  } catch {
+    /* ignore */
+  }
+}
+
+function clearTabBinding() {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.removeItem(CURRENT_TAB_BINDING_KEY);
+    window.localStorage.removeItem(CURRENT_TAB_BINDING_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Adapter de storage do Supabase com isolamento estrito por aba.
+ *
+ * REGRAS DE SEGURANÇA (não relaxar):
+ *  - Backup em localStorage SÓ pode hidratar a sessão se o userId do token
+ *    bater com o binding persistente da aba. Sem binding ou divergente:
+ *    descartamos silenciosamente — a pessoa cai no /login.
+ *  - NUNCA escolhemos "a única sessão YesClin disponível" no navegador como
+ *    fallback — esse comportamento foi a causa raiz da troca de usuário.
+ *  - setItem grava binding do userId autenticado ao mesmo tempo que a sessão.
+ *  - removeItem limpa sessão + binding da aba atual.
+ */
 const perTabAuthStorage = {
   getItem: (key: string) => {
     if (typeof window === 'undefined') return null;
     const tabValue = window.sessionStorage.getItem(key);
-    if (tabValue) return tabValue;
-
-    const scopedBackupValue = window.localStorage.getItem(key);
-    if (scopedBackupValue) {
-      window.sessionStorage.setItem(key, scopedBackupValue);
-      return scopedBackupValue;
+    if (tabValue) {
+      if (key === CURRENT_AUTH_STORAGE_KEY) {
+        const userId = extractSessionUserId(tabValue);
+        const expected = readTabBinding();
+        if (userId && expected && userId !== expected) {
+          // Sessão divergente do binding da aba — bloqueia.
+          console.error('[AUTH_SECURITY] sessionStorage com user divergente do binding da aba — descartando', {
+            tabExpected: expected, sessionUserId: userId,
+          });
+          window.sessionStorage.removeItem(key);
+          return null;
+        }
+        if (userId && !expected) {
+          // Primeiro uso desta aba — fixa o binding.
+          writeTabBinding(userId);
+        }
+      }
+      return tabValue;
     }
 
-    // Migração segura: versões anteriores usavam sessionStorage por aba.
-    // Não migramos localStorage global legado para evitar ressuscitar sessão
-    // de outra conta/aba.
     if (key === CURRENT_AUTH_STORAGE_KEY) {
-      const legacySessionValue = window.sessionStorage.getItem(LEGACY_SUPABASE_AUTH_STORAGE_KEY);
-      if (legacySessionValue) {
-        window.localStorage.setItem(key, legacySessionValue);
-        window.sessionStorage.removeItem(LEGACY_SUPABASE_AUTH_STORAGE_KEY);
-        return legacySessionValue;
+      const backup = window.localStorage.getItem(key);
+      if (!backup) return null;
+      const userId = extractSessionUserId(backup);
+      const expected = readTabBinding();
+      // Restauração SÓ permitida quando há binding válido para ESTA aba e
+      // o backup pertence exatamente ao mesmo usuário. Sem binding, NÃO
+      // restauramos — preferimos enviar para /login a aceitar outra conta.
+      if (!userId || !expected || userId !== expected) {
+        if (!expected) {
+          if (import.meta.env.DEV) {
+            console.warn('[AUTH_SECURITY] backup ignorado — aba sem binding de identidade');
+          }
+        } else if (userId !== expected) {
+          console.error('[AUTH_SECURITY] backup ignorado — userId divergente do binding da aba', {
+            tabExpected: expected, backupUserId: userId,
+          });
+        }
+        return null;
       }
+      window.sessionStorage.setItem(key, backup);
+      return backup;
     }
 
     return null;
@@ -149,14 +187,59 @@ const perTabAuthStorage = {
   setItem: (key: string, value: string) => {
     if (typeof window === 'undefined') return;
     window.sessionStorage.setItem(key, value);
-    window.localStorage.setItem(key, value);
+    if (key === CURRENT_AUTH_STORAGE_KEY) {
+      const userId = extractSessionUserId(value);
+      const expected = readTabBinding();
+      if (userId && expected && userId !== expected) {
+        // Tentativa de gravar sessão de outro usuário nesta aba — NÃO
+        // persiste no localStorage e descarta do sessionStorage também.
+        console.error('[AUTH_SECURITY] setItem bloqueado — sessão de user divergente do binding da aba', {
+          tabExpected: expected, sessionUserId: userId,
+        });
+        window.sessionStorage.removeItem(key);
+        return;
+      }
+      if (userId) {
+        writeTabBinding(userId);
+        window.localStorage.setItem(key, value);
+      } else {
+        // Sem userId identificável — não persiste backup em localStorage.
+        window.localStorage.removeItem(key);
+      }
+    } else {
+      window.localStorage.setItem(key, value);
+    }
   },
   removeItem: (key: string) => {
     if (typeof window === 'undefined') return;
     window.localStorage.removeItem(key);
     window.sessionStorage.removeItem(key);
+    if (key === CURRENT_AUTH_STORAGE_KEY) {
+      clearTabBinding();
+    }
   },
 };
+
+/**
+ * API pública para os fluxos de login/logout sincronizarem o binding da aba
+ * com a identidade autenticada — evita janelas de race em que o storage
+ * recebe a sessão antes do binding existir.
+ */
+export function rememberTabIdentity(userId: string) {
+  if (!userId) return;
+  writeTabBinding(userId);
+}
+
+export function clearTabIdentity() {
+  clearTabBinding();
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(CURRENT_AUTH_STORAGE_KEY);
+    window.sessionStorage.removeItem(CURRENT_AUTH_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
