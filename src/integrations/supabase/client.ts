@@ -78,6 +78,29 @@ function migrateTrustedLegacyAuthStorage(scopedKey: string) {
   try {
     if (window.localStorage.getItem(scopedKey)) return;
     const expectedUserId = window.sessionStorage.getItem('yc.auth.expectedUserId');
+
+    // O preview do Lovable pode recriar o iframe ao enviar uma mensagem no
+    // chat. Nesse caso o sessionStorage da aba some, mas o localStorage fica.
+    // Restauramos somente quando existe UMA única sessão YesClin escopada no
+    // navegador; com múltiplas contas/tabs não escolhemos automaticamente.
+    if (!expectedUserId) {
+      const scopedSessions: Array<{ key: string; value: string; userId: string }> = [];
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const key = window.localStorage.key(i);
+        if (!key || !key.startsWith(`yc.auth.${SUPABASE_PROJECT_REF}.`)) continue;
+        const value = window.localStorage.getItem(key);
+        const userId = extractSessionUserId(value);
+        if (value && userId) scopedSessions.push({ key, value, userId });
+      }
+
+      const uniqueUserIds = new Set(scopedSessions.map((session) => session.userId));
+      if (scopedSessions.length === 1 && uniqueUserIds.size === 1) {
+        window.localStorage.setItem(scopedKey, scopedSessions[0].value);
+        window.sessionStorage.setItem('yc.auth.expectedUserId', scopedSessions[0].userId);
+      }
+      return;
+    }
+
     if (!expectedUserId) return;
     const legacyValue = window.localStorage.getItem(LEGACY_SUPABASE_AUTH_STORAGE_KEY);
     const legacyUserId = extractSessionUserId(legacyValue);
