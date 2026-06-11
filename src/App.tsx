@@ -221,6 +221,10 @@ function RouterReadyLog() {
 
 const App = () => {
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const w = window as typeof window & { __ycAppMountCount?: number };
+      w.__ycAppMountCount = (w.__ycAppMountCount ?? 0) + 1;
+    }
     if (!import.meta.env.DEV) return;
     console.log("APP MOUNT", { route: window.location.pathname });
     return () => console.warn("APP UNMOUNT", { route: window.location.pathname });
