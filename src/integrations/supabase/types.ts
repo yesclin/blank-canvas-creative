@@ -961,6 +961,8 @@ export type Database = {
           clinic_id: string
           color: string | null
           created_at: string
+          description: string | null
+          display_order: number
           duration_minutes: number
           id: string
           is_active: boolean
@@ -972,6 +974,8 @@ export type Database = {
           clinic_id: string
           color?: string | null
           created_at?: string
+          description?: string | null
+          display_order?: number
           duration_minutes?: number
           id?: string
           is_active?: boolean
@@ -983,6 +987,8 @@ export type Database = {
           clinic_id?: string
           color?: string | null
           created_at?: string
+          description?: string | null
+          display_order?: number
           duration_minutes?: number
           id?: string
           is_active?: boolean
