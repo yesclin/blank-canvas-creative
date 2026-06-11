@@ -174,11 +174,8 @@ export function AppointmentTypesCard() {
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {type.description || "Sem descrição"} • {type.duration_minutes} min
-                        {" • "}
-                        {type.default_price != null
-                          ? type.default_price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
-                          : <span className="text-amber-600">Sem preço definido</span>}
                       </div>
+
                     </div>
                   </div>
 
