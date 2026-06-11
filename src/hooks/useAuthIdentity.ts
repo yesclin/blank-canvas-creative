@@ -16,6 +16,7 @@ export interface AuthIdentityState {
 export function useAuthIdentity(): AuthIdentityState {
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -33,10 +34,12 @@ export function useAuthIdentity(): AuthIdentityState {
         const { data, error } = await supabase.auth.getUser();
         if (cancelled || reqId !== requestId) return;
         if (error) throw error;
-        setUserId(data.user?.id ?? null);
+        userIdRef.current = data.user?.id ?? null;
+        setUserId(userIdRef.current);
       } catch (error) {
         if (!cancelled && reqId === requestId) {
           console.error("[AUTH_IDENTITY] falha ao validar auth.uid()", error);
+          userIdRef.current = null;
           setUserId(null);
         }
       } finally {
@@ -52,6 +55,7 @@ export function useAuthIdentity(): AuthIdentityState {
       }
       if (event === "SIGNED_OUT") {
         requestId++;
+        userIdRef.current = null;
         setUserId(null);
         setIsLoading(false);
         return;
@@ -65,6 +69,7 @@ export function useAuthIdentity(): AuthIdentityState {
         const nextUserId = session?.user?.id ?? null;
         if (nextUserId) {
           setUserId((prev) => prev ?? nextUserId);
+          userIdRef.current = nextUserId;
           setIsLoading(false);
         }
         setTimeout(() => {
@@ -74,7 +79,7 @@ export function useAuthIdentity(): AuthIdentityState {
 
       if (event === "USER_UPDATED") {
         const nextUserId = session?.user?.id ?? null;
-        if (nextUserId && nextUserId !== userId) {
+        if (nextUserId && nextUserId !== userIdRef.current) {
           setTimeout(() => {
             if (!cancelled) void resolve();
           }, 0);
@@ -85,7 +90,8 @@ export function useAuthIdentity(): AuthIdentityState {
     const onIdentityChanged = (event: Event) => {
       requestId++;
       const detail = (event as CustomEvent).detail as { next?: string | null } | undefined;
-      setUserId(detail?.next ?? null);
+      userIdRef.current = detail?.next ?? null;
+      setUserId(userIdRef.current);
       setIsLoading(false);
       setTimeout(() => {
         if (!cancelled) void resolve();
