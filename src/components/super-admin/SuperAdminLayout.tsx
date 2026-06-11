@@ -35,10 +35,12 @@ export function SuperAdminLayout({ children }: Props) {
   const handleLogout = async () => {
     markUserLogout("super-admin-logout");
     clearAuthenticatedTab();
+    clearSupabaseAuthStorage();
     try { clearReactQueryCache(queryClient, "super-admin-logout"); } catch { /* ignore */ }
     await supabase.auth.signOut();
     navigate('/login', { replace: true });
   };
+
 
   return (
     <SidebarProvider>
