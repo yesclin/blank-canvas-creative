@@ -107,11 +107,10 @@ export function useAppointmentTypes() {
           description: data.description,
           color: data.color,
           duration_minutes: data.duration_minutes,
-          default_price: data.default_price ?? null,
-          default_specialty_id: data.default_specialty_id ?? null,
           is_active: data.is_active,
         })
         .eq('id', id);
+
 
 
       if (error) throw error;
