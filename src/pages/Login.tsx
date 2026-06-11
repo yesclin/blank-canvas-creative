@@ -453,6 +453,32 @@ const Login = () => {
             </Button>
           </form>
 
+          {import.meta.env.DEV && (
+            <div className="mt-4 rounded-md border border-border bg-card p-3 text-xs text-muted-foreground">
+              <div className="mb-2 font-medium text-foreground">Diagnóstico de login</div>
+              <div className="space-y-1">
+                {Object.entries(diagnostics).map(([key, item]) => (
+                  <div key={key} className="flex items-start justify-between gap-3">
+                    <span className="capitalize">{key}</span>
+                    <span
+                      className={
+                        item.status === "success"
+                          ? "text-primary"
+                          : item.status === "fail"
+                            ? "text-destructive"
+                            : item.status === "warning"
+                              ? "text-amber-600"
+                              : "text-muted-foreground"
+                      }
+                    >
+                      {item.status}: {item.message}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Signup Link */}
           <p className="mt-6 text-center text-muted-foreground">
             Não tem uma conta?{" "}
