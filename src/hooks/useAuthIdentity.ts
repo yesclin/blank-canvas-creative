@@ -1,10 +1,25 @@
-import { useEffect, useRef, useState } from "react";
+import { createContext, ReactNode, useContext, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  clearAuthenticatedTab,
+  clearIdentityScopedState,
+  clearUnsafeAuthCache,
+  emitIdentityChanged,
+  getTabExpectedUserId,
+  quarantineMismatchedAuthSession,
+  rememberAuthenticatedUser,
+} from "@/lib/authSessionIsolation";
+import { wasLogoutRequestedByUser } from "@/lib/authIntent";
+import { tryRecoverSession } from "@/lib/authSessionRecovery";
+import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
+import { useQueryClient } from "@tanstack/react-query";
 
 export interface AuthIdentityState {
   userId: string | null;
   isLoading: boolean;
 }
+
+const AuthIdentityContext = createContext<AuthIdentityState | null>(null);
 
 /**
  * Fonte leve e verificada do auth.uid() atual.
@@ -13,14 +28,54 @@ export interface AuthIdentityState {
  * supabase.auth.getUser() e é revalidado em eventos de auth. Hooks sensíveis
  * usam este userId no queryKey para impedir cache compartilhado entre contas.
  */
-export function useAuthIdentity(): AuthIdentityState {
+export function AuthIdentityProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const userIdRef = useRef<string | null>(null);
+  const userIdRef = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
     let cancelled = false;
     let requestId = 0;
+
+    const applyUserId = (nextUserId: string | null, reason: string) => {
+      if (cancelled) return;
+      const prevUserId = userIdRef.current;
+      const expectedUserId = getTabExpectedUserId();
+
+      if (nextUserId && expectedUserId && expectedUserId !== nextUserId) {
+        requestId++;
+        quarantineMismatchedAuthSession(`AuthIdentityProvider:${reason}`, expectedUserId, nextUserId);
+        try { clearReactQueryCache(queryClient, "auth-identity-mismatch", { expectedUserId, nextUserId }); } catch { /* ignore */ }
+        userIdRef.current = null;
+        setUserId(null);
+        setIsLoading(false);
+        return;
+      }
+
+      if (prevUserId === nextUserId) {
+        setIsLoading(false);
+        return;
+      }
+
+      const isInitial = prevUserId === undefined;
+      const isLogout = Boolean(prevUserId && !nextUserId);
+      const isUserSwitch = Boolean(prevUserId && nextUserId && prevUserId !== nextUserId);
+
+      if (nextUserId) rememberAuthenticatedUser(nextUserId);
+      if (isLogout) clearAuthenticatedTab();
+      if (isUserSwitch) clearIdentityScopedState();
+      clearUnsafeAuthCache();
+
+      if (!isInitial && (isLogout || isUserSwitch)) {
+        try { clearReactQueryCache(queryClient, "auth-identity-changed", { prevUserId, nextUserId }); } catch { /* ignore */ }
+        emitIdentityChanged(prevUserId ?? null, nextUserId, reason);
+      }
+
+      userIdRef.current = nextUserId;
+      setUserId(nextUserId);
+      setIsLoading(false);
+    };
 
     const resolve = async () => {
       const reqId = ++requestId;
@@ -28,19 +83,17 @@ export function useAuthIdentity(): AuthIdentityState {
         const { data: sessionData } = await supabase.auth.getSession();
         if (cancelled || reqId !== requestId) return;
         if (!sessionData.session) {
-          setUserId(null);
+          applyUserId(null, "resolve:no-session");
           return;
         }
         const { data, error } = await supabase.auth.getUser();
         if (cancelled || reqId !== requestId) return;
         if (error) throw error;
-        userIdRef.current = data.user?.id ?? null;
-        setUserId(userIdRef.current);
+        applyUserId(data.user?.id ?? null, "resolve:getUser");
       } catch (error) {
         if (!cancelled && reqId === requestId) {
           console.error("[AUTH_IDENTITY] falha ao validar auth.uid()", error);
-          userIdRef.current = null;
-          setUserId(null);
+          applyUserId(null, "resolve:error");
         }
       } finally {
         if (!cancelled && reqId === requestId) setIsLoading(false);
@@ -55,22 +108,41 @@ export function useAuthIdentity(): AuthIdentityState {
       }
       if (event === "SIGNED_OUT") {
         requestId++;
-        userIdRef.current = null;
-        setUserId(null);
-        setIsLoading(false);
+        if (wasLogoutRequestedByUser()) {
+          applyUserId(null, "SIGNED_OUT:intentional");
+          return;
+        }
+        void (async () => {
+          const result = await tryRecoverSession();
+          if (cancelled) return;
+          if (result.recovered === true) {
+            applyUserId(result.session?.user?.id ?? null, "SIGNED_OUT:recovered");
+            return;
+          }
+          if (result.definitive === false) {
+            setIsLoading(false);
+            return;
+          }
+          applyUserId(null, "SIGNED_OUT:confirmed");
+        })();
         return;
       }
 
-      // TOKEN_REFRESHED não troca identidade — re-resolver propaga refetch
-      // a todos os hooks dependentes ("sistema atualiza sozinho").
-      if (event === "TOKEN_REFRESHED") return;
+      // TOKEN_REFRESHED nunca troca identidade, profile, clínica ou permissões.
+      // Se vier com uid diferente, tratamos como sessão divergente e bloqueamos.
+      if (event === "TOKEN_REFRESHED") {
+        const refreshedUserId = session?.user?.id ?? null;
+        const currentUserId = userIdRef.current ?? null;
+        if (refreshedUserId && currentUserId && refreshedUserId !== currentUserId) {
+          applyUserId(refreshedUserId, "TOKEN_REFRESHED:mismatch");
+        }
+        return;
+      }
 
       if (event === "INITIAL_SESSION" || event === "SIGNED_IN") {
         const nextUserId = session?.user?.id ?? null;
         if (nextUserId) {
-          setUserId((prev) => prev ?? nextUserId);
-          userIdRef.current = nextUserId;
-          setIsLoading(false);
+          applyUserId(nextUserId, event);
         }
         setTimeout(() => {
           if (!cancelled) void resolve();
@@ -90,9 +162,7 @@ export function useAuthIdentity(): AuthIdentityState {
     const onIdentityChanged = (event: Event) => {
       requestId++;
       const detail = (event as CustomEvent).detail as { next?: string | null } | undefined;
-      userIdRef.current = detail?.next ?? null;
-      setUserId(userIdRef.current);
-      setIsLoading(false);
+      applyUserId(detail?.next ?? null, "yesclin:identity-changed");
       setTimeout(() => {
         if (!cancelled) void resolve();
       }, 0);
@@ -104,7 +174,19 @@ export function useAuthIdentity(): AuthIdentityState {
       subscription.unsubscribe();
       window.removeEventListener("yesclin:identity-changed", onIdentityChanged);
     };
-  }, []);
+  }, [queryClient]);
 
-  return { userId, isLoading };
+  return (
+    <AuthIdentityContext.Provider value={{ userId, isLoading }}>
+      {children}
+    </AuthIdentityContext.Provider>
+  );
+}
+
+export function useAuthIdentity(): AuthIdentityState {
+  const ctx = useContext(AuthIdentityContext);
+  if (!ctx) {
+    throw new Error("useAuthIdentity deve ser usado dentro de <AuthIdentityProvider>");
+  }
+  return ctx;
 }
