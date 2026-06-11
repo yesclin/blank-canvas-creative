@@ -324,6 +324,34 @@ export function AppointmentDialog({
     }
   }, [watchProcedureId, procedures, form, availableSpecialties]);
 
+  // Auto-fill duration & expected_value from appointment_types when type changes
+  // (only for non-procedure types). For 'procedimento', the procedure selection drives the values.
+  useEffect(() => {
+    if (!watchAppointmentType || isReschedule) return;
+    if (isProcedureType) return; // procedure flow handles it
+
+    // Clear any previously selected procedure when switching to non-procedure type
+    const currentProcId = form.getValues("procedure_id");
+    if (currentProcId && currentProcId !== "none" && currentProcId !== "") {
+      form.setValue("procedure_id", "none");
+      setSelectedProcedure(null);
+    }
+
+    const typeRow = appointmentTypes.find(t => (t.slug || "").toLowerCase() === watchAppointmentType.toLowerCase());
+    if (!typeRow) return;
+
+    if (typeRow.duration_minutes) {
+      form.setValue("duration_minutes", String(typeRow.duration_minutes));
+    }
+    if (typeRow.default_price != null) {
+      form.setValue("expected_value", Number(typeRow.default_price));
+    } else {
+      // No default price configured for this type — reset to 0 so the user notices
+      form.setValue("expected_value", 0);
+    }
+  }, [watchAppointmentType, isProcedureType, isReschedule, appointmentTypes, form]);
+
+
   // Get professional schedule for slot suggestions
   const professionalScheduleData = useMemo(() => {
     if (!watchProfessionalId) {
@@ -503,8 +531,9 @@ export function AppointmentDialog({
                 }}
               />
 
-              {/* Procedure Selection */}
-              {!isReschedule && (
+              {/* Procedure Selection — only when Tipo de Atendimento = Procedimento */}
+              {!isReschedule && isProcedureType && (
+
               <FormField
                 control={form.control}
                 name="procedure_id"
