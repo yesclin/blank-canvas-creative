@@ -1,8 +1,11 @@
 import {
   CURRENT_AUTH_STORAGE_KEY,
   LEGACY_SUPABASE_AUTH_STORAGE_KEY,
+  clearTabIdentity,
+  rememberTabIdentity,
   supabase,
 } from "@/integrations/supabase/client";
+
 
 const TAB_USER_KEY = "yc.auth.expectedUserId";
 const QUARANTINE_KEY = "yc.auth.quarantinedAt";
