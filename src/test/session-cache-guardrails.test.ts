@@ -92,6 +92,21 @@ describe("session/cache guardrails", () => {
     expect(diagnostics).toContain("if (!import.meta.env.DEV");
   });
 
+  it("não usa queryClient.clear para limpar sessão", () => {
+    const diagnostics = read("src/lib/queryClientDiagnostics.ts");
+    expect(diagnostics).not.toContain("queryClient.clear()");
+    expect(diagnostics).toContain("queryClient.removeQueries()");
+  });
+
+  it("mantém sessão de suporte e view-role isolados por aba", () => {
+    const support = read("src/lib/supportSession.ts");
+    const viewMode = read("src/contexts/UserViewModeContext.tsx");
+    expect(support).not.toMatch(/localStorage\.(getItem|setItem|removeItem)\(STORAGE_KEY\)/);
+    expect(support).toMatch(/sessionStorage\.(getItem|setItem|removeItem)\(STORAGE_KEY\)/);
+    expect(viewMode).not.toMatch(/localStorage\.(getItem|setItem|removeItem)\(STORAGE_KEY\)/);
+    expect(viewMode).toMatch(/sessionStorage\.(getItem|setItem|removeItem)\(STORAGE_KEY\)/);
+  });
+
   it("não mantém queryKeys sensíveis genéricas", () => {
     const files = [
       "src/hooks/useClinicData.ts",
