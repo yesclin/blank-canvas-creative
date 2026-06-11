@@ -88,7 +88,10 @@ const Login = () => {
     e.preventDefault();
     if (isLoading) return;
 
-    if (!email || !password) {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password;
+
+    if (!cleanEmail || !cleanPassword) {
       toast({
         title: "Campos obrigatórios",
         description: "Preencha email e senha para continuar.",
@@ -104,21 +107,72 @@ const Login = () => {
     clearSupabaseAuthStorage();
     clearAuthQuarantine();
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
+    let data: Awaited<ReturnType<typeof supabase.auth.signInWithPassword>>["data"] | null = null;
+    let error: any = null;
+    try {
+      const res = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: cleanPassword,
+      });
+      data = res.data;
+      error = res.error;
+    } catch (thrown) {
+      error = thrown;
+    }
 
     if (error) {
       setIsLoading(false);
-      console.error("[AUTH] signIn error:", error);
+      if (import.meta.env.DEV) {
+        console.error("Login error:", error);
+      }
+      const rawMsg = (error?.message && error.message !== "{}" ? error.message : "") as string;
+      const code = (error?.code || "").toString().toLowerCase();
+      const status = Number(error?.status ?? 0);
+      const name = (error?.name || "").toString();
+      const msgLower = rawMsg.toLowerCase();
+
+      let description = "Erro inesperado ao entrar. Tente novamente.";
+      if (
+        code === "invalid_credentials" ||
+        msgLower.includes("invalid login credentials") ||
+        msgLower.includes("invalid_grant") ||
+        msgLower.includes("unauthorized")
+      ) {
+        description = "Email ou senha inválidos.";
+      } else if (code === "user_not_found" || msgLower.includes("user not found")) {
+        description = "Usuário não encontrado.";
+      } else if (
+        code === "email_not_confirmed" ||
+        msgLower.includes("email not confirmed") ||
+        msgLower.includes("email_change_requires_confirmation")
+      ) {
+        description = "Email não confirmado. Verifique sua caixa de entrada.";
+      } else if (
+        msgLower.includes("blocked") ||
+        msgLower.includes("disabled") ||
+        msgLower.includes("banned") ||
+        msgLower.includes("inactive")
+      ) {
+        description = "Conta bloqueada ou inativa. Contate o administrador.";
+      } else if (
+        name === "AuthRetryableFetchError" ||
+        status === 0 ||
+        status === 502 ||
+        status === 503 ||
+        status === 504 ||
+        msgLower.includes("failed to fetch") ||
+        msgLower.includes("network")
+      ) {
+        description = "Falha de conexão. Verifique sua internet e tente novamente.";
+      } else if (status === 400 || status === 401) {
+        description = "Email ou senha inválidos.";
+      } else if (rawMsg) {
+        description = rawMsg;
+      }
+
       toast({
         title: "Erro ao entrar",
-        description:
-          error.message === "Invalid login credentials"
-            ? "Email ou senha incorretos."
-            : error.message,
+        description,
         variant: "destructive",
       });
       return;
