@@ -24,10 +24,16 @@ export function useAppointmentFinancialStatus(appointment: Appointment | null): 
       };
     }
 
-    // Use new fields if available, otherwise derive from legacy
-    const amountExpected = appointment.amount_expected ?? appointment.expected_value ?? 0;
+    // Use new fields if available, otherwise derive from legacy.
+    // Fallback to linked procedure.price when nothing was snapshot on the appointment
+    // (e.g. price configured in Procedimentos AFTER the appointment was created).
+    const storedExpected = appointment.amount_expected ?? appointment.expected_value ?? 0;
+    const procedurePrice = Number(appointment.procedure?.price ?? 0) || 0;
+    const amountExpected = storedExpected > 0 ? storedExpected : procedurePrice;
     const amountReceived = appointment.amount_received ?? 0;
-    const amountDue = appointment.amount_due ?? Math.max(amountExpected - amountReceived, 0);
+    const amountDue = storedExpected > 0
+      ? (appointment.amount_due ?? Math.max(amountExpected - amountReceived, 0))
+      : Math.max(amountExpected - amountReceived, 0);
 
     let paymentStatus: PaymentStatus = appointment.payment_status ?? "pendente";
 
