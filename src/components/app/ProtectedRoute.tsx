@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePermissions, AppModule, AppAction } from "@/hooks/usePermissions";
@@ -44,6 +44,13 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { can, isLoading, isOwner, isAdmin, role, refetch } = usePermissions();
   const { userId: authUserId, isLoading: authIdentityLoading } = useAuthIdentity();
+  const previousLoadingRef = useRef<boolean | null>(null);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    console.log("PROTECTED ROUTE MOUNT", { module, action });
+    return () => console.warn("PROTECTED ROUTE UNMOUNT", { module, action });
+  }, [module, action]);
 
   const activeQuery = useQuery({
     queryKey: ["protected-route", "is-active", authUserId],
@@ -78,9 +85,24 @@ export function ProtectedRoute({
   const isActive: boolean | null =
     activeQuery.isError ? true : activeQuery.data ?? null;
 
+  const routeLoading = authIdentityLoading || isLoading || (activeQuery.isLoading && activeQuery.data === undefined);
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    if (previousLoadingRef.current === routeLoading) return;
+    previousLoadingRef.current = routeLoading;
+    console.log(routeLoading ? "GLOBAL LOADING ON" : "GLOBAL LOADING OFF", {
+      source: "ProtectedRoute",
+      module,
+      authIdentityLoading,
+      permissionsLoading: isLoading,
+      activeQueryLoading: activeQuery.isLoading && activeQuery.data === undefined,
+      authUserId,
+    });
+  }, [routeLoading, module, authIdentityLoading, isLoading, activeQuery.isLoading, activeQuery.data, authUserId]);
+
   // Só mostra skeleton no primeiro carregamento. Em navegações
   // subsequentes (cache quente) cai direto no conteúdo.
-  if (authIdentityLoading || isLoading || (activeQuery.isLoading && activeQuery.data === undefined)) {
+  if (routeLoading) {
     return (
       <div className="space-y-6 p-6">
         <Skeleton className="h-8 w-64" />

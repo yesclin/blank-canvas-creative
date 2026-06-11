@@ -222,8 +222,8 @@ function RouterReadyLog() {
 const App = () => {
   useEffect(() => {
     if (!import.meta.env.DEV) return;
-    console.log("[APP_MOUNT] App montado", { route: window.location.pathname });
-    return () => console.warn("[APP_MOUNT] App desmontado", { route: window.location.pathname });
+    console.log("APP MOUNT", { route: window.location.pathname });
+    return () => console.warn("APP UNMOUNT", { route: window.location.pathname });
   }, []);
 
   return (
