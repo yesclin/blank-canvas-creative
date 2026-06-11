@@ -82,7 +82,7 @@ export function useAppointmentTypes() {
           default_specialty_id: data.default_specialty_id ?? null,
           is_active: data.is_active ?? true,
           display_order: maxOrder,
-        } as any)
+        })
         .select()
         .single();
 
@@ -114,7 +114,7 @@ export function useAppointmentTypes() {
           default_price: data.default_price ?? null,
           default_specialty_id: data.default_specialty_id ?? null,
           is_active: data.is_active,
-        } as any)
+        })
         .eq('id', id);
 
 
