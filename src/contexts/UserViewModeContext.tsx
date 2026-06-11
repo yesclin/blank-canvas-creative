@@ -39,7 +39,7 @@ export function UserViewModeProvider({ children, realRole, userId }: ProviderPro
     }
     if (realRole !== "owner") {
       // Non-owners always view as themselves; clear any leftover storage
-      localStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem(STORAGE_KEY);
       setViewedRoleState(null);
       return;
     }
