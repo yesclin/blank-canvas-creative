@@ -19,20 +19,28 @@ import type { InsuranceFeeRule, Insurance, FeeType } from "@/types/convenios";
 import { feeTypeLabels } from "@/types/convenios";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useCreateFeeRule } from "@/hooks/useConveniosData";
+import { useConveniosClinicId, useCreateFeeRule } from "@/hooks/useConveniosData";
 import { toast } from "sonner";
 
-const useProcedureOptions = () => useQuery({
-  queryKey: ["procedures-options"],
+const useProcedureOptions = (clinicId: string | null) => useQuery({
+  queryKey: ["procedures-options", clinicId],
+  enabled: !!clinicId,
+  staleTime: 60_000,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
   queryFn: async () => {
-    const { data } = await supabase.from("procedures").select("id, name").eq("is_active", true).order("name");
+    const { data } = await supabase.from("procedures").select("id, name").eq("clinic_id", clinicId!).eq("is_active", true).order("name");
     return (data || []).map(p => ({ id: p.id, name: p.name }));
   },
 });
-const useProfessionalOptions = () => useQuery({
-  queryKey: ["professionals-options"],
+const useProfessionalOptions = (clinicId: string | null) => useQuery({
+  queryKey: ["professionals-options", clinicId],
+  enabled: !!clinicId,
+  staleTime: 60_000,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
   queryFn: async () => {
-    const { data } = await supabase.from("professionals").select("id, full_name").eq("is_active", true).order("full_name");
+    const { data } = await supabase.from("professionals").select("id, full_name").eq("clinic_id", clinicId!).eq("is_active", true).order("full_name");
     return (data || []).map(p => ({ id: p.id, name: p.full_name }));
   },
 });
@@ -43,8 +51,9 @@ interface FeeRulesListProps {
 }
 
 export function FeeRulesList({ feeRules, insurances }: FeeRulesListProps) {
-  const { data: procedureOptions = [] } = useProcedureOptions();
-  const { data: professionalOptions = [] } = useProfessionalOptions();
+  const clinicId = useConveniosClinicId();
+  const { data: procedureOptions = [] } = useProcedureOptions(clinicId);
+  const { data: professionalOptions = [] } = useProfessionalOptions(clinicId);
   const createFeeRule = useCreateFeeRule();
   const [search, setSearch] = useState("");
   const [insuranceFilter, setInsuranceFilter] = useState<string>("all");
