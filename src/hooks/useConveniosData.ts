@@ -408,6 +408,7 @@ export interface TissGuideItemInput {
 
 export function useCreateTissGuide() {
   const queryClient = useQueryClient();
+  const clinicIdForInvalidation = useConveniosClinicId();
   
   return useMutation({
     mutationFn: async (formData: {
@@ -473,8 +474,8 @@ export function useCreateTissGuide() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tiss-guides'] });
-      queryClient.invalidateQueries({ queryKey: ['convenios-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['tiss-guides', clinicIdForInvalidation] });
+      queryClient.invalidateQueries({ queryKey: ['convenios-stats', clinicIdForInvalidation] });
       toast.success('Guia TISS criada com sucesso!');
     },
     onError: (error: any) => {
@@ -486,6 +487,7 @@ export function useCreateTissGuide() {
 
 export function useUpdateTissGuideStatus() {
   const queryClient = useQueryClient();
+  const clinicId = useConveniosClinicId();
   
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: TissGuideStatus }) => {
@@ -504,8 +506,8 @@ export function useUpdateTissGuideStatus() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tiss-guides'] });
-      queryClient.invalidateQueries({ queryKey: ['convenios-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['tiss-guides', clinicId] });
+      queryClient.invalidateQueries({ queryKey: ['convenios-stats', clinicId] });
       toast.success('Status da guia atualizado!');
     },
     onError: (error: any) => {
@@ -559,6 +561,7 @@ export function useFeeRules() {
 
 export function useCreateFeeRule() {
   const queryClient = useQueryClient();
+  const clinicId = useConveniosClinicId();
   
   return useMutation({
     mutationFn: async (formData: {
@@ -598,7 +601,7 @@ export function useCreateFeeRule() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['insurance-fee-rules'] });
+      queryClient.invalidateQueries({ queryKey: ['insurance-fee-rules', clinicId] });
       toast.success('Regra de repasse criada com sucesso!');
     },
     onError: (error: any) => {
