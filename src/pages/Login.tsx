@@ -108,6 +108,7 @@ const Login = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigatedRef = useRef(false);
+  const loginInFlightRef = useRef(false);
   const fromPath = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
 
   const updateDiagnostic = (key: DiagnosticStepKey, status: DiagnosticStatus, message: string) => {
@@ -128,6 +129,10 @@ const Login = () => {
     const goTo = async (userId: string, source: string) => {
       if (hasRecentAuthQuarantine()) {
         if (import.meta.env.DEV) console.warn("[AUTH] redirect ignorado: sessão em quarentena", { source, userId });
+        return;
+      }
+      if (loginInFlightRef.current) {
+        if (import.meta.env.DEV) console.log("[AUTH] redirect aguardando validação pós-login", { source, userId });
         return;
       }
       if (navigatedRef.current) return;
@@ -178,6 +183,7 @@ const Login = () => {
     }
 
     setIsLoading(true);
+    loginInFlightRef.current = true;
     setDiagnostics(createDiagnosticState());
     // Antes de iniciar novo login, garante que a aba não carrega resíduo de
     // sessão antiga (chave Supabase + binding de identidade).
@@ -201,6 +207,7 @@ const Login = () => {
     }
 
     if (error) {
+      loginInFlightRef.current = false;
       setIsLoading(false);
       if (import.meta.env.DEV) {
         console.error("Login error:", error);
@@ -217,6 +224,7 @@ const Login = () => {
     }
 
     if (!data?.session || !data?.user) {
+      loginInFlightRef.current = false;
       setIsLoading(false);
       toast({
         title: "Não foi possível iniciar a sessão",
@@ -257,6 +265,7 @@ const Login = () => {
       clearAuthenticatedTab();
       clearSupabaseAuthStorage();
       try { clearReactQueryCache(queryClient, "login-no-profile", { userId: data.user.id }); } catch { /* ignore */ }
+      loginInFlightRef.current = false;
       setIsLoading(false);
       return;
     } else if (profile.is_active === false) {
@@ -267,6 +276,7 @@ const Login = () => {
       clearAuthenticatedTab();
       clearSupabaseAuthStorage();
       try { clearReactQueryCache(queryClient, "login-inactive-profile", { userId: data.user.id }); } catch { /* ignore */ }
+      loginInFlightRef.current = false;
       setIsLoading(false);
       return;
     } else {
@@ -283,6 +293,7 @@ const Login = () => {
       clearAuthenticatedTab();
       clearSupabaseAuthStorage();
       try { clearReactQueryCache(queryClient, "login-no-clinic", { userId: data.user.id }); } catch { /* ignore */ }
+      loginInFlightRef.current = false;
       setIsLoading(false);
       return;
     }
@@ -308,6 +319,7 @@ const Login = () => {
         clearAuthenticatedTab();
         clearSupabaseAuthStorage();
         try { clearReactQueryCache(queryClient, "login-clinic-not-found", { userId: data.user.id, clinicId }); } catch { /* ignore */ }
+        loginInFlightRef.current = false;
         setIsLoading(false);
         return;
       } else {
@@ -361,9 +373,11 @@ const Login = () => {
       updateDiagnostic("redirect", "pending", "Redirecionando para o app");
       const dest = await resolveRedirectPath(data.user.id, fromPath || "/app/dashboard");
       updateDiagnostic("redirect", "success", dest);
+      loginInFlightRef.current = false;
       navigate(dest, { replace: true });
     }
 
+    loginInFlightRef.current = false;
     setIsLoading(false);
   };
 
