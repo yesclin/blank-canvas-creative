@@ -485,10 +485,11 @@ export function useUpdateTissGuideStatus() {
 // =============================================
 
 export function useFeeRules() {
+  const clinicId = useActiveClinicId();
   return useQuery({
-    queryKey: ['insurance-fee-rules'],
+    queryKey: ['insurance-fee-rules', clinicId],
     queryFn: async () => {
-      const clinicId = await getClinicId();
+      if (!clinicId) return [];
       
       const { data, error } = await supabase
         .from('insurance_fee_rules')
@@ -518,6 +519,7 @@ export function useFeeRules() {
         };
       }) as InsuranceFeeRule[];
     },
+    ...stableClinicQuery(clinicId),
   });
 }
 
@@ -576,10 +578,11 @@ export function useCreateFeeRule() {
 // =============================================
 
 export function useFeeCalculations() {
+  const clinicId = useActiveClinicId();
   return useQuery({
-    queryKey: ['insurance-fee-calculations'],
+    queryKey: ['insurance-fee-calculations', clinicId],
     queryFn: async () => {
-      const clinicId = await getClinicId();
+      if (!clinicId) return [];
       
       const { data, error } = await supabase
         .from('insurance_fee_calculations')
@@ -608,6 +611,7 @@ export function useFeeCalculations() {
         guide_number: '', // We don't join guide here to avoid complexity
       })) as InsuranceFeeCalculation[];
     },
+    ...stableClinicQuery(clinicId),
   });
 }
 
@@ -616,10 +620,11 @@ export function useFeeCalculations() {
 // =============================================
 
 export function useInsuranceProcedures() {
+  const clinicId = useActiveClinicId();
   return useQuery({
-    queryKey: ['insurance-procedures'],
+    queryKey: ['insurance-procedures', clinicId],
     queryFn: async () => {
-      const clinicId = await getClinicId();
+      if (!clinicId) return [];
       
       // insurance_procedures doesn't have clinic_id directly, join through insurances
       const { data, error } = await supabase
@@ -644,6 +649,7 @@ export function useInsuranceProcedures() {
         is_active: true,
       })) as InsuranceProcedure[];
     },
+    ...stableClinicQuery(clinicId),
   });
 }
 
