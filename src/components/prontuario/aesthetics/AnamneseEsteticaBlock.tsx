@@ -70,6 +70,9 @@ import { AddendumSection } from '@/components/prontuario/AddendumSection';
 import { UnifiedSignatureWizard } from '@/components/signature/UnifiedSignatureWizard';
 import type { SignableDocumentContext } from '@/hooks/useUnifiedDocumentSigning';
 import { useClinicData } from '@/hooks/useClinicData';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 import { cn } from '@/lib/utils';
 
