@@ -1,55 +1,36 @@
-# Valor de Consulta/Retorno/Encaixe vem de Procedimentos
+# Pegar o valor do procedimento no momento do pagamento
 
-Mudança de fonte: o preço deixa de ficar em "Tipos de Atendimento" e volta para **Configurações › Procedimentos**. Ao escolher *Consulta*, *Retorno* ou *Encaixe* no agendamento, o sistema busca o procedimento de mesmo nome e preenche **valor + duração** automaticamente, vinculando também o `procedure_id` para que o card de detalhes mostre tudo corretamente.
+## O problema
 
-## O que muda para o usuário
+Olhando o agendamento da Eva Maria Lopes no banco:
+- `procedure_id` está corretamente vinculado a "Consulta" (R$ 35,00 já cadastrado em Procedimentos)
+- mas `amount_expected = 0` no agendamento
 
-1. **Configurações › Procedimentos** passa a ser o lugar único para definir o valor de Consulta, Retorno, Encaixe e demais procedimentos.
-2. Esses três aparecerão pré-cadastrados (sem preço) para o owner/admin apenas preencher o valor e a duração.
-3. No diálogo "Novo Agendamento":
-   - Selecionou *Consulta* → puxa preço e duração do procedimento "Consulta" da clínica.
-   - Selecionou *Retorno* → idem para "Retorno".
-   - Selecionou *Encaixe* → idem para "Encaixe".
-   - Selecionou *Procedimento* → continua mostrando o seletor de procedimentos como hoje.
-4. O card de detalhes do agendamento (drawer lateral) passa a mostrar o valor correto em **Previsto / Pendente** (hoje vem R$ 0,00 porque o `procedure_id` ficava `none`).
-5. A seção "Valor padrão (R$)" dentro de Configurações › Agenda › Tipos & Status é **removida** (volta a ser só nome, duração, cor, ativo) para não haver duas fontes da verdade.
+Isso acontece porque o agendamento foi criado **antes** do preço ser cadastrado no procedimento. Como o `amount_expected` é gravado no momento do save (snapshot), ele continua zerado mesmo depois que o usuário cadastra o preço. O card e o diálogo de pagamento leem só esse campo, então mostram R$ 0,00.
 
-## Detalhes técnicos
+## O que vou ajustar
 
-### 1. Banco
-- **Migração**: re-seed idempotente em `procedures` para cada clínica existente, inserindo (se não existirem) os 3 registros: `Consulta`, `Retorno`, `Encaixe` — com `price = NULL`, `duration_minutes` default (30/30/15), `is_active = true`, marcando uma coluna nova `is_system = true` para travar exclusão.
-- Atualizar `handle_new_user` para que novas clínicas já recebam esses 3 procedimentos do sistema.
-- Remover (ou deprecar via DROP COLUMN) `appointment_types.default_price` e `default_specialty_id` — não são mais usados.
+### 1. Fallback de leitura (corrige o caso atual da Eva e qualquer agendamento legado)
+- `useAppointmentFinancialStatus.ts`: quando `amount_expected` e `expected_value` forem 0/nulos, usar `appointment.procedure?.price` como valor previsto.
+- `useAppointmentPreviewData.ts`: mesmo fallback para o preview/card lateral.
+- Resultado: o drawer e o diálogo "Receber Pagamento" passam a mostrar R$ 35,00 (ou o que estiver no procedimento) sem precisar reabrir/reagendar.
 
-### 2. Hook `useAppointmentTypes`
-- Remover campo `default_price` do tipo e das mutations.
+### 2. Gravar o preço no save (evita o problema em agendamentos novos)
+- `useAppointmentsCreate` / `useAppointmentsUpdate` (ou onde o insert/update é montado): antes de enviar para o Supabase, se `expected_value`/`amount_expected` estiver vazio e existir `procedure_id`, buscar o `price` do procedimento e usar como `amount_expected`.
+- Assim, agendamento novo já nasce com o valor certo travado.
 
-### 3. `AppointmentTypesCard.tsx`
-- Remover input "Valor padrão (R$)" e a coluna correspondente da listagem.
-
-### 4. `AppointmentDialog.tsx`
-- Substituir o `useEffect` atual (que lê `appointment_types.default_price`) por uma busca em `procedures`:
-  - Mapeamento `consulta → "Consulta"`, `retorno → "Retorno"`, `encaixe → "Encaixe"`.
-  - `const proc = procedures.find(p => p.name.trim().toLowerCase() === labelMap[type])`.
-  - Se achou: `setValue("procedure_id", proc.id)`, `setValue("expected_value", proc.price ?? 0)`, `setValue("duration_minutes", String(proc.duration_minutes))`.
-  - Se `proc.price` é null/0 → manter expected_value = 0 e exibir aviso inline pedindo para configurar o preço em Configurações › Procedimentos.
-- O seletor visual de procedimento permanece **oculto** para tipos não-procedimento (já está assim), mas o `procedure_id` é setado por baixo.
-
-### 5. `AppointmentReceivePaymentDialog.tsx`
-- Ajustar a mensagem de alerta (quando `amountExpected === 0`) para apontar somente para "Configurações › Procedimentos" (hoje cita "ex.: Consulta, Retorno", manter).
-
-### 6. Card de detalhes (drawer)
-- Como agora `procedure_id` é gravado, o nome do procedimento já aparece corretamente e o valor previsto vem do `amount_expected` calculado no insert/update do agendamento. Sem mudanças adicionais previstas, apenas validar visualmente.
+### 3. Backfill (opcional, mas recomendado) — migração SQL
+- `UPDATE appointments a SET amount_expected = p.price, expected_value = p.price` onde `a.amount_expected IS NULL OR a.amount_expected = 0`, juntando com `procedures p ON p.id = a.procedure_id` e `p.price IS NOT NULL AND p.price > 0`.
+- O trigger `sync_appointment_financial` já recalcula `amount_due` e `payment_status` no update.
 
 ## Arquivos afetados
-- nova migração SQL (seed + remoção de colunas + update trigger)
-- `src/hooks/useAppointmentTypes.ts`
-- `src/components/config/atendimento/AppointmentTypesCard.tsx`
-- `src/components/agenda/AppointmentDialog.tsx`
-- `src/components/agenda/AppointmentReceivePaymentDialog.tsx` (texto)
+- `src/hooks/useAppointmentFinancialStatus.ts`
+- `src/hooks/useAppointmentPreviewData.ts`
+- `src/hooks/useAppointmentsCreate.ts` e `src/hooks/useAppointmentsUpdate.ts` (ajuste no payload)
+- nova migração de backfill
 
 ## Validação
-1. Abrir Configurações › Procedimentos → definir R$ 150 em "Consulta".
-2. Criar novo agendamento, escolher tipo *Consulta* → campo "Valor Esperado" deve preencher 150 automaticamente.
-3. Salvar → abrir o drawer do agendamento → Previsto/Pendente devem mostrar R$ 150,00.
-4. Repetir para Retorno e Encaixe.
+1. Abrir o card da Eva Maria Lopes → Previsto deve mostrar R$ 35,00 e Pendente R$ 35,00.
+2. Clicar em "Receber Pagamento" → o aviso amarelo some, "Valor a receber agora" já vem com 35,00.
+3. Criar agendamento novo do tipo Consulta na clínica que tem o preço cadastrado → drawer mostra valor correto sem editar nada.
+4. Numa clínica sem preço cadastrado no procedimento → segue mostrando R$ 0,00 + aviso pedindo para configurar (comportamento atual, correto).

@@ -13,9 +13,13 @@ export function useAppointmentPreviewData(appointment: Appointment | null): Agen
   return useMemo(() => {
     if (!appointment) return null;
 
-    const amountExpected = appointment.amount_expected ?? appointment.expected_value ?? 0;
+    const storedExpected = appointment.amount_expected ?? appointment.expected_value ?? 0;
+    const procedurePrice = Number(appointment.procedure?.price ?? 0) || 0;
+    const amountExpected = storedExpected > 0 ? storedExpected : procedurePrice;
     const amountReceived = appointment.amount_received ?? 0;
-    const amountDue = appointment.amount_due ?? Math.max(amountExpected - amountReceived, 0);
+    const amountDue = storedExpected > 0
+      ? (appointment.amount_due ?? Math.max(amountExpected - amountReceived, 0))
+      : Math.max(amountExpected - amountReceived, 0);
     const paymentStatus: PaymentStatus = appointment.payment_status ?? "pendente";
     const sourceLabel = getAppointmentSourceLabel(appointment);
 
