@@ -288,13 +288,15 @@ function AuthScopedProviders() {
     if (!import.meta.env.DEV) return;
     if (previousLoadingRef.current === isLoading) return;
     previousLoadingRef.current = isLoading;
-    console.log(isLoading ? "GLOBAL LOADING ON" : "GLOBAL LOADING OFF", { source: "AuthIdentityProvider" });
+    console.log(isLoading ? "AUTH IDENTITY RESOLVING" : "AUTH IDENTITY READY", { source: "AuthIdentityProvider" });
   }, [isLoading]);
 
-  if (isLoading) {
-    return <PageSkeleton />;
-  }
-
+  // IMPORTANTE: nunca trocar a árvore inteira por <PageSkeleton /> aqui.
+  // Fazer isso desmonta BrowserRouter, AppLayout, Sidebar e queries em voo,
+  // causando flash branco / "Não foi possível carregar esta tela" sempre que
+  // a identidade é reavaliada (token refresh, foco de aba, etc.).
+  // Rotas protegidas já aguardam auth via ProtectedRoute; rotas públicas
+  // (login, recovery) não precisam esperar nada.
   return <ProviderShell />;
 }
 
