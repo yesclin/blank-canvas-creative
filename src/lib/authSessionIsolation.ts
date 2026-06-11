@@ -68,11 +68,13 @@ export function clearUnsafeAuthCache() {
       window.localStorage.removeItem(key);
       window.sessionStorage.removeItem(key);
     }
+    const protectedKeys = new Set([SUPPORT_CLINIC_KEY, SUPPORT_SESSION_KEY, SUPPORT_ADMIN_USER_KEY, TAB_USER_KEY, QUARANTINE_KEY]);
     for (const store of [window.localStorage, window.sessionStorage]) {
       const scopedKeys: string[] = [];
       for (let i = 0; i < store.length; i++) {
         const key = store.key(i);
         if (!key) continue;
+        if (protectedKeys.has(key)) continue;
         if (/(^|[._:-])(user|profile|clinic|role|permissions|sidebar|super-?admin|activeClinic|selectedClinic)([._:-]|$)/i.test(key)) {
           scopedKeys.push(key);
         }
