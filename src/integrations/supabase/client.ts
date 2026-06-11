@@ -100,8 +100,14 @@ export function isYesclinScopedAuthStorageKey(key: string) {
 const perTabAuthStorage = {
   getItem: (key: string) => {
     if (typeof window === 'undefined') return null;
-    const scopedValue = window.localStorage.getItem(key);
-    if (scopedValue) return scopedValue;
+    const tabValue = window.sessionStorage.getItem(key);
+    if (tabValue) return tabValue;
+
+    const scopedBackupValue = window.localStorage.getItem(key);
+    if (scopedBackupValue) {
+      window.sessionStorage.setItem(key, scopedBackupValue);
+      return scopedBackupValue;
+    }
 
     // Migração segura: versões anteriores usavam sessionStorage por aba.
     // Não migramos localStorage global legado para evitar ressuscitar sessão
@@ -119,6 +125,7 @@ const perTabAuthStorage = {
   },
   setItem: (key: string, value: string) => {
     if (typeof window === 'undefined') return;
+    window.sessionStorage.setItem(key, value);
     window.localStorage.setItem(key, value);
   },
   removeItem: (key: string) => {
