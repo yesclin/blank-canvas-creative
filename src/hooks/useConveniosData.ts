@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useClinicData } from '@/hooks/useClinicData';
 import type {
   Insurance,
   PatientInsurance,
@@ -78,15 +79,28 @@ async function getClinicId(): Promise<string> {
   return profile.clinic_id;
 }
 
+function useActiveClinicId() {
+  const { clinic } = useClinicData();
+  return clinic?.id ?? null;
+}
+
+const stableClinicQuery = (clinicId: string | null) => ({
+  enabled: !!clinicId,
+  staleTime: 60_000,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
+});
+
 // =============================================
 // INSURANCES (Convênios)
 // =============================================
 
 export function useInsurances() {
+  const clinicId = useActiveClinicId();
   return useQuery({
-    queryKey: ['insurances'],
+    queryKey: ['insurances', clinicId],
     queryFn: async () => {
-      const clinicId = await getClinicId();
+      if (!clinicId) return [];
       
       const { data, error } = await supabase
         .from('insurances')
@@ -97,6 +111,7 @@ export function useInsurances() {
       if (error) throw error;
       return (data || []) as Insurance[];
     },
+    ...stableClinicQuery(clinicId),
   });
 }
 
