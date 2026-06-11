@@ -168,9 +168,10 @@ export function AppointmentReceivePaymentDialog({
 
           {financialStatus.amountExpected === 0 && (
             <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
-              Nenhum valor definido para este agendamento. Cadastre o preço do procedimento em <strong>Configurações › Procedimentos</strong> (ex.: Consulta, Retorno) ou informe o valor manualmente abaixo.
+              Nenhum valor definido para este agendamento. Cadastre o preço em <strong>Configurações › Procedimentos</strong> (Consulta, Retorno, Encaixe ou o procedimento desejado) ou informe o valor manualmente abaixo.
             </div>
           )}
+
 
 
 

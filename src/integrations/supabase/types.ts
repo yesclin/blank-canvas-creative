@@ -961,8 +961,6 @@ export type Database = {
           clinic_id: string
           color: string | null
           created_at: string
-          default_price: number | null
-          default_specialty_id: string | null
           duration_minutes: number
           id: string
           is_active: boolean
@@ -974,8 +972,6 @@ export type Database = {
           clinic_id: string
           color?: string | null
           created_at?: string
-          default_price?: number | null
-          default_specialty_id?: string | null
           duration_minutes?: number
           id?: string
           is_active?: boolean
@@ -987,8 +983,6 @@ export type Database = {
           clinic_id?: string
           color?: string | null
           created_at?: string
-          default_price?: number | null
-          default_specialty_id?: string | null
           duration_minutes?: number
           id?: string
           is_active?: boolean
@@ -1016,13 +1010,6 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "public_clinic_booking"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "appointment_types_default_specialty_id_fkey"
-            columns: ["default_specialty_id"]
-            isOneToOne: false
-            referencedRelation: "specialties"
             referencedColumns: ["id"]
           },
         ]
