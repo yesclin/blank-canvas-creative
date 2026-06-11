@@ -168,7 +168,19 @@ export function useCreateAppointment() {
 
       const clinicId = await getClinicId();
       const endTime = calculateEndTime(data.start_time, data.duration_minutes);
-      
+
+      // Resolve expected value: form value first, then fall back to the procedure's price
+      // so the appointment is born with the correct amount_expected.
+      let expectedValue = data.expected_value && data.expected_value > 0 ? data.expected_value : 0;
+      if (!expectedValue && data.procedure_id) {
+        const { data: proc } = await supabase
+          .from("procedures")
+          .select("price")
+          .eq("id", data.procedure_id)
+          .maybeSingle();
+        if (proc?.price) expectedValue = Number(proc.price);
+      }
+
       const { data: appointment, error } = await supabase
         .from("appointments")
         .insert({
@@ -192,6 +204,8 @@ export function useCreateAppointment() {
           status: "nao_confirmado",
           care_mode: data.care_mode || "presencial",
           meeting_provider: data.meeting_provider || null,
+          expected_value: expectedValue || null,
+          amount_expected: expectedValue || 0,
         })
         .select()
         .single();
