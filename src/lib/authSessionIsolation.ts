@@ -170,6 +170,10 @@ export function clearIdentityScopedState() {
     window.localStorage.removeItem(SUPPORT_SESSION_KEY);
     window.localStorage.removeItem(SUPPORT_ADMIN_USER_KEY);
     window.localStorage.removeItem(VIEW_ROLE_KEY);
+    window.sessionStorage.removeItem(SUPPORT_CLINIC_KEY);
+    window.sessionStorage.removeItem(SUPPORT_SESSION_KEY);
+    window.sessionStorage.removeItem(SUPPORT_ADMIN_USER_KEY);
+    window.sessionStorage.removeItem(VIEW_ROLE_KEY);
     clearUnsafeAuthCache();
     window.dispatchEvent(new CustomEvent("yesclin:support-session-changed"));
   } catch {
