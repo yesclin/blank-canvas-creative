@@ -79,7 +79,7 @@ async function getClinicId(): Promise<string> {
   return profile.clinic_id;
 }
 
-function useActiveClinicId() {
+export function useConveniosClinicId() {
   const { userId, isLoading } = useAuthIdentity();
   const { data } = useQuery({
     queryKey: ['convenios-clinic-scope', userId],
@@ -127,7 +127,7 @@ const stableClinicQuery = (clinicId: string | null) => ({
 // =============================================
 
 export function useInsurances() {
-  const clinicId = useActiveClinicId();
+  const clinicId = useConveniosClinicId();
   return useQuery({
     queryKey: ['insurances', clinicId],
     queryFn: async () => {
@@ -267,7 +267,7 @@ export function useToggleInsuranceStatus() {
 // =============================================
 
 export function usePatientInsurances() {
-  const clinicId = useActiveClinicId();
+  const clinicId = useConveniosClinicId();
   return useQuery({
     queryKey: ['patient-insurances', clinicId],
     queryFn: async () => {
@@ -303,7 +303,7 @@ export function usePatientInsurances() {
 // =============================================
 
 export function useAuthorizations() {
-  const clinicId = useActiveClinicId();
+  const clinicId = useConveniosClinicId();
   return useQuery({
     queryKey: ['insurance-authorizations', clinicId],
     queryFn: async () => {
