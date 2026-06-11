@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuthIdentity } from '@/hooks/useAuthIdentity';
 import type {
   Insurance,
   PatientInsurance,
@@ -78,15 +79,59 @@ async function getClinicId(): Promise<string> {
   return profile.clinic_id;
 }
 
+export function useConveniosClinicId() {
+  const { userId, isLoading } = useAuthIdentity();
+  const { data } = useQuery({
+    queryKey: ['convenios-clinic-scope', userId],
+    enabled: !isLoading && !!userId,
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    queryFn: async () => {
+      if (!userId) return null;
+      const { data: auth } = await supabase.auth.getUser();
+      if (auth.user?.id !== userId) return null;
+
+      try {
+        const supportClinicId = typeof window !== 'undefined' ? window.sessionStorage.getItem('yesclin_support_clinic_id') : null;
+        const supportAdminUserId = typeof window !== 'undefined' ? window.sessionStorage.getItem('yesclin_support_admin_user_id') : null;
+        if (supportClinicId && supportAdminUserId === userId) {
+          const { data: isAdmin } = await supabase.rpc('is_platform_admin', { _user_id: userId });
+          if (isAdmin === true) return supportClinicId;
+        }
+      } catch {
+        /* segue para clínica natural */
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('clinic_id, user_id')
+        .eq('user_id', userId)
+        .maybeSingle();
+      return profile?.user_id === userId ? profile?.clinic_id ?? null : null;
+    },
+  });
+  return data ?? null;
+}
+
+const stableClinicQuery = (clinicId: string | null) => ({
+  enabled: !!clinicId,
+  staleTime: 60_000,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
+});
+
 // =============================================
 // INSURANCES (Convênios)
 // =============================================
 
 export function useInsurances() {
+  const clinicId = useConveniosClinicId();
   return useQuery({
-    queryKey: ['insurances'],
+    queryKey: ['insurances', clinicId],
     queryFn: async () => {
-      const clinicId = await getClinicId();
+      if (!clinicId) return [];
       
       const { data, error } = await supabase
         .from('insurances')
@@ -97,11 +142,13 @@ export function useInsurances() {
       if (error) throw error;
       return (data || []) as Insurance[];
     },
+    ...stableClinicQuery(clinicId),
   });
 }
 
 export function useCreateInsurance() {
   const queryClient = useQueryClient();
+  const clinicId = useConveniosClinicId();
   
   return useMutation({
     mutationFn: async (formData: Partial<Insurance>) => {
@@ -134,8 +181,8 @@ export function useCreateInsurance() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['insurances'] });
-      queryClient.invalidateQueries({ queryKey: ['convenios-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['insurances', clinicId] });
+      queryClient.invalidateQueries({ queryKey: ['convenios-stats', clinicId] });
       toast.success('Convênio cadastrado com sucesso!');
     },
     onError: (error: any) => {
@@ -147,6 +194,7 @@ export function useCreateInsurance() {
 
 export function useUpdateInsurance() {
   const queryClient = useQueryClient();
+  const clinicId = useConveniosClinicId();
   
   return useMutation({
     mutationFn: async ({ id, formData }: { id: string; formData: Partial<Insurance> }) => {
@@ -178,8 +226,8 @@ export function useUpdateInsurance() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['insurances'] });
-      queryClient.invalidateQueries({ queryKey: ['convenios-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['insurances', clinicId] });
+      queryClient.invalidateQueries({ queryKey: ['convenios-stats', clinicId] });
       toast.success('Convênio atualizado com sucesso!');
     },
     onError: (error: any) => {
@@ -191,6 +239,7 @@ export function useUpdateInsurance() {
 
 export function useToggleInsuranceStatus() {
   const queryClient = useQueryClient();
+  const clinicId = useConveniosClinicId();
   
   return useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
@@ -205,8 +254,8 @@ export function useToggleInsuranceStatus() {
       return data;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['insurances'] });
-      queryClient.invalidateQueries({ queryKey: ['convenios-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['insurances', clinicId] });
+      queryClient.invalidateQueries({ queryKey: ['convenios-stats', clinicId] });
       toast.success(variables.is_active ? 'Convênio ativado!' : 'Convênio desativado!');
     },
     onError: (error: any) => {
@@ -221,10 +270,11 @@ export function useToggleInsuranceStatus() {
 // =============================================
 
 export function usePatientInsurances() {
+  const clinicId = useConveniosClinicId();
   return useQuery({
-    queryKey: ['patient-insurances'],
+    queryKey: ['patient-insurances', clinicId],
     queryFn: async () => {
-      const clinicId = await getClinicId();
+      if (!clinicId) return [];
       
       const { data, error } = await supabase
         .from('patient_insurances')
@@ -247,6 +297,7 @@ export function usePatientInsurances() {
         insurance_name: item.insurances?.name || 'Convênio não encontrado',
       })) as PatientInsurance[];
     },
+    ...stableClinicQuery(clinicId),
   });
 }
 
@@ -255,10 +306,11 @@ export function usePatientInsurances() {
 // =============================================
 
 export function useAuthorizations() {
+  const clinicId = useConveniosClinicId();
   return useQuery({
-    queryKey: ['insurance-authorizations'],
+    queryKey: ['insurance-authorizations', clinicId],
     queryFn: async () => {
-      const clinicId = await getClinicId();
+      if (!clinicId) return [];
       
       const { data, error } = await supabase
         .from('insurance_authorizations')
@@ -284,6 +336,7 @@ export function useAuthorizations() {
         procedure_name: item.procedures?.name || '',
       })) as InsuranceAuthorization[];
     },
+    ...stableClinicQuery(clinicId),
   });
 }
 
@@ -292,10 +345,11 @@ export function useAuthorizations() {
 // =============================================
 
 export function useTissGuides() {
+  const clinicId = useConveniosClinicId();
   return useQuery({
-    queryKey: ['tiss-guides'],
+    queryKey: ['tiss-guides', clinicId],
     queryFn: async () => {
-      const clinicId = await getClinicId();
+      if (!clinicId) return [];
       
       const { data, error } = await supabase
         .from('tiss_guides')
@@ -339,6 +393,7 @@ export function useTissGuides() {
         })),
       })) as TissGuide[];
     },
+    ...stableClinicQuery(clinicId),
   });
 }
 
@@ -353,6 +408,7 @@ export interface TissGuideItemInput {
 
 export function useCreateTissGuide() {
   const queryClient = useQueryClient();
+  const clinicIdForInvalidation = useConveniosClinicId();
   
   return useMutation({
     mutationFn: async (formData: {
@@ -418,8 +474,8 @@ export function useCreateTissGuide() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tiss-guides'] });
-      queryClient.invalidateQueries({ queryKey: ['convenios-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['tiss-guides', clinicIdForInvalidation] });
+      queryClient.invalidateQueries({ queryKey: ['convenios-stats', clinicIdForInvalidation] });
       toast.success('Guia TISS criada com sucesso!');
     },
     onError: (error: any) => {
@@ -431,6 +487,7 @@ export function useCreateTissGuide() {
 
 export function useUpdateTissGuideStatus() {
   const queryClient = useQueryClient();
+  const clinicId = useConveniosClinicId();
   
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: TissGuideStatus }) => {
@@ -449,8 +506,8 @@ export function useUpdateTissGuideStatus() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tiss-guides'] });
-      queryClient.invalidateQueries({ queryKey: ['convenios-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['tiss-guides', clinicId] });
+      queryClient.invalidateQueries({ queryKey: ['convenios-stats', clinicId] });
       toast.success('Status da guia atualizado!');
     },
     onError: (error: any) => {
@@ -464,10 +521,11 @@ export function useUpdateTissGuideStatus() {
 // =============================================
 
 export function useFeeRules() {
+  const clinicId = useConveniosClinicId();
   return useQuery({
-    queryKey: ['insurance-fee-rules'],
+    queryKey: ['insurance-fee-rules', clinicId],
     queryFn: async () => {
-      const clinicId = await getClinicId();
+      if (!clinicId) return [];
       
       const { data, error } = await supabase
         .from('insurance_fee_rules')
@@ -497,11 +555,13 @@ export function useFeeRules() {
         };
       }) as InsuranceFeeRule[];
     },
+    ...stableClinicQuery(clinicId),
   });
 }
 
 export function useCreateFeeRule() {
   const queryClient = useQueryClient();
+  const clinicId = useConveniosClinicId();
   
   return useMutation({
     mutationFn: async (formData: {
@@ -541,7 +601,7 @@ export function useCreateFeeRule() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['insurance-fee-rules'] });
+      queryClient.invalidateQueries({ queryKey: ['insurance-fee-rules', clinicId] });
       toast.success('Regra de repasse criada com sucesso!');
     },
     onError: (error: any) => {
@@ -555,10 +615,11 @@ export function useCreateFeeRule() {
 // =============================================
 
 export function useFeeCalculations() {
+  const clinicId = useConveniosClinicId();
   return useQuery({
-    queryKey: ['insurance-fee-calculations'],
+    queryKey: ['insurance-fee-calculations', clinicId],
     queryFn: async () => {
-      const clinicId = await getClinicId();
+      if (!clinicId) return [];
       
       const { data, error } = await supabase
         .from('insurance_fee_calculations')
@@ -587,6 +648,7 @@ export function useFeeCalculations() {
         guide_number: '', // We don't join guide here to avoid complexity
       })) as InsuranceFeeCalculation[];
     },
+    ...stableClinicQuery(clinicId),
   });
 }
 
@@ -595,10 +657,11 @@ export function useFeeCalculations() {
 // =============================================
 
 export function useInsuranceProcedures() {
+  const clinicId = useConveniosClinicId();
   return useQuery({
-    queryKey: ['insurance-procedures'],
+    queryKey: ['insurance-procedures', clinicId],
     queryFn: async () => {
-      const clinicId = await getClinicId();
+      if (!clinicId) return [];
       
       // insurance_procedures doesn't have clinic_id directly, join through insurances
       const { data, error } = await supabase
@@ -623,11 +686,13 @@ export function useInsuranceProcedures() {
         is_active: true,
       })) as InsuranceProcedure[];
     },
+    ...stableClinicQuery(clinicId),
   });
 }
 
 export function useCreateInsuranceProcedure() {
   const queryClient = useQueryClient();
+  const clinicId = useConveniosClinicId();
   
   return useMutation({
     mutationFn: async (formData: {
@@ -653,7 +718,7 @@ export function useCreateInsuranceProcedure() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['insurance-procedures'] });
+      queryClient.invalidateQueries({ queryKey: ['insurance-procedures', clinicId] });
       toast.success('Procedimento vinculado com sucesso!');
     },
     onError: (error: any) => {
@@ -668,6 +733,7 @@ export function useCreateInsuranceProcedure() {
 
 export function useCreatePatientInsurance() {
   const queryClient = useQueryClient();
+  const clinicIdForInvalidation = useConveniosClinicId();
   
   return useMutation({
     mutationFn: async (formData: {
@@ -704,8 +770,8 @@ export function useCreatePatientInsurance() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['patient-insurances'] });
-      queryClient.invalidateQueries({ queryKey: ['convenios-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['patient-insurances', clinicIdForInvalidation] });
+      queryClient.invalidateQueries({ queryKey: ['convenios-stats', clinicIdForInvalidation] });
       toast.success('Carteirinha vinculada com sucesso!');
     },
     onError: (error: any) => {
@@ -720,6 +786,7 @@ export function useCreatePatientInsurance() {
 
 export function useCreateAuthorization() {
   const queryClient = useQueryClient();
+  const clinicIdForInvalidation = useConveniosClinicId();
   
   return useMutation({
     mutationFn: async (formData: {
@@ -749,8 +816,8 @@ export function useCreateAuthorization() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['insurance-authorizations'] });
-      queryClient.invalidateQueries({ queryKey: ['convenios-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['insurance-authorizations', clinicIdForInvalidation] });
+      queryClient.invalidateQueries({ queryKey: ['convenios-stats', clinicIdForInvalidation] });
       toast.success('Autorização solicitada com sucesso!');
     },
     onError: (error: any) => {
@@ -764,10 +831,25 @@ export function useCreateAuthorization() {
 // =============================================
 
 export function useConveniosStats() {
+  const clinicId = useConveniosClinicId();
   return useQuery({
-    queryKey: ['convenios-stats'],
+    queryKey: ['convenios-stats', clinicId],
     queryFn: async () => {
-      const clinicId = await getClinicId();
+      if (!clinicId) {
+        return {
+          totalInsurances: 0,
+          activeInsurances: 0,
+          totalPatientInsurances: 0,
+          pendingAuthorizations: 0,
+          approvedAuthorizations: 0,
+          totalGuides: 0,
+          openGuides: 0,
+          approvedGuides: 0,
+          pendingFees: 0,
+          totalPendingValue: 0,
+          totalApprovedValue: 0,
+        } as ConveniosStats;
+      }
       
       const [
         insurancesResult,
@@ -827,6 +909,7 @@ export function useConveniosStats() {
       } as ConveniosStats;
     },
     refetchInterval: 30000,
+    ...stableClinicQuery(clinicId),
   });
 }
 
@@ -866,10 +949,11 @@ export function useFinancialSummary() {
 // =============================================
 
 export function usePatients() {
+  const clinicId = useConveniosClinicId();
   return useQuery({
-    queryKey: ['patients-reference'],
+    queryKey: ['patients-reference', clinicId],
     queryFn: async () => {
-      const clinicId = await getClinicId();
+      if (!clinicId) return [];
       
       const { data, error } = await supabase
         .from('patients')
@@ -885,14 +969,16 @@ export function usePatients() {
         name: p.full_name,
       }));
     },
+    ...stableClinicQuery(clinicId),
   });
 }
 
 export function useProfessionals() {
+  const clinicId = useConveniosClinicId();
   return useQuery({
-    queryKey: ['professionals-reference'],
+    queryKey: ['professionals-reference', clinicId],
     queryFn: async () => {
-      const clinicId = await getClinicId();
+      if (!clinicId) return [];
       
       const { data, error } = await supabase
         .from('professionals')
@@ -908,6 +994,7 @@ export function useProfessionals() {
         name: p.full_name,
       }));
     },
+    ...stableClinicQuery(clinicId),
   });
 }
 

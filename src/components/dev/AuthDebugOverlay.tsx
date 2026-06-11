@@ -18,7 +18,7 @@ export function AuthDebugOverlay() {
   // Estritamente opt-in. Nunca aparece em preview/produção para clientes.
   // Para ativar localmente: definir VITE_ENABLE_AUTH_DEBUG="true" no .env.local
   // e, opcionalmente, sessionStorage.setItem("yc.auth.debug","1") em DEV.
-  const envEnabled = import.meta.env.VITE_ENABLE_AUTH_DEBUG === "true";
+  const envEnabled = import.meta.env.DEV && import.meta.env.VITE_ENABLE_AUTH_DEBUG === "true";
   const devOptIn =
     import.meta.env.DEV &&
     typeof window !== "undefined" &&

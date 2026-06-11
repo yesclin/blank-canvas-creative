@@ -39,19 +39,19 @@ export function UserViewModeProvider({ children, realRole, userId }: ProviderPro
     }
     if (realRole !== "owner") {
       // Non-owners always view as themselves; clear any leftover storage
-      localStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem(STORAGE_KEY);
       setViewedRoleState(null);
       return;
     }
     try {
-      const storedRaw = localStorage.getItem(STORAGE_KEY);
+      const storedRaw = sessionStorage.getItem(STORAGE_KEY);
       const stored = storedRaw?.startsWith(`${userId}:`)
         ? (storedRaw.slice(userId.length + 1) as ViewableRole)
         : null;
       if (stored && ["owner", "admin", "profissional", "recepcionista"].includes(stored)) {
         setViewedRoleState(stored === "owner" ? null : stored);
       } else if (storedRaw) {
-        localStorage.removeItem(STORAGE_KEY);
+        sessionStorage.removeItem(STORAGE_KEY);
       }
     } catch {
       // ignore
@@ -62,7 +62,7 @@ export function UserViewModeProvider({ children, realRole, userId }: ProviderPro
   useEffect(() => {
     const handler = () => {
       try {
-        localStorage.removeItem(STORAGE_KEY);
+        sessionStorage.removeItem(STORAGE_KEY);
       } catch {}
       setViewedRoleState(null);
     };
@@ -75,9 +75,9 @@ export function UserViewModeProvider({ children, realRole, userId }: ProviderPro
       if (!canSwitchView || !userId) return;
       try {
         if (role === "owner") {
-          localStorage.removeItem(STORAGE_KEY);
+          sessionStorage.removeItem(STORAGE_KEY);
         } else {
-          localStorage.setItem(STORAGE_KEY, `${userId}:${role}`);
+          sessionStorage.setItem(STORAGE_KEY, `${userId}:${role}`);
         }
       } catch {}
       setViewedRoleState(role === "owner" ? null : role);
@@ -87,7 +87,7 @@ export function UserViewModeProvider({ children, realRole, userId }: ProviderPro
 
   const resetViewedRole = useCallback(() => {
     try {
-      localStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem(STORAGE_KEY);
     } catch {}
     setViewedRoleState(null);
   }, []);

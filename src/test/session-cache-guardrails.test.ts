@@ -73,4 +73,52 @@ describe("session/cache guardrails", () => {
     expect(app).not.toMatch(/TOKEN_REFRESHED[\s\S]{0,240}clearReactQueryCache/);
     expect(guard).not.toMatch(/TOKEN_REFRESHED[\s\S]{0,240}clearReactQueryCache/);
   });
+
+  it("centraliza auth.uid em AuthIdentityProvider resiliente", () => {
+    const app = read("src/App.tsx");
+    const identity = read("src/hooks/useAuthIdentity.ts");
+    expect(app).toContain("<AuthIdentityProvider>");
+    expect(identity).toContain("TOKEN_REFRESHED nunca troca identidade");
+    expect(identity).toContain("tryRecoverSession");
+    expect(identity).toContain("quarantineMismatchedAuthSession");
+  });
+
+  it("não expõe AuthDebugOverlay no layout final", () => {
+    const layout = read("src/components/app/AppLayout.tsx");
+    const overlay = read("src/components/dev/AuthDebugOverlay.tsx");
+    const diagnostics = read("src/lib/authDiagnostics.ts");
+    expect(layout).not.toContain("AuthDebugOverlay");
+    expect(overlay).toContain("import.meta.env.DEV && import.meta.env.VITE_ENABLE_AUTH_DEBUG");
+    expect(diagnostics).toContain("if (!import.meta.env.DEV");
+  });
+
+  it("não usa queryClient.clear para limpar sessão", () => {
+    const diagnostics = read("src/lib/queryClientDiagnostics.ts");
+    expect(diagnostics).not.toContain("queryClient.clear()");
+    expect(diagnostics).toContain("queryClient.removeQueries()");
+  });
+
+  it("mantém sessão de suporte e view-role isolados por aba", () => {
+    const support = read("src/lib/supportSession.ts");
+    const viewMode = read("src/contexts/UserViewModeContext.tsx");
+    expect(support).not.toMatch(/localStorage\.(getItem|setItem|removeItem)\(STORAGE_KEY\)/);
+    expect(support).toMatch(/sessionStorage\.(getItem|setItem|removeItem)\(STORAGE_KEY\)/);
+    expect(viewMode).not.toMatch(/localStorage\.(getItem|setItem|removeItem)\(STORAGE_KEY\)/);
+    expect(viewMode).toMatch(/sessionStorage\.(getItem|setItem|removeItem)\(STORAGE_KEY\)/);
+  });
+
+  it("não mantém queryKeys sensíveis genéricas", () => {
+    const files = [
+      "src/hooks/useClinicData.ts",
+      "src/hooks/useClinicFeatures.tsx",
+      "src/hooks/useClinicSubscription.tsx",
+      "src/hooks/usePermissions.tsx",
+      "src/hooks/usePlatformAdmin.ts",
+      "src/hooks/useUserManagement.ts",
+    ];
+    const forbidden = /queryKey:\s*\[\s*["'](profile|permissions|clinic|activeClinic|userRoles|clinicUsers|sidebar|user_roles|super-admin)["']\s*\]/;
+    for (const file of files) {
+      expect(read(file), file).not.toMatch(forbidden);
+    }
+  });
 });

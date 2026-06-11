@@ -33,14 +33,18 @@ import type { TissGuide, Insurance, TissGuideType } from "@/types/convenios";
 import { guideTypeLabels, guideStatusLabels, guideStatusColors } from "@/types/convenios";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useCreateTissGuide, type TissGuideItemInput } from "@/hooks/useConveniosData";
+import { useConveniosClinicId, useCreateTissGuide, type TissGuideItemInput } from "@/hooks/useConveniosData";
 import { DocumentHeader } from "@/components/documents/DocumentHeader";
 import { toast } from "sonner";
 
-const useProcedureOptions = () => useQuery({
-  queryKey: ["procedures-options"],
+const useProcedureOptions = (clinicId: string | null) => useQuery({
+  queryKey: ["procedures-options", clinicId],
+  enabled: !!clinicId,
+  staleTime: 60_000,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
   queryFn: async () => {
-    const { data } = await supabase.from("procedures").select("id, name, price").eq("is_active", true).order("name");
+    const { data } = await supabase.from("procedures").select("id, name, price").eq("clinic_id", clinicId!).eq("is_active", true).order("name");
     return (data || []).map(p => ({ id: p.id, name: p.name, code: "", price: p.price || 0 }));
   },
 });
@@ -72,7 +76,8 @@ export function TissGuideDialog({
   patients,
   professionals 
 }: TissGuideDialogProps) {
-  const { data: procedures = [] } = useProcedureOptions();
+  const clinicId = useConveniosClinicId();
+  const { data: procedures = [] } = useProcedureOptions(clinicId);
   const createGuide = useCreateTissGuide();
   const isNew = !guide;
   const isEditable = !guide || ['rascunho', 'aberta'].includes(guide.status);

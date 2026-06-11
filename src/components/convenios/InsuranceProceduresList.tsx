@@ -19,13 +19,17 @@ import { Textarea } from "@/components/ui/textarea";
 import type { InsuranceProcedure, Insurance } from "@/types/convenios";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useCreateInsuranceProcedure } from "@/hooks/useConveniosData";
+import { useConveniosClinicId, useCreateInsuranceProcedure } from "@/hooks/useConveniosData";
 import { toast } from "sonner";
 
-const useProcedureOptions = () => useQuery({
-  queryKey: ["procedures-options"],
+const useProcedureOptions = (clinicId: string | null) => useQuery({
+  queryKey: ["procedures-options", clinicId],
+  enabled: !!clinicId,
+  staleTime: 60_000,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
   queryFn: async () => {
-    const { data } = await supabase.from("procedures").select("id, name").eq("is_active", true).order("name");
+    const { data } = await supabase.from("procedures").select("id, name").eq("clinic_id", clinicId!).eq("is_active", true).order("name");
     return (data || []).map(p => ({ id: p.id, name: p.name }));
   },
 });
@@ -36,7 +40,8 @@ interface InsuranceProceduresListProps {
 }
 
 export function InsuranceProceduresList({ insuranceProcedures, insurances }: InsuranceProceduresListProps) {
-  const { data: procedureOptions = [] } = useProcedureOptions();
+  const clinicId = useConveniosClinicId();
+  const { data: procedureOptions = [] } = useProcedureOptions(clinicId);
   const createProcedure = useCreateInsuranceProcedure();
   const [search, setSearch] = useState("");
   const [insuranceFilter, setInsuranceFilter] = useState<string>("all");

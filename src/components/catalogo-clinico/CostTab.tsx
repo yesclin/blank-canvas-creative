@@ -6,16 +6,24 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ProcedureCostSummaryCard } from "@/components/cadastros-clinicos/ProcedureCostSummaryCard";
+import { useClinicData } from "@/hooks/useClinicData";
 
 export function CatalogoClincioCostTab() {
   const [search, setSearch] = useState("");
+  const { clinic } = useClinicData();
+  const clinicId = clinic?.id ?? null;
 
   const { data: procedures, isLoading } = useQuery({
-    queryKey: ["procedures-for-cost"],
+    queryKey: ["procedures-for-cost", clinicId],
+    enabled: !!clinicId,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("procedures")
         .select("id, name")
+        .eq("clinic_id", clinicId!)
         .eq("is_active", true)
         .order("name");
 

@@ -40,12 +40,25 @@ const LEGACY_UNSAFE_KEYS = [
   "userPermissions",
   "currentPermissions",
   "currentProfile",
+  "sidebar",
+  "sidebarState",
+  "activeSidebar",
+  "super-admin",
+  "superAdmin",
+  "platformAdmin",
+  "platform-admin",
+  "clinicUsers",
+  "clinic-users",
+  "current-user",
+  "user_roles",
   "yc.currentUser",
   "yc.profile",
   "yc.role",
   "yc.clinic",
   "yc.clinicId",
   "yc.permissions",
+  "yc.auth.debug",
+  "yc.auth.trace",
 ];
 
 export function clearUnsafeAuthCache() {
@@ -54,6 +67,19 @@ export function clearUnsafeAuthCache() {
     for (const key of LEGACY_UNSAFE_KEYS) {
       window.localStorage.removeItem(key);
       window.sessionStorage.removeItem(key);
+    }
+    const protectedKeys = new Set([SUPPORT_CLINIC_KEY, SUPPORT_SESSION_KEY, SUPPORT_ADMIN_USER_KEY, TAB_USER_KEY, QUARANTINE_KEY]);
+    for (const store of [window.localStorage, window.sessionStorage]) {
+      const scopedKeys: string[] = [];
+      for (let i = 0; i < store.length; i++) {
+        const key = store.key(i);
+        if (!key) continue;
+        if (protectedKeys.has(key)) continue;
+        if (/(^|[._:-])(user|profile|clinic|role|permissions|sidebar|super-?admin|activeClinic|selectedClinic)([._:-]|$)/i.test(key)) {
+          scopedKeys.push(key);
+        }
+      }
+      scopedKeys.forEach((key) => store.removeItem(key));
     }
     const localAuthKeys: string[] = [];
     for (let i = 0; i < window.localStorage.length; i++) {
@@ -144,6 +170,10 @@ export function clearIdentityScopedState() {
     window.localStorage.removeItem(SUPPORT_SESSION_KEY);
     window.localStorage.removeItem(SUPPORT_ADMIN_USER_KEY);
     window.localStorage.removeItem(VIEW_ROLE_KEY);
+    window.sessionStorage.removeItem(SUPPORT_CLINIC_KEY);
+    window.sessionStorage.removeItem(SUPPORT_SESSION_KEY);
+    window.sessionStorage.removeItem(SUPPORT_ADMIN_USER_KEY);
+    window.sessionStorage.removeItem(VIEW_ROLE_KEY);
     clearUnsafeAuthCache();
     window.dispatchEvent(new CustomEvent("yesclin:support-session-changed"));
   } catch {

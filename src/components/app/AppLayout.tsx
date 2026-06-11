@@ -26,7 +26,6 @@ import { ActiveAppointmentDrawer } from "./ActiveAppointmentDrawer";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { SubscriptionGate } from "./SubscriptionGate";
 import { FloatingSupportButton } from "./FloatingSupportButton";
-import { AuthDebugOverlay } from "@/components/dev/AuthDebugOverlay";
 
 function getModuleScope(pathname: string): string {
   if (pathname.startsWith("/app/prontuario")) return "Prontuário";
@@ -186,7 +185,6 @@ export function AppLayout() {
         <GuidedTour />
       </ErrorBoundary>
     )}
-    <AuthDebugOverlay />
     </GlobalActiveAppointmentProvider>
     </GlobalSpecialtyProvider>
   );

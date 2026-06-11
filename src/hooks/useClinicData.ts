@@ -72,10 +72,10 @@ export function useClinicData() {
 
         try {
           const supportClinicId = typeof window !== 'undefined'
-            ? window.localStorage.getItem('yesclin_support_clinic_id')
+            ? window.sessionStorage.getItem('yesclin_support_clinic_id')
             : null;
           const supportAdminUserId = typeof window !== 'undefined'
-            ? window.localStorage.getItem('yesclin_support_admin_user_id')
+            ? window.sessionStorage.getItem('yesclin_support_admin_user_id')
             : null;
 
           // CRÍTICO: a sessão de suporte só vale se foi iniciada pelo MESMO
@@ -236,13 +236,9 @@ export function useClinicData() {
     };
 
     const onSupportToggle = () => fetchClinicData();
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === 'yesclin_support_clinic_id') fetchClinicData();
-    };
     if (typeof window !== 'undefined') {
       window.addEventListener('yesclin:identity-changed', onIdentityChanged);
       window.addEventListener('yesclin:support-session-changed', onSupportToggle);
-      window.addEventListener('storage', onStorage);
     }
 
     return () => {
@@ -251,7 +247,6 @@ export function useClinicData() {
       if (typeof window !== 'undefined') {
         window.removeEventListener('yesclin:identity-changed', onIdentityChanged);
         window.removeEventListener('yesclin:support-session-changed', onSupportToggle);
-        window.removeEventListener('storage', onStorage);
       }
     };
   }, []);
