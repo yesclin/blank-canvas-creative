@@ -23,11 +23,18 @@ describe("session/cache guardrails", () => {
     }
   });
 
-  it("usa storage de auth isolado por aba", () => {
+  it("usa storage de auth isolado por aba com binding de identidade", () => {
     const source = read("src/integrations/supabase/client.ts");
     expect(source).toContain("storage: perTabAuthStorage");
     expect(source).not.toMatch(/storage:\s*localStorage/);
+    // Binding obrigatório por aba — não pode haver fallback "única sessão".
+    expect(source).toContain("TAB_BINDING_PREFIX");
+    expect(source).toContain("readTabBinding");
+    expect(source).not.toContain("scopedSessions");
+    expect(source).not.toContain("migrateTrustedLegacyAuthStorage");
+    expect(source).toMatch(/userId !== expected/);
   });
+
 
   it("escopa queryKeys críticas por clinic_id", () => {
     const agenda = read("src/hooks/useAgendaRealData.ts");
