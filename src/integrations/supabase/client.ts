@@ -49,8 +49,49 @@ function getStableTabId() {
   }
 }
 
+function decodeJwtSub(token: string | null | undefined) {
+  if (!token) return null;
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const json = JSON.parse(window.atob(normalized));
+    return typeof json?.sub === 'string' ? json.sub : null;
+  } catch {
+    return null;
+  }
+}
+
+function extractSessionUserId(rawSession: string | null) {
+  if (!rawSession || typeof window === 'undefined') return null;
+  try {
+    const parsed = JSON.parse(rawSession);
+    if (typeof parsed?.user?.id === 'string') return parsed.user.id;
+    return decodeJwtSub(parsed?.access_token);
+  } catch {
+    return null;
+  }
+}
+
+function migrateTrustedLegacyAuthStorage(scopedKey: string) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (window.localStorage.getItem(scopedKey)) return;
+    const expectedUserId = window.sessionStorage.getItem('yc.auth.expectedUserId');
+    if (!expectedUserId) return;
+    const legacyValue = window.localStorage.getItem(LEGACY_SUPABASE_AUTH_STORAGE_KEY);
+    const legacyUserId = extractSessionUserId(legacyValue);
+    if (legacyValue && legacyUserId && legacyUserId === expectedUserId) {
+      window.localStorage.setItem(scopedKey, legacyValue);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 const CURRENT_TAB_ID = getStableTabId();
 export const CURRENT_AUTH_STORAGE_KEY = `yc.auth.${SUPABASE_PROJECT_REF}.${CURRENT_TAB_ID}`;
+migrateTrustedLegacyAuthStorage(CURRENT_AUTH_STORAGE_KEY);
 
 export function isYesclinScopedAuthStorageKey(key: string) {
   return key.startsWith(`yc.auth.${SUPABASE_PROJECT_REF}.`);
