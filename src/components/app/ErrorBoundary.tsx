@@ -81,9 +81,13 @@ export class ErrorBoundary extends Component<Props, State> {
 
     if (fallback && error) return fallback(error, this.reset);
 
-    // Detalhes técnicos só aparecem em DEV. Em produção, usuário vê
-    // sempre uma mensagem amigável — o erro completo fica no console.
-    const isDev = import.meta.env.DEV;
+    // Detalhes técnicos só aparecem quando o desenvolvedor opta explicitamente
+    // (localStorage `lovable_debug_errors=1`). Em produção e no preview do cliente,
+    // o usuário vê sempre uma mensagem amigável — o erro completo fica no console.
+    const isDev =
+      import.meta.env.DEV &&
+      typeof window !== "undefined" &&
+      window.localStorage?.getItem("lovable_debug_errors") === "1";
 
     if (compact) {
       return (
