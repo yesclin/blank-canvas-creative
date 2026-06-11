@@ -4,17 +4,85 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+const SUPABASE_PROJECT_REF = (() => {
+  try {
+    return new URL(SUPABASE_URL).hostname.split('.')[0] || 'default';
+  } catch {
+    return 'default';
+  }
+})();
+
+export const LEGACY_SUPABASE_AUTH_STORAGE_KEY = `sb-${SUPABASE_PROJECT_REF}-auth-token`;
+
+const TAB_ID_SESSION_KEY = 'yc.auth.tabId';
+const TAB_ID_WINDOW_NAME_PREFIX = 'yesclin-auth-tab:';
+
+function createTabId() {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
+function getStableTabId() {
+  if (typeof window === 'undefined') return 'server';
+  try {
+    const nameMatch = window.name.match(new RegExp(`${TAB_ID_WINDOW_NAME_PREFIX}([a-zA-Z0-9-]+)`));
+    if (nameMatch?.[1]) return nameMatch[1];
+
+    const sessionTabId = window.sessionStorage.getItem(TAB_ID_SESSION_KEY);
+    if (sessionTabId) {
+      window.name = window.name
+        ? `${window.name}|${TAB_ID_WINDOW_NAME_PREFIX}${sessionTabId}`
+        : `${TAB_ID_WINDOW_NAME_PREFIX}${sessionTabId}`;
+      return sessionTabId;
+    }
+
+    const tabId = createTabId();
+    window.sessionStorage.setItem(TAB_ID_SESSION_KEY, tabId);
+    window.name = window.name
+      ? `${window.name}|${TAB_ID_WINDOW_NAME_PREFIX}${tabId}`
+      : `${TAB_ID_WINDOW_NAME_PREFIX}${tabId}`;
+    return tabId;
+  } catch {
+    return createTabId();
+  }
+}
+
+const CURRENT_TAB_ID = getStableTabId();
+export const CURRENT_AUTH_STORAGE_KEY = `yc.auth.${SUPABASE_PROJECT_REF}.${CURRENT_TAB_ID}`;
+
+export function isYesclinScopedAuthStorageKey(key: string) {
+  return key.startsWith(`yc.auth.${SUPABASE_PROJECT_REF}.`);
+}
+
 const perTabAuthStorage = {
   getItem: (key: string) => {
     if (typeof window === 'undefined') return null;
-    return window.sessionStorage.getItem(key);
+    const scopedValue = window.localStorage.getItem(key);
+    if (scopedValue) return scopedValue;
+
+    // Migração segura: versões anteriores usavam sessionStorage por aba.
+    // Não migramos localStorage global legado para evitar ressuscitar sessão
+    // de outra conta/aba.
+    if (key === CURRENT_AUTH_STORAGE_KEY) {
+      const legacySessionValue = window.sessionStorage.getItem(LEGACY_SUPABASE_AUTH_STORAGE_KEY);
+      if (legacySessionValue) {
+        window.localStorage.setItem(key, legacySessionValue);
+        window.sessionStorage.removeItem(LEGACY_SUPABASE_AUTH_STORAGE_KEY);
+        return legacySessionValue;
+      }
+    }
+
+    return null;
   },
   setItem: (key: string, value: string) => {
     if (typeof window === 'undefined') return;
-    window.sessionStorage.setItem(key, value);
+    window.localStorage.setItem(key, value);
   },
   removeItem: (key: string) => {
     if (typeof window === 'undefined') return;
+    window.localStorage.removeItem(key);
     window.sessionStorage.removeItem(key);
   },
 };
@@ -27,6 +95,7 @@ const _supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     // Isolamento por aba: evita que o login de B em outra aba sobrescreva o
     // JWT de A via localStorage compartilhado e gere janela de race no cache.
     storage: perTabAuthStorage,
+    storageKey: CURRENT_AUTH_STORAGE_KEY,
     persistSession: true,
     autoRefreshToken: true,
     // CRÍTICO para o fluxo de auth não voltar para /login após login/recovery:
