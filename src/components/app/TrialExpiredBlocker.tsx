@@ -25,13 +25,17 @@ export function TrialExpiredBlocker({ status, role, clinicName }: Props) {
   const handleLogout = async () => {
     try {
       const { markUserLogout } = await import("@/lib/authIntent");
+      const { clearAuthenticatedTab, clearSupabaseAuthStorage } = await import("@/lib/authSessionIsolation");
       markUserLogout("trial-expired-logout");
+      clearAuthenticatedTab();
+      clearSupabaseAuthStorage();
       await supabase.auth.signOut();
       navigate("/login", { replace: true });
     } catch {
       toast.error("Erro ao encerrar sessão");
     }
   };
+
 
   const isOwner = role === "owner";
   const isAdmin = role === "admin";

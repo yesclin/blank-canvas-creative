@@ -122,9 +122,10 @@ export function useSignDocument() {
       }
       if (reauthData?.user?.id && reauthData.user.id !== userId) {
         console.error("[AUTH_SECURITY] Reautenticação retornou usuário diferente", { userId, receivedUserId: reauthData.user.id });
-        await supabase.auth.signOut();
+        await supabase.auth.signOut({ scope: "local" });
         throw new Error("Sessão inconsistente detectada. Faça login novamente.");
       }
+
 
       // 2. Generate SHA-256 hash of the snapshot for integrity
       let documentHash: string | null = null;

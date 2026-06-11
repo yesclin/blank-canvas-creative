@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
 import { useCurrentViewRole } from "@/contexts/UserViewModeContext";
 import { RoleSwitcherDialog } from "./RoleSwitcherDialog";
 import { useQueryClient } from "@tanstack/react-query";
-import { clearAuthenticatedTab } from "@/lib/authSessionIsolation";
+import { clearAuthenticatedTab, clearSupabaseAuthStorage } from "@/lib/authSessionIsolation";
 import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
 
 type UserRole = "admin" | "owner" | "profissional" | "recepcionista";
@@ -79,6 +79,7 @@ export function UserProfileFooter() {
       // Clear simulated role before signing out
       resetViewedRole();
       clearAuthenticatedTab();
+      clearSupabaseAuthStorage();
       try { clearReactQueryCache(queryClient, "user-logout"); } catch { /* ignore */ }
       window.dispatchEvent(new Event("yc:signout"));
       await supabase.auth.signOut();
@@ -88,6 +89,7 @@ export function UserProfileFooter() {
       toast.error("Erro ao encerrar sessão");
     }
   };
+
 
   const handleViewProfile = () => {
     navigate("/app/config/usuarios");

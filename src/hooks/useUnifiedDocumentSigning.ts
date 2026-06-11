@@ -290,10 +290,13 @@ export function useUnifiedDocumentSigning() {
     }
     if (currentUserId && data?.user?.id && data.user.id !== currentUserId) {
       console.error("[AUTH_SECURITY] Reautenticação retornou usuário diferente", { currentUserId, receivedUserId: data.user.id });
-      await supabase.auth.signOut();
+      // NÃO chamar signOut global aqui: poderia derrubar a sessão atual.
+      // Apenas encerra a sessão local divergente e força nova autenticação.
+      await supabase.auth.signOut({ scope: "local" });
       toast.error("Sessão inconsistente detectada. Faça login novamente.");
       return false;
     }
+
     return true;
   }, []);
 

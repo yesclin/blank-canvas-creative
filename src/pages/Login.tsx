@@ -9,7 +9,7 @@ import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import logoFull from "@/assets/logo-full.png";
 import logoIcon from "@/assets/logo-icon.png";
 import { motion } from "framer-motion";
-import { clearAuthenticatedTab, clearAuthQuarantine, hasRecentAuthQuarantine, rememberAuthenticatedUser } from "@/lib/authSessionIsolation";
+import { clearAuthenticatedTab, clearAuthQuarantine, clearSupabaseAuthStorage, hasRecentAuthQuarantine, rememberAuthenticatedUser } from "@/lib/authSessionIsolation";
 
 /**
  * Decide para onde mandar o usuário autenticado.
@@ -98,13 +98,17 @@ const Login = () => {
     }
 
     setIsLoading(true);
+    // Antes de iniciar novo login, garante que a aba não carrega resíduo de
+    // sessão antiga (chave Supabase + binding de identidade).
     clearAuthenticatedTab();
+    clearSupabaseAuthStorage();
     clearAuthQuarantine();
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+
 
     if (error) {
       setIsLoading(false);
