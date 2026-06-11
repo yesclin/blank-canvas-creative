@@ -791,10 +791,25 @@ export function useCreateAuthorization() {
 // =============================================
 
 export function useConveniosStats() {
+  const clinicId = useActiveClinicId();
   return useQuery({
-    queryKey: ['convenios-stats'],
+    queryKey: ['convenios-stats', clinicId],
     queryFn: async () => {
-      const clinicId = await getClinicId();
+      if (!clinicId) {
+        return {
+          totalInsurances: 0,
+          activeInsurances: 0,
+          totalPatientInsurances: 0,
+          pendingAuthorizations: 0,
+          approvedAuthorizations: 0,
+          totalGuides: 0,
+          openGuides: 0,
+          approvedGuides: 0,
+          pendingFees: 0,
+          totalPendingValue: 0,
+          totalApprovedValue: 0,
+        } as ConveniosStats;
+      }
       
       const [
         insurancesResult,
@@ -854,6 +869,7 @@ export function useConveniosStats() {
       } as ConveniosStats;
     },
     refetchInterval: 30000,
+    ...stableClinicQuery(clinicId),
   });
 }
 
@@ -893,10 +909,11 @@ export function useFinancialSummary() {
 // =============================================
 
 export function usePatients() {
+  const clinicId = useActiveClinicId();
   return useQuery({
-    queryKey: ['patients-reference'],
+    queryKey: ['patients-reference', clinicId],
     queryFn: async () => {
-      const clinicId = await getClinicId();
+      if (!clinicId) return [];
       
       const { data, error } = await supabase
         .from('patients')
@@ -912,14 +929,16 @@ export function usePatients() {
         name: p.full_name,
       }));
     },
+    ...stableClinicQuery(clinicId),
   });
 }
 
 export function useProfessionals() {
+  const clinicId = useActiveClinicId();
   return useQuery({
-    queryKey: ['professionals-reference'],
+    queryKey: ['professionals-reference', clinicId],
     queryFn: async () => {
-      const clinicId = await getClinicId();
+      if (!clinicId) return [];
       
       const { data, error } = await supabase
         .from('professionals')
@@ -935,6 +954,7 @@ export function useProfessionals() {
         name: p.full_name,
       }));
     },
+    ...stableClinicQuery(clinicId),
   });
 }
 
