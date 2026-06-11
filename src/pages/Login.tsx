@@ -390,7 +390,11 @@ const Login = () => {
     // (evita race com o RequireAuth no destino).
     try {
       for (let i = 0; i < 10; i += 1) {
-        const { data: sessionData } = await supabase.auth.getSession();
+        const { data: sessionData } = await withTimeout<{ data?: { session?: AuthSessionLike } }>(
+          supabase.auth.getSession() as PromiseLike<{ data?: { session?: AuthSessionLike } }>,
+          1000,
+          "Tempo esgotado ao confirmar sessão local.",
+        );
         if (sessionData?.session) break;
         await new Promise((r) => setTimeout(r, 100));
       }
