@@ -351,6 +351,7 @@ function AppRouter() {
                       }
                     >
                       <Route index element={moduleRoute(<ProtectedRoute module="dashboard"><Dashboard /></ProtectedRoute>, "Dashboard")} />
+                      <Route path="dashboard" element={moduleRoute(<ProtectedRoute module="dashboard"><Dashboard /></ProtectedRoute>, "Dashboard")} />
                       <Route path="assinatura" element={moduleRoute(<Assinatura />, "Assinatura")} />
                       <Route path="agenda" element={moduleRoute(<ProtectedRoute module="agenda"><Agenda /></ProtectedRoute>, "Agenda")} />
                       <Route path="prontuario" element={moduleRoute(<ProtectedRoute module="prontuario"><Prontuario /></ProtectedRoute>, "Prontuário")} />
