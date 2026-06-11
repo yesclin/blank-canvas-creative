@@ -144,6 +144,8 @@ export default function AceitarConvite() {
       // Auto-login after account creation
       if (invitation?.email) {
         clearAuthenticatedTab();
+        clearSupabaseAuthStorage();
+
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email: invitation.email,
           password: password,
