@@ -692,6 +692,7 @@ export function useInsuranceProcedures() {
 
 export function useCreateInsuranceProcedure() {
   const queryClient = useQueryClient();
+  const clinicId = useConveniosClinicId();
   
   return useMutation({
     mutationFn: async (formData: {
@@ -717,7 +718,7 @@ export function useCreateInsuranceProcedure() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['insurance-procedures'] });
+      queryClient.invalidateQueries({ queryKey: ['insurance-procedures', clinicId] });
       toast.success('Procedimento vinculado com sucesso!');
     },
     onError: (error: any) => {
@@ -732,6 +733,7 @@ export function useCreateInsuranceProcedure() {
 
 export function useCreatePatientInsurance() {
   const queryClient = useQueryClient();
+  const clinicIdForInvalidation = useConveniosClinicId();
   
   return useMutation({
     mutationFn: async (formData: {
@@ -768,8 +770,8 @@ export function useCreatePatientInsurance() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['patient-insurances'] });
-      queryClient.invalidateQueries({ queryKey: ['convenios-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['patient-insurances', clinicIdForInvalidation] });
+      queryClient.invalidateQueries({ queryKey: ['convenios-stats', clinicIdForInvalidation] });
       toast.success('Carteirinha vinculada com sucesso!');
     },
     onError: (error: any) => {
@@ -784,6 +786,7 @@ export function useCreatePatientInsurance() {
 
 export function useCreateAuthorization() {
   const queryClient = useQueryClient();
+  const clinicIdForInvalidation = useConveniosClinicId();
   
   return useMutation({
     mutationFn: async (formData: {
@@ -813,8 +816,8 @@ export function useCreateAuthorization() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['insurance-authorizations'] });
-      queryClient.invalidateQueries({ queryKey: ['convenios-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['insurance-authorizations', clinicIdForInvalidation] });
+      queryClient.invalidateQueries({ queryKey: ['convenios-stats', clinicIdForInvalidation] });
       toast.success('Autorização solicitada com sucesso!');
     },
     onError: (error: any) => {
