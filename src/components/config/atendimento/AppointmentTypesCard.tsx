@@ -247,27 +247,10 @@ export function AppointmentTypesCard() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="type_price">Valor padrão (R$)</Label>
-              <Input
-                id="type_price"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="Ex: 500,00 (deixe vazio se variar)"
-                value={formData.default_price ?? ""}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  setFormData({
-                    ...formData,
-                    default_price: raw === "" ? null : Number(raw),
-                  });
-                }}
-              />
-              <p className="text-xs text-muted-foreground">
-                Quando definido, este valor é puxado automaticamente para o agendamento ao selecionar este tipo.
-              </p>
+            <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-200">
+              💡 O <strong>valor</strong> de Consulta, Retorno e Encaixe é definido em <strong>Configurações › Procedimentos</strong>, no procedimento de mesmo nome.
             </div>
+
 
             <div className="grid gap-2">
               <Label htmlFor="type_color">Cor</Label>
