@@ -4,17 +4,156 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+const SUPABASE_PROJECT_REF = (() => {
+  try {
+    return new URL(SUPABASE_URL).hostname.split('.')[0] || 'default';
+  } catch {
+    return 'default';
+  }
+})();
+
+export const LEGACY_SUPABASE_AUTH_STORAGE_KEY = `sb-${SUPABASE_PROJECT_REF}-auth-token`;
+
+const TAB_ID_SESSION_KEY = 'yc.auth.tabId';
+const TAB_ID_WINDOW_NAME_PREFIX = 'yesclin-auth-tab:';
+
+function createTabId() {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
+function getStableTabId() {
+  if (typeof window === 'undefined') return 'server';
+  try {
+    const nameMatch = window.name.match(new RegExp(`${TAB_ID_WINDOW_NAME_PREFIX}([a-zA-Z0-9-]+)`));
+    if (nameMatch?.[1]) return nameMatch[1];
+
+    const sessionTabId = window.sessionStorage.getItem(TAB_ID_SESSION_KEY);
+    if (sessionTabId) {
+      window.name = window.name
+        ? `${window.name}|${TAB_ID_WINDOW_NAME_PREFIX}${sessionTabId}`
+        : `${TAB_ID_WINDOW_NAME_PREFIX}${sessionTabId}`;
+      return sessionTabId;
+    }
+
+    const tabId = createTabId();
+    window.sessionStorage.setItem(TAB_ID_SESSION_KEY, tabId);
+    window.name = window.name
+      ? `${window.name}|${TAB_ID_WINDOW_NAME_PREFIX}${tabId}`
+      : `${TAB_ID_WINDOW_NAME_PREFIX}${tabId}`;
+    return tabId;
+  } catch {
+    return createTabId();
+  }
+}
+
+function decodeJwtSub(token: string | null | undefined) {
+  if (!token) return null;
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const json = JSON.parse(window.atob(normalized));
+    return typeof json?.sub === 'string' ? json.sub : null;
+  } catch {
+    return null;
+  }
+}
+
+function extractSessionUserId(rawSession: string | null) {
+  if (!rawSession || typeof window === 'undefined') return null;
+  try {
+    const parsed = JSON.parse(rawSession);
+    if (typeof parsed?.user?.id === 'string') return parsed.user.id;
+    return decodeJwtSub(parsed?.access_token);
+  } catch {
+    return null;
+  }
+}
+
+function migrateTrustedLegacyAuthStorage(scopedKey: string) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (window.localStorage.getItem(scopedKey)) return;
+    const expectedUserId = window.sessionStorage.getItem('yc.auth.expectedUserId');
+
+    // O preview do Lovable pode recriar o iframe ao enviar uma mensagem no
+    // chat. Nesse caso o sessionStorage da aba some, mas o localStorage fica.
+    // Restauramos somente quando existe UMA única sessão YesClin escopada no
+    // navegador; com múltiplas contas/tabs não escolhemos automaticamente.
+    if (!expectedUserId) {
+      const scopedSessions: Array<{ key: string; value: string; userId: string }> = [];
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const key = window.localStorage.key(i);
+        if (!key || !key.startsWith(`yc.auth.${SUPABASE_PROJECT_REF}.`)) continue;
+        const value = window.localStorage.getItem(key);
+        const userId = extractSessionUserId(value);
+        if (value && userId) scopedSessions.push({ key, value, userId });
+      }
+
+      const uniqueUserIds = new Set(scopedSessions.map((session) => session.userId));
+      if (scopedSessions.length === 1 && uniqueUserIds.size === 1) {
+        window.localStorage.setItem(scopedKey, scopedSessions[0].value);
+        window.sessionStorage.setItem('yc.auth.expectedUserId', scopedSessions[0].userId);
+      }
+      return;
+    }
+
+    if (!expectedUserId) return;
+    const legacyValue = window.localStorage.getItem(LEGACY_SUPABASE_AUTH_STORAGE_KEY);
+    const legacyUserId = extractSessionUserId(legacyValue);
+    if (legacyValue && legacyUserId && legacyUserId === expectedUserId) {
+      window.localStorage.setItem(scopedKey, legacyValue);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+const CURRENT_TAB_ID = getStableTabId();
+export const CURRENT_AUTH_STORAGE_KEY = `yc.auth.${SUPABASE_PROJECT_REF}.${CURRENT_TAB_ID}`;
+migrateTrustedLegacyAuthStorage(CURRENT_AUTH_STORAGE_KEY);
+
+export function isYesclinScopedAuthStorageKey(key: string) {
+  return key.startsWith(`yc.auth.${SUPABASE_PROJECT_REF}.`);
+}
+
 const perTabAuthStorage = {
   getItem: (key: string) => {
     if (typeof window === 'undefined') return null;
-    return window.sessionStorage.getItem(key);
+    const tabValue = window.sessionStorage.getItem(key);
+    if (tabValue) return tabValue;
+
+    const scopedBackupValue = window.localStorage.getItem(key);
+    if (scopedBackupValue) {
+      window.sessionStorage.setItem(key, scopedBackupValue);
+      return scopedBackupValue;
+    }
+
+    // Migração segura: versões anteriores usavam sessionStorage por aba.
+    // Não migramos localStorage global legado para evitar ressuscitar sessão
+    // de outra conta/aba.
+    if (key === CURRENT_AUTH_STORAGE_KEY) {
+      const legacySessionValue = window.sessionStorage.getItem(LEGACY_SUPABASE_AUTH_STORAGE_KEY);
+      if (legacySessionValue) {
+        window.localStorage.setItem(key, legacySessionValue);
+        window.sessionStorage.removeItem(LEGACY_SUPABASE_AUTH_STORAGE_KEY);
+        return legacySessionValue;
+      }
+    }
+
+    return null;
   },
   setItem: (key: string, value: string) => {
     if (typeof window === 'undefined') return;
     window.sessionStorage.setItem(key, value);
+    window.localStorage.setItem(key, value);
   },
   removeItem: (key: string) => {
     if (typeof window === 'undefined') return;
+    window.localStorage.removeItem(key);
     window.sessionStorage.removeItem(key);
   },
 };
@@ -27,6 +166,7 @@ const _supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     // Isolamento por aba: evita que o login de B em outra aba sobrescreva o
     // JWT de A via localStorage compartilhado e gere janela de race no cache.
     storage: perTabAuthStorage,
+    storageKey: CURRENT_AUTH_STORAGE_KEY,
     persistSession: true,
     autoRefreshToken: true,
     // CRÍTICO para o fluxo de auth não voltar para /login após login/recovery:

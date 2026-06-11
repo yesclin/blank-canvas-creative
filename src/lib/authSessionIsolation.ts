@@ -1,4 +1,8 @@
-import { supabase } from "@/integrations/supabase/client";
+import {
+  CURRENT_AUTH_STORAGE_KEY,
+  LEGACY_SUPABASE_AUTH_STORAGE_KEY,
+  supabase,
+} from "@/integrations/supabase/client";
 
 const TAB_USER_KEY = "yc.auth.expectedUserId";
 const QUARANTINE_KEY = "yc.auth.quarantinedAt";
@@ -68,7 +72,14 @@ export function clearUnsafeAuthCache() {
       window.localStorage.removeItem(key);
       window.sessionStorage.removeItem(key);
     }
-    const protectedKeys = new Set([SUPPORT_CLINIC_KEY, SUPPORT_SESSION_KEY, SUPPORT_ADMIN_USER_KEY, TAB_USER_KEY, QUARANTINE_KEY]);
+    const protectedKeys = new Set([
+      SUPPORT_CLINIC_KEY,
+      SUPPORT_SESSION_KEY,
+      SUPPORT_ADMIN_USER_KEY,
+      TAB_USER_KEY,
+      QUARANTINE_KEY,
+      CURRENT_AUTH_STORAGE_KEY,
+    ]);
     for (const store of [window.localStorage, window.sessionStorage]) {
       const scopedKeys: string[] = [];
       for (let i = 0; i < store.length; i++) {
@@ -190,12 +201,8 @@ export function clearSupabaseAuthStorage() {
   if (typeof window === "undefined") return;
   try {
     for (const store of [window.localStorage, window.sessionStorage]) {
-      const keys: string[] = [];
-      for (let i = 0; i < store.length; i++) {
-        const key = store.key(i);
-        if (key && /^sb-.+-auth-token$/.test(key)) keys.push(key);
-      }
-      keys.forEach((key) => store.removeItem(key));
+      store.removeItem(CURRENT_AUTH_STORAGE_KEY);
+      store.removeItem(LEGACY_SUPABASE_AUTH_STORAGE_KEY);
     }
   } catch {
     /* ignore */

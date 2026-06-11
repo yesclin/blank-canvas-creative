@@ -116,7 +116,7 @@ export function AuthSessionGuard() {
       if (!session) {
         // INITIAL_SESSION sem sessão: só limpa tab key se realmente não havia
         // usuário antes — evita derrubar refresh em andamento.
-        if (event === "INITIAL_SESSION" && !currentUserIdRef.current) {
+        if (event === "INITIAL_SESSION" && !currentUserIdRef.current && !getTabExpectedUserId()) {
           clearAuthenticatedTab();
         }
         return;
