@@ -16,9 +16,8 @@ import { ErrorBoundary } from "@/components/app/ErrorBoundary";
 import { AuthSessionGuard } from "@/components/app/AuthSessionGuard";
 import { PageSkeleton } from "@/components/app/PageSkeleton";
 import CookieConsent from "@/components/CookieConsent";
-import { supabase } from "@/integrations/supabase/client";
 import { usePageResumeRecovery } from "@/hooks/usePageResumeRecovery";
-import { clearAuthenticatedTab, clearIdentityScopedState, clearUnsafeAuthCache, getTabExpectedUserId, quarantineMismatchedAuthSession } from "@/lib/authSessionIsolation";
+import { AuthIdentityProvider, useAuthIdentity } from "@/hooks/useAuthIdentity";
 import { clearReactQueryCache, logReactQueryEvent } from "@/lib/queryClientDiagnostics";
 
 // Páginas Públicas — lazy para não pesar no boot inicial.
@@ -235,7 +234,9 @@ const App = () => {
       <AuthSessionGuard />
       <PageResumeRecoveryMount />
       <TooltipProvider>
-        <AuthScopedProviders />
+        <AuthIdentityProvider>
+          <AuthScopedProviders />
+        </AuthIdentityProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
