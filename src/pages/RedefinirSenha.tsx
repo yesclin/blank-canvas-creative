@@ -9,6 +9,8 @@ import { ArrowLeft, Eye, EyeOff, CheckCircle, AlertCircle, ShieldCheck } from "l
 import logoFull from "@/assets/logo-full.png";
 import { motion } from "framer-motion";
 import { z } from "zod";
+import { useQueryClient } from "@tanstack/react-query";
+import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
 
 const passwordSchema = z
   .string()
@@ -27,6 +29,7 @@ const RedefinirSenha = () => {
   const [hasSession, setHasSession] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     // Listen for PASSWORD_RECOVERY event (fires when Supabase processes the hash fragment)
@@ -97,7 +100,11 @@ const RedefinirSenha = () => {
 
       // Sign out so user logs in with the new password
       const { markUserLogout } = await import("@/lib/authIntent");
+      const { clearAuthenticatedTab, clearSupabaseAuthStorage } = await import("@/lib/authSessionIsolation");
       markUserLogout("password-reset");
+      clearAuthenticatedTab();
+      clearSupabaseAuthStorage();
+      try { clearReactQueryCache(queryClient, "password-reset-logout"); } catch { /* ignore */ }
       await supabase.auth.signOut();
 
       toast({
