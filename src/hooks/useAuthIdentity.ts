@@ -24,6 +24,12 @@ export function useAuthIdentity(): AuthIdentityState {
     const resolve = async () => {
       const reqId = ++requestId;
       try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (cancelled || reqId !== requestId) return;
+        if (!sessionData.session) {
+          setUserId(null);
+          return;
+        }
         const { data, error } = await supabase.auth.getUser();
         if (cancelled || reqId !== requestId) return;
         if (error) throw error;
@@ -40,7 +46,10 @@ export function useAuthIdentity(): AuthIdentityState {
 
     void resolve();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (import.meta.env.DEV) {
+        console.log("AUTH STATE CHANGE", { source: "useAuthIdentity", event, userId: session?.user?.id ?? null });
+      }
       if (event === "SIGNED_OUT") {
         requestId++;
         setUserId(null);
@@ -52,10 +61,24 @@ export function useAuthIdentity(): AuthIdentityState {
       // a todos os hooks dependentes ("sistema atualiza sozinho").
       if (event === "TOKEN_REFRESHED") return;
 
-      if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "USER_UPDATED") {
+      if (event === "INITIAL_SESSION" || event === "SIGNED_IN") {
+        const nextUserId = session?.user?.id ?? null;
+        if (nextUserId) {
+          setUserId((prev) => prev ?? nextUserId);
+          setIsLoading(false);
+        }
         setTimeout(() => {
           if (!cancelled) void resolve();
         }, 0);
+      }
+
+      if (event === "USER_UPDATED") {
+        const nextUserId = session?.user?.id ?? null;
+        if (nextUserId && nextUserId !== userId) {
+          setTimeout(() => {
+            if (!cancelled) void resolve();
+          }, 0);
+        }
       }
     });
 

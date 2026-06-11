@@ -73,12 +73,17 @@ export function AuthSessionGuard() {
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (import.meta.env.DEV) {
+        console.log("AUTH STATE CHANGE", { source: "AuthSessionGuard", event, userId: session?.user?.id ?? null });
+      }
       if (event === "SIGNED_OUT") {
         // Se o usuário pediu logout explicitamente, aplica imediatamente.
         if (wasLogoutRequestedByUser()) {
           if (currentUserIdRef.current) hardReset("SIGNED_OUT (intencional)", currentUserIdRef.current, null);
           clearAuthenticatedTab();
-          try { clearReactQueryCache(qc, "SIGNED_OUT intencional", { prev: currentUserIdRef.current, next: null }); } catch { /* ignore */ }
+          if (!currentUserIdRef.current) {
+            try { clearReactQueryCache(qc, "SIGNED_OUT intencional", { prev: null, next: null }); } catch { /* ignore */ }
+          }
           currentUserIdRef.current = null;
           return;
         }
@@ -97,9 +102,12 @@ export function AuthSessionGuard() {
             }
             return;
           }
-          if (currentUserIdRef.current) hardReset("SIGNED_OUT confirmado", currentUserIdRef.current, null);
+          const prev = currentUserIdRef.current;
+          if (prev) hardReset("SIGNED_OUT confirmado", prev, null);
           clearAuthenticatedTab();
-          try { clearReactQueryCache(qc, "SIGNED_OUT confirmado", { prev: currentUserIdRef.current, next: null }); } catch { /* ignore */ }
+          if (!prev) {
+            try { clearReactQueryCache(qc, "SIGNED_OUT confirmado", { prev: null, next: null }); } catch { /* ignore */ }
+          }
           currentUserIdRef.current = null;
         })();
         return;
