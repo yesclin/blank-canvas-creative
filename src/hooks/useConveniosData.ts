@@ -148,6 +148,7 @@ export function useInsurances() {
 
 export function useCreateInsurance() {
   const queryClient = useQueryClient();
+  const clinicId = useConveniosClinicId();
   
   return useMutation({
     mutationFn: async (formData: Partial<Insurance>) => {
@@ -180,8 +181,8 @@ export function useCreateInsurance() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['insurances'] });
-      queryClient.invalidateQueries({ queryKey: ['convenios-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['insurances', clinicId] });
+      queryClient.invalidateQueries({ queryKey: ['convenios-stats', clinicId] });
       toast.success('Convênio cadastrado com sucesso!');
     },
     onError: (error: any) => {
@@ -193,6 +194,7 @@ export function useCreateInsurance() {
 
 export function useUpdateInsurance() {
   const queryClient = useQueryClient();
+  const clinicId = useConveniosClinicId();
   
   return useMutation({
     mutationFn: async ({ id, formData }: { id: string; formData: Partial<Insurance> }) => {
@@ -224,8 +226,8 @@ export function useUpdateInsurance() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['insurances'] });
-      queryClient.invalidateQueries({ queryKey: ['convenios-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['insurances', clinicId] });
+      queryClient.invalidateQueries({ queryKey: ['convenios-stats', clinicId] });
       toast.success('Convênio atualizado com sucesso!');
     },
     onError: (error: any) => {
@@ -237,6 +239,7 @@ export function useUpdateInsurance() {
 
 export function useToggleInsuranceStatus() {
   const queryClient = useQueryClient();
+  const clinicId = useConveniosClinicId();
   
   return useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
@@ -251,8 +254,8 @@ export function useToggleInsuranceStatus() {
       return data;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['insurances'] });
-      queryClient.invalidateQueries({ queryKey: ['convenios-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['insurances', clinicId] });
+      queryClient.invalidateQueries({ queryKey: ['convenios-stats', clinicId] });
       toast.success(variables.is_active ? 'Convênio ativado!' : 'Convênio desativado!');
     },
     onError: (error: any) => {
