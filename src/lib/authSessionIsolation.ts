@@ -197,6 +197,7 @@ export function clearIdentityScopedState() {
 
 export function clearAuthenticatedTab() {
   setTabExpectedUserId(null);
+  clearTabIdentity();
   clearIdentityScopedState();
 }
 
@@ -207,6 +208,7 @@ export function clearSupabaseAuthStorage() {
       store.removeItem(CURRENT_AUTH_STORAGE_KEY);
       store.removeItem(LEGACY_SUPABASE_AUTH_STORAGE_KEY);
     }
+    clearTabIdentity();
   } catch {
     /* ignore */
   }
@@ -230,8 +232,12 @@ export function quarantineMismatchedAuthSession(reason: string, expectedUserId: 
 }
 
 export function rememberAuthenticatedUser(userId: string | null | undefined) {
-  if (userId) setTabExpectedUserId(userId);
+  if (userId) {
+    setTabExpectedUserId(userId);
+    rememberTabIdentity(userId);
+  }
 }
+
 
 export function ensureSessionMatchesTab(session: SessionLike): SessionMatchResult {
   const userId = getSessionUserId(session);
