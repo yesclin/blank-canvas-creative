@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { usePlatformAdmin } from '@/hooks/usePlatformAdmin';
 import { markUserLogout } from '@/lib/authIntent';
-import { clearAuthenticatedTab } from '@/lib/authSessionIsolation';
+import { clearAuthenticatedTab, clearSupabaseAuthStorage } from '@/lib/authSessionIsolation';
 import { useQueryClient } from '@tanstack/react-query';
 import { clearReactQueryCache } from '@/lib/queryClientDiagnostics';
 
