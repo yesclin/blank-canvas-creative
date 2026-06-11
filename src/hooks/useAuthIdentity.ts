@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext, useEffect, useRef, useState } from "react";
+import { createContext, createElement, ReactNode, useContext, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   clearAuthenticatedTab,
@@ -176,11 +176,7 @@ export function AuthIdentityProvider({ children }: { children: ReactNode }) {
     };
   }, [queryClient]);
 
-  return (
-    <AuthIdentityContext.Provider value={{ userId, isLoading }}>
-      {children}
-    </AuthIdentityContext.Provider>
-  );
+  return createElement(AuthIdentityContext.Provider, { value: { userId, isLoading } }, children);
 }
 
 export function useAuthIdentity(): AuthIdentityState {
