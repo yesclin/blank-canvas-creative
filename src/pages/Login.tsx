@@ -10,6 +10,8 @@ import logoFull from "@/assets/logo-full.png";
 import logoIcon from "@/assets/logo-icon.png";
 import { motion } from "framer-motion";
 import { clearAuthenticatedTab, clearAuthQuarantine, clearSupabaseAuthStorage, hasRecentAuthQuarantine, rememberAuthenticatedUser } from "@/lib/authSessionIsolation";
+import { useQueryClient } from "@tanstack/react-query";
+import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
 
 /**
  * Decide para onde mandar o usuário autenticado.
@@ -28,16 +30,91 @@ async function resolveRedirectPath(userId: string, fallback: string): Promise<st
   return fallback || "/app";
 }
 
+type DiagnosticStepKey = "auth" | "profile" | "clinic" | "role" | "redirect";
+type DiagnosticStatus = "idle" | "pending" | "success" | "fail" | "warning";
+type DiagnosticState = Record<DiagnosticStepKey, { status: DiagnosticStatus; message: string }>;
+
+const createDiagnosticState = (): DiagnosticState => ({
+  auth: { status: "idle", message: "Aguardando login" },
+  profile: { status: "idle", message: "Aguardando autenticação" },
+  clinic: { status: "idle", message: "Aguardando perfil" },
+  role: { status: "idle", message: "Aguardando clínica" },
+  redirect: { status: "idle", message: "Aguardando validações" },
+});
+
+function getAuthErrorMessage(error: any): string {
+  const rawMsg = (typeof error?.message === "string" && error.message !== "{}" ? error.message : "") as string;
+  const code = (error?.code || "").toString().toLowerCase();
+  const status = Number(error?.status ?? 0);
+  const name = (error?.name || "").toString();
+  const msgLower = rawMsg.toLowerCase();
+
+  if (
+    code === "invalid_credentials" ||
+    msgLower.includes("invalid login credentials") ||
+    msgLower.includes("invalid_grant") ||
+    msgLower.includes("unauthorized") ||
+    status === 400 ||
+    status === 401
+  ) {
+    return "Email ou senha inválidos.";
+  }
+  if (code === "user_not_found" || msgLower.includes("user not found")) {
+    return "Usuário não encontrado.";
+  }
+  if (
+    code === "email_not_confirmed" ||
+    msgLower.includes("email not confirmed") ||
+    msgLower.includes("email_change_requires_confirmation")
+  ) {
+    return "Email não confirmado. Verifique sua caixa de entrada.";
+  }
+  if (
+    msgLower.includes("blocked") ||
+    msgLower.includes("disabled") ||
+    msgLower.includes("banned") ||
+    msgLower.includes("inactive")
+  ) {
+    return "Conta bloqueada ou inativa. Contate o administrador.";
+  }
+  if (
+    name === "AuthRetryableFetchError" ||
+    status === 0 ||
+    status === 502 ||
+    status === 503 ||
+    status === 504 ||
+    msgLower.includes("failed to fetch") ||
+    msgLower.includes("network") ||
+    msgLower.includes("timeout")
+  ) {
+    return "Auth: falha de conexão com o Supabase. Tente novamente em instantes.";
+  }
+  return rawMsg || "Auth: erro inesperado ao entrar. Tente novamente.";
+}
+
+function getQueryErrorMessage(error: any, fallback: string): string {
+  const rawMsg = typeof error?.message === "string" && error.message !== "{}" ? error.message : "";
+  return rawMsg || fallback;
+}
+
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [diagnostics, setDiagnostics] = useState<DiagnosticState>(() => createDiagnosticState());
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const navigatedRef = useRef(false);
+  const loginInFlightRef = useRef(false);
   const fromPath = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
+
+  const updateDiagnostic = (key: DiagnosticStepKey, status: DiagnosticStatus, message: string) => {
+    if (!import.meta.env.DEV) return;
+    setDiagnostics((current) => ({ ...current, [key]: { status, message } }));
+  };
 
   /**
    * Se o usuário já estiver autenticado ao montar /login (ou se o evento
@@ -54,13 +131,18 @@ const Login = () => {
         if (import.meta.env.DEV) console.warn("[AUTH] redirect ignorado: sessão em quarentena", { source, userId });
         return;
       }
+      if (loginInFlightRef.current) {
+        if (import.meta.env.DEV) console.log("[AUTH] redirect aguardando validação pós-login", { source, userId });
+        return;
+      }
       if (navigatedRef.current) return;
       navigatedRef.current = true;
-      const dest = await resolveRedirectPath(userId, fromPath || "/app");
+      const dest = await resolveRedirectPath(userId, fromPath || "/app/dashboard");
       if (!mounted) return;
       if (import.meta.env.DEV) {
         console.log("[AUTH] Login redirect", { source, dest, userId });
       }
+      updateDiagnostic("redirect", "success", dest);
       navigate(dest, { replace: true });
     };
 
@@ -101,11 +183,15 @@ const Login = () => {
     }
 
     setIsLoading(true);
+    loginInFlightRef.current = true;
+    setDiagnostics(createDiagnosticState());
     // Antes de iniciar novo login, garante que a aba não carrega resíduo de
     // sessão antiga (chave Supabase + binding de identidade).
     clearAuthenticatedTab();
     clearSupabaseAuthStorage();
     clearAuthQuarantine();
+    try { clearReactQueryCache(queryClient, "login-before", { email: cleanEmail }); } catch { /* ignore */ }
+    updateDiagnostic("auth", "pending", "Autenticando no Supabase");
 
     let data: Awaited<ReturnType<typeof supabase.auth.signInWithPassword>>["data"] | null = null;
     let error: any = null;
@@ -121,54 +207,13 @@ const Login = () => {
     }
 
     if (error) {
+      loginInFlightRef.current = false;
       setIsLoading(false);
       if (import.meta.env.DEV) {
         console.error("Login error:", error);
       }
-      const rawMsg = (error?.message && error.message !== "{}" ? error.message : "") as string;
-      const code = (error?.code || "").toString().toLowerCase();
-      const status = Number(error?.status ?? 0);
-      const name = (error?.name || "").toString();
-      const msgLower = rawMsg.toLowerCase();
-
-      let description = "Erro inesperado ao entrar. Tente novamente.";
-      if (
-        code === "invalid_credentials" ||
-        msgLower.includes("invalid login credentials") ||
-        msgLower.includes("invalid_grant") ||
-        msgLower.includes("unauthorized")
-      ) {
-        description = "Email ou senha inválidos.";
-      } else if (code === "user_not_found" || msgLower.includes("user not found")) {
-        description = "Usuário não encontrado.";
-      } else if (
-        code === "email_not_confirmed" ||
-        msgLower.includes("email not confirmed") ||
-        msgLower.includes("email_change_requires_confirmation")
-      ) {
-        description = "Email não confirmado. Verifique sua caixa de entrada.";
-      } else if (
-        msgLower.includes("blocked") ||
-        msgLower.includes("disabled") ||
-        msgLower.includes("banned") ||
-        msgLower.includes("inactive")
-      ) {
-        description = "Conta bloqueada ou inativa. Contate o administrador.";
-      } else if (
-        name === "AuthRetryableFetchError" ||
-        status === 0 ||
-        status === 502 ||
-        status === 503 ||
-        status === 504 ||
-        msgLower.includes("failed to fetch") ||
-        msgLower.includes("network")
-      ) {
-        description = "Falha de conexão. Verifique sua internet e tente novamente.";
-      } else if (status === 400 || status === 401) {
-        description = "Email ou senha inválidos.";
-      } else if (rawMsg) {
-        description = rawMsg;
-      }
+      const description = getAuthErrorMessage(error);
+      updateDiagnostic("auth", "fail", description);
 
       toast({
         title: "Erro ao entrar",
@@ -179,20 +224,129 @@ const Login = () => {
     }
 
     if (!data?.session || !data?.user) {
+      loginInFlightRef.current = false;
       setIsLoading(false);
       toast({
         title: "Não foi possível iniciar a sessão",
-        description: "Tente novamente em instantes.",
+        description: "Auth: sessão não retornada pelo Supabase. Tente novamente.",
         variant: "destructive",
       });
+      updateDiagnostic("auth", "fail", "Auth: sessão não retornada pelo Supabase");
       return;
     }
 
     if (import.meta.env.DEV) {
-      console.log("[AUTH] signIn ok", { userId: data.user.id });
+      console.log("AUTH USER:", data.user);
+      console.log("AUTH SESSION:", data.session);
     }
+    updateDiagnostic("auth", "success", `Auth OK: ${data.user.email ?? data.user.id}`);
 
     rememberAuthenticatedUser(data.user.id);
+    try { clearReactQueryCache(queryClient, "login-after-auth", { userId: data.user.id }); } catch { /* ignore */ }
+
+    updateDiagnostic("profile", "pending", "Buscando profile por auth.uid");
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("clinic_id, user_id, full_name, is_active")
+      .eq("user_id", data.user.id)
+      .limit(1)
+      .maybeSingle();
+    if (import.meta.env.DEV) console.log("PROFILE:", profile);
+
+    if (profileError) {
+      const msg = getQueryErrorMessage(profileError, "Profile: falha ao consultar perfil; seguindo com sessão autenticada.");
+      console.warn("[AUTH] PROFILE query failed", profileError);
+      updateDiagnostic("profile", "warning", msg);
+    } else if (!profile || profile.user_id !== data.user.id) {
+      const description = "Conta encontrada, mas sem perfil vinculado. Contate o administrador.";
+      updateDiagnostic("profile", "fail", description);
+      toast({ title: "Cadastro incompleto", description, variant: "destructive" });
+      await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+      clearAuthenticatedTab();
+      clearSupabaseAuthStorage();
+      try { clearReactQueryCache(queryClient, "login-no-profile", { userId: data.user.id }); } catch { /* ignore */ }
+      loginInFlightRef.current = false;
+      setIsLoading(false);
+      return;
+    } else if (profile.is_active === false) {
+      const description = "Conta bloqueada ou inativa. Contate o administrador.";
+      updateDiagnostic("profile", "fail", description);
+      toast({ title: "Acesso bloqueado", description, variant: "destructive" });
+      await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+      clearAuthenticatedTab();
+      clearSupabaseAuthStorage();
+      try { clearReactQueryCache(queryClient, "login-inactive-profile", { userId: data.user.id }); } catch { /* ignore */ }
+      loginInFlightRef.current = false;
+      setIsLoading(false);
+      return;
+    } else {
+      updateDiagnostic("profile", "success", `Profile OK: ${profile.full_name ?? data.user.email ?? data.user.id}`);
+    }
+
+    const clinicId = profile?.clinic_id ?? null;
+    updateDiagnostic("clinic", "pending", "Buscando clínica vinculada");
+    if (!clinicId && !profileError) {
+      const description = "Conta encontrada, mas sem clínica vinculada. Contate o administrador.";
+      updateDiagnostic("clinic", "fail", description);
+      toast({ title: "Clínica não vinculada", description, variant: "destructive" });
+      await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+      clearAuthenticatedTab();
+      clearSupabaseAuthStorage();
+      try { clearReactQueryCache(queryClient, "login-no-clinic", { userId: data.user.id }); } catch { /* ignore */ }
+      loginInFlightRef.current = false;
+      setIsLoading(false);
+      return;
+    }
+
+    let roles: any[] | null = null;
+    if (clinicId) {
+      const { data: clinic, error: clinicError } = await supabase
+        .from("clinics")
+        .select("id, name")
+        .eq("id", clinicId)
+        .limit(1)
+        .maybeSingle();
+      if (import.meta.env.DEV) console.log("CLINIC:", clinic);
+      if (clinicError) {
+        const msg = getQueryErrorMessage(clinicError, "Clinic: falha ao consultar clínica; seguindo com sessão autenticada.");
+        console.warn("[AUTH] CLINIC query failed", clinicError);
+        updateDiagnostic("clinic", "warning", msg);
+      } else if (!clinic) {
+        const description = "Conta encontrada, mas sem clínica vinculada. Contate o administrador.";
+        updateDiagnostic("clinic", "fail", description);
+        toast({ title: "Clínica não encontrada", description, variant: "destructive" });
+        await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+        clearAuthenticatedTab();
+        clearSupabaseAuthStorage();
+        try { clearReactQueryCache(queryClient, "login-clinic-not-found", { userId: data.user.id, clinicId }); } catch { /* ignore */ }
+        loginInFlightRef.current = false;
+        setIsLoading(false);
+        return;
+      } else {
+        updateDiagnostic("clinic", "success", `Clinic OK: ${clinic.name ?? clinic.id}`);
+      }
+
+      updateDiagnostic("role", "pending", "Buscando papéis do usuário");
+      const { data: rolesData, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("role, clinic_id, user_id")
+        .eq("user_id", data.user.id)
+        .eq("clinic_id", clinicId);
+      roles = rolesData ?? null;
+      if (import.meta.env.DEV) console.log("ROLES:", roles);
+      if (rolesError) {
+        const msg = getQueryErrorMessage(rolesError, "Role: falha ao consultar permissões; seguindo com sessão autenticada.");
+        console.warn("[AUTH] ROLES query failed", rolesError);
+        updateDiagnostic("role", "warning", msg);
+      } else if (!rolesData?.length) {
+        updateDiagnostic("role", "warning", "Role não encontrada; o app abrirá e mostrará o bloqueio de permissões se necessário.");
+      } else {
+        updateDiagnostic("role", "success", rolesData.map((item: any) => item.role).join(", "));
+      }
+    } else if (profileError) {
+      updateDiagnostic("clinic", "warning", "Clinic não validada porque a consulta de profile falhou.");
+      updateDiagnostic("role", "warning", "Role não validada porque a consulta de profile falhou.");
+    }
 
     // Aguarda a sessão estar persistida no storage antes de navegar
     // (evita race com o RequireAuth no destino).
@@ -216,10 +370,14 @@ const Login = () => {
     // useEffect acima cobre a navegação no novo mount.
     if (!navigatedRef.current) {
       navigatedRef.current = true;
-      const dest = await resolveRedirectPath(data.user.id, fromPath || "/app");
+      updateDiagnostic("redirect", "pending", "Redirecionando para o app");
+      const dest = await resolveRedirectPath(data.user.id, fromPath || "/app/dashboard");
+      updateDiagnostic("redirect", "success", dest);
+      loginInFlightRef.current = false;
       navigate(dest, { replace: true });
     }
 
+    loginInFlightRef.current = false;
     setIsLoading(false);
   };
 
@@ -308,6 +466,32 @@ const Login = () => {
               {isLoading ? "Entrando..." : "Entrar"}
             </Button>
           </form>
+
+          {import.meta.env.DEV && (
+            <div className="mt-4 rounded-md border border-border bg-card p-3 text-xs text-muted-foreground">
+              <div className="mb-2 font-medium text-foreground">Diagnóstico de login</div>
+              <div className="space-y-1">
+                {Object.entries(diagnostics).map(([key, item]) => (
+                  <div key={key} className="flex items-start justify-between gap-3">
+                    <span className="capitalize">{key}</span>
+                    <span
+                      className={
+                        item.status === "success"
+                          ? "text-primary"
+                          : item.status === "fail"
+                            ? "text-destructive"
+                            : item.status === "warning"
+                              ? "text-amber-600"
+                              : "text-muted-foreground"
+                      }
+                    >
+                      {item.status}: {item.message}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Signup Link */}
           <p className="mt-6 text-center text-muted-foreground">

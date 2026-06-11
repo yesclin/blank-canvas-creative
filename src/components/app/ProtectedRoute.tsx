@@ -8,7 +8,7 @@ import { ShieldX, UserX, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { withTimeout } from "@/lib/asyncTimeout";
 import { useAuthIdentity } from "@/hooks/useAuthIdentity";
-import { clearAuthenticatedTab } from "@/lib/authSessionIsolation";
+import { clearAuthenticatedTab, clearSupabaseAuthStorage } from "@/lib/authSessionIsolation";
 import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
 
 interface ProtectedRouteProps {
@@ -212,6 +212,7 @@ function InactiveUserPage() {
     const { markUserLogout } = await import("@/lib/authIntent");
     markUserLogout("inactive-account");
     clearAuthenticatedTab();
+    clearSupabaseAuthStorage();
     try { clearReactQueryCache(queryClient, "inactive-account-logout"); } catch { /* ignore */ }
     await supabase.auth.signOut();
     navigate("/login", { replace: true });
