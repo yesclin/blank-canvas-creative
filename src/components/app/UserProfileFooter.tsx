@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
 import { useCurrentViewRole } from "@/contexts/UserViewModeContext";
 import { RoleSwitcherDialog } from "./RoleSwitcherDialog";
 import { useQueryClient } from "@tanstack/react-query";
-import { clearAuthenticatedTab } from "@/lib/authSessionIsolation";
+import { clearAuthenticatedTab, clearSupabaseAuthStorage } from "@/lib/authSessionIsolation";
 import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
 
 type UserRole = "admin" | "owner" | "profissional" | "recepcionista";
