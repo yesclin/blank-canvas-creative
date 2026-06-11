@@ -50,6 +50,10 @@ export function AppLayout() {
   const previousClinicIdRef = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const w = window as typeof window & { __ycAppLayoutMountCount?: number };
+      w.__ycAppLayoutMountCount = (w.__ycAppLayoutMountCount ?? 0) + 1;
+    }
     if (!import.meta.env.DEV) return;
     console.log("APP LAYOUT MOUNT", { route: location.pathname });
     return () => console.warn("APP LAYOUT UNMOUNT", { route: window.location.pathname });
