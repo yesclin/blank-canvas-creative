@@ -13,6 +13,7 @@ import { clearAuthQuarantine, hasRecentAuthQuarantine, rememberAuthenticatedUser
 import { useQueryClient } from "@tanstack/react-query";
 import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
 import { withTimeout } from "@/lib/asyncTimeout";
+import { useAuthIdentity } from "@/hooks/useAuthIdentity";
 
 type AuthErrorLike = { message?: unknown; code?: unknown; status?: unknown; name?: unknown; cause?: unknown; stack?: unknown };
 type QueryResult<T> = { data: T | null; error: unknown };
@@ -175,6 +176,7 @@ const Login = () => {
   const location = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { userId: currentAuthUserId, isLoading: authIdentityLoading } = useAuthIdentity();
   const navigatedRef = useRef(false);
   const loginInFlightRef = useRef(false);
   const fromPath = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
@@ -193,23 +195,15 @@ const Login = () => {
     console.log("SUPABASE_KEY_REF:", keyRef || "não identificado");
   }, []);
 
-  /**
-   * Se o usuário já estiver autenticado ao montar /login (ou se o evento
-   * SIGNED_IN chegar depois do remount provocado pelo `AuthScopedProviders`),
-   * redireciona automaticamente para o destino correto. Esse efeito é o
-   * caminho oficial de navegação pós-login — sobrevive ao remount do
-   * ProviderShell que acontece quando a `scopeKey` muda.
-   */
   useEffect(() => {
     let mounted = true;
-
-    const goTo = async (userId: string, source: string) => {
+    const goTo = async (userId: string) => {
       if (hasRecentAuthQuarantine()) {
-        if (import.meta.env.DEV) console.warn("[AUTH] redirect ignorado: sessão em quarentena", { source, userId });
+        if (import.meta.env.DEV) console.warn("[AUTH] redirect ignorado: sessão em quarentena", { source: "AuthIdentityProvider", userId });
         return;
       }
       if (loginInFlightRef.current) {
-        if (import.meta.env.DEV) console.log("[AUTH] redirect aguardando validação pós-login", { source, userId });
+        if (import.meta.env.DEV) console.log("[AUTH] redirect aguardando validação pós-login", { source: "AuthIdentityProvider", userId });
         return;
       }
       if (navigatedRef.current) return;
@@ -217,31 +211,17 @@ const Login = () => {
       const dest = await resolveRedirectPath(userId, fromPath || "/app/dashboard");
       if (!mounted) return;
       if (import.meta.env.DEV) {
-        console.log("[AUTH] Login redirect", { source, dest, userId });
+        console.log("REDIRECT_TARGET", { source: "AuthIdentityProvider", dest, userId });
       }
       updateDiagnostic("redirect", "success", dest);
       navigate(dest, { replace: true });
     };
-
-    // 1) Sessão já existente ao abrir /login
-    supabase.auth.getSession().then(({ data }: { data?: { session?: AuthSessionLike } }) => {
-      const uid = data?.session?.user?.id;
-      if (uid && mounted) void goTo(uid, "getSession");
-    });
-
-    // 2) Evento posterior (SIGNED_IN, INITIAL_SESSION com sessão)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!mounted) return;
-      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user?.id) {
-        void goTo(session.user.id, event);
-      }
-    });
+    if (!authIdentityLoading && currentAuthUserId) void goTo(currentAuthUserId);
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
     };
-  }, [navigate, fromPath]);
+  }, [navigate, fromPath, currentAuthUserId, authIdentityLoading]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
