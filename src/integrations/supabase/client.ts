@@ -88,15 +88,58 @@ export function isYesclinScopedAuthStorageKey(key: string) {
   return key.startsWith(`yc.auth.${SUPABASE_PROJECT_REF}.`);
 }
 
+const BIND_KEY_PREFIX_FOR_PROJECT = `${TAB_BINDING_PREFIX}${SUPABASE_PROJECT_REF}.`;
+const SESSION_KEY_PREFIX_FOR_PROJECT = `yc.auth.${SUPABASE_PROJECT_REF}.`;
+
+/**
+ * Quando a aba nova não tem binding (ex.: iframe recriado, reload do preview,
+ * sessionStorage limpo), tentamos restaurar com segurança: se TODAS as
+ * identidades YesClin já conhecidas neste navegador apontam para o MESMO
+ * userId, é seguro adotá-lo. Se houver mais de uma identidade, retornamos null
+ * e o usuário cai em /login — não escolhemos entre contas.
+ */
+function resolveSoleStoredIdentity(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const ids = new Set<string>();
+    const scan = (store: Storage) => {
+      for (let i = 0; i < store.length; i++) {
+        const key = store.key(i);
+        if (!key) continue;
+        if (key.startsWith(BIND_KEY_PREFIX_FOR_PROJECT)) {
+          const value = store.getItem(key);
+          if (value) ids.add(value);
+        } else if (key.startsWith(SESSION_KEY_PREFIX_FOR_PROJECT)) {
+          const userId = extractSessionUserId(store.getItem(key));
+          if (userId) ids.add(userId);
+        }
+      }
+    };
+    scan(window.localStorage);
+    scan(window.sessionStorage);
+    if (ids.size === 1) return [...ids][0];
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function readTabBinding(): string | null {
   if (typeof window === 'undefined') return null;
   try {
     // Prioriza sessionStorage (vivo durante a sessão da aba); cai para
     // localStorage com a mesma chave de aba (persistente entre reloads/iframe).
-    return (
+    const direct =
       window.sessionStorage.getItem(CURRENT_TAB_BINDING_KEY) ||
-      window.localStorage.getItem(CURRENT_TAB_BINDING_KEY)
-    );
+      window.localStorage.getItem(CURRENT_TAB_BINDING_KEY);
+    if (direct) return direct;
+    // Fallback seguro: única identidade conhecida no navegador.
+    const sole = resolveSoleStoredIdentity();
+    if (sole) {
+      writeTabBinding(sole);
+      return sole;
+    }
+    return null;
   } catch {
     return null;
   }
