@@ -166,6 +166,33 @@ function clearTabBinding() {
 }
 
 /**
+ * Remove TODOS os bindings e sessões YesClin órfãos deste projeto em ambos
+ * os storages. Usado em logout/quarentena para impedir que backups antigos
+ * "ressuscitem" via resolveSoleStoredIdentity em uma aba futura.
+ */
+export function purgeAllProjectAuthStorage() {
+  if (typeof window === 'undefined') return;
+  try {
+    for (const store of [window.localStorage, window.sessionStorage]) {
+      const toRemove: string[] = [];
+      for (let i = 0; i < store.length; i++) {
+        const key = store.key(i);
+        if (!key) continue;
+        if (
+          key.startsWith(BIND_KEY_PREFIX_FOR_PROJECT) ||
+          key.startsWith(SESSION_KEY_PREFIX_FOR_PROJECT)
+        ) {
+          toRemove.push(key);
+        }
+      }
+      toRemove.forEach((key) => store.removeItem(key));
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
  * Adapter de storage do Supabase com isolamento estrito por aba.
  *
  * REGRAS DE SEGURANÇA (não relaxar):
