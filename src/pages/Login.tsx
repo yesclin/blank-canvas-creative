@@ -23,25 +23,6 @@ type ProfileRow = { clinic_id: string | null; user_id: string | null; full_name:
 type ClinicRow = { id: string; name: string | null };
 type RoleRow = { role: string; clinic_id: string | null; user_id: string | null };
 type AuthFailureKind = "NONE" | "ENV_MISSING" | "NETWORK_ERROR" | "CORS_ERROR" | "AUTH_ERROR" | "POST_LOGIN_ERROR";
-type SupabaseHealthDiagnostic = {
-  kind: AuthFailureKind;
-  ok: boolean;
-  message: string;
-  status?: number;
-};
-type DevAuthDiagnosticState = {
-  supabaseUrlPresent: boolean;
-  anonKeyPresent: boolean;
-  publishableKeyPresent: boolean;
-  currentHost: string;
-  projectRef: string;
-  keyRef: string;
-  refMatch: boolean | null;
-  getSessionResult: string;
-  healthResult: string;
-  lastFailureKind: AuthFailureKind;
-  lastFailureMessage: string;
-};
 
 function errorField(error: unknown, field: keyof AuthErrorLike): unknown {
   return typeof error === "object" && error !== null ? (error as AuthErrorLike)[field] : undefined;
@@ -51,6 +32,11 @@ const LOGIN_SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || "").trim();
 const LOGIN_SUPABASE_ANON_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY || "").trim();
 const LOGIN_SUPABASE_PUBLISHABLE_KEY = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "").trim();
 const LOGIN_SUPABASE_AUTH_KEY = LOGIN_SUPABASE_ANON_KEY || LOGIN_SUPABASE_PUBLISHABLE_KEY;
+
+function isLocalDevelopmentHost(): boolean {
+  if (import.meta.env.DEV !== true || typeof window === "undefined") return false;
+  return ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+}
 
 function getProjectRefFromUrl(url: string): string {
   try {
@@ -74,25 +60,6 @@ function decodeJwtRef(token: string): string {
 
 const LOGIN_SUPABASE_PROJECT_REF = getProjectRefFromUrl(LOGIN_SUPABASE_URL);
 
-function buildDevAuthDiagnosticState(overrides: Partial<DevAuthDiagnosticState> = {}): DevAuthDiagnosticState {
-  const keyRef = typeof window === "undefined" || !LOGIN_SUPABASE_AUTH_KEY ? "" : decodeJwtRef(LOGIN_SUPABASE_AUTH_KEY);
-  const refMatch = LOGIN_SUPABASE_PROJECT_REF && keyRef ? LOGIN_SUPABASE_PROJECT_REF === keyRef : null;
-  return {
-    supabaseUrlPresent: Boolean(LOGIN_SUPABASE_URL),
-    anonKeyPresent: Boolean(LOGIN_SUPABASE_ANON_KEY),
-    publishableKeyPresent: Boolean(LOGIN_SUPABASE_PUBLISHABLE_KEY),
-    currentHost: typeof window === "undefined" ? "server" : window.location.origin,
-    projectRef: LOGIN_SUPABASE_PROJECT_REF || "não identificado",
-    keyRef: keyRef || "não identificado",
-    refMatch,
-    getSessionResult: "não testado",
-    healthResult: "não testado",
-    lastFailureKind: "NONE",
-    lastFailureMessage: "",
-    ...overrides,
-  };
-}
-
 function hasSupabaseEnvProblem(): string | null {
   if (!LOGIN_SUPABASE_URL) return "VITE_SUPABASE_URL ausente.";
   if (!LOGIN_SUPABASE_AUTH_KEY) return "VITE_SUPABASE_ANON_KEY ausente.";
@@ -101,54 +68,6 @@ function hasSupabaseEnvProblem(): string | null {
     return `Anon key pertence ao projeto ${keyRef}, mas a URL aponta para ${LOGIN_SUPABASE_PROJECT_REF}.`;
   }
   return null;
-}
-
-const HEALTH_TIMEOUT_MS = 15000;
-const SIGN_IN_TIMEOUT_MS = 30000;
-
-async function fetchSupabaseAuthHealth(): Promise<SupabaseHealthDiagnostic> {
-  const envProblem = hasSupabaseEnvProblem();
-  if (envProblem) return { kind: "ENV_MISSING", ok: false, message: envProblem };
-
-  const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
-  const healthUrl = `${LOGIN_SUPABASE_URL.replace(/\/$/, "")}/auth/v1/health`;
-  const startedAt = performance.now();
-  try {
-    // IMPORTANTE: GoTrue health aceita apenas o header `apikey`. Mandar
-    // `Authorization: Bearer <anon>` junto faz alguns deploys responderem
-    // 401 "No API key found" ou travarem. Mantemos somente `apikey`.
-    const response = await fetch(healthUrl, {
-      method: "GET",
-      headers: { apikey: LOGIN_SUPABASE_AUTH_KEY },
-      signal: controller.signal,
-      cache: "no-store",
-    });
-    const elapsed = Math.round(performance.now() - startedAt);
-    const body = await response.text().catch(() => "");
-    const suffix = body ? ` — ${body.slice(0, 160)}` : "";
-    console.info("[AUTH_HEALTH] response", { status: response.status, elapsedMs: elapsed, ok: response.ok });
-    return {
-      kind: response.ok ? "NONE" : response.status === 401 ? "AUTH_ERROR" : "NETWORK_ERROR",
-      ok: response.ok,
-      status: response.status,
-      message: `HTTP ${response.status} em ${elapsed}ms${suffix}`,
-    };
-  } catch (error) {
-    const elapsed = Math.round(performance.now() - startedAt);
-    const message = String(errorField(error, "message") || error);
-    const name = String(errorField(error, "name") || "");
-    console.error("[AUTH_HEALTH] falhou", { name, message, elapsedMs: elapsed });
-    if (name === "AbortError") {
-      return { kind: "NETWORK_ERROR", ok: false, message: `timeout: Supabase Auth não respondeu em ${HEALTH_TIMEOUT_MS / 1000}s` };
-    }
-    if (/cors|cross-origin|access-control/i.test(message)) {
-      return { kind: "CORS_ERROR", ok: false, message: `CORS_ERROR: ${message}` };
-    }
-    return { kind: "NETWORK_ERROR", ok: false, message: `NETWORK_ERROR: ${message || "sem resposta do Supabase"}` };
-  } finally {
-    window.clearTimeout(timeoutId);
-  }
 }
 
 /**
