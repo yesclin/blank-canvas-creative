@@ -20,9 +20,6 @@ type QueryResult<T> = { data: T | null; error: unknown };
 type AuthUserLike = { id: string; email?: string | null };
 type AuthSessionLike = { user?: AuthUserLike | null } | null;
 type AuthSignInResult = { data: { session: AuthSessionLike; user: AuthUserLike | null }; error: unknown };
-type ProfileRow = { clinic_id: string | null; user_id: string | null; full_name: string | null; is_active: boolean | null };
-type ClinicRow = { id: string; name: string | null };
-type RoleRow = { role: string; clinic_id: string | null; user_id: string | null };
 type AuthFailureKind = "NONE" | "ENV_MISSING" | "NETWORK_ERROR" | "CORS_ERROR" | "AUTH_ERROR" | "POST_LOGIN_ERROR";
 
 function errorField(error: unknown, field: keyof AuthErrorLike): unknown {
@@ -95,7 +92,6 @@ async function resolveRedirectPath(userId: string, fallback: string): Promise<st
 type DiagnosticStepKey = "auth" | "profile" | "clinic" | "role" | "redirect";
 type DiagnosticStatus = "idle" | "pending" | "success" | "fail" | "warning";
 
-const POST_AUTH_QUERY_TIMEOUT_MS = 6000;
 function getAuthErrorMessage(error: unknown): string {
   const message = errorField(error, "message");
   const rawMsg = typeof message === "string" && message !== "{}" ? message : "";
@@ -161,12 +157,6 @@ function classifyAuthFailure(error: unknown): AuthFailureKind {
   return "AUTH_ERROR";
 }
 
-function getQueryErrorMessage(error: unknown, fallback: string): string {
-  const message = errorField(error, "message");
-  const rawMsg = typeof message === "string" && message !== "{}" ? message : "";
-  return rawMsg || fallback;
-}
-
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -211,7 +201,7 @@ const Login = () => {
       const dest = await resolveRedirectPath(userId, fromPath || "/app/dashboard");
       if (!mounted) return;
       if (import.meta.env.DEV) {
-        console.log("REDIRECT_TARGET", { source: "AuthIdentityProvider", dest, userId });
+        console.log("REDIRECT_DECISION", { source: "AuthIdentityProvider", dest, userId, reason: "existing-session" });
       }
       updateDiagnostic("redirect", "success", dest);
       navigate(dest, { replace: true });
