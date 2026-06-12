@@ -100,15 +100,17 @@ function getAuthErrorMessage(error: unknown): string {
   }
   if (
     name === "AuthRetryableFetchError" ||
+    name === "TimeoutError" ||
     status === 0 ||
     status === 502 ||
     status === 503 ||
     status === 504 ||
     msgLower.includes("failed to fetch") ||
     msgLower.includes("network") ||
-    msgLower.includes("timeout")
+    msgLower.includes("timeout") ||
+    msgLower.includes("upstream")
   ) {
-    return "Auth: falha de conexão com o Supabase. Tente novamente em instantes.";
+    return "Não foi possível conectar ao servidor. Verifique internet ou configuração do Supabase.";
   }
   return rawMsg || "Auth: erro inesperado ao entrar. Tente novamente.";
 }
@@ -207,12 +209,10 @@ const Login = () => {
     setIsLoading(true);
     loginInFlightRef.current = true;
     setDiagnostics(createDiagnosticState());
-    // Antes de iniciar novo login, garante que a aba não carrega resíduo de
-    // sessão antiga (chave Supabase + binding de identidade).
-    clearAuthenticatedTab();
-    clearSupabaseAuthStorage();
+    // Apenas limpa a quarentena anterior — NÃO apagamos sessão/binding antes
+    // de tentar autenticar: se a chamada falhar por rede/timeout/CORS, o
+    // usuário não deve perder a sessão atual.
     clearAuthQuarantine();
-    try { clearReactQueryCache(queryClient, "login-before", { email: cleanEmail }); } catch { /* ignore */ }
     updateDiagnostic("auth", "pending", "Autenticando no Supabase");
 
     let data: AuthSignInResult["data"] | null = null;
@@ -235,9 +235,18 @@ const Login = () => {
     if (error) {
       loginInFlightRef.current = false;
       setIsLoading(false);
-      if (import.meta.env.DEV) {
-        console.error("Login error:", error);
-      }
+      const name = String(errorField(error, "name") || "");
+      const status = Number(errorField(error, "status") ?? 0);
+      const msg = String(errorField(error, "message") || "");
+      const isNetwork =
+        name === "AuthRetryableFetchError" ||
+        name === "TimeoutError" ||
+        status === 0 || status === 502 || status === 503 || status === 504 ||
+        /failed to fetch|network|timeout|upstream/i.test(msg);
+      console.error("[AUTH] login falhou", {
+        kind: isNetwork ? "network_or_auth_unavailable" : "auth_error",
+        name, status, message: msg,
+      });
       const description = getAuthErrorMessage(error);
       updateDiagnostic("auth", "fail", description);
 
