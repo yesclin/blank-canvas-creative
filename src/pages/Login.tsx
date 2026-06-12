@@ -237,6 +237,19 @@ function getAuthErrorMessage(error: unknown): string {
   return rawMsg || "Auth: erro inesperado ao entrar. Tente novamente.";
 }
 
+function classifyAuthFailure(error: unknown, health?: SupabaseHealthDiagnostic): AuthFailureKind {
+  const envProblem = hasSupabaseEnvProblem();
+  if (envProblem) return "ENV_MISSING";
+  const name = String(errorField(error, "name") || "");
+  const status = Number(errorField(error, "status") ?? 0);
+  const msg = String(errorField(error, "message") || "").toLowerCase();
+  if (health && !health.ok && health.kind !== "NONE") return health.kind;
+  if (name === "AuthRetryableFetchError" || name === "TimeoutError" || status === 0 || status === 502 || status === 503 || status === 504) return "NETWORK_ERROR";
+  if (/failed to fetch|network|timeout|upstream|abort/i.test(msg)) return "NETWORK_ERROR";
+  if (/cors|cross-origin|access-control/i.test(msg)) return "CORS_ERROR";
+  return "AUTH_ERROR";
+}
+
 function getQueryErrorMessage(error: unknown, fallback: string): string {
   const message = errorField(error, "message");
   const rawMsg = typeof message === "string" && message !== "{}" ? message : "";
@@ -249,6 +262,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [diagnostics, setDiagnostics] = useState<DiagnosticState>(() => createDiagnosticState());
+  const [devAuthDiagnostic, setDevAuthDiagnostic] = useState<DevAuthDiagnosticState>(() => buildDevAuthDiagnosticState());
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -260,6 +274,57 @@ const Login = () => {
   const updateDiagnostic = (key: DiagnosticStepKey, status: DiagnosticStatus, message: string) => {
     if (!import.meta.env.DEV) return;
     setDiagnostics((current) => ({ ...current, [key]: { status, message } }));
+  };
+
+  const runDevAuthDiagnostics = async (source: string) => {
+    const base = buildDevAuthDiagnosticState({ getSessionResult: "testando...", healthResult: "testando..." });
+    if (import.meta.env.DEV) {
+      setDevAuthDiagnostic(base);
+      console.log("SUPABASE_URL:", import.meta.env.VITE_SUPABASE_URL);
+      console.log("HAS_ANON_KEY:", !!import.meta.env.VITE_SUPABASE_ANON_KEY);
+      console.log("HAS_PUBLISHABLE_KEY:", !!import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
+      console.log("CURRENT_HOST:", window.location.origin);
+      console.log("SUPABASE_PROJECT_REF:", base.projectRef);
+      console.log("SUPABASE_KEY_REF:", base.keyRef);
+    }
+
+    let getSessionResult = "não executado";
+    try {
+      const sessionCheck = await withTimeout(
+        supabase.auth.getSession() as PromiseLike<{ data?: { session?: AuthSessionLike }; error?: unknown }>,
+        5000,
+        "Auth: tempo esgotado ao testar getSession antes do login.",
+      );
+      if (sessionCheck.error) throw sessionCheck.error;
+      getSessionResult = `OK — sessão: ${sessionCheck.data?.session ? "sim" : "não"}`;
+      console.log("Supabase getSession diagnostic:", {
+        source,
+        hasSession: !!sessionCheck.data?.session,
+        userId: sessionCheck.data?.session?.user?.id ?? null,
+      });
+    } catch (sessionError) {
+      getSessionResult = `FALHA — ${String(errorField(sessionError, "message") || sessionError)}`;
+      console.error("Supabase getSession diagnostic failed:", {
+        source,
+        message: errorField(sessionError, "message"),
+        name: errorField(sessionError, "name"),
+        status: errorField(sessionError, "status"),
+        cause: errorField(sessionError, "cause"),
+        stack: errorField(sessionError, "stack"),
+      });
+    }
+
+    const health = await fetchSupabaseAuthHealth();
+    const healthResult = `${health.ok ? "OK" : "FALHA"} — ${health.message}`;
+    console.log("Supabase auth health diagnostic:", { source, ...health });
+    const next = buildDevAuthDiagnosticState({
+      getSessionResult,
+      healthResult,
+      lastFailureKind: health.ok ? "NONE" : health.kind,
+      lastFailureMessage: health.ok ? "" : health.message,
+    });
+    if (import.meta.env.DEV) setDevAuthDiagnostic(next);
+    return { state: next, health };
   };
 
   /**
