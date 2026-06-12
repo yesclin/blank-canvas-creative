@@ -88,15 +88,58 @@ export function isYesclinScopedAuthStorageKey(key: string) {
   return key.startsWith(`yc.auth.${SUPABASE_PROJECT_REF}.`);
 }
 
+const BIND_KEY_PREFIX_FOR_PROJECT = `${TAB_BINDING_PREFIX}${SUPABASE_PROJECT_REF}.`;
+const SESSION_KEY_PREFIX_FOR_PROJECT = `yc.auth.${SUPABASE_PROJECT_REF}.`;
+
+/**
+ * Quando a aba nova não tem binding (ex.: iframe recriado, reload do preview,
+ * sessionStorage limpo), tentamos restaurar com segurança: se TODAS as
+ * identidades YesClin já conhecidas neste navegador apontam para o MESMO
+ * userId, é seguro adotá-lo. Se houver mais de uma identidade, retornamos null
+ * e o usuário cai em /login — não escolhemos entre contas.
+ */
+function resolveSoleStoredIdentity(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const ids = new Set<string>();
+    const scan = (store: Storage) => {
+      for (let i = 0; i < store.length; i++) {
+        const key = store.key(i);
+        if (!key) continue;
+        if (key.startsWith(BIND_KEY_PREFIX_FOR_PROJECT)) {
+          const value = store.getItem(key);
+          if (value) ids.add(value);
+        } else if (key.startsWith(SESSION_KEY_PREFIX_FOR_PROJECT)) {
+          const userId = extractSessionUserId(store.getItem(key));
+          if (userId) ids.add(userId);
+        }
+      }
+    };
+    scan(window.localStorage);
+    scan(window.sessionStorage);
+    if (ids.size === 1) return [...ids][0];
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function readTabBinding(): string | null {
   if (typeof window === 'undefined') return null;
   try {
     // Prioriza sessionStorage (vivo durante a sessão da aba); cai para
     // localStorage com a mesma chave de aba (persistente entre reloads/iframe).
-    return (
+    const direct =
       window.sessionStorage.getItem(CURRENT_TAB_BINDING_KEY) ||
-      window.localStorage.getItem(CURRENT_TAB_BINDING_KEY)
-    );
+      window.localStorage.getItem(CURRENT_TAB_BINDING_KEY);
+    if (direct) return direct;
+    // Fallback seguro: única identidade conhecida no navegador.
+    const sole = resolveSoleStoredIdentity();
+    if (sole) {
+      writeTabBinding(sole);
+      return sole;
+    }
+    return null;
   } catch {
     return null;
   }
@@ -123,14 +166,43 @@ function clearTabBinding() {
 }
 
 /**
+ * Remove TODOS os bindings e sessões YesClin órfãos deste projeto em ambos
+ * os storages. Usado em logout/quarentena para impedir que backups antigos
+ * "ressuscitem" via resolveSoleStoredIdentity em uma aba futura.
+ */
+export function purgeAllProjectAuthStorage() {
+  if (typeof window === 'undefined') return;
+  try {
+    for (const store of [window.localStorage, window.sessionStorage]) {
+      const toRemove: string[] = [];
+      for (let i = 0; i < store.length; i++) {
+        const key = store.key(i);
+        if (!key) continue;
+        if (
+          key.startsWith(BIND_KEY_PREFIX_FOR_PROJECT) ||
+          key.startsWith(SESSION_KEY_PREFIX_FOR_PROJECT)
+        ) {
+          toRemove.push(key);
+        }
+      }
+      toRemove.forEach((key) => store.removeItem(key));
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
  * Adapter de storage do Supabase com isolamento estrito por aba.
  *
  * REGRAS DE SEGURANÇA (não relaxar):
  *  - Backup em localStorage SÓ pode hidratar a sessão se o userId do token
  *    bater com o binding persistente da aba. Sem binding ou divergente:
  *    descartamos silenciosamente — a pessoa cai no /login.
- *  - NUNCA escolhemos "a única sessão YesClin disponível" no navegador como
- *    fallback — esse comportamento foi a causa raiz da troca de usuário.
+ *  - Quando a aba nova não tem binding (iframe recriado, reload do preview),
+ *    aceitamos restaurar APENAS se houver uma única identidade YesClin
+ *    conhecida no navegador (resolveSoleStoredIdentity). Havendo duas ou
+ *    mais contas armazenadas, NUNCA escolhemos por o usuário.
  *  - setItem grava binding do userId autenticado ao mesmo tempo que a sessão.
  *  - removeItem limpa sessão + binding da aba atual.
  */
