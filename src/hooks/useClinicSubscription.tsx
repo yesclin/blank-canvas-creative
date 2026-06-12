@@ -4,15 +4,13 @@
  * Estado da assinatura da clínica ativa: status, ciclo, plano, trial.
  * - Roda `expire_overdue_trials()` no login (idempotente).
  * - Expõe `canMutate` (false quando overdue/canceled/blocked).
- * - Reativo a auth + modo suporte.
+ * - Reativo a auth + modo suporte via `useActiveClinicScope`.
  */
-import { useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { differenceInCalendarDays, parseISO, startOfDay } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { withTimeout } from '@/lib/asyncTimeout';
-import { logAuthDiagnostic } from '@/lib/authDiagnostics';
-import { useAuthIdentity } from '@/hooks/useAuthIdentity';
+import { useActiveClinicScope } from '@/hooks/useActiveClinicScope';
 
 export type SubscriptionStatus =
   | 'trial'
@@ -33,45 +31,7 @@ export interface ClinicSubscriptionData {
   canMutate: boolean;
 }
 
-type ClinicScope = { userId: string | null; clinicId: string | null };
-
-async function resolveClinicScope(expectedUserId: string): Promise<ClinicScope> {
-  const { data: auth } = await withTimeout<any>(supabase.auth.getUser(), 10000, 'Tempo esgotado ao carregar sessão.');
-  const userId = auth?.user?.id;
-  if (!userId || userId !== expectedUserId) return { userId: null, clinicId: null };
-
-  try {
-    const supportClinicId =
-      typeof window !== 'undefined'
-        ? window.sessionStorage.getItem('yesclin_support_clinic_id')
-        : null;
-    const supportAdminUserId =
-      typeof window !== 'undefined'
-        ? window.sessionStorage.getItem('yesclin_support_admin_user_id')
-        : null;
-    if (supportClinicId && supportAdminUserId === userId) {
-      const { data: isAdmin } = await withTimeout<any>(
-        supabase.rpc('is_platform_admin', { _user_id: userId }),
-        10000,
-        'Tempo esgotado ao validar suporte.'
-      );
-      if (isAdmin === true) return { userId, clinicId: supportClinicId };
-    }
-  } catch {
-    /* noop */
-  }
-
-  const { data: profile } = await withTimeout<any>(supabase
-    .from('profiles')
-    .select('clinic_id, user_id')
-    .eq('user_id', userId)
-    .maybeSingle(), 10000, 'Tempo esgotado ao carregar perfil.');
-  const clinicId = profile?.user_id === userId ? profile?.clinic_id ?? null : null;
-  logAuthDiagnostic('clinic-subscription-scope', { authUid: userId, profileUserId: profile?.user_id ?? null, activeClinicId: clinicId });
-  return { userId, clinicId };
-}
-
-async function fetchSubscription(scope: ClinicScope | null | undefined): Promise<ClinicSubscriptionData> {
+async function fetchSubscription(clinicId: string | null): Promise<ClinicSubscriptionData> {
   const empty: ClinicSubscriptionData = {
     clinic_id: null,
     status: null,
@@ -91,7 +51,6 @@ async function fetchSubscription(scope: ClinicScope | null | undefined): Promise
     /* noop */
   }
 
-  const clinicId = scope?.clinicId ?? null;
   if (!clinicId) return empty;
 
   const { data, error } = await withTimeout<any>(supabase
@@ -103,9 +62,6 @@ async function fetchSubscription(scope: ClinicScope | null | undefined): Promise
   if (error || !data) return { ...empty, clinic_id: clinicId };
 
   const status = data.status as SubscriptionStatus;
-  // Dias restantes em dias-de-calendário locais.
-  // Usamos startOfDay para que o resultado NÃO dependa da hora atual:
-  // só muda quando o relógio cruza a meia-noite local.
   const refIso =
     status === 'trial' && data.trial_ends_at
       ? data.trial_ends_at
@@ -133,56 +89,22 @@ async function fetchSubscription(scope: ClinicScope | null | undefined): Promise
 }
 
 export function useClinicSubscription() {
-  const queryClient = useQueryClient();
-  const { userId: authUserId, isLoading: authIdentityLoading } = useAuthIdentity();
-
-  const { data: scope } = useQuery({
-    queryKey: ['clinic-subscription-scope', authUserId],
-    queryFn: () => resolveClinicScope(authUserId!),
-    enabled: !authIdentityLoading && !!authUserId,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    retry: 1,
-    throwOnError: false,
-  });
+  const { scope, isLoading: scopeLoading } = useActiveClinicScope();
+  const clinicId = scope.clinicId;
+  const userId = scope.userId;
 
   const query = useQuery({
-    queryKey: ['clinic-subscription', scope?.userId ?? null, scope?.clinicId ?? null],
-    queryFn: () => fetchSubscription(scope),
-    enabled: !!scope?.userId,
+    queryKey: ['clinic-subscription', userId, clinicId],
+    queryFn: () => fetchSubscription(clinicId),
+    enabled: !scopeLoading && !!userId,
     staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
+    refetchOnMount: false,
     retry: 1,
     throwOnError: false,
   });
-
-  useEffect(() => {
-    const invalidate = () => {
-      queryClient.invalidateQueries({ queryKey: ['clinic-subscription-scope'] });
-      queryClient.invalidateQueries({ queryKey: ['clinic-subscription'] });
-    };
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      // TOKEN_REFRESHED / INITIAL_SESSION não trocam clínica — ignorar para
-      // evitar refetch em background da assinatura enquanto o usuário usa o app.
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-        if (import.meta.env.DEV) console.log('[CLINIC_SUBSCRIPTION] invalidando por auth', { event });
-        setTimeout(() => invalidate(), 0);
-      }
-    });
-    const onSupport = () => invalidate();
-    if (typeof window !== 'undefined') {
-      window.addEventListener('yesclin:support-session-changed', onSupport);
-    }
-    return () => {
-      sub.subscription.unsubscribe();
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('yesclin:support-session-changed', onSupport);
-      }
-    };
-  }, [queryClient]);
 
   return {
     ...(query.data ?? ({
@@ -196,7 +118,7 @@ export function useClinicSubscription() {
       days_remaining: null,
       canMutate: true,
     } satisfies ClinicSubscriptionData)),
-    loading: authIdentityLoading || query.isLoading,
+    loading: scopeLoading || (query.isLoading && !query.data),
     refetch: () => void query.refetch(),
   };
 }
