@@ -3,13 +3,13 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { clearTabIdentity, supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import logoFull from "@/assets/logo-full.png";
 import logoIcon from "@/assets/logo-icon.png";
 import { motion } from "framer-motion";
-import { clearAuthQuarantine, hasRecentAuthQuarantine, rememberAuthenticatedUser } from "@/lib/authSessionIsolation";
+import { clearAuthQuarantine, hasRecentAuthQuarantine, rememberAuthenticatedUser, setTabExpectedUserId } from "@/lib/authSessionIsolation";
 import { useQueryClient } from "@tanstack/react-query";
 import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
 import { withTimeout } from "@/lib/asyncTimeout";
@@ -95,8 +95,6 @@ type DiagnosticStepKey = "auth" | "profile" | "clinic" | "role" | "redirect";
 type DiagnosticStatus = "idle" | "pending" | "success" | "fail" | "warning";
 
 const POST_AUTH_QUERY_TIMEOUT_MS = 6000;
-const AUTH_REQUEST_FEEDBACK_TIMEOUT_MS = 45000;
-
 function getAuthErrorMessage(error: unknown): string {
   const message = errorField(error, "message");
   const rawMsg = typeof message === "string" && message !== "{}" ? message : "";
@@ -267,6 +265,11 @@ const Login = () => {
     // de tentar autenticar: se a chamada falhar por rede/timeout/CORS, o
     // usuário não deve perder a sessão atual.
     clearAuthQuarantine();
+    // Fluxo explícito de login: remove binding local antigo antes do Supabase
+    // persistir a nova sessão. Sem isso, uma sessão válida pode ser rejeitada
+    // pelo storage isolado por aba e o RequireAuth volta para /login.
+    setTabExpectedUserId(null);
+    clearTabIdentity();
     updateDiagnostic("auth", "pending", "Autenticando no Supabase");
 
     const envProblem = hasSupabaseEnvProblem();
@@ -283,19 +286,28 @@ const Login = () => {
     let error: unknown = null;
     try {
       const signInStartedAt = performance.now();
-      const signInPromise = supabase.auth.signInWithPassword({
+      if (import.meta.env.DEV) {
+        console.log("LOGIN_START", {
+          email: cleanEmail,
+          supabaseUrl: LOGIN_SUPABASE_URL,
+          urlProjectRef: LOGIN_SUPABASE_PROJECT_REF,
+          keyProjectRef: LOGIN_SUPABASE_AUTH_KEY ? decodeJwtRef(LOGIN_SUPABASE_AUTH_KEY) : "",
+        });
+      }
+      const res = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password: cleanPassword,
-      }) as PromiseLike<AuthSignInResult>;
-      let feedbackTimeoutId: number | undefined;
-      const feedbackTimeout = new Promise<never>((_, reject) => {
-        feedbackTimeoutId = window.setTimeout(() => reject(new Error("AUTH_REQUEST_STILL_PENDING")), AUTH_REQUEST_FEEDBACK_TIMEOUT_MS);
-      });
-      const res = await Promise.race([signInPromise, feedbackTimeout]).finally(() => {
-        if (feedbackTimeoutId) window.clearTimeout(feedbackTimeoutId);
-      });
-      if (isLocalDevelopmentHost()) {
-        console.info("[AUTH] signInWithPassword respondeu", { elapsedMs: Math.round(performance.now() - signInStartedAt), hasSession: !!res.data?.session, hasError: !!res.error });
+      }) as AuthSignInResult;
+      if (import.meta.env.DEV) {
+        console.info("LOGIN_SUCCESS", {
+          elapsedMs: Math.round(performance.now() - signInStartedAt),
+          email: cleanEmail,
+          status: errorField(res.error, "status") ?? null,
+          error: res.error ?? null,
+          hasSession: !!res.data?.session,
+          hasUser: !!res.data?.user,
+          userId: res.data?.user?.id ?? null,
+        });
       }
       data = res.data;
       error = res.error;
@@ -310,21 +322,19 @@ const Login = () => {
       const status = Number(errorField(error, "status") ?? 0);
       const msg = String(errorField(error, "message") || "");
       const failureKind = classifyAuthFailure(error);
-      const isStillPending = msg === "AUTH_REQUEST_STILL_PENDING";
       if (import.meta.env.DEV) {
-        console.error("Supabase connection diagnostic:", {
+        console.error("LOGIN_ERROR", {
           failureKind,
+          email: cleanEmail,
           message: errorField(error, "message"),
           name: errorField(error, "name"),
           status: errorField(error, "status"),
           cause: errorField(error, "cause"),
           stack: errorField(error, "stack"),
         });
-        console.error("[AUTH] login falhou", { kind: failureKind, name, status, message: msg, stillPending: isStillPending });
+        console.error("[AUTH] login falhou", { kind: failureKind, name, status, message: msg });
       }
-      const baseDescription = isStillPending
-        ? "Não foi possível conectar ao servidor de autenticação. Tente novamente em instantes."
-        : getAuthErrorMessage(error);
+      const baseDescription = getAuthErrorMessage(error);
       updateDiagnostic("auth", "fail", `${failureKind}: ${baseDescription}`);
 
       toast({
