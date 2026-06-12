@@ -2,11 +2,11 @@
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || '').trim();
-// Aceita tanto VITE_SUPABASE_PUBLISHABLE_KEY quanto VITE_SUPABASE_ANON_KEY
-// (Lovable popula a primeira; projetos antigos podem ter a segunda).
+// Usa a variável padrão pedida pelo app; mantém fallback para projetos Lovable
+// que ainda expõem a mesma anon key como VITE_SUPABASE_PUBLISHABLE_KEY.
 const SUPABASE_PUBLISHABLE_KEY = (
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
   import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
   ''
 ).trim();
 
