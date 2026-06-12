@@ -287,10 +287,13 @@ const Login = () => {
         email: cleanEmail,
         password: cleanPassword,
       }) as PromiseLike<AuthSignInResult>;
+      let feedbackTimeoutId: number | undefined;
       const feedbackTimeout = new Promise<never>((_, reject) => {
-        window.setTimeout(() => reject(new Error("AUTH_REQUEST_STILL_PENDING")), AUTH_REQUEST_FEEDBACK_TIMEOUT_MS);
+        feedbackTimeoutId = window.setTimeout(() => reject(new Error("AUTH_REQUEST_STILL_PENDING")), AUTH_REQUEST_FEEDBACK_TIMEOUT_MS);
       });
-      const res = await Promise.race([signInPromise, feedbackTimeout]);
+      const res = await Promise.race([signInPromise, feedbackTimeout]).finally(() => {
+        if (feedbackTimeoutId) window.clearTimeout(feedbackTimeoutId);
+      });
       if (isLocalDevelopmentHost()) {
         console.info("[AUTH] signInWithPassword respondeu", { elapsedMs: Math.round(performance.now() - signInStartedAt), hasSession: !!res.data?.session, hasError: !!res.error });
       }
