@@ -23,25 +23,6 @@ type ProfileRow = { clinic_id: string | null; user_id: string | null; full_name:
 type ClinicRow = { id: string; name: string | null };
 type RoleRow = { role: string; clinic_id: string | null; user_id: string | null };
 type AuthFailureKind = "NONE" | "ENV_MISSING" | "NETWORK_ERROR" | "CORS_ERROR" | "AUTH_ERROR" | "POST_LOGIN_ERROR";
-type SupabaseHealthDiagnostic = {
-  kind: AuthFailureKind;
-  ok: boolean;
-  message: string;
-  status?: number;
-};
-type DevAuthDiagnosticState = {
-  supabaseUrlPresent: boolean;
-  anonKeyPresent: boolean;
-  publishableKeyPresent: boolean;
-  currentHost: string;
-  projectRef: string;
-  keyRef: string;
-  refMatch: boolean | null;
-  getSessionResult: string;
-  healthResult: string;
-  lastFailureKind: AuthFailureKind;
-  lastFailureMessage: string;
-};
 
 function errorField(error: unknown, field: keyof AuthErrorLike): unknown {
   return typeof error === "object" && error !== null ? (error as AuthErrorLike)[field] : undefined;
@@ -51,6 +32,11 @@ const LOGIN_SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || "").trim();
 const LOGIN_SUPABASE_ANON_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY || "").trim();
 const LOGIN_SUPABASE_PUBLISHABLE_KEY = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "").trim();
 const LOGIN_SUPABASE_AUTH_KEY = LOGIN_SUPABASE_ANON_KEY || LOGIN_SUPABASE_PUBLISHABLE_KEY;
+
+function isLocalDevelopmentHost(): boolean {
+  if (import.meta.env.DEV !== true || typeof window === "undefined") return false;
+  return ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+}
 
 function getProjectRefFromUrl(url: string): string {
   try {
@@ -74,25 +60,6 @@ function decodeJwtRef(token: string): string {
 
 const LOGIN_SUPABASE_PROJECT_REF = getProjectRefFromUrl(LOGIN_SUPABASE_URL);
 
-function buildDevAuthDiagnosticState(overrides: Partial<DevAuthDiagnosticState> = {}): DevAuthDiagnosticState {
-  const keyRef = typeof window === "undefined" || !LOGIN_SUPABASE_AUTH_KEY ? "" : decodeJwtRef(LOGIN_SUPABASE_AUTH_KEY);
-  const refMatch = LOGIN_SUPABASE_PROJECT_REF && keyRef ? LOGIN_SUPABASE_PROJECT_REF === keyRef : null;
-  return {
-    supabaseUrlPresent: Boolean(LOGIN_SUPABASE_URL),
-    anonKeyPresent: Boolean(LOGIN_SUPABASE_ANON_KEY),
-    publishableKeyPresent: Boolean(LOGIN_SUPABASE_PUBLISHABLE_KEY),
-    currentHost: typeof window === "undefined" ? "server" : window.location.origin,
-    projectRef: LOGIN_SUPABASE_PROJECT_REF || "não identificado",
-    keyRef: keyRef || "não identificado",
-    refMatch,
-    getSessionResult: "não testado",
-    healthResult: "não testado",
-    lastFailureKind: "NONE",
-    lastFailureMessage: "",
-    ...overrides,
-  };
-}
-
 function hasSupabaseEnvProblem(): string | null {
   if (!LOGIN_SUPABASE_URL) return "VITE_SUPABASE_URL ausente.";
   if (!LOGIN_SUPABASE_AUTH_KEY) return "VITE_SUPABASE_ANON_KEY ausente.";
@@ -101,54 +68,6 @@ function hasSupabaseEnvProblem(): string | null {
     return `Anon key pertence ao projeto ${keyRef}, mas a URL aponta para ${LOGIN_SUPABASE_PROJECT_REF}.`;
   }
   return null;
-}
-
-const HEALTH_TIMEOUT_MS = 15000;
-const SIGN_IN_TIMEOUT_MS = 30000;
-
-async function fetchSupabaseAuthHealth(): Promise<SupabaseHealthDiagnostic> {
-  const envProblem = hasSupabaseEnvProblem();
-  if (envProblem) return { kind: "ENV_MISSING", ok: false, message: envProblem };
-
-  const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
-  const healthUrl = `${LOGIN_SUPABASE_URL.replace(/\/$/, "")}/auth/v1/health`;
-  const startedAt = performance.now();
-  try {
-    // IMPORTANTE: GoTrue health aceita apenas o header `apikey`. Mandar
-    // `Authorization: Bearer <anon>` junto faz alguns deploys responderem
-    // 401 "No API key found" ou travarem. Mantemos somente `apikey`.
-    const response = await fetch(healthUrl, {
-      method: "GET",
-      headers: { apikey: LOGIN_SUPABASE_AUTH_KEY },
-      signal: controller.signal,
-      cache: "no-store",
-    });
-    const elapsed = Math.round(performance.now() - startedAt);
-    const body = await response.text().catch(() => "");
-    const suffix = body ? ` — ${body.slice(0, 160)}` : "";
-    console.info("[AUTH_HEALTH] response", { status: response.status, elapsedMs: elapsed, ok: response.ok });
-    return {
-      kind: response.ok ? "NONE" : response.status === 401 ? "AUTH_ERROR" : "NETWORK_ERROR",
-      ok: response.ok,
-      status: response.status,
-      message: `HTTP ${response.status} em ${elapsed}ms${suffix}`,
-    };
-  } catch (error) {
-    const elapsed = Math.round(performance.now() - startedAt);
-    const message = String(errorField(error, "message") || error);
-    const name = String(errorField(error, "name") || "");
-    console.error("[AUTH_HEALTH] falhou", { name, message, elapsedMs: elapsed });
-    if (name === "AbortError") {
-      return { kind: "NETWORK_ERROR", ok: false, message: `timeout: Supabase Auth não respondeu em ${HEALTH_TIMEOUT_MS / 1000}s` };
-    }
-    if (/cors|cross-origin|access-control/i.test(message)) {
-      return { kind: "CORS_ERROR", ok: false, message: `CORS_ERROR: ${message}` };
-    }
-    return { kind: "NETWORK_ERROR", ok: false, message: `NETWORK_ERROR: ${message || "sem resposta do Supabase"}` };
-  } finally {
-    window.clearTimeout(timeoutId);
-  }
 }
 
 /**
@@ -174,17 +93,9 @@ async function resolveRedirectPath(userId: string, fallback: string): Promise<st
 
 type DiagnosticStepKey = "auth" | "profile" | "clinic" | "role" | "redirect";
 type DiagnosticStatus = "idle" | "pending" | "success" | "fail" | "warning";
-type DiagnosticState = Record<DiagnosticStepKey, { status: DiagnosticStatus; message: string }>;
-
-const createDiagnosticState = (): DiagnosticState => ({
-  auth: { status: "idle", message: "Aguardando login" },
-  profile: { status: "idle", message: "Aguardando autenticação" },
-  clinic: { status: "idle", message: "Aguardando perfil" },
-  role: { status: "idle", message: "Aguardando clínica" },
-  redirect: { status: "idle", message: "Aguardando validações" },
-});
 
 const POST_AUTH_QUERY_TIMEOUT_MS = 6000;
+const AUTH_REQUEST_FEEDBACK_TIMEOUT_MS = 45000;
 
 function getAuthErrorMessage(error: unknown): string {
   const message = errorField(error, "message");
@@ -234,18 +145,17 @@ function getAuthErrorMessage(error: unknown): string {
     msgLower.includes("timeout") ||
     msgLower.includes("upstream")
   ) {
-    return "Não foi possível conectar ao servidor. Verifique internet ou configuração do Supabase.";
+    return "Não foi possível conectar ao servidor de autenticação. Tente novamente em instantes.";
   }
   return rawMsg || "Auth: erro inesperado ao entrar. Tente novamente.";
 }
 
-function classifyAuthFailure(error: unknown, health?: SupabaseHealthDiagnostic): AuthFailureKind {
+function classifyAuthFailure(error: unknown): AuthFailureKind {
   const envProblem = hasSupabaseEnvProblem();
   if (envProblem) return "ENV_MISSING";
   const name = String(errorField(error, "name") || "");
   const status = Number(errorField(error, "status") ?? 0);
   const msg = String(errorField(error, "message") || "").toLowerCase();
-  if (health && !health.ok && health.kind !== "NONE") return health.kind;
   if (name === "AuthRetryableFetchError" || name === "TimeoutError" || status === 0 || status === 502 || status === 503 || status === 504) return "NETWORK_ERROR";
   if (/failed to fetch|network|timeout|upstream|abort/i.test(msg)) return "NETWORK_ERROR";
   if (/cors|cross-origin|access-control/i.test(msg)) return "CORS_ERROR";
@@ -263,8 +173,6 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [diagnostics, setDiagnostics] = useState<DiagnosticState>(() => createDiagnosticState());
-  const [devAuthDiagnostic, setDevAuthDiagnostic] = useState<DevAuthDiagnosticState>(() => buildDevAuthDiagnosticState());
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -274,66 +182,17 @@ const Login = () => {
   const fromPath = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
 
   const updateDiagnostic = (key: DiagnosticStepKey, status: DiagnosticStatus, message: string) => {
-    if (!import.meta.env.DEV) return;
-    setDiagnostics((current) => ({ ...current, [key]: { status, message } }));
-  };
-
-  const runDevAuthDiagnostics = async (source: string) => {
-    const base = buildDevAuthDiagnosticState({ getSessionResult: "testando...", healthResult: "testando..." });
-    if (import.meta.env.DEV) {
-      setDevAuthDiagnostic(base);
-      console.log("SUPABASE_URL:", import.meta.env.VITE_SUPABASE_URL);
-      console.log("HAS_ANON_KEY:", !!import.meta.env.VITE_SUPABASE_ANON_KEY);
-      console.log("HAS_PUBLISHABLE_KEY:", !!import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
-      console.log("CURRENT_HOST:", window.location.origin);
-      console.log("SUPABASE_PROJECT_REF:", base.projectRef);
-      console.log("SUPABASE_KEY_REF:", base.keyRef);
-    }
-
-    let getSessionResult = "não executado";
-    try {
-      const sessionCheck = await withTimeout(
-        supabase.auth.getSession() as PromiseLike<{ data?: { session?: AuthSessionLike }; error?: unknown }>,
-        5000,
-        "Auth: tempo esgotado ao testar getSession antes do login.",
-      );
-      if (sessionCheck.error) throw sessionCheck.error;
-      getSessionResult = `OK — sessão: ${sessionCheck.data?.session ? "sim" : "não"}`;
-      console.log("Supabase getSession diagnostic:", {
-        source,
-        hasSession: !!sessionCheck.data?.session,
-        userId: sessionCheck.data?.session?.user?.id ?? null,
-      });
-    } catch (sessionError) {
-      getSessionResult = `FALHA — ${String(errorField(sessionError, "message") || sessionError)}`;
-      console.error("Supabase getSession diagnostic failed:", {
-        source,
-        message: errorField(sessionError, "message"),
-        name: errorField(sessionError, "name"),
-        status: errorField(sessionError, "status"),
-        cause: errorField(sessionError, "cause"),
-        stack: errorField(sessionError, "stack"),
-      });
-    }
-
-    const health = await fetchSupabaseAuthHealth();
-    const healthResult = `${health.ok ? "OK" : "FALHA"} — ${health.message}`;
-    console.log("Supabase auth health diagnostic:", { source, ...health });
-    const next = buildDevAuthDiagnosticState({
-      getSessionResult,
-      healthResult,
-      lastFailureKind: health.ok ? "NONE" : health.kind,
-      lastFailureMessage: health.ok ? "" : health.message,
-    });
-    if (import.meta.env.DEV) setDevAuthDiagnostic(next);
-    return { state: next, health };
+    if (isLocalDevelopmentHost()) console.debug("[AUTH_DIAGNOSTIC]", { key, status, message });
   };
 
   useEffect(() => {
-    if (!import.meta.env.DEV) return;
-    void runDevAuthDiagnostics("login-mount");
-    // Diagnóstico temporário de desenvolvimento: roda uma vez ao abrir /login.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!isLocalDevelopmentHost()) return;
+    const keyRef = LOGIN_SUPABASE_AUTH_KEY ? decodeJwtRef(LOGIN_SUPABASE_AUTH_KEY) : "";
+    console.log("SUPABASE_URL:", import.meta.env.VITE_SUPABASE_URL);
+    console.log("HAS_ANON_KEY:", !!import.meta.env.VITE_SUPABASE_ANON_KEY);
+    console.log("HAS_PUBLISHABLE_KEY:", !!import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
+    console.log("SUPABASE_PROJECT_REF:", LOGIN_SUPABASE_PROJECT_REF || "não identificado");
+    console.log("SUPABASE_KEY_REF:", keyRef || "não identificado");
   }, []);
 
   /**
@@ -404,22 +263,19 @@ const Login = () => {
 
     setIsLoading(true);
     loginInFlightRef.current = true;
-    setDiagnostics(createDiagnosticState());
     // Apenas limpa a quarentena anterior — NÃO apagamos sessão/binding antes
     // de tentar autenticar: se a chamada falhar por rede/timeout/CORS, o
     // usuário não deve perder a sessão atual.
     clearAuthQuarantine();
     updateDiagnostic("auth", "pending", "Autenticando no Supabase");
 
-    const preflight = await runDevAuthDiagnostics("handleLogin");
     const envProblem = hasSupabaseEnvProblem();
     if (envProblem) {
       loginInFlightRef.current = false;
       setIsLoading(false);
       updateDiagnostic("auth", "fail", `ENV_MISSING: ${envProblem}`);
-      setDevAuthDiagnostic((current) => ({ ...current, lastFailureKind: "ENV_MISSING", lastFailureMessage: envProblem }));
-      console.error("[AUTH] login bloqueado por ENV_MISSING", { message: envProblem });
-      toast({ title: "Configuração Supabase ausente", description: envProblem, variant: "destructive" });
+      if (import.meta.env.DEV) console.error("[AUTH] login bloqueado por ENV_MISSING", { message: envProblem });
+      toast({ title: "Erro ao entrar", description: "Não foi possível conectar ao servidor de autenticação. Tente novamente em instantes.", variant: "destructive" });
       return;
     }
 
@@ -427,15 +283,20 @@ const Login = () => {
     let error: unknown = null;
     try {
       const signInStartedAt = performance.now();
-      const res = await withTimeout<AuthSignInResult>(
-        supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password: cleanPassword,
-        }) as PromiseLike<AuthSignInResult>,
-        SIGN_IN_TIMEOUT_MS,
-        `Auth: tempo esgotado ao autenticar no Supabase (${SIGN_IN_TIMEOUT_MS / 1000}s).`,
-      );
-      console.info("[AUTH] signInWithPassword respondeu", { elapsedMs: Math.round(performance.now() - signInStartedAt), hasSession: !!res.data?.session, hasError: !!res.error });
+      const signInPromise = supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: cleanPassword,
+      }) as PromiseLike<AuthSignInResult>;
+      let feedbackTimeoutId: number | undefined;
+      const feedbackTimeout = new Promise<never>((_, reject) => {
+        feedbackTimeoutId = window.setTimeout(() => reject(new Error("AUTH_REQUEST_STILL_PENDING")), AUTH_REQUEST_FEEDBACK_TIMEOUT_MS);
+      });
+      const res = await Promise.race([signInPromise, feedbackTimeout]).finally(() => {
+        if (feedbackTimeoutId) window.clearTimeout(feedbackTimeoutId);
+      });
+      if (isLocalDevelopmentHost()) {
+        console.info("[AUTH] signInWithPassword respondeu", { elapsedMs: Math.round(performance.now() - signInStartedAt), hasSession: !!res.data?.session, hasError: !!res.error });
+      }
       data = res.data;
       error = res.error;
     } catch (thrown) {
@@ -448,31 +309,27 @@ const Login = () => {
       const name = String(errorField(error, "name") || "");
       const status = Number(errorField(error, "status") ?? 0);
       const msg = String(errorField(error, "message") || "");
-      const failureKind = classifyAuthFailure(error, preflight.health);
-      console.error("Supabase connection diagnostic:", {
-        failureKind,
-        message: errorField(error, "message"),
-        name: errorField(error, "name"),
-        status: errorField(error, "status"),
-        cause: errorField(error, "cause"),
-        stack: errorField(error, "stack"),
-      });
-      console.error("[AUTH] login falhou", {
-        kind: failureKind,
-        name, status, message: msg,
-        health: preflight.health,
-      });
-      const baseDescription = getAuthErrorMessage(error);
-      const technicalDescription =
-        failureKind !== "AUTH_ERROR" && preflight.health.kind !== "NONE"
-          ? `${failureKind}: ${preflight.health.message}`
-          : `${failureKind}: ${baseDescription}`;
-      updateDiagnostic("auth", "fail", technicalDescription);
-      setDevAuthDiagnostic((current) => ({ ...current, lastFailureKind: failureKind, lastFailureMessage: technicalDescription }));
+      const failureKind = classifyAuthFailure(error);
+      const isStillPending = msg === "AUTH_REQUEST_STILL_PENDING";
+      if (import.meta.env.DEV) {
+        console.error("Supabase connection diagnostic:", {
+          failureKind,
+          message: errorField(error, "message"),
+          name: errorField(error, "name"),
+          status: errorField(error, "status"),
+          cause: errorField(error, "cause"),
+          stack: errorField(error, "stack"),
+        });
+        console.error("[AUTH] login falhou", { kind: failureKind, name, status, message: msg, stillPending: isStillPending });
+      }
+      const baseDescription = isStillPending
+        ? "Não foi possível conectar ao servidor de autenticação. Tente novamente em instantes."
+        : getAuthErrorMessage(error);
+      updateDiagnostic("auth", "fail", `${failureKind}: ${baseDescription}`);
 
       toast({
         title: "Erro ao entrar",
-        description: technicalDescription,
+        description: baseDescription,
         variant: "destructive",
       });
       return;
@@ -483,7 +340,7 @@ const Login = () => {
       setIsLoading(false);
       toast({
         title: "Não foi possível iniciar a sessão",
-        description: "Auth: sessão não retornada pelo Supabase. Tente novamente.",
+        description: "Não foi possível iniciar a sessão. Tente novamente em instantes.",
         variant: "destructive",
       });
       updateDiagnostic("auth", "fail", "Auth: sessão não retornada pelo Supabase");
@@ -519,13 +376,11 @@ const Login = () => {
     } else if (!profile || profile.user_id !== data.user.id) {
       const description = "Conta encontrada, mas sem perfil vinculado. Contate o administrador.";
       updateDiagnostic("profile", "warning", `POST_LOGIN_ERROR: ${description}`);
-      setDevAuthDiagnostic((current) => ({ ...current, lastFailureKind: "POST_LOGIN_ERROR", lastFailureMessage: description }));
       toast({ title: "Cadastro incompleto", description, variant: "destructive" });
       try { clearReactQueryCache(queryClient, "login-no-profile", { userId: data.user.id }); } catch { /* ignore */ }
     } else if (profile.is_active === false) {
       const description = "Conta bloqueada ou inativa. Contate o administrador.";
       updateDiagnostic("profile", "warning", `POST_LOGIN_ERROR: ${description}`);
-      setDevAuthDiagnostic((current) => ({ ...current, lastFailureKind: "POST_LOGIN_ERROR", lastFailureMessage: description }));
       toast({ title: "Acesso bloqueado", description, variant: "destructive" });
       try { clearReactQueryCache(queryClient, "login-inactive-profile", { userId: data.user.id }); } catch { /* ignore */ }
     } else {
@@ -537,7 +392,6 @@ const Login = () => {
     if (!clinicId && !profileError) {
       const description = "Conta encontrada, mas sem clínica vinculada. Contate o administrador.";
       updateDiagnostic("clinic", "warning", `POST_LOGIN_ERROR: ${description}`);
-      setDevAuthDiagnostic((current) => ({ ...current, lastFailureKind: "POST_LOGIN_ERROR", lastFailureMessage: description }));
       toast({ title: "Clínica não vinculada", description, variant: "destructive" });
       try { clearReactQueryCache(queryClient, "login-no-clinic", { userId: data.user.id }); } catch { /* ignore */ }
     }
@@ -562,7 +416,6 @@ const Login = () => {
       } else if (!clinic) {
         const description = "Conta encontrada, mas sem clínica vinculada. Contate o administrador.";
         updateDiagnostic("clinic", "warning", `POST_LOGIN_ERROR: ${description}`);
-        setDevAuthDiagnostic((current) => ({ ...current, lastFailureKind: "POST_LOGIN_ERROR", lastFailureMessage: description }));
         toast({ title: "Clínica não encontrada", description, variant: "destructive" });
         try { clearReactQueryCache(queryClient, "login-clinic-not-found", { userId: data.user.id, clinicId }); } catch { /* ignore */ }
       } else {
@@ -717,46 +570,6 @@ const Login = () => {
               {isLoading ? "Entrando..." : "Entrar"}
             </Button>
           </form>
-
-          {import.meta.env.DEV && (
-            <div className="mt-5 rounded-lg border border-border bg-card p-4 text-xs text-card-foreground shadow-sm">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <p className="font-semibold">Diagnóstico Auth DEV</p>
-                <span className="rounded-md bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground">
-                  {devAuthDiagnostic.lastFailureKind}
-                </span>
-              </div>
-              <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1">
-                <dt className="text-muted-foreground">SUPABASE_URL presente</dt>
-                <dd className="font-mono">{devAuthDiagnostic.supabaseUrlPresent ? "sim" : "não"}</dd>
-                <dt className="text-muted-foreground">ANON_KEY presente</dt>
-                <dd className="font-mono">{devAuthDiagnostic.anonKeyPresent ? "sim" : "não"}</dd>
-                <dt className="text-muted-foreground">Host atual</dt>
-                <dd className="max-w-48 truncate text-right font-mono" title={devAuthDiagnostic.currentHost}>{devAuthDiagnostic.currentHost}</dd>
-                <dt className="text-muted-foreground">URL ref / Key ref</dt>
-                <dd className="font-mono">{devAuthDiagnostic.projectRef} / {devAuthDiagnostic.keyRef}</dd>
-                <dt className="text-muted-foreground">Mesmo projeto</dt>
-                <dd className="font-mono">{devAuthDiagnostic.refMatch === null ? "n/a" : devAuthDiagnostic.refMatch ? "sim" : "não"}</dd>
-              </dl>
-              <div className="mt-3 space-y-2 border-t border-border pt-3">
-                <p><span className="text-muted-foreground">getSession:</span> <span className="font-mono">{devAuthDiagnostic.getSessionResult}</span></p>
-                <p><span className="text-muted-foreground">auth/v1/health:</span> <span className="font-mono">{devAuthDiagnostic.healthResult}</span></p>
-                {devAuthDiagnostic.lastFailureMessage && (
-                  <p><span className="text-muted-foreground">Falha:</span> <span className="font-mono">{devAuthDiagnostic.lastFailureMessage}</span></p>
-                )}
-              </div>
-              <div className="mt-3 space-y-1 border-t border-border pt-3">
-                {Object.entries(diagnostics).map(([step, item]) => (
-                  <p key={step} className="flex gap-2">
-                    <span className="min-w-14 font-mono text-muted-foreground">{step}</span>
-                    <span className="font-mono">{item.status}</span>
-                    <span className="truncate">{item.message}</span>
-                  </p>
-                ))}
-              </div>
-            </div>
-          )}
-
 
           {/* Signup Link */}
           <p className="mt-6 text-center text-muted-foreground">
