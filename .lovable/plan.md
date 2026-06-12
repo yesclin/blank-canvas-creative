@@ -1,37 +1,25 @@
-# Corrigir logout em reload do preview
+Plano para corrigir o erro de login Supabase:
 
-## Problema
-A cada mudança aplicada, o iframe do preview é recriado. Como `tabId` depende de `window.name` + `sessionStorage` (ambos zerados no novo iframe), a nova aba não encontra binding e o adapter `perTabAuthStorage` descarta o backup do `localStorage` por segurança — derruba o usuário em `/login`.
+1. Ajustar variáveis do cliente Supabase
+- Atualizar `src/integrations/supabase/client.ts` para aceitar `VITE_SUPABASE_ANON_KEY` e manter fallback para `VITE_SUPABASE_PUBLISHABLE_KEY`, já que o projeto atualmente tem `VITE_SUPABASE_PUBLISHABLE_KEY` no `.env` e não tem `VITE_SUPABASE_ANON_KEY`.
+- Validar em runtime se `SUPABASE_URL` e chave anon/publishable existem, não estão vazias e a URL é uma URL Supabase válida.
+- Registrar no console diagnósticos claros: `SUPABASE_URL ausente`, `ANON_KEY ausente`, `projeto/ref divergente`, `network timeout`, `Auth error`.
 
-Isso também afeta usuários reais quando fecham/reabrem a aba ou quando o navegador descarta `sessionStorage`.
+2. Melhorar mensagem e diagnóstico no login
+- Em `src/pages/Login.tsx`, trocar a mensagem genérica atual por uma mensagem mais clara para timeout/rede:
+  `Não foi possível conectar ao servidor. Verifique internet ou configuração do Supabase.`
+- Manter mensagens separadas para credenciais inválidas, usuário bloqueado/inativo e email não confirmado.
+- Logar no console o tipo do erro sem expor senha/token.
 
-## Objetivo
-Restaurar a sessão automaticamente quando for seguro (uma única identidade conhecida no navegador) sem reintroduzir o vazamento entre contas que motivou o isolamento atual.
+3. Não destruir sessão em erro de conexão
+- Alterar o fluxo do `handleLogin` para não limpar toda a sessão antes de tentar autenticar.
+- Limpar/quarentenar sessão apenas em casos intencionais: logout, troca real de usuário autenticado, perfil sem vínculo/inativo ou sessão divergente confirmada.
+- Em erro de timeout/network/CORS/configuração, preservar a sessão atual e não trocar usuário.
 
-## Mudanças
+4. Testes de verificação
+- Verificar a tela `/login` em preview.
+- Testar endpoints Supabase: REST responde 401 (normal) e Auth health/settings/token indicam se há timeout de serviço.
+- Testar login com usuário válido no preview, recarregar a página e tentar logout/login novamente.
+- Registrar no console a causa final se falhar: variável ausente, CORS/network timeout ou erro Auth.
 
-### 1. `src/integrations/supabase/client.ts`
-Adicionar fallback controlado em `readTabBinding()` quando a aba nova não tem binding:
-
-- Varrer `localStorage` por todas as chaves `yc.auth.bind.<ref>.*` desse mesmo `SUPABASE_PROJECT_REF`.
-- Se **todas** apontam para o **mesmo `userId`** (= só existe uma identidade YesClin no navegador), adotar esse `userId` como binding da aba nova (gravar via `writeTabBinding`).
-- Se houver divergência (mais de um userId), manter o comportamento atual: descartar o backup.
-
-Também varrer chaves `yc.auth.<ref>.*` (storage de sessão) como backup secundário: se só existir sessão de um único `userId`, idem.
-
-### 2. `src/lib/authSessionIsolation.ts`
-- Em `clearAuthenticatedTab()` e `quarantineMismatchedAuthSession()`, ao limpar binding/sessão da aba atual, **também** remover todas as chaves `yc.auth.bind.<ref>.*` e `yc.auth.<ref>.*` órfãs de outras tabIds do mesmo projeto. Isso evita backups "fantasmas" persistindo após logout.
-
-### 3. Atualizar guardrail de teste
-`src/test/session-cache-guardrails.test.ts` proíbe a string `scopedSessions`. O fallback novo usa outro nome (ex.: `resolveSoleStoredIdentity`), portanto não viola a regra — confirmar e ajustar a asserção se necessário para refletir a nova lógica explicitamente (continuar bloqueando "escolher uma entre várias", permitir "única identidade conhecida").
-
-## Como continua seguro
-- Se duas contas já logaram no mesmo navegador, **não há** restauração silenciosa — vai para `/login` igual hoje.
-- Logout (`clearAuthenticatedTab`) passa a apagar todos os bindings residuais, então uma conta nova não herda binding antigo.
-- `quarantineMismatchedAuthSession` continua disparando `signOut({ scope: 'local' })` em qualquer divergência.
-
-## Validação
-1. Login no preview, aplicar uma mudança trivial, confirmar que **não desloga**.
-2. Logout manual → backup some, próximo reload mantém em `/login`.
-3. Simular dois `yc.auth.bind.*` com userIds diferentes em `localStorage` → reload não restaura (fica em `/login`).
-4. Rodar `bunx vitest run src/test/session-cache-guardrails.test.ts`.
+Observação importante: já confirmei que o `.env` aponta para `https://yfljqgmbnplkdjfhvunq.supabase.co` e a chave publishable/anon corresponde ao ref `yfljqgmbnplkdjfhvunq`. Porém os endpoints Auth `/auth/v1/health` e `/auth/v1/settings` estão dando timeout, enquanto REST responde; se o serviço Auth do Supabase continuar indisponível, o código vai diagnosticar corretamente, mas a autenticação só volta quando o Auth do Supabase responder.
