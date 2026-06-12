@@ -9,7 +9,7 @@ import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import logoFull from "@/assets/logo-full.png";
 import logoIcon from "@/assets/logo-icon.png";
 import { motion } from "framer-motion";
-import { clearAuthenticatedTab, clearAuthQuarantine, clearSupabaseAuthStorage, hasRecentAuthQuarantine, rememberAuthenticatedUser } from "@/lib/authSessionIsolation";
+import { clearAuthQuarantine, hasRecentAuthQuarantine, rememberAuthenticatedUser } from "@/lib/authSessionIsolation";
 import { useQueryClient } from "@tanstack/react-query";
 import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
 import { withTimeout } from "@/lib/asyncTimeout";
@@ -22,9 +22,131 @@ type AuthSignInResult = { data: { session: AuthSessionLike; user: AuthUserLike |
 type ProfileRow = { clinic_id: string | null; user_id: string | null; full_name: string | null; is_active: boolean | null };
 type ClinicRow = { id: string; name: string | null };
 type RoleRow = { role: string; clinic_id: string | null; user_id: string | null };
+type AuthFailureKind = "NONE" | "ENV_MISSING" | "NETWORK_ERROR" | "CORS_ERROR" | "AUTH_ERROR" | "POST_LOGIN_ERROR";
+type SupabaseHealthDiagnostic = {
+  kind: AuthFailureKind;
+  ok: boolean;
+  message: string;
+  status?: number;
+};
+type DevAuthDiagnosticState = {
+  supabaseUrlPresent: boolean;
+  anonKeyPresent: boolean;
+  publishableKeyPresent: boolean;
+  currentHost: string;
+  projectRef: string;
+  keyRef: string;
+  refMatch: boolean | null;
+  getSessionResult: string;
+  healthResult: string;
+  lastFailureKind: AuthFailureKind;
+  lastFailureMessage: string;
+};
 
 function errorField(error: unknown, field: keyof AuthErrorLike): unknown {
   return typeof error === "object" && error !== null ? (error as AuthErrorLike)[field] : undefined;
+}
+
+const LOGIN_SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || "").trim();
+const LOGIN_SUPABASE_ANON_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY || "").trim();
+const LOGIN_SUPABASE_PUBLISHABLE_KEY = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "").trim();
+const LOGIN_SUPABASE_AUTH_KEY = LOGIN_SUPABASE_ANON_KEY || LOGIN_SUPABASE_PUBLISHABLE_KEY;
+
+function getProjectRefFromUrl(url: string): string {
+  try {
+    return new URL(url).hostname.split(".")[0] || "";
+  } catch {
+    return "";
+  }
+}
+
+function decodeJwtRef(token: string): string {
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return "";
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const json = JSON.parse(window.atob(normalized));
+    return typeof json?.ref === "string" ? json.ref : "";
+  } catch {
+    return "";
+  }
+}
+
+const LOGIN_SUPABASE_PROJECT_REF = getProjectRefFromUrl(LOGIN_SUPABASE_URL);
+
+function buildDevAuthDiagnosticState(overrides: Partial<DevAuthDiagnosticState> = {}): DevAuthDiagnosticState {
+  const keyRef = typeof window === "undefined" || !LOGIN_SUPABASE_AUTH_KEY ? "" : decodeJwtRef(LOGIN_SUPABASE_AUTH_KEY);
+  const refMatch = LOGIN_SUPABASE_PROJECT_REF && keyRef ? LOGIN_SUPABASE_PROJECT_REF === keyRef : null;
+  return {
+    supabaseUrlPresent: Boolean(LOGIN_SUPABASE_URL),
+    anonKeyPresent: Boolean(LOGIN_SUPABASE_ANON_KEY),
+    publishableKeyPresent: Boolean(LOGIN_SUPABASE_PUBLISHABLE_KEY),
+    currentHost: typeof window === "undefined" ? "server" : window.location.origin,
+    projectRef: LOGIN_SUPABASE_PROJECT_REF || "não identificado",
+    keyRef: keyRef || "não identificado",
+    refMatch,
+    getSessionResult: "não testado",
+    healthResult: "não testado",
+    lastFailureKind: "NONE",
+    lastFailureMessage: "",
+    ...overrides,
+  };
+}
+
+function hasSupabaseEnvProblem(): string | null {
+  if (!LOGIN_SUPABASE_URL) return "VITE_SUPABASE_URL ausente.";
+  if (!LOGIN_SUPABASE_AUTH_KEY) return "VITE_SUPABASE_ANON_KEY ausente.";
+  const keyRef = typeof window === "undefined" ? "" : decodeJwtRef(LOGIN_SUPABASE_AUTH_KEY);
+  if (LOGIN_SUPABASE_PROJECT_REF && keyRef && LOGIN_SUPABASE_PROJECT_REF !== keyRef) {
+    return `Anon key pertence ao projeto ${keyRef}, mas a URL aponta para ${LOGIN_SUPABASE_PROJECT_REF}.`;
+  }
+  return null;
+}
+
+async function fetchSupabaseAuthHealth(): Promise<SupabaseHealthDiagnostic> {
+  const envProblem = hasSupabaseEnvProblem();
+  if (envProblem) return { kind: "ENV_MISSING", ok: false, message: envProblem };
+
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 6000);
+  const healthUrl = `${LOGIN_SUPABASE_URL.replace(/\/$/, "")}/auth/v1/health`;
+  try {
+    const response = await fetch(healthUrl, {
+      method: "GET",
+      headers: {
+        apikey: LOGIN_SUPABASE_AUTH_KEY,
+        Authorization: `Bearer ${LOGIN_SUPABASE_AUTH_KEY}`,
+      },
+      signal: controller.signal,
+    });
+    const body = await response.text().catch(() => "");
+    const suffix = body ? ` — ${body.slice(0, 160)}` : "";
+    return {
+      kind: response.ok ? "NONE" : "NETWORK_ERROR",
+      ok: response.ok,
+      status: response.status,
+      message: `HTTP ${response.status}${suffix}`,
+    };
+  } catch (error) {
+    const message = String(errorField(error, "message") || error);
+    if (errorField(error, "name") === "AbortError") {
+      return { kind: "NETWORK_ERROR", ok: false, message: "timeout: Supabase Auth não respondeu em 6s" };
+    }
+
+    try {
+      const reachabilityController = new AbortController();
+      const reachabilityTimeout = window.setTimeout(() => reachabilityController.abort(), 3500);
+      await fetch(LOGIN_SUPABASE_URL, { mode: "no-cors", signal: reachabilityController.signal });
+      window.clearTimeout(reachabilityTimeout);
+      return { kind: "CORS_ERROR", ok: false, message: `CORS_ERROR: ${message || "fetch bloqueado pelo navegador"}` };
+    } catch {
+      return { kind: "NETWORK_ERROR", ok: false, message: `NETWORK_ERROR: ${message || "sem resposta do Supabase"}` };
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 }
 
 /**
