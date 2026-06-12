@@ -100,15 +100,17 @@ function getAuthErrorMessage(error: unknown): string {
   }
   if (
     name === "AuthRetryableFetchError" ||
+    name === "TimeoutError" ||
     status === 0 ||
     status === 502 ||
     status === 503 ||
     status === 504 ||
     msgLower.includes("failed to fetch") ||
     msgLower.includes("network") ||
-    msgLower.includes("timeout")
+    msgLower.includes("timeout") ||
+    msgLower.includes("upstream")
   ) {
-    return "Auth: falha de conexão com o Supabase. Tente novamente em instantes.";
+    return "Não foi possível conectar ao servidor. Verifique internet ou configuração do Supabase.";
   }
   return rawMsg || "Auth: erro inesperado ao entrar. Tente novamente.";
 }
