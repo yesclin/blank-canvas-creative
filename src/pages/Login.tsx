@@ -14,7 +14,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
 import { withTimeout } from "@/lib/asyncTimeout";
 
-type AuthErrorLike = { message?: unknown; code?: unknown; status?: unknown; name?: unknown };
+type AuthErrorLike = { message?: unknown; code?: unknown; status?: unknown; name?: unknown; cause?: unknown; stack?: unknown };
 type QueryResult<T> = { data: T | null; error: unknown };
 type AuthUserLike = { id: string; email?: string | null };
 type AuthSessionLike = { user?: AuthUserLike | null } | null;
