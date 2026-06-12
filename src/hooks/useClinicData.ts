@@ -198,6 +198,7 @@ export function useClinicData() {
       } catch (error) {
         if (import.meta.env.DEV) console.error("CLINIC_ERROR", { source: "useClinicData", error });
         console.error("[APP_ERROR]", error);
+        setClinic(null);
         setError(error);
       } finally {
         if (stillCurrent(activeUserIdRef.current)) {
