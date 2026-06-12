@@ -402,29 +402,16 @@ const Login = () => {
     clearAuthQuarantine();
     updateDiagnostic("auth", "pending", "Autenticando no Supabase");
 
-    console.log("SUPABASE_URL:", import.meta.env.VITE_SUPABASE_URL);
-    console.log("HAS_ANON_KEY:", !!import.meta.env.VITE_SUPABASE_ANON_KEY);
-    console.log("HAS_PUBLISHABLE_KEY:", !!import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
-
-    try {
-      const sessionCheck = await withTimeout(
-        supabase.auth.getSession() as PromiseLike<{ data?: { session?: AuthSessionLike }; error?: unknown }>,
-        5000,
-        "Auth: tempo esgotado ao testar getSession antes do login.",
-      );
-      if (sessionCheck.error) throw sessionCheck.error;
-      console.log("Supabase getSession diagnostic:", {
-        hasSession: !!sessionCheck.data?.session,
-        userId: sessionCheck.data?.session?.user?.id ?? null,
-      });
-    } catch (sessionError) {
-      console.error("Supabase connection diagnostic:", {
-        message: errorField(sessionError, "message"),
-        name: errorField(sessionError, "name"),
-        status: errorField(sessionError, "status"),
-        cause: errorField(sessionError, "cause"),
-        stack: errorField(sessionError, "stack"),
-      });
+    const preflight = await runDevAuthDiagnostics("handleLogin");
+    const envProblem = hasSupabaseEnvProblem();
+    if (envProblem) {
+      loginInFlightRef.current = false;
+      setIsLoading(false);
+      updateDiagnostic("auth", "fail", `ENV_MISSING: ${envProblem}`);
+      setDevAuthDiagnostic((current) => ({ ...current, lastFailureKind: "ENV_MISSING", lastFailureMessage: envProblem }));
+      console.error("[AUTH] login bloqueado por ENV_MISSING", { message: envProblem });
+      toast({ title: "Configuração Supabase ausente", description: envProblem, variant: "destructive" });
+      return;
     }
 
     let data: AuthSignInResult["data"] | null = null;
@@ -450,12 +437,9 @@ const Login = () => {
       const name = String(errorField(error, "name") || "");
       const status = Number(errorField(error, "status") ?? 0);
       const msg = String(errorField(error, "message") || "");
-      const isNetwork =
-        name === "AuthRetryableFetchError" ||
-        name === "TimeoutError" ||
-        status === 0 || status === 502 || status === 503 || status === 504 ||
-        /failed to fetch|network|timeout|upstream/i.test(msg);
+      const failureKind = classifyAuthFailure(error, preflight.health);
       console.error("Supabase connection diagnostic:", {
+        failureKind,
         message: errorField(error, "message"),
         name: errorField(error, "name"),
         status: errorField(error, "status"),
@@ -463,11 +447,13 @@ const Login = () => {
         stack: errorField(error, "stack"),
       });
       console.error("[AUTH] login falhou", {
-        kind: isNetwork ? "network_or_auth_unavailable" : "auth_error",
+        kind: failureKind,
         name, status, message: msg,
+        health: preflight.health,
       });
       const description = getAuthErrorMessage(error);
-      updateDiagnostic("auth", "fail", description);
+      updateDiagnostic("auth", "fail", `${failureKind}: ${description}`);
+      setDevAuthDiagnostic((current) => ({ ...current, lastFailureKind: failureKind, lastFailureMessage: description }));
 
       toast({
         title: "Erro ao entrar",
@@ -517,26 +503,16 @@ const Login = () => {
       updateDiagnostic("profile", "warning", msg);
     } else if (!profile || profile.user_id !== data.user.id) {
       const description = "Conta encontrada, mas sem perfil vinculado. Contate o administrador.";
-      updateDiagnostic("profile", "fail", description);
+      updateDiagnostic("profile", "warning", `POST_LOGIN_ERROR: ${description}`);
+      setDevAuthDiagnostic((current) => ({ ...current, lastFailureKind: "POST_LOGIN_ERROR", lastFailureMessage: description }));
       toast({ title: "Cadastro incompleto", description, variant: "destructive" });
-      await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
-      clearAuthenticatedTab();
-      clearSupabaseAuthStorage();
       try { clearReactQueryCache(queryClient, "login-no-profile", { userId: data.user.id }); } catch { /* ignore */ }
-      loginInFlightRef.current = false;
-      setIsLoading(false);
-      return;
     } else if (profile.is_active === false) {
       const description = "Conta bloqueada ou inativa. Contate o administrador.";
-      updateDiagnostic("profile", "fail", description);
+      updateDiagnostic("profile", "warning", `POST_LOGIN_ERROR: ${description}`);
+      setDevAuthDiagnostic((current) => ({ ...current, lastFailureKind: "POST_LOGIN_ERROR", lastFailureMessage: description }));
       toast({ title: "Acesso bloqueado", description, variant: "destructive" });
-      await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
-      clearAuthenticatedTab();
-      clearSupabaseAuthStorage();
       try { clearReactQueryCache(queryClient, "login-inactive-profile", { userId: data.user.id }); } catch { /* ignore */ }
-      loginInFlightRef.current = false;
-      setIsLoading(false);
-      return;
     } else {
       updateDiagnostic("profile", "success", `Profile OK: ${profile.full_name ?? data.user.email ?? data.user.id}`);
     }
@@ -545,15 +521,10 @@ const Login = () => {
     updateDiagnostic("clinic", "pending", "Buscando clínica vinculada");
     if (!clinicId && !profileError) {
       const description = "Conta encontrada, mas sem clínica vinculada. Contate o administrador.";
-      updateDiagnostic("clinic", "fail", description);
+      updateDiagnostic("clinic", "warning", `POST_LOGIN_ERROR: ${description}`);
+      setDevAuthDiagnostic((current) => ({ ...current, lastFailureKind: "POST_LOGIN_ERROR", lastFailureMessage: description }));
       toast({ title: "Clínica não vinculada", description, variant: "destructive" });
-      await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
-      clearAuthenticatedTab();
-      clearSupabaseAuthStorage();
       try { clearReactQueryCache(queryClient, "login-no-clinic", { userId: data.user.id }); } catch { /* ignore */ }
-      loginInFlightRef.current = false;
-      setIsLoading(false);
-      return;
     }
 
     let roles: RoleRow[] | null = null;
@@ -575,15 +546,10 @@ const Login = () => {
         updateDiagnostic("clinic", "warning", msg);
       } else if (!clinic) {
         const description = "Conta encontrada, mas sem clínica vinculada. Contate o administrador.";
-        updateDiagnostic("clinic", "fail", description);
+        updateDiagnostic("clinic", "warning", `POST_LOGIN_ERROR: ${description}`);
+        setDevAuthDiagnostic((current) => ({ ...current, lastFailureKind: "POST_LOGIN_ERROR", lastFailureMessage: description }));
         toast({ title: "Clínica não encontrada", description, variant: "destructive" });
-        await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
-        clearAuthenticatedTab();
-        clearSupabaseAuthStorage();
         try { clearReactQueryCache(queryClient, "login-clinic-not-found", { userId: data.user.id, clinicId }); } catch { /* ignore */ }
-        loginInFlightRef.current = false;
-        setIsLoading(false);
-        return;
       } else {
         updateDiagnostic("clinic", "success", `Clinic OK: ${clinic.name ?? clinic.id}`);
       }
