@@ -14,7 +14,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
 import { withTimeout } from "@/lib/asyncTimeout";
 
-type AuthErrorLike = { message?: unknown; code?: unknown; status?: unknown; name?: unknown };
+type AuthErrorLike = { message?: unknown; code?: unknown; status?: unknown; name?: unknown; cause?: unknown; stack?: unknown };
 type QueryResult<T> = { data: T | null; error: unknown };
 type AuthUserLike = { id: string; email?: string | null };
 type AuthSessionLike = { user?: AuthUserLike | null } | null;
@@ -215,6 +215,31 @@ const Login = () => {
     clearAuthQuarantine();
     updateDiagnostic("auth", "pending", "Autenticando no Supabase");
 
+    console.log("SUPABASE_URL:", import.meta.env.VITE_SUPABASE_URL);
+    console.log("HAS_ANON_KEY:", !!import.meta.env.VITE_SUPABASE_ANON_KEY);
+    console.log("HAS_PUBLISHABLE_KEY:", !!import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
+
+    try {
+      const sessionCheck = await withTimeout(
+        supabase.auth.getSession() as PromiseLike<{ data?: { session?: AuthSessionLike }; error?: unknown }>,
+        5000,
+        "Auth: tempo esgotado ao testar getSession antes do login.",
+      );
+      if (sessionCheck.error) throw sessionCheck.error;
+      console.log("Supabase getSession diagnostic:", {
+        hasSession: !!sessionCheck.data?.session,
+        userId: sessionCheck.data?.session?.user?.id ?? null,
+      });
+    } catch (sessionError) {
+      console.error("Supabase connection diagnostic:", {
+        message: errorField(sessionError, "message"),
+        name: errorField(sessionError, "name"),
+        status: errorField(sessionError, "status"),
+        cause: errorField(sessionError, "cause"),
+        stack: errorField(sessionError, "stack"),
+      });
+    }
+
     let data: AuthSignInResult["data"] | null = null;
     let error: unknown = null;
     try {
@@ -243,6 +268,13 @@ const Login = () => {
         name === "TimeoutError" ||
         status === 0 || status === 502 || status === 503 || status === 504 ||
         /failed to fetch|network|timeout|upstream/i.test(msg);
+      console.error("Supabase connection diagnostic:", {
+        message: errorField(error, "message"),
+        name: errorField(error, "name"),
+        status: errorField(error, "status"),
+        cause: errorField(error, "cause"),
+        stack: errorField(error, "stack"),
+      });
       console.error("[AUTH] login falhou", {
         kind: isNetwork ? "network_or_auth_unavailable" : "auth_error",
         name, status, message: msg,
