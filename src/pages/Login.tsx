@@ -374,13 +374,11 @@ const Login = () => {
     } else if (!profile || profile.user_id !== data.user.id) {
       const description = "Conta encontrada, mas sem perfil vinculado. Contate o administrador.";
       updateDiagnostic("profile", "warning", `POST_LOGIN_ERROR: ${description}`);
-      setDevAuthDiagnostic((current) => ({ ...current, lastFailureKind: "POST_LOGIN_ERROR", lastFailureMessage: description }));
       toast({ title: "Cadastro incompleto", description, variant: "destructive" });
       try { clearReactQueryCache(queryClient, "login-no-profile", { userId: data.user.id }); } catch { /* ignore */ }
     } else if (profile.is_active === false) {
       const description = "Conta bloqueada ou inativa. Contate o administrador.";
       updateDiagnostic("profile", "warning", `POST_LOGIN_ERROR: ${description}`);
-      setDevAuthDiagnostic((current) => ({ ...current, lastFailureKind: "POST_LOGIN_ERROR", lastFailureMessage: description }));
       toast({ title: "Acesso bloqueado", description, variant: "destructive" });
       try { clearReactQueryCache(queryClient, "login-inactive-profile", { userId: data.user.id }); } catch { /* ignore */ }
     } else {
@@ -392,7 +390,6 @@ const Login = () => {
     if (!clinicId && !profileError) {
       const description = "Conta encontrada, mas sem clínica vinculada. Contate o administrador.";
       updateDiagnostic("clinic", "warning", `POST_LOGIN_ERROR: ${description}`);
-      setDevAuthDiagnostic((current) => ({ ...current, lastFailureKind: "POST_LOGIN_ERROR", lastFailureMessage: description }));
       toast({ title: "Clínica não vinculada", description, variant: "destructive" });
       try { clearReactQueryCache(queryClient, "login-no-clinic", { userId: data.user.id }); } catch { /* ignore */ }
     }
@@ -417,7 +414,6 @@ const Login = () => {
       } else if (!clinic) {
         const description = "Conta encontrada, mas sem clínica vinculada. Contate o administrador.";
         updateDiagnostic("clinic", "warning", `POST_LOGIN_ERROR: ${description}`);
-        setDevAuthDiagnostic((current) => ({ ...current, lastFailureKind: "POST_LOGIN_ERROR", lastFailureMessage: description }));
         toast({ title: "Clínica não encontrada", description, variant: "destructive" });
         try { clearReactQueryCache(queryClient, "login-clinic-not-found", { userId: data.user.id, clinicId }); } catch { /* ignore */ }
       } else {
@@ -572,46 +568,6 @@ const Login = () => {
               {isLoading ? "Entrando..." : "Entrar"}
             </Button>
           </form>
-
-          {import.meta.env.DEV && (
-            <div className="mt-5 rounded-lg border border-border bg-card p-4 text-xs text-card-foreground shadow-sm">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <p className="font-semibold">Diagnóstico Auth DEV</p>
-                <span className="rounded-md bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground">
-                  {devAuthDiagnostic.lastFailureKind}
-                </span>
-              </div>
-              <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1">
-                <dt className="text-muted-foreground">SUPABASE_URL presente</dt>
-                <dd className="font-mono">{devAuthDiagnostic.supabaseUrlPresent ? "sim" : "não"}</dd>
-                <dt className="text-muted-foreground">ANON_KEY presente</dt>
-                <dd className="font-mono">{devAuthDiagnostic.anonKeyPresent ? "sim" : "não"}</dd>
-                <dt className="text-muted-foreground">Host atual</dt>
-                <dd className="max-w-48 truncate text-right font-mono" title={devAuthDiagnostic.currentHost}>{devAuthDiagnostic.currentHost}</dd>
-                <dt className="text-muted-foreground">URL ref / Key ref</dt>
-                <dd className="font-mono">{devAuthDiagnostic.projectRef} / {devAuthDiagnostic.keyRef}</dd>
-                <dt className="text-muted-foreground">Mesmo projeto</dt>
-                <dd className="font-mono">{devAuthDiagnostic.refMatch === null ? "n/a" : devAuthDiagnostic.refMatch ? "sim" : "não"}</dd>
-              </dl>
-              <div className="mt-3 space-y-2 border-t border-border pt-3">
-                <p><span className="text-muted-foreground">getSession:</span> <span className="font-mono">{devAuthDiagnostic.getSessionResult}</span></p>
-                <p><span className="text-muted-foreground">auth/v1/health:</span> <span className="font-mono">{devAuthDiagnostic.healthResult}</span></p>
-                {devAuthDiagnostic.lastFailureMessage && (
-                  <p><span className="text-muted-foreground">Falha:</span> <span className="font-mono">{devAuthDiagnostic.lastFailureMessage}</span></p>
-                )}
-              </div>
-              <div className="mt-3 space-y-1 border-t border-border pt-3">
-                {Object.entries(diagnostics).map(([step, item]) => (
-                  <p key={step} className="flex gap-2">
-                    <span className="min-w-14 font-mono text-muted-foreground">{step}</span>
-                    <span className="font-mono">{item.status}</span>
-                    <span className="truncate">{item.message}</span>
-                  </p>
-                ))}
-              </div>
-            </div>
-          )}
-
 
           {/* Signup Link */}
           <p className="mt-6 text-center text-muted-foreground">
