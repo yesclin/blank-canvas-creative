@@ -153,7 +153,7 @@ function getAuthErrorMessage(error: unknown): string {
     msgLower.includes("timeout") ||
     msgLower.includes("upstream")
   ) {
-    return "Não foi possível conectar ao servidor. Verifique internet ou configuração do Supabase.";
+    return "Não foi possível conectar ao servidor de autenticação. Tente novamente em instantes.";
   }
   return rawMsg || "Auth: erro inesperado ao entrar. Tente novamente.";
 }
@@ -271,22 +271,19 @@ const Login = () => {
 
     setIsLoading(true);
     loginInFlightRef.current = true;
-    setDiagnostics(createDiagnosticState());
     // Apenas limpa a quarentena anterior — NÃO apagamos sessão/binding antes
     // de tentar autenticar: se a chamada falhar por rede/timeout/CORS, o
     // usuário não deve perder a sessão atual.
     clearAuthQuarantine();
     updateDiagnostic("auth", "pending", "Autenticando no Supabase");
 
-    const preflight = await runDevAuthDiagnostics("handleLogin");
     const envProblem = hasSupabaseEnvProblem();
     if (envProblem) {
       loginInFlightRef.current = false;
       setIsLoading(false);
       updateDiagnostic("auth", "fail", `ENV_MISSING: ${envProblem}`);
-      setDevAuthDiagnostic((current) => ({ ...current, lastFailureKind: "ENV_MISSING", lastFailureMessage: envProblem }));
       console.error("[AUTH] login bloqueado por ENV_MISSING", { message: envProblem });
-      toast({ title: "Configuração Supabase ausente", description: envProblem, variant: "destructive" });
+      toast({ title: "Erro ao entrar", description: "Não foi possível conectar ao servidor de autenticação. Tente novamente em instantes.", variant: "destructive" });
       return;
     }
 
@@ -294,15 +291,13 @@ const Login = () => {
     let error: unknown = null;
     try {
       const signInStartedAt = performance.now();
-      const res = await withTimeout<AuthSignInResult>(
-        supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password: cleanPassword,
-        }) as PromiseLike<AuthSignInResult>,
-        SIGN_IN_TIMEOUT_MS,
-        `Auth: tempo esgotado ao autenticar no Supabase (${SIGN_IN_TIMEOUT_MS / 1000}s).`,
-      );
-      console.info("[AUTH] signInWithPassword respondeu", { elapsedMs: Math.round(performance.now() - signInStartedAt), hasSession: !!res.data?.session, hasError: !!res.error });
+      const res = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: cleanPassword,
+      }) as AuthSignInResult;
+      if (isLocalDevelopmentHost()) {
+        console.info("[AUTH] signInWithPassword respondeu", { elapsedMs: Math.round(performance.now() - signInStartedAt), hasSession: !!res.data?.session, hasError: !!res.error });
+      }
       data = res.data;
       error = res.error;
     } catch (thrown) {
@@ -315,31 +310,24 @@ const Login = () => {
       const name = String(errorField(error, "name") || "");
       const status = Number(errorField(error, "status") ?? 0);
       const msg = String(errorField(error, "message") || "");
-      const failureKind = classifyAuthFailure(error, preflight.health);
-      console.error("Supabase connection diagnostic:", {
-        failureKind,
-        message: errorField(error, "message"),
-        name: errorField(error, "name"),
-        status: errorField(error, "status"),
-        cause: errorField(error, "cause"),
-        stack: errorField(error, "stack"),
-      });
-      console.error("[AUTH] login falhou", {
-        kind: failureKind,
-        name, status, message: msg,
-        health: preflight.health,
-      });
+      const failureKind = classifyAuthFailure(error);
+      if (import.meta.env.DEV) {
+        console.error("Supabase connection diagnostic:", {
+          failureKind,
+          message: errorField(error, "message"),
+          name: errorField(error, "name"),
+          status: errorField(error, "status"),
+          cause: errorField(error, "cause"),
+          stack: errorField(error, "stack"),
+        });
+        console.error("[AUTH] login falhou", { kind: failureKind, name, status, message: msg });
+      }
       const baseDescription = getAuthErrorMessage(error);
-      const technicalDescription =
-        failureKind !== "AUTH_ERROR" && preflight.health.kind !== "NONE"
-          ? `${failureKind}: ${preflight.health.message}`
-          : `${failureKind}: ${baseDescription}`;
-      updateDiagnostic("auth", "fail", technicalDescription);
-      setDevAuthDiagnostic((current) => ({ ...current, lastFailureKind: failureKind, lastFailureMessage: technicalDescription }));
+      updateDiagnostic("auth", "fail", `${failureKind}: ${baseDescription}`);
 
       toast({
         title: "Erro ao entrar",
-        description: technicalDescription,
+        description: baseDescription,
         variant: "destructive",
       });
       return;
