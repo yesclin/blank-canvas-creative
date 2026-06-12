@@ -11,15 +11,14 @@ const SUPABASE_PUBLISHABLE_KEY = (
   readEnvString(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY)
 );
 
+if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+  throw new Error('[SUPABASE_CONFIG] VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY/VITE_SUPABASE_PUBLISHABLE_KEY são obrigatórios.');
+}
+
 // Diagnóstico em runtime para facilitar suporte quando o login falha.
 if (typeof window !== 'undefined') {
-  if (!SUPABASE_URL) {
-    console.error('[SUPABASE_CONFIG] VITE_SUPABASE_URL ausente ou vazio. Login não vai funcionar.');
-  } else if (!/^https:\/\/[a-z0-9-]+\.supabase\.(co|in)$/i.test(SUPABASE_URL)) {
+  if (!/^https:\/\/[a-z0-9-]+\.supabase\.(co|in)$/i.test(SUPABASE_URL)) {
     console.warn('[SUPABASE_CONFIG] VITE_SUPABASE_URL com formato inesperado:', SUPABASE_URL);
-  }
-  if (!SUPABASE_PUBLISHABLE_KEY) {
-    console.error('[SUPABASE_CONFIG] VITE_SUPABASE_PUBLISHABLE_KEY/ANON_KEY ausente. Login não vai funcionar.');
   }
 }
 
