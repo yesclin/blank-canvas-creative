@@ -299,7 +299,7 @@ const Login = () => {
         password: cleanPassword,
       }) as AuthSignInResult;
       if (import.meta.env.DEV) {
-        console.info("LOGIN_SUCCESS", {
+        console.info(res.error ? "LOGIN_ERROR" : "LOGIN_SUCCESS", {
           elapsedMs: Math.round(performance.now() - signInStartedAt),
           email: cleanEmail,
           status: errorField(res.error, "status") ?? null,
@@ -361,6 +361,7 @@ const Login = () => {
       console.log("AUTH USER:", data.user);
       console.log("AUTH SESSION:", data.session);
     }
+    if (import.meta.env.DEV) console.log("SESSION_FOUND", { hasSession: true, hasUser: true, userId: data.user.id, email: data.user.email ?? cleanEmail });
     updateDiagnostic("auth", "success", `Auth OK: ${data.user.email ?? data.user.id}`);
 
     rememberAuthenticatedUser(data.user.id);
@@ -377,14 +378,14 @@ const Login = () => {
       POST_AUTH_QUERY_TIMEOUT_MS,
       "Profile: tempo esgotado ao consultar perfil; seguindo com sessão autenticada.",
     ).catch((error: unknown): QueryResult<ProfileRow> => ({ data: null, error }));
-    if (import.meta.env.DEV) console.log("PROFILE:", profile);
+    if (import.meta.env.DEV) console.log("PROFILE_LOADED", { found: !!profile, error: profileError ?? null, clinicId: profile?.clinic_id ?? null, userId: profile?.user_id ?? null });
 
     if (profileError) {
       const msg = getQueryErrorMessage(profileError, "Profile: falha ao consultar perfil; seguindo com sessão autenticada.");
       console.warn("[AUTH] PROFILE query failed", profileError);
       updateDiagnostic("profile", "warning", msg);
     } else if (!profile || profile.user_id !== data.user.id) {
-      const description = "Conta encontrada, mas sem perfil vinculado. Contate o administrador.";
+      const description = "Usuário autenticado, mas perfil/clínica não encontrado.";
       updateDiagnostic("profile", "warning", `POST_LOGIN_ERROR: ${description}`);
       toast({ title: "Cadastro incompleto", description, variant: "destructive" });
       try { clearReactQueryCache(queryClient, "login-no-profile", { userId: data.user.id }); } catch { /* ignore */ }
@@ -400,7 +401,7 @@ const Login = () => {
     const clinicId = profile?.clinic_id ?? null;
     updateDiagnostic("clinic", "pending", "Buscando clínica vinculada");
     if (!clinicId && !profileError) {
-      const description = "Conta encontrada, mas sem clínica vinculada. Contate o administrador.";
+      const description = "Usuário autenticado, mas perfil/clínica não encontrado.";
       updateDiagnostic("clinic", "warning", `POST_LOGIN_ERROR: ${description}`);
       toast({ title: "Clínica não vinculada", description, variant: "destructive" });
       try { clearReactQueryCache(queryClient, "login-no-clinic", { userId: data.user.id }); } catch { /* ignore */ }
@@ -418,13 +419,13 @@ const Login = () => {
         POST_AUTH_QUERY_TIMEOUT_MS,
         "Clinic: tempo esgotado ao consultar clínica; seguindo com sessão autenticada.",
       ).catch((error: unknown): QueryResult<ClinicRow> => ({ data: null, error }));
-      if (import.meta.env.DEV) console.log("CLINIC:", clinic);
+      if (import.meta.env.DEV) console.log("CLINIC_LOADED", { found: !!clinic, error: clinicError ?? null, clinicId, name: clinic?.name ?? null });
       if (clinicError) {
         const msg = getQueryErrorMessage(clinicError, "Clinic: falha ao consultar clínica; seguindo com sessão autenticada.");
         console.warn("[AUTH] CLINIC query failed", clinicError);
         updateDiagnostic("clinic", "warning", msg);
       } else if (!clinic) {
-        const description = "Conta encontrada, mas sem clínica vinculada. Contate o administrador.";
+        const description = "Usuário autenticado, mas perfil/clínica não encontrado.";
         updateDiagnostic("clinic", "warning", `POST_LOGIN_ERROR: ${description}`);
         toast({ title: "Clínica não encontrada", description, variant: "destructive" });
         try { clearReactQueryCache(queryClient, "login-clinic-not-found", { userId: data.user.id, clinicId }); } catch { /* ignore */ }
@@ -458,17 +459,12 @@ const Login = () => {
       updateDiagnostic("role", "warning", "Role não validada porque a consulta de profile falhou.");
     }
 
-    // Aguarda a sessão estar persistida no storage antes de navegar
-    // (evita race com o RequireAuth no destino).
+    // Confirma a sessão local uma única vez antes de navegar. Não há timeout
+    // manual bloqueando auth: signInWithPassword já retornou com session.
     try {
-      for (let i = 0; i < 10; i += 1) {
-        const { data: sessionData } = await withTimeout<{ data?: { session?: AuthSessionLike } }>(
-          supabase.auth.getSession() as PromiseLike<{ data?: { session?: AuthSessionLike } }>,
-          1000,
-          "Tempo esgotado ao confirmar sessão local.",
-        );
-        if (sessionData?.session) break;
-        await new Promise((r) => setTimeout(r, 100));
+      const { data: sessionData } = await supabase.auth.getSession() as { data?: { session?: AuthSessionLike } };
+      if (import.meta.env.DEV) {
+        console.log("SESSION_FOUND", { source: "post-login-getSession", hasSession: !!sessionData?.session, userId: sessionData?.session?.user?.id ?? null });
       }
     } catch (waitError) {
       console.error("[AUTH] erro aguardando sessão", waitError);
@@ -486,6 +482,7 @@ const Login = () => {
       navigatedRef.current = true;
       updateDiagnostic("redirect", "pending", "Redirecionando para o app");
       const dest = await resolveRedirectPath(data.user.id, fromPath || "/app/dashboard");
+      if (import.meta.env.DEV) console.log("REDIRECT_TARGET", { dest, userId: data.user.id });
       updateDiagnostic("redirect", "success", dest);
       loginInFlightRef.current = false;
       navigate(dest, { replace: true });
