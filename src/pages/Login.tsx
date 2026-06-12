@@ -458,13 +458,17 @@ const Login = () => {
         name, status, message: msg,
         health: preflight.health,
       });
-      const description = getAuthErrorMessage(error);
-      updateDiagnostic("auth", "fail", `${failureKind}: ${description}`);
-      setDevAuthDiagnostic((current) => ({ ...current, lastFailureKind: failureKind, lastFailureMessage: description }));
+      const baseDescription = getAuthErrorMessage(error);
+      const technicalDescription =
+        failureKind !== "AUTH_ERROR" && preflight.health.kind !== "NONE"
+          ? `${failureKind}: ${preflight.health.message}`
+          : `${failureKind}: ${baseDescription}`;
+      updateDiagnostic("auth", "fail", technicalDescription);
+      setDevAuthDiagnostic((current) => ({ ...current, lastFailureKind: failureKind, lastFailureMessage: technicalDescription }));
 
       toast({
         title: "Erro ao entrar",
-        description,
+        description: technicalDescription,
         variant: "destructive",
       });
       return;
