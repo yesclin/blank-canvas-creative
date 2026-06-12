@@ -172,8 +172,10 @@ function clearTabBinding() {
  *  - Backup em localStorage SÓ pode hidratar a sessão se o userId do token
  *    bater com o binding persistente da aba. Sem binding ou divergente:
  *    descartamos silenciosamente — a pessoa cai no /login.
- *  - NUNCA escolhemos "a única sessão YesClin disponível" no navegador como
- *    fallback — esse comportamento foi a causa raiz da troca de usuário.
+ *  - Quando a aba nova não tem binding (iframe recriado, reload do preview),
+ *    aceitamos restaurar APENAS se houver uma única identidade YesClin
+ *    conhecida no navegador (resolveSoleStoredIdentity). Havendo duas ou
+ *    mais contas armazenadas, NUNCA escolhemos por o usuário.
  *  - setItem grava binding do userId autenticado ao mesmo tempo que a sessão.
  *  - removeItem limpa sessão + binding da aba atual.
  */
