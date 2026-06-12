@@ -199,6 +199,7 @@ export function clearIdentityScopedState() {
 export function clearAuthenticatedTab() {
   setTabExpectedUserId(null);
   clearTabIdentity();
+  purgeAllProjectAuthStorage();
   clearIdentityScopedState();
 }
 
