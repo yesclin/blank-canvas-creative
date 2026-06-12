@@ -8,8 +8,9 @@ import { useClinicData } from "@/hooks/useClinicData";
 import { useClinicSubscription } from "@/hooks/useClinicSubscription";
 import { useCurrentUser } from "@/hooks/useClinicUsers";
 import { TrialExpiredBlocker } from "./TrialExpiredBlocker";
-import { Building2, ChevronDown, Settings, Users, CreditCard, Image as ImageIcon } from "lucide-react";
+import { AlertTriangle, Building2, ChevronDown, Settings, Users, CreditCard, Image as ImageIcon } from "lucide-react";
 import logoFull from "@/assets/logo-full.png";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,7 +44,7 @@ function getModuleScope(pathname: string): string {
 export function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { clinic, isLoading } = useClinicData();
+  const { clinic, isLoading, error: clinicError, refetch: retryClinic } = useClinicData();
   const subscription = useClinicSubscription();
   const { user: currentUser } = useCurrentUser();
   const previousClinicIdRef = useRef<string | null | undefined>(undefined);
@@ -82,6 +83,25 @@ export function AppLayout() {
         role={currentUser?.role ?? null}
         clinicName={clinic?.name ?? null}
       />
+    );
+  }
+
+  if (!isLoading && clinicError && !clinic) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-6">
+        <div className="max-w-md text-center space-y-5">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-warning/10">
+            <AlertTriangle className="h-7 w-7 text-warning" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold text-foreground">Dados da clínica indisponíveis</h1>
+            <p className="text-muted-foreground">
+              Login realizado, mas não foi possível carregar os dados da clínica.
+            </p>
+          </div>
+          <Button onClick={retryClinic}>Tentar novamente</Button>
+        </div>
+      </div>
     );
   }
 
