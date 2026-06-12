@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { clearTabIdentity, supabase } from "@/integrations/supabase/client";
+import { prepareTabForNewLogin, supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import logoFull from "@/assets/logo-full.png";
@@ -20,9 +20,6 @@ type QueryResult<T> = { data: T | null; error: unknown };
 type AuthUserLike = { id: string; email?: string | null };
 type AuthSessionLike = { user?: AuthUserLike | null } | null;
 type AuthSignInResult = { data: { session: AuthSessionLike; user: AuthUserLike | null }; error: unknown };
-type ProfileRow = { clinic_id: string | null; user_id: string | null; full_name: string | null; is_active: boolean | null };
-type ClinicRow = { id: string; name: string | null };
-type RoleRow = { role: string; clinic_id: string | null; user_id: string | null };
 type AuthFailureKind = "NONE" | "ENV_MISSING" | "NETWORK_ERROR" | "CORS_ERROR" | "AUTH_ERROR" | "POST_LOGIN_ERROR";
 
 function errorField(error: unknown, field: keyof AuthErrorLike): unknown {
@@ -95,7 +92,6 @@ async function resolveRedirectPath(userId: string, fallback: string): Promise<st
 type DiagnosticStepKey = "auth" | "profile" | "clinic" | "role" | "redirect";
 type DiagnosticStatus = "idle" | "pending" | "success" | "fail" | "warning";
 
-const POST_AUTH_QUERY_TIMEOUT_MS = 6000;
 function getAuthErrorMessage(error: unknown): string {
   const message = errorField(error, "message");
   const rawMsg = typeof message === "string" && message !== "{}" ? message : "";
@@ -161,12 +157,6 @@ function classifyAuthFailure(error: unknown): AuthFailureKind {
   return "AUTH_ERROR";
 }
 
-function getQueryErrorMessage(error: unknown, fallback: string): string {
-  const message = errorField(error, "message");
-  const rawMsg = typeof message === "string" && message !== "{}" ? message : "";
-  return rawMsg || fallback;
-}
-
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -211,7 +201,7 @@ const Login = () => {
       const dest = await resolveRedirectPath(userId, fromPath || "/app/dashboard");
       if (!mounted) return;
       if (import.meta.env.DEV) {
-        console.log("REDIRECT_TARGET", { source: "AuthIdentityProvider", dest, userId });
+        console.log("REDIRECT_DECISION", { source: "AuthIdentityProvider", dest, userId, reason: "existing-session" });
       }
       updateDiagnostic("redirect", "success", dest);
       navigate(dest, { replace: true });
@@ -227,7 +217,7 @@ const Login = () => {
     e.preventDefault();
     if (isLoading) return;
 
-    const cleanEmail = email.trim().toLowerCase();
+    const cleanEmail = email.trim();
     const cleanPassword = password;
 
     if (!cleanEmail || !cleanPassword) {
@@ -249,7 +239,7 @@ const Login = () => {
     // persistir a nova sessão. Sem isso, uma sessão válida pode ser rejeitada
     // pelo storage isolado por aba e o RequireAuth volta para /login.
     setTabExpectedUserId(null);
-    clearTabIdentity();
+    prepareTabForNewLogin();
     updateDiagnostic("auth", "pending", "Autenticando no Supabase");
 
     const envProblem = hasSupabaseEnvProblem();
@@ -347,97 +337,9 @@ const Login = () => {
     rememberAuthenticatedUser(data.user.id);
     try { clearReactQueryCache(queryClient, "login-after-auth", { userId: data.user.id }); } catch { /* ignore */ }
 
-    updateDiagnostic("profile", "pending", "Buscando profile por auth.uid");
-    const { data: profile, error: profileError } = await withTimeout<QueryResult<ProfileRow>>(
-      supabase
-        .from("profiles")
-        .select("clinic_id, user_id, full_name, is_active")
-        .eq("user_id", data.user.id)
-        .limit(1)
-        .maybeSingle() as PromiseLike<QueryResult<ProfileRow>>,
-      POST_AUTH_QUERY_TIMEOUT_MS,
-      "Profile: tempo esgotado ao consultar perfil; seguindo com sessão autenticada.",
-    ).catch((error: unknown): QueryResult<ProfileRow> => ({ data: null, error }));
-    if (import.meta.env.DEV) console.log("PROFILE_LOADED", { found: !!profile, error: profileError ?? null, clinicId: profile?.clinic_id ?? null, userId: profile?.user_id ?? null });
-
-    if (profileError) {
-      const msg = getQueryErrorMessage(profileError, "Profile: falha ao consultar perfil; seguindo com sessão autenticada.");
-      console.warn("[AUTH] PROFILE query failed", profileError);
-      updateDiagnostic("profile", "warning", msg);
-    } else if (!profile || profile.user_id !== data.user.id) {
-      const description = "Usuário autenticado, mas perfil/clínica não encontrado.";
-      updateDiagnostic("profile", "warning", `POST_LOGIN_ERROR: ${description}`);
-      toast({ title: "Cadastro incompleto", description, variant: "destructive" });
-      try { clearReactQueryCache(queryClient, "login-no-profile", { userId: data.user.id }); } catch { /* ignore */ }
-    } else if (profile.is_active === false) {
-      const description = "Conta bloqueada ou inativa. Contate o administrador.";
-      updateDiagnostic("profile", "warning", `POST_LOGIN_ERROR: ${description}`);
-      toast({ title: "Acesso bloqueado", description, variant: "destructive" });
-      try { clearReactQueryCache(queryClient, "login-inactive-profile", { userId: data.user.id }); } catch { /* ignore */ }
-    } else {
-      updateDiagnostic("profile", "success", `Profile OK: ${profile.full_name ?? data.user.email ?? data.user.id}`);
-    }
-
-    const clinicId = profile?.clinic_id ?? null;
-    updateDiagnostic("clinic", "pending", "Buscando clínica vinculada");
-    if (!clinicId && !profileError) {
-      const description = "Usuário autenticado, mas perfil/clínica não encontrado.";
-      updateDiagnostic("clinic", "warning", `POST_LOGIN_ERROR: ${description}`);
-      toast({ title: "Clínica não vinculada", description, variant: "destructive" });
-      try { clearReactQueryCache(queryClient, "login-no-clinic", { userId: data.user.id }); } catch { /* ignore */ }
-    }
-
-    let roles: RoleRow[] | null = null;
-    if (clinicId) {
-      const { data: clinic, error: clinicError } = await withTimeout<QueryResult<ClinicRow>>(
-        supabase
-          .from("clinics")
-          .select("id, name")
-          .eq("id", clinicId)
-          .limit(1)
-          .maybeSingle() as PromiseLike<QueryResult<ClinicRow>>,
-        POST_AUTH_QUERY_TIMEOUT_MS,
-        "Clinic: tempo esgotado ao consultar clínica; seguindo com sessão autenticada.",
-      ).catch((error: unknown): QueryResult<ClinicRow> => ({ data: null, error }));
-      if (import.meta.env.DEV) console.log("CLINIC_LOADED", { found: !!clinic, error: clinicError ?? null, clinicId, name: clinic?.name ?? null });
-      if (clinicError) {
-        const msg = getQueryErrorMessage(clinicError, "Clinic: falha ao consultar clínica; seguindo com sessão autenticada.");
-        console.warn("[AUTH] CLINIC query failed", clinicError);
-        updateDiagnostic("clinic", "warning", msg);
-      } else if (!clinic) {
-        const description = "Usuário autenticado, mas perfil/clínica não encontrado.";
-        updateDiagnostic("clinic", "warning", `POST_LOGIN_ERROR: ${description}`);
-        toast({ title: "Clínica não encontrada", description, variant: "destructive" });
-        try { clearReactQueryCache(queryClient, "login-clinic-not-found", { userId: data.user.id, clinicId }); } catch { /* ignore */ }
-      } else {
-        updateDiagnostic("clinic", "success", `Clinic OK: ${clinic.name ?? clinic.id}`);
-      }
-
-      updateDiagnostic("role", "pending", "Buscando papéis do usuário");
-      const { data: rolesData, error: rolesError } = await withTimeout<QueryResult<RoleRow[]>>(
-        supabase
-          .from("user_roles")
-          .select("role, clinic_id, user_id")
-          .eq("user_id", data.user.id)
-          .eq("clinic_id", clinicId) as PromiseLike<QueryResult<RoleRow[]>>,
-        POST_AUTH_QUERY_TIMEOUT_MS,
-        "Role: tempo esgotado ao consultar permissões; seguindo com sessão autenticada.",
-      ).catch((error: unknown): QueryResult<RoleRow[]> => ({ data: null, error }));
-      roles = rolesData ?? null;
-      if (import.meta.env.DEV) console.log("ROLES:", roles);
-      if (rolesError) {
-        const msg = getQueryErrorMessage(rolesError, "Role: falha ao consultar permissões; seguindo com sessão autenticada.");
-        console.warn("[AUTH] ROLES query failed", rolesError);
-        updateDiagnostic("role", "warning", msg);
-      } else if (!rolesData?.length) {
-        updateDiagnostic("role", "warning", "Role não encontrada; o app abrirá e mostrará o bloqueio de permissões se necessário.");
-      } else {
-        updateDiagnostic("role", "success", rolesData.map((item) => item.role).join(", "));
-      }
-    } else if (profileError) {
-      updateDiagnostic("clinic", "warning", "Clinic não validada porque a consulta de profile falhou.");
-      updateDiagnostic("role", "warning", "Role não validada porque a consulta de profile falhou.");
-    }
+    // Não bloquear o login por profile/clinic/role aqui. A sessão já foi
+    // autenticada; os dados da clínica são carregados na área /app com tela de
+    // erro recuperável se o banco/RLS falhar.
 
     // Confirma a sessão local uma única vez antes de navegar. Não há timeout
     // manual bloqueando auth: signInWithPassword já retornou com session.
@@ -462,7 +364,7 @@ const Login = () => {
       navigatedRef.current = true;
       updateDiagnostic("redirect", "pending", "Redirecionando para o app");
       const dest = await resolveRedirectPath(data.user.id, fromPath || "/app/dashboard");
-      if (import.meta.env.DEV) console.log("REDIRECT_TARGET", { dest, userId: data.user.id });
+      if (import.meta.env.DEV) console.log("REDIRECT_DECISION", { dest, userId: data.user.id, reason: "login-success" });
       updateDiagnostic("redirect", "success", dest);
       loginInFlightRef.current = false;
       navigate(dest, { replace: true });

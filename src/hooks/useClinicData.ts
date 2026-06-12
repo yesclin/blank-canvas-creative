@@ -26,7 +26,9 @@ export interface ClinicData {
 
 export function useClinicData() {
   const [clinic, setClinic] = useState<ClinicData | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [retryVersion, setRetryVersion] = useState(0);
   const requestRef = useRef(0);
   const activeUserIdRef = useRef<string | null>(null);
   const activeClinicIdRef = useRef<string | null>(null);
@@ -46,6 +48,7 @@ export function useClinicData() {
       };
 
       try {
+        setError(null);
         const { data: authData, error: authError } = await withTimeout<any>(supabase.auth.getUser());
         if (authError) throw authError;
 
@@ -104,6 +107,7 @@ export function useClinicData() {
         if (!stillCurrent(userId)) return;
 
         if (!resolvedClinicId) {
+          if (import.meta.env.DEV) console.log("PROFILE_LOADING", { source: "useClinicData", userId });
           const { data: profile } = await withTimeout<any>(supabase
             .from("profiles")
             .select("clinic_id, user_id")
@@ -125,13 +129,17 @@ export function useClinicData() {
           }
 
           if (!profile?.clinic_id) {
+            if (import.meta.env.DEV) console.error("PROFILE_ERROR", { source: "useClinicData", userId, reason: "missing-clinic" });
+            setError(new Error("Login realizado, mas não foi possível carregar os dados da clínica."));
             setClinic(null);
             setIsLoading(false);
             return;
           }
+          if (import.meta.env.DEV) console.log("PROFILE_LOADED", { source: "useClinicData", userId, clinicId: profile.clinic_id });
           resolvedClinicId = profile.clinic_id;
         }
 
+        if (import.meta.env.DEV) console.log("CLINIC_LOADING", { source: "useClinicData", userId, clinicId: resolvedClinicId });
         const { data: clinicData } = await withTimeout<any>(supabase
           .from("clinics")
           .select(`
@@ -181,9 +189,17 @@ export function useClinicData() {
             activeClinicIdRef.current = clinicData.id;
             setClinic({ ...clinicData, logo_url: signedLogoUrl });
           }
+          if (import.meta.env.DEV) console.log("CLINIC_LOADED", { source: "useClinicData", userId, clinicId: clinicData.id, name: clinicData.name ?? null });
+        } else {
+          if (import.meta.env.DEV) console.error("CLINIC_ERROR", { source: "useClinicData", userId, clinicId: resolvedClinicId, reason: "not-found-or-rls" });
+          setError(new Error("Login realizado, mas não foi possível carregar os dados da clínica."));
+          setClinic(null);
         }
       } catch (error) {
+        if (import.meta.env.DEV) console.error("CLINIC_ERROR", { source: "useClinicData", error });
         console.error("[APP_ERROR]", error);
+        setClinic(null);
+        setError(error);
       } finally {
         if (stillCurrent(activeUserIdRef.current)) {
           if (import.meta.env.DEV) {
@@ -249,7 +265,7 @@ export function useClinicData() {
         window.removeEventListener('yesclin:support-session-changed', onSupportToggle);
       }
     };
-  }, []);
+  }, [retryVersion]);
 
   const getFormattedAddress = () => {
     if (!clinic) return null;
@@ -284,6 +300,8 @@ export function useClinicData() {
   return {
     clinic,
     isLoading,
+    error,
+    refetch: () => setRetryVersion((value) => value + 1),
     getFormattedAddress,
     getFiscalDocument,
   };

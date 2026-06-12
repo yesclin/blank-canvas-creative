@@ -115,6 +115,7 @@ function extractSessionUserId(rawSession: string | null) {
 const CURRENT_TAB_ID = getStableTabId();
 export const CURRENT_AUTH_STORAGE_KEY = `yc.auth.${SUPABASE_PROJECT_REF}.${CURRENT_TAB_ID}`;
 const CURRENT_TAB_BINDING_KEY = `${TAB_BINDING_PREFIX}${SUPABASE_PROJECT_REF}.${CURRENT_TAB_ID}`;
+const LOGIN_TRANSITION_KEY = `yc.auth.login-transition.${SUPABASE_PROJECT_REF}.${CURRENT_TAB_ID}`;
 
 export function isYesclinScopedAuthStorageKey(key: string) {
   return key.startsWith(`yc.auth.${SUPABASE_PROJECT_REF}.`);
@@ -165,6 +166,7 @@ function readTabBinding(): string | null {
       window.sessionStorage.getItem(CURRENT_TAB_BINDING_KEY) ||
       window.localStorage.getItem(CURRENT_TAB_BINDING_KEY);
     if (direct) return direct;
+    if (window.sessionStorage.getItem(LOGIN_TRANSITION_KEY) === '1') return null;
     // Fallback seguro: única identidade conhecida no navegador.
     const sole = resolveSoleStoredIdentity();
     if (sole) {
@@ -293,6 +295,12 @@ const perTabAuthStorage = {
     window.sessionStorage.setItem(key, value);
     if (key === CURRENT_AUTH_STORAGE_KEY) {
       const userId = extractSessionUserId(value);
+      if (userId && window.sessionStorage.getItem(LOGIN_TRANSITION_KEY) === '1') {
+        writeTabBinding(userId);
+        window.localStorage.setItem(key, value);
+        window.sessionStorage.removeItem(LOGIN_TRANSITION_KEY);
+        return;
+      }
       const expected = readTabBinding();
       if (userId && expected && userId !== expected) {
         // Tentativa de gravar sessão de outro usuário nesta aba — NÃO
@@ -319,6 +327,7 @@ const perTabAuthStorage = {
     window.localStorage.removeItem(key);
     window.sessionStorage.removeItem(key);
     if (key === CURRENT_AUTH_STORAGE_KEY) {
+      window.sessionStorage.removeItem(LOGIN_TRANSITION_KEY);
       clearTabBinding();
     }
   },
@@ -340,6 +349,19 @@ export function clearTabIdentity() {
   try {
     window.localStorage.removeItem(CURRENT_AUTH_STORAGE_KEY);
     window.sessionStorage.removeItem(CURRENT_AUTH_STORAGE_KEY);
+    window.sessionStorage.removeItem(LOGIN_TRANSITION_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function prepareTabForNewLogin() {
+  clearTabBinding();
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(CURRENT_AUTH_STORAGE_KEY);
+    window.sessionStorage.removeItem(CURRENT_AUTH_STORAGE_KEY);
+    window.sessionStorage.setItem(LOGIN_TRANSITION_KEY, '1');
   } catch {
     /* ignore */
   }
