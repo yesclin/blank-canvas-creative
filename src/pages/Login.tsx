@@ -426,14 +426,16 @@ const Login = () => {
     let data: AuthSignInResult["data"] | null = null;
     let error: unknown = null;
     try {
+      const signInStartedAt = performance.now();
       const res = await withTimeout<AuthSignInResult>(
         supabase.auth.signInWithPassword({
           email: cleanEmail,
           password: cleanPassword,
         }) as PromiseLike<AuthSignInResult>,
-        10000,
-        "Auth: tempo esgotado ao autenticar no Supabase.",
+        SIGN_IN_TIMEOUT_MS,
+        `Auth: tempo esgotado ao autenticar no Supabase (${SIGN_IN_TIMEOUT_MS / 1000}s).`,
       );
+      console.info("[AUTH] signInWithPassword respondeu", { elapsedMs: Math.round(performance.now() - signInStartedAt), hasSession: !!res.data?.session, hasError: !!res.error });
       data = res.data;
       error = res.error;
     } catch (thrown) {
