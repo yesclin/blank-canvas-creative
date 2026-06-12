@@ -103,47 +103,49 @@ function hasSupabaseEnvProblem(): string | null {
   return null;
 }
 
+const HEALTH_TIMEOUT_MS = 15000;
+const SIGN_IN_TIMEOUT_MS = 30000;
+
 async function fetchSupabaseAuthHealth(): Promise<SupabaseHealthDiagnostic> {
   const envProblem = hasSupabaseEnvProblem();
   if (envProblem) return { kind: "ENV_MISSING", ok: false, message: envProblem };
 
   const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), 6000);
+  const timeoutId = window.setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
   const healthUrl = `${LOGIN_SUPABASE_URL.replace(/\/$/, "")}/auth/v1/health`;
+  const startedAt = performance.now();
   try {
+    // IMPORTANTE: GoTrue health aceita apenas o header `apikey`. Mandar
+    // `Authorization: Bearer <anon>` junto faz alguns deploys responderem
+    // 401 "No API key found" ou travarem. Mantemos somente `apikey`.
     const response = await fetch(healthUrl, {
       method: "GET",
-      headers: {
-        apikey: LOGIN_SUPABASE_AUTH_KEY,
-        Authorization: `Bearer ${LOGIN_SUPABASE_AUTH_KEY}`,
-      },
+      headers: { apikey: LOGIN_SUPABASE_AUTH_KEY },
       signal: controller.signal,
+      cache: "no-store",
     });
+    const elapsed = Math.round(performance.now() - startedAt);
     const body = await response.text().catch(() => "");
     const suffix = body ? ` — ${body.slice(0, 160)}` : "";
+    console.info("[AUTH_HEALTH] response", { status: response.status, elapsedMs: elapsed, ok: response.ok });
     return {
-      kind: response.ok ? "NONE" : "NETWORK_ERROR",
+      kind: response.ok ? "NONE" : response.status === 401 ? "AUTH_ERROR" : "NETWORK_ERROR",
       ok: response.ok,
       status: response.status,
-      message: `HTTP ${response.status}${suffix}`,
+      message: `HTTP ${response.status} em ${elapsed}ms${suffix}`,
     };
   } catch (error) {
+    const elapsed = Math.round(performance.now() - startedAt);
     const message = String(errorField(error, "message") || error);
-    if (errorField(error, "name") === "AbortError") {
-      return { kind: "NETWORK_ERROR", ok: false, message: "timeout: Supabase Auth não respondeu em 6s" };
+    const name = String(errorField(error, "name") || "");
+    console.error("[AUTH_HEALTH] falhou", { name, message, elapsedMs: elapsed });
+    if (name === "AbortError") {
+      return { kind: "NETWORK_ERROR", ok: false, message: `timeout: Supabase Auth não respondeu em ${HEALTH_TIMEOUT_MS / 1000}s` };
     }
-
-    try {
-      const reachabilityController = new AbortController();
-      const reachabilityTimeout = window.setTimeout(() => reachabilityController.abort(), 3500);
-      await fetch(LOGIN_SUPABASE_URL, { mode: "no-cors", signal: reachabilityController.signal });
-      window.clearTimeout(reachabilityTimeout);
-      return { kind: "CORS_ERROR", ok: false, message: `CORS_ERROR: ${message || "fetch bloqueado pelo navegador"}` };
-    } catch {
-      return { kind: "NETWORK_ERROR", ok: false, message: `NETWORK_ERROR: ${message || "sem resposta do Supabase"}` };
-    } finally {
-      window.clearTimeout(timeoutId);
+    if (/cors|cross-origin|access-control/i.test(message)) {
+      return { kind: "CORS_ERROR", ok: false, message: `CORS_ERROR: ${message}` };
     }
+    return { kind: "NETWORK_ERROR", ok: false, message: `NETWORK_ERROR: ${message || "sem resposta do Supabase"}` };
   } finally {
     window.clearTimeout(timeoutId);
   }
@@ -424,14 +426,16 @@ const Login = () => {
     let data: AuthSignInResult["data"] | null = null;
     let error: unknown = null;
     try {
+      const signInStartedAt = performance.now();
       const res = await withTimeout<AuthSignInResult>(
         supabase.auth.signInWithPassword({
           email: cleanEmail,
           password: cleanPassword,
         }) as PromiseLike<AuthSignInResult>,
-        10000,
-        "Auth: tempo esgotado ao autenticar no Supabase.",
+        SIGN_IN_TIMEOUT_MS,
+        `Auth: tempo esgotado ao autenticar no Supabase (${SIGN_IN_TIMEOUT_MS / 1000}s).`,
       );
+      console.info("[AUTH] signInWithPassword respondeu", { elapsedMs: Math.round(performance.now() - signInStartedAt), hasSession: !!res.data?.session, hasError: !!res.error });
       data = res.data;
       error = res.error;
     } catch (thrown) {

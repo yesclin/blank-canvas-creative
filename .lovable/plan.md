@@ -1,25 +1,36 @@
-Plano para corrigir o erro de login Supabase:
+Do I know what the issue is? Sim: o frontend está abortando o diagnóstico em 6s e o login em 10s, então o app transforma lentidão/indisponibilidade do Supabase Auth em `NETWORK_ERROR` antes de sabermos se `/auth/v1/health` e `/auth/v1/token` responderiam. O Network já mostra `auth/v1/token` como `Failed to fetch`, sem evidência de env errado. Não encontrei Service Worker em `public`, nem CSP explícita em `index.html`/`vite.config.ts`.
 
-1. Ajustar variáveis do cliente Supabase
-- Atualizar `src/integrations/supabase/client.ts` para aceitar `VITE_SUPABASE_ANON_KEY` e manter fallback para `VITE_SUPABASE_PUBLISHABLE_KEY`, já que o projeto atualmente tem `VITE_SUPABASE_PUBLISHABLE_KEY` no `.env` e não tem `VITE_SUPABASE_ANON_KEY`.
-- Validar em runtime se `SUPABASE_URL` e chave anon/publishable existem, não estão vazias e a URL é uma URL Supabase válida.
-- Registrar no console diagnósticos claros: `SUPABASE_URL ausente`, `ANON_KEY ausente`, `projeto/ref divergente`, `network timeout`, `Auth error`.
+Plano de correção:
 
-2. Melhorar mensagem e diagnóstico no login
-- Em `src/pages/Login.tsx`, trocar a mensagem genérica atual por uma mensagem mais clara para timeout/rede:
-  `Não foi possível conectar ao servidor. Verifique internet ou configuração do Supabase.`
-- Manter mensagens separadas para credenciais inválidas, usuário bloqueado/inativo e email não confirmado.
-- Logar no console o tipo do erro sem expor senha/token.
+1. Ajustar diagnóstico sem mascarar o erro
+- Trocar o timeout de `auth/v1/health` de 6s para 15s somente no diagnóstico.
+- Fazer o fetch direto exatamente com `apikey` e `Authorization: Bearer <anon key>`.
+- Logar duração, status HTTP, body parcial, `TypeError/AbortError`, e classificar como `CORS_ERROR`, `ERR_FAILED`, `TIMEOUT`, `HTTP_401`, `HTTP_5XX` ou `OK`.
 
-3. Não destruir sessão em erro de conexão
-- Alterar o fluxo do `handleLogin` para não limpar toda a sessão antes de tentar autenticar.
-- Limpar/quarentenar sessão apenas em casos intencionais: logout, troca real de usuário autenticado, perfil sem vínculo/inativo ou sessão divergente confirmada.
-- Em erro de timeout/network/CORS/configuração, preservar a sessão atual e não trocar usuário.
+2. Remover abortos prematuros do login real
+- Remover o `withTimeout(..., 10000)` em `supabase.auth.signInWithPassword` ou aumentar para 30s apenas como proteção de UI.
+- Garantir que nenhum `AbortController` de 6s seja usado no `signInWithPassword`.
+- Manter timeouts curtos apenas em consultas pós-login (`profile`, `clinic`, `role`) sem bloquear a sessão autenticada.
 
-4. Testes de verificação
-- Verificar a tela `/login` em preview.
-- Testar endpoints Supabase: REST responde 401 (normal) e Auth health/settings/token indicam se há timeout de serviço.
-- Testar login com usuário válido no preview, recarregar a página e tentar logout/login novamente.
-- Registrar no console a causa final se falhar: variável ausente, CORS/network timeout ou erro Auth.
+3. Verificar bloqueios do app
+- Confirmar por busca que não há Service Worker, `window.fetch` monkey patch, MSW/workbox, proxy ou CSP bloqueando Supabase.
+- Se existir algum interceptador, excluir `https://*.supabase.co/auth/v1/*` do interceptador.
+- Se houver CSP, garantir `connect-src https://*.supabase.co wss://*.supabase.co`.
 
-Observação importante: já confirmei que o `.env` aponta para `https://yfljqgmbnplkdjfhvunq.supabase.co` e a chave publishable/anon corresponde ao ref `yfljqgmbnplkdjfhvunq`. Porém os endpoints Auth `/auth/v1/health` e `/auth/v1/settings` estão dando timeout, enquanto REST responde; se o serviço Auth do Supabase continuar indisponível, o código vai diagnosticar corretamente, mas a autenticação só volta quando o Auth do Supabase responder.
+4. Melhorar evidência no painel DEV
+- Exibir `health: pending/ok/status/timeout`, duração em ms e resultado do último `token`.
+- Exibir claramente se falhou em `env`, `health`, `token`, `auth credentials` ou `post-login data`.
+
+5. Teste obrigatório em navegador limpo
+- Usar Playwright com contexto novo (equivalente a aba anônima) e sem `localStorage/sessionStorage/cookies`.
+- Abrir `/login`, capturar console e rede.
+- Tentar login válido e verificar se `/auth/v1/health` responde OK e se `/auth/v1/token` retorna session.
+- Recarregar e validar que a sessão persiste.
+
+6. Se ainda falhar fora do app
+- Se `health` e `token` também falharem com fetch direto sem interceptadores, a correção não é no React: precisa ajustar/recuperar o Supabase Auth do projeto `yfljqgmbnplkdjfhvunq`.
+- Conferir no Supabase Dashboard: projeto ativo, Auth saudável, Authentication > URL Configuration com Site URL do preview/produção e Redirect URLs incluindo os domínios Lovable.
+
+Arquivos previstos:
+- `src/pages/Login.tsx` para diagnóstico, timeouts e logs de login.
+- Possivelmente nenhum outro arquivo se não houver CSP/interceptador encontrado.
