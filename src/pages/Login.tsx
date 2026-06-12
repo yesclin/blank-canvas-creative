@@ -95,6 +95,7 @@ type DiagnosticStepKey = "auth" | "profile" | "clinic" | "role" | "redirect";
 type DiagnosticStatus = "idle" | "pending" | "success" | "fail" | "warning";
 
 const POST_AUTH_QUERY_TIMEOUT_MS = 6000;
+const AUTH_REQUEST_FEEDBACK_TIMEOUT_MS = 45000;
 
 function getAuthErrorMessage(error: unknown): string {
   const message = errorField(error, "message");
@@ -282,10 +283,14 @@ const Login = () => {
     let error: unknown = null;
     try {
       const signInStartedAt = performance.now();
-      const res = await supabase.auth.signInWithPassword({
+      const signInPromise = supabase.auth.signInWithPassword({
         email: cleanEmail,
         password: cleanPassword,
-      }) as AuthSignInResult;
+      }) as PromiseLike<AuthSignInResult>;
+      const feedbackTimeout = new Promise<never>((_, reject) => {
+        window.setTimeout(() => reject(new Error("AUTH_REQUEST_STILL_PENDING")), AUTH_REQUEST_FEEDBACK_TIMEOUT_MS);
+      });
+      const res = await Promise.race([signInPromise, feedbackTimeout]);
       if (isLocalDevelopmentHost()) {
         console.info("[AUTH] signInWithPassword respondeu", { elapsedMs: Math.round(performance.now() - signInStartedAt), hasSession: !!res.data?.session, hasError: !!res.error });
       }
@@ -302,6 +307,7 @@ const Login = () => {
       const status = Number(errorField(error, "status") ?? 0);
       const msg = String(errorField(error, "message") || "");
       const failureKind = classifyAuthFailure(error);
+      const isStillPending = msg === "AUTH_REQUEST_STILL_PENDING";
       if (import.meta.env.DEV) {
         console.error("Supabase connection diagnostic:", {
           failureKind,
@@ -311,9 +317,11 @@ const Login = () => {
           cause: errorField(error, "cause"),
           stack: errorField(error, "stack"),
         });
-        console.error("[AUTH] login falhou", { kind: failureKind, name, status, message: msg });
+        console.error("[AUTH] login falhou", { kind: failureKind, name, status, message: msg, stillPending: isStillPending });
       }
-      const baseDescription = getAuthErrorMessage(error);
+      const baseDescription = isStillPending
+        ? "Não foi possível conectar ao servidor de autenticação. Tente novamente em instantes."
+        : getAuthErrorMessage(error);
       updateDiagnostic("auth", "fail", `${failureKind}: ${baseDescription}`);
 
       toast({
