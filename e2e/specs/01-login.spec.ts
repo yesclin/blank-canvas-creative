@@ -6,8 +6,14 @@ test.describe("Fluxo 1 — Login & contexto de clínica", () => {
     await loginAs(page, "owner");
     // após login deve estar fora de /login
     expect(page.url()).not.toContain("/login");
+    await page.waitForURL(/\/app\/(dashboard)?$/);
     // sanity: app shell carregou (procura header/sidebar comuns)
     await expect(page.locator("body")).toBeVisible();
+
+    // Recarregar não pode perder sessão nem voltar ao login.
+    await page.reload();
+    await expect(page.locator("body")).toBeVisible();
+    expect(page.url()).not.toContain("/login");
   });
 
   test("credenciais inválidas mostram erro e não redirecionam", async ({ page }) => {
