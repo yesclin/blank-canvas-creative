@@ -86,6 +86,11 @@ export function AuthIdentityProvider({ children }: { children: ReactNode }) {
           applyUserId(null, "resolve:no-session");
           return;
         }
+        const sessionUserId = sessionData.session.user?.id ?? null;
+        if (sessionUserId) {
+          applyUserId(sessionUserId, "resolve:getSession");
+          if (import.meta.env.DEV) console.log("SESSION_FOUND", { source: "AuthIdentityProvider", userId: sessionUserId });
+        }
         const { data, error } = await supabase.auth.getUser();
         if (cancelled || reqId !== requestId) return;
         if (error) throw error;
@@ -93,7 +98,13 @@ export function AuthIdentityProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         if (!cancelled && reqId === requestId) {
           console.error("[AUTH_IDENTITY] falha ao validar auth.uid()", error);
-          applyUserId(null, "resolve:error");
+          // Falha de rede/getUser depois de uma sessão local existente NÃO é
+          // logout. Preserva a sessão e evita voltar para /login indevidamente.
+          if (userIdRef.current === undefined) {
+            applyUserId(null, "resolve:error-no-session");
+          } else {
+            setIsLoading(false);
+          }
         }
       } finally {
         if (!cancelled && reqId === requestId) setIsLoading(false);

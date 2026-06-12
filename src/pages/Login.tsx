@@ -3,16 +3,17 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { clearTabIdentity, supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import logoFull from "@/assets/logo-full.png";
 import logoIcon from "@/assets/logo-icon.png";
 import { motion } from "framer-motion";
-import { clearAuthQuarantine, hasRecentAuthQuarantine, rememberAuthenticatedUser } from "@/lib/authSessionIsolation";
+import { clearAuthQuarantine, hasRecentAuthQuarantine, rememberAuthenticatedUser, setTabExpectedUserId } from "@/lib/authSessionIsolation";
 import { useQueryClient } from "@tanstack/react-query";
 import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
 import { withTimeout } from "@/lib/asyncTimeout";
+import { useAuthIdentity } from "@/hooks/useAuthIdentity";
 
 type AuthErrorLike = { message?: unknown; code?: unknown; status?: unknown; name?: unknown; cause?: unknown; stack?: unknown };
 type QueryResult<T> = { data: T | null; error: unknown };
@@ -95,8 +96,6 @@ type DiagnosticStepKey = "auth" | "profile" | "clinic" | "role" | "redirect";
 type DiagnosticStatus = "idle" | "pending" | "success" | "fail" | "warning";
 
 const POST_AUTH_QUERY_TIMEOUT_MS = 6000;
-const AUTH_REQUEST_FEEDBACK_TIMEOUT_MS = 45000;
-
 function getAuthErrorMessage(error: unknown): string {
   const message = errorField(error, "message");
   const rawMsg = typeof message === "string" && message !== "{}" ? message : "";
@@ -177,6 +176,7 @@ const Login = () => {
   const location = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { userId: currentAuthUserId, isLoading: authIdentityLoading } = useAuthIdentity();
   const navigatedRef = useRef(false);
   const loginInFlightRef = useRef(false);
   const fromPath = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
@@ -195,23 +195,15 @@ const Login = () => {
     console.log("SUPABASE_KEY_REF:", keyRef || "não identificado");
   }, []);
 
-  /**
-   * Se o usuário já estiver autenticado ao montar /login (ou se o evento
-   * SIGNED_IN chegar depois do remount provocado pelo `AuthScopedProviders`),
-   * redireciona automaticamente para o destino correto. Esse efeito é o
-   * caminho oficial de navegação pós-login — sobrevive ao remount do
-   * ProviderShell que acontece quando a `scopeKey` muda.
-   */
   useEffect(() => {
     let mounted = true;
-
-    const goTo = async (userId: string, source: string) => {
+    const goTo = async (userId: string) => {
       if (hasRecentAuthQuarantine()) {
-        if (import.meta.env.DEV) console.warn("[AUTH] redirect ignorado: sessão em quarentena", { source, userId });
+        if (import.meta.env.DEV) console.warn("[AUTH] redirect ignorado: sessão em quarentena", { source: "AuthIdentityProvider", userId });
         return;
       }
       if (loginInFlightRef.current) {
-        if (import.meta.env.DEV) console.log("[AUTH] redirect aguardando validação pós-login", { source, userId });
+        if (import.meta.env.DEV) console.log("[AUTH] redirect aguardando validação pós-login", { source: "AuthIdentityProvider", userId });
         return;
       }
       if (navigatedRef.current) return;
@@ -219,31 +211,17 @@ const Login = () => {
       const dest = await resolveRedirectPath(userId, fromPath || "/app/dashboard");
       if (!mounted) return;
       if (import.meta.env.DEV) {
-        console.log("[AUTH] Login redirect", { source, dest, userId });
+        console.log("REDIRECT_TARGET", { source: "AuthIdentityProvider", dest, userId });
       }
       updateDiagnostic("redirect", "success", dest);
       navigate(dest, { replace: true });
     };
-
-    // 1) Sessão já existente ao abrir /login
-    supabase.auth.getSession().then(({ data }: { data?: { session?: AuthSessionLike } }) => {
-      const uid = data?.session?.user?.id;
-      if (uid && mounted) void goTo(uid, "getSession");
-    });
-
-    // 2) Evento posterior (SIGNED_IN, INITIAL_SESSION com sessão)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!mounted) return;
-      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user?.id) {
-        void goTo(session.user.id, event);
-      }
-    });
+    if (!authIdentityLoading && currentAuthUserId) void goTo(currentAuthUserId);
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
     };
-  }, [navigate, fromPath]);
+  }, [navigate, fromPath, currentAuthUserId, authIdentityLoading]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -267,6 +245,11 @@ const Login = () => {
     // de tentar autenticar: se a chamada falhar por rede/timeout/CORS, o
     // usuário não deve perder a sessão atual.
     clearAuthQuarantine();
+    // Fluxo explícito de login: remove binding local antigo antes do Supabase
+    // persistir a nova sessão. Sem isso, uma sessão válida pode ser rejeitada
+    // pelo storage isolado por aba e o RequireAuth volta para /login.
+    setTabExpectedUserId(null);
+    clearTabIdentity();
     updateDiagnostic("auth", "pending", "Autenticando no Supabase");
 
     const envProblem = hasSupabaseEnvProblem();
@@ -283,19 +266,28 @@ const Login = () => {
     let error: unknown = null;
     try {
       const signInStartedAt = performance.now();
-      const signInPromise = supabase.auth.signInWithPassword({
+      if (import.meta.env.DEV) {
+        console.log("LOGIN_START", {
+          email: cleanEmail,
+          supabaseUrl: LOGIN_SUPABASE_URL,
+          urlProjectRef: LOGIN_SUPABASE_PROJECT_REF,
+          keyProjectRef: LOGIN_SUPABASE_AUTH_KEY ? decodeJwtRef(LOGIN_SUPABASE_AUTH_KEY) : "",
+        });
+      }
+      const res = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password: cleanPassword,
-      }) as PromiseLike<AuthSignInResult>;
-      let feedbackTimeoutId: number | undefined;
-      const feedbackTimeout = new Promise<never>((_, reject) => {
-        feedbackTimeoutId = window.setTimeout(() => reject(new Error("AUTH_REQUEST_STILL_PENDING")), AUTH_REQUEST_FEEDBACK_TIMEOUT_MS);
-      });
-      const res = await Promise.race([signInPromise, feedbackTimeout]).finally(() => {
-        if (feedbackTimeoutId) window.clearTimeout(feedbackTimeoutId);
-      });
-      if (isLocalDevelopmentHost()) {
-        console.info("[AUTH] signInWithPassword respondeu", { elapsedMs: Math.round(performance.now() - signInStartedAt), hasSession: !!res.data?.session, hasError: !!res.error });
+      }) as AuthSignInResult;
+      if (import.meta.env.DEV) {
+        console.info(res.error ? "LOGIN_ERROR" : "LOGIN_SUCCESS", {
+          elapsedMs: Math.round(performance.now() - signInStartedAt),
+          email: cleanEmail,
+          status: errorField(res.error, "status") ?? null,
+          error: res.error ?? null,
+          hasSession: !!res.data?.session,
+          hasUser: !!res.data?.user,
+          userId: res.data?.user?.id ?? null,
+        });
       }
       data = res.data;
       error = res.error;
@@ -310,21 +302,19 @@ const Login = () => {
       const status = Number(errorField(error, "status") ?? 0);
       const msg = String(errorField(error, "message") || "");
       const failureKind = classifyAuthFailure(error);
-      const isStillPending = msg === "AUTH_REQUEST_STILL_PENDING";
       if (import.meta.env.DEV) {
-        console.error("Supabase connection diagnostic:", {
+        console.error("LOGIN_ERROR", {
           failureKind,
+          email: cleanEmail,
           message: errorField(error, "message"),
           name: errorField(error, "name"),
           status: errorField(error, "status"),
           cause: errorField(error, "cause"),
           stack: errorField(error, "stack"),
         });
-        console.error("[AUTH] login falhou", { kind: failureKind, name, status, message: msg, stillPending: isStillPending });
+        console.error("[AUTH] login falhou", { kind: failureKind, name, status, message: msg });
       }
-      const baseDescription = isStillPending
-        ? "Não foi possível conectar ao servidor de autenticação. Tente novamente em instantes."
-        : getAuthErrorMessage(error);
+      const baseDescription = getAuthErrorMessage(error);
       updateDiagnostic("auth", "fail", `${failureKind}: ${baseDescription}`);
 
       toast({
@@ -351,6 +341,7 @@ const Login = () => {
       console.log("AUTH USER:", data.user);
       console.log("AUTH SESSION:", data.session);
     }
+    if (import.meta.env.DEV) console.log("SESSION_FOUND", { hasSession: true, hasUser: true, userId: data.user.id, email: data.user.email ?? cleanEmail });
     updateDiagnostic("auth", "success", `Auth OK: ${data.user.email ?? data.user.id}`);
 
     rememberAuthenticatedUser(data.user.id);
@@ -367,14 +358,14 @@ const Login = () => {
       POST_AUTH_QUERY_TIMEOUT_MS,
       "Profile: tempo esgotado ao consultar perfil; seguindo com sessão autenticada.",
     ).catch((error: unknown): QueryResult<ProfileRow> => ({ data: null, error }));
-    if (import.meta.env.DEV) console.log("PROFILE:", profile);
+    if (import.meta.env.DEV) console.log("PROFILE_LOADED", { found: !!profile, error: profileError ?? null, clinicId: profile?.clinic_id ?? null, userId: profile?.user_id ?? null });
 
     if (profileError) {
       const msg = getQueryErrorMessage(profileError, "Profile: falha ao consultar perfil; seguindo com sessão autenticada.");
       console.warn("[AUTH] PROFILE query failed", profileError);
       updateDiagnostic("profile", "warning", msg);
     } else if (!profile || profile.user_id !== data.user.id) {
-      const description = "Conta encontrada, mas sem perfil vinculado. Contate o administrador.";
+      const description = "Usuário autenticado, mas perfil/clínica não encontrado.";
       updateDiagnostic("profile", "warning", `POST_LOGIN_ERROR: ${description}`);
       toast({ title: "Cadastro incompleto", description, variant: "destructive" });
       try { clearReactQueryCache(queryClient, "login-no-profile", { userId: data.user.id }); } catch { /* ignore */ }
@@ -390,7 +381,7 @@ const Login = () => {
     const clinicId = profile?.clinic_id ?? null;
     updateDiagnostic("clinic", "pending", "Buscando clínica vinculada");
     if (!clinicId && !profileError) {
-      const description = "Conta encontrada, mas sem clínica vinculada. Contate o administrador.";
+      const description = "Usuário autenticado, mas perfil/clínica não encontrado.";
       updateDiagnostic("clinic", "warning", `POST_LOGIN_ERROR: ${description}`);
       toast({ title: "Clínica não vinculada", description, variant: "destructive" });
       try { clearReactQueryCache(queryClient, "login-no-clinic", { userId: data.user.id }); } catch { /* ignore */ }
@@ -408,13 +399,13 @@ const Login = () => {
         POST_AUTH_QUERY_TIMEOUT_MS,
         "Clinic: tempo esgotado ao consultar clínica; seguindo com sessão autenticada.",
       ).catch((error: unknown): QueryResult<ClinicRow> => ({ data: null, error }));
-      if (import.meta.env.DEV) console.log("CLINIC:", clinic);
+      if (import.meta.env.DEV) console.log("CLINIC_LOADED", { found: !!clinic, error: clinicError ?? null, clinicId, name: clinic?.name ?? null });
       if (clinicError) {
         const msg = getQueryErrorMessage(clinicError, "Clinic: falha ao consultar clínica; seguindo com sessão autenticada.");
         console.warn("[AUTH] CLINIC query failed", clinicError);
         updateDiagnostic("clinic", "warning", msg);
       } else if (!clinic) {
-        const description = "Conta encontrada, mas sem clínica vinculada. Contate o administrador.";
+        const description = "Usuário autenticado, mas perfil/clínica não encontrado.";
         updateDiagnostic("clinic", "warning", `POST_LOGIN_ERROR: ${description}`);
         toast({ title: "Clínica não encontrada", description, variant: "destructive" });
         try { clearReactQueryCache(queryClient, "login-clinic-not-found", { userId: data.user.id, clinicId }); } catch { /* ignore */ }
@@ -448,17 +439,12 @@ const Login = () => {
       updateDiagnostic("role", "warning", "Role não validada porque a consulta de profile falhou.");
     }
 
-    // Aguarda a sessão estar persistida no storage antes de navegar
-    // (evita race com o RequireAuth no destino).
+    // Confirma a sessão local uma única vez antes de navegar. Não há timeout
+    // manual bloqueando auth: signInWithPassword já retornou com session.
     try {
-      for (let i = 0; i < 10; i += 1) {
-        const { data: sessionData } = await withTimeout<{ data?: { session?: AuthSessionLike } }>(
-          supabase.auth.getSession() as PromiseLike<{ data?: { session?: AuthSessionLike } }>,
-          1000,
-          "Tempo esgotado ao confirmar sessão local.",
-        );
-        if (sessionData?.session) break;
-        await new Promise((r) => setTimeout(r, 100));
+      const { data: sessionData } = await supabase.auth.getSession() as { data?: { session?: AuthSessionLike } };
+      if (import.meta.env.DEV) {
+        console.log("SESSION_FOUND", { source: "post-login-getSession", hasSession: !!sessionData?.session, userId: sessionData?.session?.user?.id ?? null });
       }
     } catch (waitError) {
       console.error("[AUTH] erro aguardando sessão", waitError);
@@ -476,6 +462,7 @@ const Login = () => {
       navigatedRef.current = true;
       updateDiagnostic("redirect", "pending", "Redirecionando para o app");
       const dest = await resolveRedirectPath(data.user.id, fromPath || "/app/dashboard");
+      if (import.meta.env.DEV) console.log("REDIRECT_TARGET", { dest, userId: data.user.id });
       updateDiagnostic("redirect", "success", dest);
       loginInFlightRef.current = false;
       navigate(dest, { replace: true });
