@@ -82,6 +82,9 @@ export function AuthIdentityProvider({ children }: { children: ReactNode }) {
       try {
         const { data: sessionData } = await supabase.auth.getSession();
         if (cancelled || reqId !== requestId) return;
+        if (import.meta.env.DEV) {
+          console.log("SESSION_LOADED", { source: "AuthIdentityProvider", hasSession: !!sessionData.session, userId: sessionData.session?.user?.id ?? null });
+        }
         if (!sessionData.session) {
           applyUserId(null, "resolve:no-session");
           return;
@@ -91,10 +94,6 @@ export function AuthIdentityProvider({ children }: { children: ReactNode }) {
           applyUserId(sessionUserId, "resolve:getSession");
           if (import.meta.env.DEV) console.log("SESSION_FOUND", { source: "AuthIdentityProvider", userId: sessionUserId });
         }
-        const { data, error } = await supabase.auth.getUser();
-        if (cancelled || reqId !== requestId) return;
-        if (error) throw error;
-        applyUserId(data.user?.id ?? null, "resolve:getUser");
       } catch (error) {
         if (!cancelled && reqId === requestId) {
           console.error("[AUTH_IDENTITY] falha ao validar auth.uid()", error);
@@ -115,7 +114,7 @@ export function AuthIdentityProvider({ children }: { children: ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (import.meta.env.DEV) {
-        console.log("AUTH STATE CHANGE", { source: "useAuthIdentity", event, userId: session?.user?.id ?? null });
+        console.log("AUTH_STATE_CHANGED", { source: "useAuthIdentity", event, userId: session?.user?.id ?? null });
       }
       if (event === "SIGNED_OUT") {
         requestId++;
@@ -155,18 +154,11 @@ export function AuthIdentityProvider({ children }: { children: ReactNode }) {
         if (nextUserId) {
           applyUserId(nextUserId, event);
         }
-        setTimeout(() => {
-          if (!cancelled) void resolve();
-        }, 0);
       }
 
       if (event === "USER_UPDATED") {
         const nextUserId = session?.user?.id ?? null;
-        if (nextUserId && nextUserId !== userIdRef.current) {
-          setTimeout(() => {
-            if (!cancelled) void resolve();
-          }, 0);
-        }
+        if (nextUserId) applyUserId(nextUserId, "USER_UPDATED");
       }
     });
 
