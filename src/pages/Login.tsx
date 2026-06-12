@@ -93,15 +93,6 @@ async function resolveRedirectPath(userId: string, fallback: string): Promise<st
 
 type DiagnosticStepKey = "auth" | "profile" | "clinic" | "role" | "redirect";
 type DiagnosticStatus = "idle" | "pending" | "success" | "fail" | "warning";
-type DiagnosticState = Record<DiagnosticStepKey, { status: DiagnosticStatus; message: string }>;
-
-const createDiagnosticState = (): DiagnosticState => ({
-  auth: { status: "idle", message: "Aguardando login" },
-  profile: { status: "idle", message: "Aguardando autenticação" },
-  clinic: { status: "idle", message: "Aguardando perfil" },
-  role: { status: "idle", message: "Aguardando clínica" },
-  redirect: { status: "idle", message: "Aguardando validações" },
-});
 
 const POST_AUTH_QUERY_TIMEOUT_MS = 6000;
 
@@ -282,7 +273,7 @@ const Login = () => {
       loginInFlightRef.current = false;
       setIsLoading(false);
       updateDiagnostic("auth", "fail", `ENV_MISSING: ${envProblem}`);
-      console.error("[AUTH] login bloqueado por ENV_MISSING", { message: envProblem });
+      if (import.meta.env.DEV) console.error("[AUTH] login bloqueado por ENV_MISSING", { message: envProblem });
       toast({ title: "Erro ao entrar", description: "Não foi possível conectar ao servidor de autenticação. Tente novamente em instantes.", variant: "destructive" });
       return;
     }
@@ -338,7 +329,7 @@ const Login = () => {
       setIsLoading(false);
       toast({
         title: "Não foi possível iniciar a sessão",
-        description: "Auth: sessão não retornada pelo Supabase. Tente novamente.",
+        description: "Não foi possível iniciar a sessão. Tente novamente em instantes.",
         variant: "destructive",
       });
       updateDiagnostic("auth", "fail", "Auth: sessão não retornada pelo Supabase");
