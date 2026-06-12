@@ -2,6 +2,7 @@ import {
   CURRENT_AUTH_STORAGE_KEY,
   LEGACY_SUPABASE_AUTH_STORAGE_KEY,
   clearTabIdentity,
+  purgeAllProjectAuthStorage,
   rememberTabIdentity,
   supabase,
 } from "@/integrations/supabase/client";
