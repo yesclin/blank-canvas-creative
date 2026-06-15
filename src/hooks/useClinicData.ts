@@ -135,7 +135,7 @@ async function fetchClinicById(userId: string, clinicId: string): Promise<Clinic
  */
 export function useClinicData() {
   const { userId, isLoading: authLoading } = useAuthIdentity();
-  const { scope, isLoading: scopeLoading } = useActiveClinicScope();
+  const { scope, isLoading: scopeLoading, error: scopeError } = useActiveClinicScope();
   const queryClient = useQueryClient();
   const clinicId = scope.userId === userId ? scope.clinicId : null;
 
@@ -200,7 +200,7 @@ export function useClinicData() {
   return {
     clinic,
     isLoading: authLoading || (query.isLoading && !query.data),
-    error: query.error ?? null,
+    error: scopeError ?? query.error ?? null,
     refetch: () => {
       void query.refetch();
     },
