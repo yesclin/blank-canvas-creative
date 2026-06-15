@@ -71,7 +71,7 @@ async function fetchScope(userId: string): Promise<ActiveClinicScope> {
   let profileAvatarUrl: string | null = null;
   let profileIsActive: boolean | null = null;
   if (!clinicId) {
-    const { data: profile } = await withTimeout<any>(
+    const { data: profile, error: profileError } = await withTimeout<any>(
       supabase
         .from("profiles")
         .select("clinic_id, user_id, full_name, email, avatar_url, is_active")
@@ -79,6 +79,7 @@ async function fetchScope(userId: string): Promise<ActiveClinicScope> {
         .limit(1)
         .maybeSingle(),
     );
+    if (profileError) throw profileError;
     if (profile && profile.user_id === userId) {
       clinicId = profile.clinic_id ?? null;
       profileName = profile.full_name ?? null;
@@ -91,14 +92,16 @@ async function fetchScope(userId: string): Promise<ActiveClinicScope> {
   // 3) Role
   let role: ClinicRole | null = null;
   if (clinicId) {
-    const { data } = await withTimeout<any>(
+    const { data, error } = await withTimeout<any>(
       supabase
         .from("user_roles")
         .select("role, user_id")
         .eq("user_id", userId)
         .eq("clinic_id", clinicId)
+        .limit(1)
         .maybeSingle(),
     );
+    if (error) throw error;
     if (data && data.user_id === userId && data.role) {
       role = data.role as ClinicRole;
     }
@@ -153,6 +156,7 @@ export function useActiveClinicScope() {
     scope: query.data ?? EMPTY,
     isLoading: authIdentityLoading || (query.isLoading && !query.data),
     isReady: !authIdentityLoading && !!authUserId && !!query.data,
+    error: query.error ?? null,
     refetch: () => void query.refetch(),
   };
 }
