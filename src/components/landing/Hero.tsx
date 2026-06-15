@@ -12,7 +12,7 @@ const Hero = () => {
   ];
 
   return (
-    <section className="relative min-h-screen hero-gradient overflow-hidden">
+    <section className="relative hero-gradient overflow-hidden">
       {/* Background Pattern */}
       <div className="absolute inset-0 pattern-grid opacity-50" />
       
