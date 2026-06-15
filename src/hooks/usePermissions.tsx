@@ -4,6 +4,7 @@ import { useCurrentViewRole } from "@/contexts/UserViewModeContext";
 import { withTimeout } from "@/lib/asyncTimeout";
 import { logAuthDiagnostic } from "@/lib/authDiagnostics";
 import { clearUnsafeAuthCache } from "@/lib/authSessionIsolation";
+import { useActiveClinicScope, type ActiveClinicScope } from "@/hooks/useActiveClinicScope";
 
 // Types
 export type AppModule = 
@@ -75,6 +76,7 @@ const EMPTY_PERMISSIONS_STATE: PermissionsState = {
 // Provider Component
 export function PermissionsProvider({ children }: { children: ReactNode }) {
   const { viewedRole, isImpersonating } = useCurrentViewRole();
+  const { scope, isLoading: scopeLoading } = useActiveClinicScope();
   const [state, setState] = useState<PermissionsState>({
     permissions: [],
     role: null,
@@ -90,90 +92,49 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   const requestRef = useRef(0);
   const activeUserIdRef = useRef<string | null>(null);
 
-  const fetchPermissionsOnce = useCallback(async (reqId: number) => {
+  const fetchPermissionsOnce = useCallback(async (reqId: number, currentScope: ActiveClinicScope) => {
     const stillCurrent = (expectedUserId: string | null) => {
       if (reqId !== requestRef.current) return false;
       if (expectedUserId !== null && activeUserIdRef.current !== expectedUserId) return false;
       return true;
     };
 
-    const { data: { user } } = await withTimeout<any>(supabase.auth.getUser());
-    if (!user) {
+    const userId = currentScope.userId;
+    const clinicId = currentScope.clinicId;
+    const role = currentScope.role;
+    if (!userId) {
       activeUserIdRef.current = null;
       return { kind: "no-user" as const };
     }
-    activeUserIdRef.current = user.id;
-
-    const { data: profileData, error: profileErr } = await withTimeout<any>(supabase
-      .from("profiles")
-      .select("clinic_id, user_id")
-      .eq("user_id", user.id)
-      .maybeSingle());
-
-    if (!stillCurrent(user.id)) return { kind: "stale" as const };
-    if (profileErr) throw profileErr;
-    if (!profileData?.clinic_id || profileData.user_id !== user.id) {
-      return { kind: "no-role" as const, userId: user.id };
-    }
-
-    // Get user role
-    const { data: roleData, error: roleErr } = await withTimeout<any>(supabase
-      .from("user_roles")
-      .select("role, clinic_id, user_id")
-      .eq("user_id", user.id)
-      .eq("clinic_id", profileData.clinic_id)
-      .maybeSingle());
-
-    if (!stillCurrent(user.id)) return { kind: "stale" as const };
-    if (roleErr) throw roleErr;
-
-    if (!roleData) {
-      return { kind: "no-role" as const, userId: user.id };
-    }
-
-    if (roleData.clinic_id && roleData.clinic_id !== profileData.clinic_id) {
-      console.error("[AUTH_SECURITY] role.clinic_id divergente do profile.clinic_id — descartado", {
-        authUid: user.id,
-        profileClinicId: profileData.clinic_id,
-        roleClinicId: roleData.clinic_id,
-      });
-      return { kind: "no-role" as const, userId: user.id };
-    }
-
-    // Defesa final: a row TEM que ser do auth.uid() atual.
-    if (roleData.user_id && roleData.user_id !== user.id) {
-      console.error("[AUTH_SECURITY] user_roles.user_id divergente — descartado", {
-        expected: user.id,
-        received: roleData.user_id,
-      });
-      return { kind: "no-role" as const, userId: user.id };
+    activeUserIdRef.current = userId;
+    if (!clinicId || !role) {
+      return { kind: "no-role" as const, userId };
     }
 
     logAuthDiagnostic("permissions-role-loaded", {
-      authUid: user.id,
-      profileUserId: profileData.user_id,
-      roleUserId: roleData.user_id,
-      activeClinicId: profileData.clinic_id,
-      displaySource: "user_roles.role + get_user_all_permissions",
+      authUid: userId,
+      profileUserId: userId,
+      roleUserId: userId,
+      activeClinicId: clinicId,
+      displaySource: "active-clinic-scope + get_user_all_permissions",
     });
 
-    const role = roleData.role;
     const isOwner = role === "owner";
     const isAdmin = ["owner", "admin"].includes(role);
 
     const { data: professionalData } = await withTimeout<any>(supabase
       .from("professionals")
       .select("id")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("is_active", true)
       .maybeSingle());
-    if (!stillCurrent(user.id)) return { kind: "stale" as const };
+    if (!stillCurrent(userId)) return { kind: "stale" as const };
     const professionalId = professionalData?.id || null;
 
     const { data: permsData, error } = await withTimeout<any>(
-      supabase.rpc("get_user_all_permissions", { _user_id: user.id, _clinic_id: profileData.clinic_id })
+      supabase.rpc("get_user_all_permissions", { _user_id: userId, _clinic_id: clinicId })
     );
-    if (!stillCurrent(user.id)) return { kind: "stale" as const };
+    if (!stillCurrent(userId)) return { kind: "stale" as const };
 
     let permissions: ModulePermission[];
     if (error) {
@@ -187,7 +148,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       }));
     }
 
-    return { kind: "ok" as const, role, isOwner, isAdmin, professionalId, permissions, userId: user.id };
+    return { kind: "ok" as const, role, isOwner, isAdmin, professionalId, permissions, userId };
   }, []);
 
   const fetchPermissions = useCallback(async () => {
