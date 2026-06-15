@@ -2,13 +2,11 @@ import { ReactNode, useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePermissions, AppModule, AppAction } from "@/hooks/usePermissions";
-import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShieldX, UserX, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useActiveClinicScope } from "@/hooks/useActiveClinicScope";
-import { clearAuthenticatedTab, clearSupabaseAuthStorage } from "@/lib/authSessionIsolation";
-import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
+import { completeLocalLogout } from "@/lib/authLifecycle";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -175,12 +173,7 @@ function InactiveUserPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const handleLogout = async () => {
-    const { markUserLogout } = await import("@/lib/authIntent");
-    markUserLogout("inactive-account");
-    clearAuthenticatedTab();
-    clearSupabaseAuthStorage();
-    try { clearReactQueryCache(queryClient, "inactive-account-logout"); } catch { /* ignore */ }
-    await supabase.auth.signOut();
+    await completeLocalLogout(queryClient, "inactive-account-logout");
     navigate("/login", { replace: true });
   };
 

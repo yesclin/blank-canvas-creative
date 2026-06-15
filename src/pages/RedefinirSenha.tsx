@@ -10,7 +10,7 @@ import logoFull from "@/assets/logo-full.png";
 import { motion } from "framer-motion";
 import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
-import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
+import { completeLocalLogout } from "@/lib/authLifecycle";
 
 const passwordSchema = z
   .string()
@@ -99,13 +99,7 @@ const RedefinirSenha = () => {
       setSuccess(true);
 
       // Sign out so user logs in with the new password
-      const { markUserLogout } = await import("@/lib/authIntent");
-      const { clearAuthenticatedTab, clearSupabaseAuthStorage } = await import("@/lib/authSessionIsolation");
-      markUserLogout("password-reset");
-      clearAuthenticatedTab();
-      clearSupabaseAuthStorage();
-      try { clearReactQueryCache(queryClient, "password-reset-logout"); } catch { /* ignore */ }
-      await supabase.auth.signOut();
+      await completeLocalLogout(queryClient, "password-reset-logout");
 
       toast({
         title: "Senha redefinida com sucesso!",

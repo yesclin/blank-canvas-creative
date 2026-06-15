@@ -14,6 +14,17 @@ export function clearReactQueryCache(queryClient: QueryClient, reason: string, m
   queryClient.resetQueries({ type: "active" });
 }
 
+export function hardClearReactQueryCache(queryClient: QueryClient, reason: string, meta: CacheMeta = {}) {
+  if (import.meta.env.DEV) {
+    console.warn("[RQ_CACHE] hard-clear", { reason, ...meta });
+  }
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("yesclin:react-query-cleared", { detail: { reason, ...meta, hard: true } }));
+  }
+  queryClient.cancelQueries();
+  queryClient.removeQueries();
+}
+
 export function logReactQueryEvent(event: unknown) {
   if (!import.meta.env.DEV || typeof window === "undefined") return;
   const lastEvent = window.__ycLastEvent ?? "unknown";

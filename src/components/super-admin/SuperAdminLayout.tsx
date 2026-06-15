@@ -5,13 +5,10 @@ import { SuperAdminSidebar } from './SuperAdminSidebar';
 import { SupportSessionBanner } from './SupportSessionBanner';
 import { Button } from '@/components/ui/button';
 import { LogOut, ExternalLink } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { usePlatformAdmin } from '@/hooks/usePlatformAdmin';
-import { markUserLogout } from '@/lib/authIntent';
-import { clearAuthenticatedTab, clearSupabaseAuthStorage } from '@/lib/authSessionIsolation';
 import { useQueryClient } from '@tanstack/react-query';
-import { clearReactQueryCache } from '@/lib/queryClientDiagnostics';
+import { completeLocalLogout } from '@/lib/authLifecycle';
 
 interface Props {
   children?: ReactNode;
@@ -33,11 +30,7 @@ export function SuperAdminLayout({ children }: Props) {
   }, []);
 
   const handleLogout = async () => {
-    markUserLogout("super-admin-logout");
-    clearAuthenticatedTab();
-    clearSupabaseAuthStorage();
-    try { clearReactQueryCache(queryClient, "super-admin-logout"); } catch { /* ignore */ }
-    await supabase.auth.signOut();
+    await completeLocalLogout(queryClient, "super-admin-logout");
     navigate('/login', { replace: true });
   };
 
