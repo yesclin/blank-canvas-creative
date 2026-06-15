@@ -118,9 +118,14 @@ export function useGlobalActiveAppointments() {
       return (data || []).map(mapAppointmentRow).filter(isGloballyActiveAppointment);
     },
     enabled: !!clinicId && !permLoading && !clinicLoading,
-    refetchInterval: 15000,
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
+    refetchInterval: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
+    refetchOnMount: false,
+    retry: 1,
+    throwOnError: false,
     // Keep previous data during refetch to prevent UI flicker
     placeholderData: (prev) => prev,
   });
@@ -157,7 +162,7 @@ export function useGlobalActiveAppointments() {
   useEffect(() => {
     if (!clinicId) return;
 
-    const channelName = `global-active-appointments-${clinicId}-${Date.now()}`;
+    const channelName = `global-active-appointments-${clinicId}`;
     const channel = supabase
       .channel(channelName)
       .on(
@@ -169,7 +174,7 @@ export function useGlobalActiveAppointments() {
           filter: `clinic_id=eq.${clinicId}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ["global-active-appointments"] });
+          queryClient.invalidateQueries({ queryKey: ["global-active-appointments", clinicId] });
         }
       )
       .subscribe();
@@ -183,8 +188,8 @@ export function useGlobalActiveAppointments() {
   }, [clinicId, queryClient]);
 
   const refresh = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ["global-active-appointments"] });
-  }, [queryClient]);
+    if (clinicId) queryClient.invalidateQueries({ queryKey: ["global-active-appointments", clinicId] });
+  }, [queryClient, clinicId]);
 
   return {
     appointments,
