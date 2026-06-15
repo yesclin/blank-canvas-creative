@@ -18,6 +18,10 @@ export async function completeLocalLogout(queryClient: QueryClient, reason = "us
 
   try {
     await supabase.auth.signOut();
+  } catch (error) {
+    // Mesmo que o Supabase esteja offline, logout local precisa ser definitivo:
+    // nada de token/cache antigo permanecendo no navegador.
+    console.warn("[AUTH] signOut remoto falhou; aplicando logout local", error);
   } finally {
     clearAuthenticatedTab();
     clearSupabaseAuthStorage();
