@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 const read = (path: string) => readFileSync(path, "utf8");
 
@@ -92,10 +92,9 @@ describe("session/cache guardrails", () => {
 
   it("não expõe AuthDebugOverlay no layout final", () => {
     const layout = read("src/components/app/AppLayout.tsx");
-    const overlay = read("src/components/dev/AuthDebugOverlay.tsx");
     const diagnostics = read("src/lib/authDiagnostics.ts");
     expect(layout).not.toContain("AuthDebugOverlay");
-    expect(overlay).toContain("import.meta.env.DEV && import.meta.env.VITE_ENABLE_AUTH_DEBUG");
+    expect(existsSync("src/components/dev/AuthDebugOverlay.tsx")).toBe(false);
     expect(diagnostics).toContain("if (!import.meta.env.DEV");
   });
 
