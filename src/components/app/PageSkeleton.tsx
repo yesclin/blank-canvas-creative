@@ -17,7 +17,7 @@ interface PageSkeletonProps {
  * Após `slowAfterMs` mostra um aviso discreto + botão "Tentar novamente"
  * (recarrega a tela atual).
  */
-export function PageSkeleton({ slowAfterMs = 3000 }: PageSkeletonProps) {
+export function PageSkeleton({ slowAfterMs = 8000 }: PageSkeletonProps) {
   const [isSlow, setIsSlow] = useState(false);
 
   useEffect(() => {
