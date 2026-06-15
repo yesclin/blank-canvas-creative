@@ -24,6 +24,10 @@ export interface ActiveClinicScope {
   userId: string | null;
   clinicId: string | null;
   role: ClinicRole | null;
+  profileName: string | null;
+  profileEmail: string | null;
+  profileAvatarUrl: string | null;
+  profileIsActive: boolean | null;
   isSupportMode: boolean;
 }
 
@@ -31,6 +35,10 @@ const EMPTY: ActiveClinicScope = {
   userId: null,
   clinicId: null,
   role: null,
+  profileName: null,
+  profileEmail: null,
+  profileAvatarUrl: null,
+  profileIsActive: null,
   isSupportMode: false,
 };
 
@@ -58,12 +66,25 @@ async function fetchScope(userId: string): Promise<ActiveClinicScope> {
 
   // 2) Profile natural se não houver suporte
   let clinicId: string | null = resolvedClinicId;
+  let profileName: string | null = null;
+  let profileEmail: string | null = null;
+  let profileAvatarUrl: string | null = null;
+  let profileIsActive: boolean | null = null;
   if (!clinicId) {
     const { data: profile } = await withTimeout<any>(
-      supabase.from("profiles").select("clinic_id, user_id").eq("user_id", userId).maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("clinic_id, user_id, full_name, email, avatar_url, is_active")
+        .eq("user_id", userId)
+        .limit(1)
+        .maybeSingle(),
     );
     if (profile && profile.user_id === userId) {
       clinicId = profile.clinic_id ?? null;
+      profileName = profile.full_name ?? null;
+      profileEmail = profile.email ?? null;
+      profileAvatarUrl = profile.avatar_url ?? null;
+      profileIsActive = profile.is_active ?? true;
     }
   }
 
@@ -83,7 +104,7 @@ async function fetchScope(userId: string): Promise<ActiveClinicScope> {
     }
   }
 
-  return { userId, clinicId, role, isSupportMode };
+  return { userId, clinicId, role, profileName, profileEmail, profileAvatarUrl, profileIsActive, isSupportMode };
 }
 
 export function useActiveClinicScope() {
