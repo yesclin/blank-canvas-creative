@@ -102,7 +102,8 @@ describe("session/cache guardrails", () => {
   it("não usa queryClient.clear para limpar sessão", () => {
     const diagnostics = read("src/lib/queryClientDiagnostics.ts");
     expect(diagnostics).not.toContain("queryClient.clear()");
-    expect(diagnostics).toContain("queryClient.removeQueries()");
+    expect(diagnostics).toContain('queryClient.removeQueries({ type: "inactive" })');
+    expect(diagnostics).toContain('queryClient.resetQueries({ type: "active" })');
   });
 
   it("mantém sessão de suporte e view-role isolados por aba", () => {
