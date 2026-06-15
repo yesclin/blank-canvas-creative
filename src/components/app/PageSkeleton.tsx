@@ -1,6 +1,4 @@
-import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 
 interface PageSkeletonProps {
   /** Tempo (ms) para exibir o aviso "está demorando mais que o normal". */
@@ -18,12 +16,7 @@ interface PageSkeletonProps {
  * (recarrega a tela atual).
  */
 export function PageSkeleton({ slowAfterMs = 8000 }: PageSkeletonProps) {
-  const [isSlow, setIsSlow] = useState(false);
-
-  useEffect(() => {
-    const t = window.setTimeout(() => setIsSlow(true), slowAfterMs);
-    return () => window.clearTimeout(t);
-  }, [slowAfterMs]);
+  void slowAfterMs;
 
   return (
     <div className="space-y-6 animate-in fade-in-0 duration-200" aria-busy="true" aria-live="polite">
@@ -56,15 +49,6 @@ export function PageSkeleton({ slowAfterMs = 8000 }: PageSkeletonProps) {
           ))}
         </div>
       </div>
-
-      {isSlow && (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-md border border-dashed bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-          <span>Essa tela está demorando mais que o normal…</span>
-          <Button size="sm" variant="outline" onClick={() => setIsSlow(false)} className="self-start sm:self-auto">
-            Continuar aguardando
-          </Button>
-        </div>
-      )}
     </div>
   );
 }

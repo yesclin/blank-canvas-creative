@@ -68,10 +68,13 @@ export class ErrorBoundary extends Component<Props, State> {
     window.dispatchEvent(new PopStateEvent("popstate"));
   };
 
-  goLogin = () => {
-    window.history.pushState({}, "", "/login");
-    window.dispatchEvent(new PopStateEvent("popstate"));
-  };
+  componentDidUpdate(prevProps: Props) {
+    if (!this.state.hasError) return;
+    const currentRoute = typeof window !== "undefined" ? window.location.pathname : "unknown";
+    if (prevProps.scope !== this.props.scope || this.state.route !== currentRoute) {
+      this.reset();
+    }
+  }
 
   render() {
     if (!this.state.hasError) return this.props.children;
@@ -156,9 +159,6 @@ export class ErrorBoundary extends Component<Props, State> {
                   Dashboard
                 </Button>
               )}
-              <Button onClick={this.goLogin} variant="ghost" className="flex-1">
-                Login
-              </Button>
             </div>
           </CardContent>
         </Card>

@@ -1,13 +1,12 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { usePermissions, AppModule, AppAction } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShieldX, UserX, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { withTimeout } from "@/lib/asyncTimeout";
-import { useAuthIdentity } from "@/hooks/useAuthIdentity";
+import { useActiveClinicScope } from "@/hooks/useActiveClinicScope";
 import { clearAuthenticatedTab, clearSupabaseAuthStorage } from "@/lib/authSessionIsolation";
 import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
 
@@ -43,7 +42,7 @@ export function ProtectedRoute({
   redirectTo,
 }: ProtectedRouteProps) {
   const { can, isLoading, isOwner, isAdmin, role, refetch } = usePermissions();
-  const { userId: authUserId, isLoading: authIdentityLoading } = useAuthIdentity();
+  const { scope, isLoading: scopeLoading } = useActiveClinicScope();
   const previousLoadingRef = useRef<boolean | null>(null);
 
   useEffect(() => {
@@ -52,40 +51,8 @@ export function ProtectedRoute({
     return () => console.warn("PROTECTED ROUTE UNMOUNT", { module, action });
   }, [module, action]);
 
-  const activeQuery = useQuery({
-    queryKey: ["protected-route", "is-active", authUserId],
-    queryFn: async (): Promise<boolean> => {
-      const { data: { user } } = await withTimeout<any>(supabase.auth.getUser());
-      if (!user) return false;
-      if (user.id !== authUserId) {
-        console.error("[AUTH_SECURITY] is-active descartado por auth.uid divergente", {
-          queryUserId: authUserId,
-          currentUserId: user.id,
-        });
-        return false;
-      }
-      const { data: profile } = await withTimeout<any>(
-        supabase.from("profiles").select("is_active, user_id").eq("user_id", user.id).maybeSingle()
-      );
-      // Profile ainda não criado (race no signup) → trata como ativo.
-      if (!profile) return true;
-      if (profile.user_id !== user.id) return false;
-      return profile.is_active ?? true;
-    },
-    enabled: !authIdentityLoading && !!authUserId,
-    staleTime: 5 * 60_000,
-    gcTime: 30 * 60_000,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
-    retry: 1,
-    // Em erro, não bloqueamos — default ativo. Tratado abaixo.
-  });
-
-  const isActive: boolean | null =
-    activeQuery.isError ? true : activeQuery.data ?? null;
-
-  const routeLoading = authIdentityLoading || isLoading || (activeQuery.isLoading && activeQuery.data === undefined);
+  const isActive = scope.profileIsActive ?? true;
+  const routeLoading = scopeLoading || isLoading;
   useEffect(() => {
     if (!import.meta.env.DEV) return;
     if (previousLoadingRef.current === routeLoading) return;
@@ -93,12 +60,11 @@ export function ProtectedRoute({
     console.log(routeLoading ? "GLOBAL LOADING ON" : "GLOBAL LOADING OFF", {
       source: "ProtectedRoute",
       module,
-      authIdentityLoading,
+      scopeLoading,
       permissionsLoading: isLoading,
-      activeQueryLoading: activeQuery.isLoading && activeQuery.data === undefined,
-      authUserId,
+      authUserId: scope.userId,
     });
-  }, [routeLoading, module, authIdentityLoading, isLoading, activeQuery.isLoading, activeQuery.data, authUserId]);
+  }, [routeLoading, module, scopeLoading, isLoading, scope.userId]);
 
   // Só mostra skeleton no primeiro carregamento. Em navegações
   // subsequentes (cache quente) cai direto no conteúdo.

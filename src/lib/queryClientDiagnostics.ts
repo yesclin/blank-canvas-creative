@@ -9,7 +9,9 @@ export function clearReactQueryCache(queryClient: QueryClient, reason: string, m
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent("yesclin:react-query-cleared", { detail: { reason, ...meta } }));
   }
-  queryClient.removeQueries();
+  queryClient.cancelQueries();
+  queryClient.removeQueries({ type: "inactive" });
+  queryClient.resetQueries({ type: "active" });
 }
 
 export function logReactQueryEvent(event: unknown) {

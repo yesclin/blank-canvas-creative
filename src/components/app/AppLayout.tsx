@@ -86,25 +86,6 @@ export function AppLayout() {
     );
   }
 
-  if (!isLoading && clinicError && !clinic) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-6">
-        <div className="max-w-md text-center space-y-5">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-warning/10">
-            <AlertTriangle className="h-7 w-7 text-warning" />
-          </div>
-          <div className="space-y-2">
-            <h1 className="text-2xl font-bold text-foreground">Dados da clínica indisponíveis</h1>
-            <p className="text-muted-foreground">
-              Login realizado, mas não foi possível carregar os dados da clínica.
-            </p>
-          </div>
-          <Button onClick={retryClinic}>Tentar novamente</Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <GlobalSpecialtyProvider>
     <GlobalActiveAppointmentProvider>
@@ -173,6 +154,17 @@ export function AppLayout() {
           <div className="flex-1 overflow-auto">
             <SubscriptionGate>
               <div className="p-6">
+                {!isLoading && clinicError && !clinic && (
+                  <div className="mb-4 flex flex-col gap-3 rounded-md border border-warning/30 bg-warning/10 p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-start gap-3 text-foreground">
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+                      <span>Não foi possível atualizar o contexto da clínica agora. Tente novamente em instantes.</span>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={retryClinic} className="self-start sm:self-auto">
+                      Tentar novamente
+                    </Button>
+                  </div>
+                )}
                 <ErrorBoundary scope={getModuleScope(location.pathname)}>
                   <Outlet />
                 </ErrorBoundary>

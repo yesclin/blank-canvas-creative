@@ -13,7 +13,7 @@
  * `staleTime` de 5 minutos. Hooks consumidores apenas leem o resultado.
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/asyncTimeout";
 import { useAuthIdentity } from "@/hooks/useAuthIdentity";
@@ -24,6 +24,10 @@ export interface ActiveClinicScope {
   userId: string | null;
   clinicId: string | null;
   role: ClinicRole | null;
+  profileName: string | null;
+  profileEmail: string | null;
+  profileAvatarUrl: string | null;
+  profileIsActive: boolean | null;
   isSupportMode: boolean;
 }
 
@@ -31,6 +35,10 @@ const EMPTY: ActiveClinicScope = {
   userId: null,
   clinicId: null,
   role: null,
+  profileName: null,
+  profileEmail: null,
+  profileAvatarUrl: null,
+  profileIsActive: null,
   isSupportMode: false,
 };
 
@@ -58,40 +66,60 @@ async function fetchScope(userId: string): Promise<ActiveClinicScope> {
 
   // 2) Profile natural se não houver suporte
   let clinicId: string | null = resolvedClinicId;
+  let profileName: string | null = null;
+  let profileEmail: string | null = null;
+  let profileAvatarUrl: string | null = null;
+  let profileIsActive: boolean | null = null;
   if (!clinicId) {
-    const { data: profile } = await withTimeout<any>(
-      supabase.from("profiles").select("clinic_id, user_id").eq("user_id", userId).maybeSingle(),
+    const { data: profile, error: profileError } = await withTimeout<any>(
+      supabase
+        .from("profiles")
+        .select("clinic_id, user_id, full_name, email, avatar_url, is_active")
+        .eq("user_id", userId)
+        .limit(1)
+        .maybeSingle(),
     );
+    if (profileError) throw profileError;
     if (profile && profile.user_id === userId) {
       clinicId = profile.clinic_id ?? null;
+      profileName = profile.full_name ?? null;
+      profileEmail = profile.email ?? null;
+      profileAvatarUrl = profile.avatar_url ?? null;
+      profileIsActive = profile.is_active ?? true;
     }
   }
 
   // 3) Role
   let role: ClinicRole | null = null;
   if (clinicId) {
-    const { data } = await withTimeout<any>(
+    const { data, error } = await withTimeout<any>(
       supabase
         .from("user_roles")
         .select("role, user_id")
         .eq("user_id", userId)
         .eq("clinic_id", clinicId)
+        .limit(1)
         .maybeSingle(),
     );
+    if (error) throw error;
     if (data && data.user_id === userId && data.role) {
       role = data.role as ClinicRole;
     }
   }
 
-  return { userId, clinicId, role, isSupportMode };
+  return { userId, clinicId, role, profileName, profileEmail, profileAvatarUrl, profileIsActive, isSupportMode };
 }
 
 export function useActiveClinicScope() {
   const queryClient = useQueryClient();
   const { userId: authUserId, isLoading: authIdentityLoading } = useAuthIdentity();
+  const [supportScopeKey, setSupportScopeKey] = useState(() => {
+    if (typeof window === "undefined") return "none";
+    return `${window.sessionStorage.getItem("yesclin_support_admin_user_id") ?? ""}:${window.sessionStorage.getItem("yesclin_support_clinic_id") ?? ""}`;
+  });
 
   const query = useQuery({
-    queryKey: ["active-clinic-scope", authUserId],
+    queryKey: ["active-clinic-scope", authUserId, supportScopeKey],
     queryFn: () => fetchScope(authUserId!),
     enabled: !authIdentityLoading && !!authUserId,
     staleTime: 5 * 60_000,
@@ -108,6 +136,7 @@ export function useActiveClinicScope() {
   // em background a cada clique no menu.
   useEffect(() => {
     const invalidate = () => {
+      setSupportScopeKey(`${window.sessionStorage.getItem("yesclin_support_admin_user_id") ?? ""}:${window.sessionStorage.getItem("yesclin_support_clinic_id") ?? ""}`);
       queryClient.invalidateQueries({ queryKey: ["active-clinic-scope"] });
     };
     const onSupport = () => invalidate();
@@ -127,6 +156,7 @@ export function useActiveClinicScope() {
     scope: query.data ?? EMPTY,
     isLoading: authIdentityLoading || (query.isLoading && !query.data),
     isReady: !authIdentityLoading && !!authUserId && !!query.data,
+    error: query.error ?? null,
     refetch: () => void query.refetch(),
   };
 }

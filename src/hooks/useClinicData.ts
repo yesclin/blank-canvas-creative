@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/asyncTimeout";
 import { clearUnsafeAuthCache } from "@/lib/authSessionIsolation";
 import { useAuthIdentity } from "@/hooks/useAuthIdentity";
+import { useActiveClinicScope } from "@/hooks/useActiveClinicScope";
 
 export interface ClinicData {
   id: string;
@@ -89,6 +90,14 @@ async function fetchClinic(userId: string): Promise<ClinicData> {
     throw new Error("Login realizado, mas não foi possível carregar os dados da clínica.");
   }
 
+  return fetchClinicById(userId, clinicId);
+}
+
+async function fetchClinicById(userId: string, clinicId: string): Promise<ClinicData> {
+  if (!userId || !clinicId) {
+    throw new Error("Login realizado, mas não foi possível carregar os dados da clínica.");
+  }
+
   const { data: clinicData, error } = await withTimeout<any>(
     supabase.from("clinics").select(CLINIC_FIELDS).eq("id", clinicId).maybeSingle()
   );
@@ -126,18 +135,24 @@ async function fetchClinic(userId: string): Promise<ClinicData> {
  */
 export function useClinicData() {
   const { userId, isLoading: authLoading } = useAuthIdentity();
+  const { scope, isLoading: scopeLoading, error: scopeError } = useActiveClinicScope();
   const queryClient = useQueryClient();
+  const clinicId = scope.userId === userId ? scope.clinicId : null;
 
   const query = useQuery({
-    queryKey: ["clinic-data", userId],
-    queryFn: () => fetchClinic(userId!),
-    enabled: !authLoading && !!userId,
+    queryKey: ["clinic-data", userId, clinicId],
+    queryFn: async () => {
+      if (clinicId) return fetchClinicById(userId!, clinicId);
+      return fetchClinic(userId!);
+    },
+    enabled: !authLoading && !scopeLoading && !!userId && !!clinicId,
     staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     refetchOnMount: false,
     retry: 1,
+    throwOnError: false,
   });
 
   // Em troca de identidade / suporte: invalida o cache para refetch limpo.
@@ -185,7 +200,7 @@ export function useClinicData() {
   return {
     clinic,
     isLoading: authLoading || (query.isLoading && !query.data),
-    error: query.error ?? null,
+    error: scopeError ?? query.error ?? null,
     refetch: () => {
       void query.refetch();
     },
