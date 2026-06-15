@@ -90,6 +90,14 @@ async function fetchClinic(userId: string): Promise<ClinicData> {
     throw new Error("Login realizado, mas não foi possível carregar os dados da clínica.");
   }
 
+  return fetchClinicById(userId, clinicId);
+}
+
+async function fetchClinicById(userId: string, clinicId: string): Promise<ClinicData> {
+  if (!userId || !clinicId) {
+    throw new Error("Login realizado, mas não foi possível carregar os dados da clínica.");
+  }
+
   const { data: clinicData, error } = await withTimeout<any>(
     supabase.from("clinics").select(CLINIC_FIELDS).eq("id", clinicId).maybeSingle()
   );
