@@ -152,12 +152,24 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const fetchPermissions = useCallback(async () => {
+    if (scopeLoading) return;
     const reqId = ++requestRef.current;
+    if (!scope.userId) {
+      activeUserIdRef.current = null;
+      setState(EMPTY_PERMISSIONS_STATE);
+      return;
+    }
+    activeUserIdRef.current = scope.userId;
+    setState((current) =>
+      current.role === scope.role && current.permissions.length > 0
+        ? current
+        : { permissions: [], role: null, isLoading: true, isAdmin: false, isOwner: false, professionalId: null },
+    );
     const maxAttempts = 3;
     let lastError: unknown = null;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        const result = await fetchPermissionsOnce(reqId);
+        const result = await fetchPermissionsOnce(reqId, scope);
         if (reqId !== requestRef.current) return; // resposta obsoleta
         if (result.kind === "stale") return;
         if (result.kind === "no-user") {
@@ -197,7 +209,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     console.error("[APP_ERROR] permissions fetch failed — estado limpo para evitar dados antigos", lastError);
     clearUnsafeAuthCache();
     setState(EMPTY_PERMISSIONS_STATE);
-  }, [fetchPermissionsOnce]);
+  }, [fetchPermissionsOnce, scope, scopeLoading]);
 
   useEffect(() => {
     fetchPermissions();
@@ -209,31 +221,6 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         return { permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null };
       });
     }, 10000);
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "TOKEN_REFRESHED") return;
-      const newUserId = session?.user?.id ?? null;
-      // Identidade trocou no meio da sessão: derruba estado IMEDIATAMENTE
-      // para não deixar role/permissões antigas vazarem para o novo usuário.
-      if (newUserId && newUserId !== activeUserIdRef.current) {
-        requestRef.current++;
-        activeUserIdRef.current = newUserId;
-        clearUnsafeAuthCache();
-        setState({ permissions: [], role: null, isLoading: true, isAdmin: false, isOwner: false, professionalId: null });
-      }
-      if (event === "SIGNED_OUT") {
-        requestRef.current++;
-        activeUserIdRef.current = null;
-        clearUnsafeAuthCache();
-        setState(EMPTY_PERMISSIONS_STATE);
-        return;
-      }
-      // TOKEN_REFRESHED não troca papel/permissões — refetch aqui faz a
-      // sidebar piscar enquanto o usuário usa o sistema.
-      if (event === "SIGNED_IN" || event === "USER_UPDATED") {
-        setTimeout(() => fetchPermissions(), 0);
-      }
-    });
 
     const onIdentityChanged = () => {
       requestRef.current++;
@@ -248,7 +235,6 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
 
     return () => {
       window.clearTimeout(bootTimeout);
-      subscription.unsubscribe();
       if (typeof window !== "undefined") {
         window.removeEventListener("yesclin:identity-changed", onIdentityChanged);
       }
