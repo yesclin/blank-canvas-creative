@@ -10,7 +10,7 @@ import {
   rememberAuthenticatedUser,
 } from "@/lib/authSessionIsolation";
 import { wasLogoutRequestedByUser } from "@/lib/authIntent";
-import { tryRecoverSession } from "@/lib/authSessionRecovery";
+import { isTransientAuthError, tryRecoverSession } from "@/lib/authSessionRecovery";
 import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -91,8 +91,26 @@ export function AuthIdentityProvider({ children }: { children: ReactNode }) {
         }
         const sessionUserId = sessionData.session.user?.id ?? null;
         if (sessionUserId) {
-          applyUserId(sessionUserId, "resolve:getSession");
-          if (import.meta.env.DEV) console.log("SESSION_FOUND", { source: "AuthIdentityProvider", userId: sessionUserId });
+          const { data: userData, error: userError } = await supabase.auth.getUser();
+          if (cancelled || reqId !== requestId) return;
+          if (userError || !userData.user?.id) {
+            console.error("[AUTH_IDENTITY] sessão local inválida ao validar auth.uid()", userError);
+            if (isTransientAuthError(userError)) {
+              setIsLoading(false);
+              return;
+            }
+            clearAuthenticatedTab();
+            clearUnsafeAuthCache();
+            applyUserId(null, "resolve:getUser-invalid");
+            return;
+          }
+          if (userData.user.id !== sessionUserId) {
+            quarantineMismatchedAuthSession("AuthIdentityProvider:session-user-mismatch", sessionUserId, userData.user.id);
+            applyUserId(null, "resolve:user-mismatch");
+            return;
+          }
+          applyUserId(userData.user.id, "resolve:getUser");
+          if (import.meta.env.DEV) console.log("SESSION_FOUND", { source: "AuthIdentityProvider", userId: userData.user.id });
         }
       } catch (error) {
         if (!cancelled && reqId === requestId) {

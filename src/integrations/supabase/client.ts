@@ -105,8 +105,16 @@ function extractSessionUserId(rawSession: string | null) {
   if (!rawSession || typeof window === 'undefined') return null;
   try {
     const parsed = JSON.parse(rawSession);
-    if (typeof parsed?.user?.id === 'string') return parsed.user.id;
-    return decodeJwtSub(parsed?.access_token);
+    const tokenSub = decodeJwtSub(parsed?.access_token);
+    const parsedUserId = typeof parsed?.user?.id === 'string' ? parsed.user.id : null;
+
+    // Sessão Supabase válida SEMPRE precisa ter `sub` no access_token.
+    // Se aceitarmos `user.id` quando o JWT não tem `sub`, o app monta como
+    // autenticado mas o Supabase Auth responde /user com 403 bad_jwt
+    // ("invalid claim: missing sub claim"), quebrando profile/clínica.
+    if (parsed?.access_token && !tokenSub) return null;
+    if (tokenSub && parsedUserId && tokenSub !== parsedUserId) return null;
+    return tokenSub ?? parsedUserId;
   } catch {
     return null;
   }
@@ -247,6 +255,13 @@ const perTabAuthStorage = {
     if (tabValue) {
       if (key === CURRENT_AUTH_STORAGE_KEY) {
         const userId = extractSessionUserId(tabValue);
+        if (!userId) {
+          console.error('[AUTH_SECURITY] sessionStorage com sessão Supabase inválida — descartando');
+          window.sessionStorage.removeItem(key);
+          window.localStorage.removeItem(key);
+          clearTabBinding();
+          return null;
+        }
         const expected = readTabBinding();
         if (userId && expected && userId !== expected) {
           // Sessão divergente do binding da aba — bloqueia.
@@ -273,6 +288,10 @@ const perTabAuthStorage = {
       // o backup pertence exatamente ao mesmo usuário. Sem binding, NÃO
       // restauramos — preferimos enviar para /login a aceitar outra conta.
       if (!userId || !expected || userId !== expected) {
+        if (!userId) {
+          console.error('[AUTH_SECURITY] backup com sessão Supabase inválida — descartando');
+          window.localStorage.removeItem(key);
+        }
         if (!expected) {
           if (import.meta.env.DEV) {
             console.warn('[AUTH_SECURITY] backup ignorado — aba sem binding de identidade');
@@ -292,9 +311,17 @@ const perTabAuthStorage = {
   },
   setItem: (key: string, value: string) => {
     if (typeof window === 'undefined') return;
-    window.sessionStorage.setItem(key, value);
     if (key === CURRENT_AUTH_STORAGE_KEY) {
       const userId = extractSessionUserId(value);
+      if (!userId) {
+        console.error('[AUTH_SECURITY] setItem bloqueado — sessão Supabase sem JWT válido');
+        window.sessionStorage.removeItem(key);
+        window.localStorage.removeItem(key);
+        clearTabBinding();
+        window.sessionStorage.removeItem(LOGIN_TRANSITION_KEY);
+        return;
+      }
+      window.sessionStorage.setItem(key, value);
       if (userId && window.sessionStorage.getItem(LOGIN_TRANSITION_KEY) === '1') {
         writeTabBinding(userId);
         window.localStorage.setItem(key, value);
@@ -319,6 +346,7 @@ const perTabAuthStorage = {
         window.localStorage.removeItem(key);
       }
     } else {
+      window.sessionStorage.setItem(key, value);
       window.localStorage.setItem(key, value);
     }
   },
@@ -356,6 +384,10 @@ export function clearTabIdentity() {
 }
 
 export function prepareTabForNewLogin() {
+  // Login explícito inicia uma nova identidade. Removemos TODAS as sessões e
+  // bindings antigos deste projeto, não só a chave da aba atual, para impedir
+  // que query/storage legados ressuscitem outro usuário durante o pós-login.
+  purgeAllProjectAuthStorage();
   clearTabBinding();
   if (typeof window === 'undefined') return;
   try {

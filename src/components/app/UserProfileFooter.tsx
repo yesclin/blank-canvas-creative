@@ -22,7 +22,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/hooks/useClinicUsers";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -30,8 +29,7 @@ import { cn } from "@/lib/utils";
 import { useCurrentViewRole } from "@/contexts/UserViewModeContext";
 import { RoleSwitcherDialog } from "./RoleSwitcherDialog";
 import { useQueryClient } from "@tanstack/react-query";
-import { clearAuthenticatedTab, clearSupabaseAuthStorage } from "@/lib/authSessionIsolation";
-import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
+import { completeLocalLogout } from "@/lib/authLifecycle";
 
 type UserRole = "admin" | "owner" | "profissional" | "recepcionista";
 
@@ -72,19 +70,11 @@ export function UserProfileFooter() {
 
   const handleLogout = async () => {
     try {
-      // Sinaliza que este logout é INTENCIONAL (clique em Sair) para os
-      // guards (RequireAuth/AuthSessionGuard) não tentarem reverter.
-      const { markUserLogout } = await import("@/lib/authIntent");
-      markUserLogout("user-logout");
       // Clear simulated role before signing out
       resetViewedRole();
-      clearAuthenticatedTab();
-      clearSupabaseAuthStorage();
-      try { clearReactQueryCache(queryClient, "user-logout"); } catch { /* ignore */ }
-      window.dispatchEvent(new Event("yc:signout"));
-      await supabase.auth.signOut();
+      await completeLocalLogout(queryClient, "user-logout");
       toast.success("Sessão encerrada com sucesso");
-      navigate("/login");
+      navigate("/login", { replace: true });
     } catch (error) {
       toast.error("Erro ao encerrar sessão");
     }

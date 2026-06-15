@@ -1,17 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { prepareTabForNewLogin, supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, AlertCircle } from "lucide-react";
 import logoFull from "@/assets/logo-full.png";
 import logoIcon from "@/assets/logo-icon.png";
 import { motion } from "framer-motion";
-import { clearAuthQuarantine, hasRecentAuthQuarantine, rememberAuthenticatedUser, setTabExpectedUserId } from "@/lib/authSessionIsolation";
+import { clearAuthQuarantine, clearAuthenticatedTab, clearSupabaseAuthStorage, hasRecentAuthQuarantine, rememberAuthenticatedUser, setTabExpectedUserId } from "@/lib/authSessionIsolation";
 import { useQueryClient } from "@tanstack/react-query";
-import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
+import { hardClearReactQueryCache } from "@/lib/queryClientDiagnostics";
 import { withTimeout } from "@/lib/asyncTimeout";
 import { useAuthIdentity } from "@/hooks/useAuthIdentity";
 
@@ -21,6 +21,18 @@ type AuthUserLike = { id: string; email?: string | null };
 type AuthSessionLike = { user?: AuthUserLike | null } | null;
 type AuthSignInResult = { data: { session: AuthSessionLike; user: AuthUserLike | null }; error: unknown };
 type AuthFailureKind = "NONE" | "ENV_MISSING" | "NETWORK_ERROR" | "CORS_ERROR" | "AUTH_ERROR" | "POST_LOGIN_ERROR";
+type LoginProfile = { id: string; user_id: string; clinic_id: string | null; full_name: string | null; email: string | null; avatar_url: string | null; is_active: boolean | null };
+type LoginRole = "owner" | "admin" | "profissional" | "recepcionista";
+type LoginClinic = { id: string; name: string | null };
+type PostLoginContext = {
+  user: AuthUserLike;
+  session: AuthSessionLike;
+  profile: LoginProfile | null;
+  clinic: LoginClinic | null;
+  role: LoginRole | "platform-admin" | null;
+  permissionsCount: number;
+  isPlatformAdmin: boolean;
+};
 
 function errorField(error: unknown, field: keyof AuthErrorLike): unknown {
   return typeof error === "object" && error !== null ? (error as AuthErrorLike)[field] : undefined;
@@ -68,25 +80,111 @@ function hasSupabaseEnvProblem(): string | null {
   return null;
 }
 
-/**
- * Decide para onde mandar o usuário autenticado.
- *
- * Super Admins (tabela platform_admins) entram no painel da plataforma.
- * Demais usuários vão para /app. Falha de rede no RPC NÃO trava o login —
- * caímos para /app por padrão.
- */
-async function resolveRedirectPath(userId: string, fallback: string): Promise<string> {
-  try {
-    const { data } = await withTimeout<QueryResult<boolean>>(
-      supabase.rpc("is_platform_admin", { _user_id: userId }) as PromiseLike<QueryResult<boolean>>,
-      2500,
-      "Tempo esgotado ao verificar painel administrativo.",
-    );
-    if (data === true) return "/super-admin";
-  } catch (err) {
-    console.warn("[AUTH] is_platform_admin falhou — usando destino padrão", err);
+async function loadPostLoginContext(expectedUserId: string): Promise<PostLoginContext> {
+  const { data: sessionData, error: sessionError } = await withTimeout<any>(
+    supabase.auth.getSession(),
+    10000,
+    "Tempo esgotado ao confirmar sessão.",
+  );
+  if (sessionError || !sessionData?.session?.user?.id) {
+    throw sessionError || new Error("Sessão não encontrada após autenticação.");
   }
-  return fallback || "/app";
+  const sessionUserId = sessionData.session.user.id;
+  if (sessionUserId !== expectedUserId) {
+    throw new Error("Sessão retornada pertence a outro usuário. Login bloqueado por segurança.");
+  }
+
+  const { data: userData, error: userError } = await withTimeout<any>(
+    supabase.auth.getUser(),
+    10000,
+    "Tempo esgotado ao validar usuário autenticado.",
+  );
+  if (userError || !userData?.user?.id) {
+    throw userError || new Error("Não foi possível validar o usuário autenticado.");
+  }
+  if (userData.user.id !== expectedUserId) {
+    throw new Error("auth.uid() retornou outro usuário. Login bloqueado por segurança.");
+  }
+
+  const { data: isPlatformAdmin } = await withTimeout<QueryResult<boolean>>(
+    supabase.rpc("is_platform_admin", { _user_id: expectedUserId }) as PromiseLike<QueryResult<boolean>>,
+    2500,
+    "Tempo esgotado ao verificar painel administrativo.",
+  ).catch(() => ({ data: false, error: null }));
+  if (isPlatformAdmin === true) {
+    return {
+      user: userData.user,
+      session: sessionData.session,
+      profile: null,
+      clinic: null,
+      role: "platform-admin",
+      permissionsCount: 0,
+      isPlatformAdmin: true,
+    };
+  }
+
+  const { data: profile, error: profileError } = await withTimeout<QueryResult<LoginProfile>>(
+    supabase
+      .from("profiles")
+      .select("id, user_id, clinic_id, full_name, email, avatar_url, is_active")
+      .eq("user_id", expectedUserId)
+      .limit(1)
+      .maybeSingle() as PromiseLike<QueryResult<LoginProfile>>,
+    10000,
+    "Tempo esgotado ao carregar perfil.",
+  );
+  if (profileError) throw profileError;
+  if (!profile) throw new Error("Login realizado, mas seu perfil ainda não existe. Contate o administrador da clínica.");
+  if (profile.user_id !== expectedUserId) throw new Error("Perfil retornado pertence a outro usuário. Login bloqueado por segurança.");
+  if (profile.is_active === false) throw new Error("Sua conta está desativada. Contate o administrador da clínica.");
+  if (!profile.clinic_id) throw new Error("Login realizado, mas seu perfil não está vinculado a uma clínica.");
+
+  const { data: clinic, error: clinicError } = await withTimeout<QueryResult<LoginClinic>>(
+    supabase
+      .from("clinics")
+      .select("id, name")
+      .eq("id", profile.clinic_id)
+      .limit(1)
+      .maybeSingle() as PromiseLike<QueryResult<LoginClinic>>,
+    10000,
+    "Tempo esgotado ao carregar clínica.",
+  );
+  if (clinicError) throw clinicError;
+  if (!clinic?.id) throw new Error("Login realizado, mas não foi possível carregar a clínica vinculada ao seu perfil.");
+
+  const { data: roleData, error: roleError } = await withTimeout<QueryResult<{ role: LoginRole; user_id: string; clinic_id: string }>>(
+    supabase
+      .from("user_roles")
+      .select("role, user_id, clinic_id")
+      .eq("user_id", expectedUserId)
+      .eq("clinic_id", profile.clinic_id)
+      .limit(1)
+      .maybeSingle() as PromiseLike<QueryResult<{ role: LoginRole; user_id: string; clinic_id: string }>>,
+    10000,
+    "Tempo esgotado ao carregar perfil de acesso.",
+  );
+  if (roleError) throw roleError;
+  if (!roleData?.role) throw new Error("Login realizado, mas seu perfil de acesso não está configurado nesta clínica.");
+  if (roleData.user_id !== expectedUserId || roleData.clinic_id !== profile.clinic_id) {
+    throw new Error("Permissão retornada pertence a outro usuário ou clínica. Login bloqueado por segurança.");
+  }
+
+  const { data: permissionsData, error: permissionsError } = await withTimeout<QueryResult<unknown[]>>(
+    supabase.rpc("get_user_all_permissions", { _user_id: expectedUserId, _clinic_id: profile.clinic_id }) as PromiseLike<QueryResult<unknown[]>>,
+    10000,
+    "Tempo esgotado ao carregar permissões.",
+  );
+  if (permissionsError) throw permissionsError;
+
+  return {
+    user: userData.user,
+    session: sessionData.session,
+    profile,
+    clinic,
+    role: roleData.role,
+    permissionsCount: Array.isArray(permissionsData) ? permissionsData.length : 0,
+    isPlatformAdmin: false,
+  };
 }
 
 type DiagnosticStepKey = "auth" | "profile" | "clinic" | "role" | "redirect";
@@ -162,14 +260,13 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const location = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { userId: currentAuthUserId, isLoading: authIdentityLoading } = useAuthIdentity();
   const navigatedRef = useRef(false);
   const loginInFlightRef = useRef(false);
-  const fromPath = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
 
   const updateDiagnostic = (key: DiagnosticStepKey, status: DiagnosticStatus, message: string) => {
     if (isLocalDevelopmentHost()) console.debug("[AUTH_DIAGNOSTIC]", { key, status, message });
@@ -197,21 +294,33 @@ const Login = () => {
         return;
       }
       if (navigatedRef.current) return;
-      navigatedRef.current = true;
-      const dest = await resolveRedirectPath(userId, fromPath || "/app/dashboard");
-      if (!mounted) return;
-      if (import.meta.env.DEV) {
-        console.log("REDIRECT_DECISION", { source: "AuthIdentityProvider", dest, userId, reason: "existing-session" });
+      try {
+        const context = await loadPostLoginContext(userId);
+        const dest = context.isPlatformAdmin ? "/super-admin" : "/app/dashboard";
+        navigatedRef.current = true;
+        if (!mounted) return;
+        if (import.meta.env.DEV) {
+          console.log("REDIRECT_DECISION", { source: "AuthIdentityProvider", dest, userId, clinicId: context.clinic?.id ?? null, role: context.role, reason: "existing-session" });
+        }
+        updateDiagnostic("redirect", "success", dest);
+        navigate(dest, { replace: true });
+      } catch (error) {
+        console.error("[AUTH] sessão existente sem contexto válido", error);
+        setLoginError(getAuthErrorMessage(error));
+        const { markUserLogout } = await import("@/lib/authIntent");
+        markUserLogout("existing-session-invalid");
+        clearAuthenticatedTab();
+        clearSupabaseAuthStorage();
+        try { hardClearReactQueryCache(queryClient, "existing-session-invalid", { userId }); } catch { /* ignore */ }
+        await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
       }
-      updateDiagnostic("redirect", "success", dest);
-      navigate(dest, { replace: true });
     };
     if (!authIdentityLoading && currentAuthUserId) void goTo(currentAuthUserId);
 
     return () => {
       mounted = false;
     };
-  }, [navigate, fromPath, currentAuthUserId, authIdentityLoading]);
+  }, [navigate, currentAuthUserId, authIdentityLoading, queryClient]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -219,6 +328,7 @@ const Login = () => {
 
     const cleanEmail = email.trim();
     const cleanPassword = password;
+    setLoginError(null);
 
     if (!cleanEmail || !cleanPassword) {
       toast({
@@ -231,13 +341,13 @@ const Login = () => {
 
     setIsLoading(true);
     loginInFlightRef.current = true;
-    // Apenas limpa a quarentena anterior — NÃO apagamos sessão/binding antes
-    // de tentar autenticar: se a chamada falhar por rede/timeout/CORS, o
-    // usuário não deve perder a sessão atual.
     clearAuthQuarantine();
-    // Fluxo explícito de login: remove binding local antigo antes do Supabase
-    // persistir a nova sessão. Sem isso, uma sessão válida pode ser rejeitada
-    // pelo storage isolado por aba e o RequireAuth volta para /login.
+    // Fluxo explícito de login: remove sessão/cache/identidade antigos antes
+    // do Supabase persistir a nova sessão. Nada de user_id/profile/clinic_id
+    // antigo pode sobreviver ao login de outro usuário.
+    clearAuthenticatedTab();
+    clearSupabaseAuthStorage();
+    try { hardClearReactQueryCache(queryClient, "login-start", { email: cleanEmail }); } catch { /* ignore */ }
     setTabExpectedUserId(null);
     prepareTabForNewLogin();
     updateDiagnostic("auth", "pending", "Autenticando no Supabase");
@@ -248,7 +358,9 @@ const Login = () => {
       setIsLoading(false);
       updateDiagnostic("auth", "fail", `ENV_MISSING: ${envProblem}`);
       if (import.meta.env.DEV) console.error("[AUTH] login bloqueado por ENV_MISSING", { message: envProblem });
-      toast({ title: "Erro ao entrar", description: "Não foi possível conectar ao servidor de autenticação. Tente novamente em instantes.", variant: "destructive" });
+      const description = "Não foi possível conectar ao servidor de autenticação. Tente novamente em instantes.";
+      setLoginError(description);
+      toast({ title: "Erro ao entrar", description, variant: "destructive" });
       return;
     }
 
@@ -305,6 +417,7 @@ const Login = () => {
         console.error("[AUTH] login falhou", { kind: failureKind, name, status, message: msg });
       }
       const baseDescription = getAuthErrorMessage(error);
+      setLoginError(baseDescription);
       updateDiagnostic("auth", "fail", `${failureKind}: ${baseDescription}`);
 
       toast({
@@ -323,6 +436,7 @@ const Login = () => {
         description: "Não foi possível iniciar a sessão. Tente novamente em instantes.",
         variant: "destructive",
       });
+      setLoginError("Não foi possível iniciar a sessão. Tente novamente em instantes.");
       updateDiagnostic("auth", "fail", "Auth: sessão não retornada pelo Supabase");
       return;
     }
@@ -335,21 +449,36 @@ const Login = () => {
     updateDiagnostic("auth", "success", `Auth OK: ${data.user.email ?? data.user.id}`);
 
     rememberAuthenticatedUser(data.user.id);
-    try { clearReactQueryCache(queryClient, "login-after-auth", { userId: data.user.id }); } catch { /* ignore */ }
+    try { hardClearReactQueryCache(queryClient, "login-after-auth", { userId: data.user.id }); } catch { /* ignore */ }
 
-    // Não bloquear o login por profile/clinic/role aqui. A sessão já foi
-    // autenticada; os dados da clínica são carregados na área /app com tela de
-    // erro recuperável se o banco/RLS falhar.
-
-    // Confirma a sessão local uma única vez antes de navegar. Não há timeout
-    // manual bloqueando auth: signInWithPassword já retornou com session.
+    // Confirma sessão + auth.uid() + perfil + clínica + role/permissões antes
+    // de redirecionar. Não entramos no /app com contexto incompleto.
+    let postLoginContext: PostLoginContext;
     try {
-      const { data: sessionData } = await supabase.auth.getSession() as { data?: { session?: AuthSessionLike } };
+      postLoginContext = await loadPostLoginContext(data.user.id);
       if (import.meta.env.DEV) {
-        console.log("SESSION_FOUND", { source: "post-login-getSession", hasSession: !!sessionData?.session, userId: sessionData?.session?.user?.id ?? null });
+        console.log("PROFILE_LOADED", { userId: postLoginContext.profile?.user_id ?? postLoginContext.user.id, profileId: postLoginContext.profile?.id ?? null, clinicId: postLoginContext.profile?.clinic_id ?? null });
+        console.log("CLINIC_LOADED", { clinicId: postLoginContext.clinic?.id ?? null, clinicName: postLoginContext.clinic?.name ?? null });
+        console.log("ROLE_LOADED", { role: postLoginContext.role, permissionsCount: postLoginContext.permissionsCount });
       }
-    } catch (waitError) {
-      console.error("[AUTH] erro aguardando sessão", waitError);
+    } catch (postLoginError) {
+      loginInFlightRef.current = false;
+      setIsLoading(false);
+      console.error("[AUTH] contexto pós-login inválido", postLoginError);
+      updateDiagnostic("profile", "fail", getAuthErrorMessage(postLoginError));
+      const { markUserLogout } = await import("@/lib/authIntent");
+      markUserLogout("post-login-context-invalid");
+      clearAuthenticatedTab();
+      clearSupabaseAuthStorage();
+      try { hardClearReactQueryCache(queryClient, "post-login-context-invalid", { userId: data.user.id }); } catch { /* ignore */ }
+      await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+      toast({
+        title: "Não foi possível concluir o login",
+        description: getAuthErrorMessage(postLoginError),
+        variant: "destructive",
+      });
+      setLoginError(getAuthErrorMessage(postLoginError));
+      return;
     }
 
     toast({
@@ -363,8 +492,8 @@ const Login = () => {
     if (!navigatedRef.current) {
       navigatedRef.current = true;
       updateDiagnostic("redirect", "pending", "Redirecionando para o app");
-      const dest = await resolveRedirectPath(data.user.id, fromPath || "/app/dashboard");
-      if (import.meta.env.DEV) console.log("REDIRECT_DECISION", { dest, userId: data.user.id, reason: "login-success" });
+      const dest = postLoginContext.isPlatformAdmin ? "/super-admin" : "/app/dashboard";
+      if (import.meta.env.DEV) console.log("REDIRECT_DECISION", { dest, userId: data.user.id, clinicId: postLoginContext.clinic?.id ?? null, role: postLoginContext.role, reason: "login-context-ready" });
       updateDiagnostic("redirect", "success", dest);
       loginInFlightRef.current = false;
       navigate(dest, { replace: true });
@@ -405,6 +534,13 @@ const Login = () => {
               Entre para gerenciar sua clínica
             </p>
           </div>
+
+          {loginError && (
+            <div className="mb-5 flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-foreground">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+              <span>{loginError}</span>
+            </div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleLogin} className="space-y-5">

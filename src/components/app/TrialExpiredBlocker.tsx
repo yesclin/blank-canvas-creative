@@ -1,12 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import { Lock, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import logoFull from "@/assets/logo-full.png";
 import Assinatura from "@/pages/app/Assinatura";
 import { useQueryClient } from "@tanstack/react-query";
-import { clearReactQueryCache } from "@/lib/queryClientDiagnostics";
+import { completeLocalLogout } from "@/lib/authLifecycle";
 
 type Role = "owner" | "admin" | "profissional" | "recepcionista" | string | null;
 
@@ -27,13 +26,7 @@ export function TrialExpiredBlocker({ status, role, clinicName }: Props) {
 
   const handleLogout = async () => {
     try {
-      const { markUserLogout } = await import("@/lib/authIntent");
-      const { clearAuthenticatedTab, clearSupabaseAuthStorage } = await import("@/lib/authSessionIsolation");
-      markUserLogout("trial-expired-logout");
-      clearAuthenticatedTab();
-      clearSupabaseAuthStorage();
-      try { clearReactQueryCache(queryClient, "trial-expired-logout"); } catch { /* ignore */ }
-      await supabase.auth.signOut();
+      await completeLocalLogout(queryClient, "trial-expired-logout");
       navigate("/login", { replace: true });
     } catch {
       toast.error("Erro ao encerrar sessão");
