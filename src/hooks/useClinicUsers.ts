@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { withTimeout } from "@/lib/asyncTimeout";
 import { logAuthDiagnostic } from "@/lib/authDiagnostics";
+import { useActiveClinicScope } from "@/hooks/useActiveClinicScope";
 
 export interface ClinicUser {
   id: string;
@@ -366,178 +367,32 @@ export function useClinicUsers() {
 //    isso causava o bug "Arthur Lopes vira yi4405/Administrador" quando
 //    a query de profile/role estourava timeout durante refresh de sessão.
 export function useCurrentUser() {
-  const [user, setUser] = useState<{
-    id: string;
-    name: string;
-    email: string;
-    role: "owner" | "admin" | "profissional" | "recepcionista";
-    avatarUrl: string | null;
-  } | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { scope, isLoading } = useActiveClinicScope();
+  const hasCompleteProfile = Boolean(scope.userId && scope.role && scope.profileName);
+  const user = hasCompleteProfile ? {
+    id: scope.userId!,
+    name: scope.profileName!,
+    email: scope.profileEmail || "",
+    role: scope.role!,
+    avatarUrl: scope.profileAvatarUrl || null,
+  } : null;
 
   useEffect(() => {
-    let cancelled = false;
-    let activeUserId: string | null = null;
-    let requestId = 0;
-
-    async function loadUser() {
-      const reqId = ++requestId;
-      try {
-        setError(null);
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (cancelled || reqId !== requestId) return;
-
-        if (!authUser) {
-          activeUserId = null;
-          setUser(null);
-          setIsLoading(false);
-          return;
-        }
-
-        const requestedFor = authUser.id;
-        activeUserId = requestedFor;
-
-        // Perfil estritamente pelo user_id da sessão
-        const { data: profile, error: profileErr } = await supabase
-          .from("profiles")
-          .select("full_name, avatar_url, clinic_id, user_id")
-          .eq("user_id", requestedFor)
-          .maybeSingle();
-
-        if (cancelled || reqId !== requestId || activeUserId !== requestedFor) return;
-        if (profileErr) throw profileErr;
-        logAuthDiagnostic("sidebar-profile-loaded", {
-          authUid: requestedFor,
-          profileUserId: profile?.user_id ?? null,
-          activeClinicId: profile?.clinic_id ?? null,
-          displaySource: "profiles.full_name",
-        });
-
-        // Sem perfil ou perfil de outro user: estado neutro, jamais inventar.
-        if (!profile || profile.user_id !== requestedFor) {
-          setUser(null);
-          setIsLoading(false);
-          setError("profile-missing");
-          return;
-        }
-
-        let roleValue: "owner" | "admin" | "profissional" | "recepcionista" | null = null;
-        if (profile.clinic_id) {
-          const { data: roleData, error: roleErr } = await supabase
-            .from("user_roles")
-            .select("role, user_id")
-            .eq("user_id", requestedFor)
-            .eq("clinic_id", profile.clinic_id)
-            .maybeSingle();
-          if (cancelled || reqId !== requestId || activeUserId !== requestedFor) return;
-          if (roleErr) throw roleErr;
-          logAuthDiagnostic("sidebar-role-loaded", {
-            authUid: requestedFor,
-            profileUserId: profile.user_id,
-            roleUserId: roleData?.user_id ?? null,
-            activeClinicId: profile.clinic_id,
-            displaySource: "user_roles.role",
-          });
-          if (roleData && roleData.user_id === requestedFor && roleData.role) {
-            roleValue = roleData.role as typeof roleValue;
-          }
-        }
-
-        // Sem role confirmada NÃO podemos exibir o usuário com role default —
-        // isso era o que mostrava "Administrador" para qualquer um.
-        if (!roleValue) {
-          setUser(null);
-          setIsLoading(false);
-          setError("role-missing");
-          return;
-        }
-
-        if (!profile.full_name) {
-          // Sem nome confirmado também não exibimos placeholder do e-mail.
-          setUser(null);
-          setIsLoading(false);
-          setError("name-missing");
-          return;
-        }
-
-        if (cancelled || reqId !== requestId || activeUserId !== requestedFor) return;
-        setUser({
-          id: requestedFor,
-          name: profile.full_name,
-          email: authUser.email || "",
-          role: roleValue,
-          avatarUrl: profile.avatar_url || null,
-        });
-        logAuthDiagnostic("sidebar-display-applied", {
-          authUid: requestedFor,
-          profileUserId: profile.user_id,
-          roleUserId: requestedFor,
-          activeClinicId: profile.clinic_id,
-          displaySource: "useCurrentUser -> UserProfileFooter",
-        });
-        setIsLoading(false);
-      } catch (err) {
-        if (cancelled || reqId !== requestId) return;
-        console.error("[useCurrentUser] erro ao carregar", err);
-        // Em erro, NUNCA manter usuário antigo nem inventar um novo.
-        setUser(null);
-        setIsLoading(false);
-        setError(err instanceof Error ? err.message : "load-failed");
-      }
-    }
-
-    loadUser();
-
-    // Reset IMEDIATO em mudanças de sessão para impedir mistura de identidade
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "TOKEN_REFRESHED") return;
-      const newId = session?.user?.id ?? null;
-
-      if (event === "SIGNED_OUT" || (!newId && event !== "INITIAL_SESSION")) {
-        requestId++;
-        activeUserId = null;
-        setUser(null);
-        setError(null);
-        setIsLoading(false);
-        return;
-      }
-
-      // Trocou de usuário na mesma aba ou novo SIGNED_IN: limpa antes de recarregar
-      if (newId && newId !== activeUserId) {
-        requestId++;
-        activeUserId = newId;
-        setUser(null);
-        setError(null);
-        setIsLoading(true);
-      }
-
-      // Defer para evitar deadlock dentro do callback de auth
-      setTimeout(() => {
-        if (!cancelled) loadUser();
-      }, 0);
+    if (!user || !import.meta.env.DEV) return;
+    logAuthDiagnostic("sidebar-display-applied", {
+      authUid: user.id,
+      profileUserId: user.id,
+      roleUserId: user.id,
+      activeClinicId: scope.clinicId,
+      displaySource: "useActiveClinicScope -> useCurrentUser",
     });
+  }, [user, scope.clinicId]);
 
-    // Reset imediato quando o AuthSessionGuard sinaliza troca de identidade
-    const onIdentityChanged = () => {
-      requestId++;
-      activeUserId = null;
-      setUser(null);
-      setError(null);
-      setIsLoading(true);
-      setTimeout(() => {
-        if (!cancelled) loadUser();
-      }, 0);
-    };
-    window.addEventListener("yesclin:identity-changed", onIdentityChanged);
-
-    return () => {
-      cancelled = true;
-      subscription.unsubscribe();
-      window.removeEventListener("yesclin:identity-changed", onIdentityChanged);
-    };
-  }, []);
-
-  return { user, isLoading, error, reload: () => { /* trigger via auth event */ } };
+  return {
+    user,
+    isLoading,
+    error: !isLoading && scope.userId && !hasCompleteProfile ? "profile-or-role-missing" : null,
+    reload: () => { /* cache compartilhado pelo useActiveClinicScope */ },
+  };
 }
 
