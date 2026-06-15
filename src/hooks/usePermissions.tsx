@@ -227,7 +227,6 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       activeUserIdRef.current = null;
       clearUnsafeAuthCache();
       setState({ permissions: [], role: null, isLoading: true, isAdmin: false, isOwner: false, professionalId: null });
-      setTimeout(() => fetchPermissions(), 0);
     };
     if (typeof window !== "undefined") {
       window.addEventListener("yesclin:identity-changed", onIdentityChanged);
