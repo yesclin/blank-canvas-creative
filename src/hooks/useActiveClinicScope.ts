@@ -13,7 +13,7 @@
  * `staleTime` de 5 minutos. Hooks consumidores apenas leem o resultado.
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/asyncTimeout";
 import { useAuthIdentity } from "@/hooks/useAuthIdentity";
@@ -110,9 +110,13 @@ async function fetchScope(userId: string): Promise<ActiveClinicScope> {
 export function useActiveClinicScope() {
   const queryClient = useQueryClient();
   const { userId: authUserId, isLoading: authIdentityLoading } = useAuthIdentity();
+  const [supportScopeKey, setSupportScopeKey] = useState(() => {
+    if (typeof window === "undefined") return "none";
+    return `${window.sessionStorage.getItem("yesclin_support_admin_user_id") ?? ""}:${window.sessionStorage.getItem("yesclin_support_clinic_id") ?? ""}`;
+  });
 
   const query = useQuery({
-    queryKey: ["active-clinic-scope", authUserId],
+    queryKey: ["active-clinic-scope", authUserId, supportScopeKey],
     queryFn: () => fetchScope(authUserId!),
     enabled: !authIdentityLoading && !!authUserId,
     staleTime: 5 * 60_000,
@@ -129,6 +133,7 @@ export function useActiveClinicScope() {
   // em background a cada clique no menu.
   useEffect(() => {
     const invalidate = () => {
+      setSupportScopeKey(`${window.sessionStorage.getItem("yesclin_support_admin_user_id") ?? ""}:${window.sessionStorage.getItem("yesclin_support_clinic_id") ?? ""}`);
       queryClient.invalidateQueries({ queryKey: ["active-clinic-scope"] });
     };
     const onSupport = () => invalidate();
