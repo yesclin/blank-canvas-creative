@@ -91,12 +91,20 @@ export function AuthIdentityProvider({ children }: { children: ReactNode }) {
         }
         const sessionUserId = sessionData.session.user?.id ?? null;
         if (sessionUserId) {
-          const { data: userData, error: userError } = await supabase.auth.getUser();
+          let userData: { user?: { id?: string | null } | null } = {};
+          let userError: unknown = null;
+          try {
+            const userResult = await supabase.auth.getUser();
+            userData = userResult.data ?? {};
+            userError = userResult.error ?? null;
+          } catch (error) {
+            userError = error;
+          }
           if (cancelled || reqId !== requestId) return;
           if (userError || !userData.user?.id) {
             console.error("[AUTH_IDENTITY] sessão local inválida ao validar auth.uid()", userError);
             if (isTransientAuthError(userError)) {
-              setIsLoading(false);
+              applyUserId(sessionUserId, "resolve:getUser-transient");
               return;
             }
             clearAuthenticatedTab();
