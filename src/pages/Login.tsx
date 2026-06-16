@@ -14,6 +14,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { hardClearReactQueryCache } from "@/lib/queryClientDiagnostics";
 import { withTimeout } from "@/lib/asyncTimeout";
 import { useAuthIdentity } from "@/hooks/useAuthIdentity";
+import { prefetchEssentialClinicData } from "@/lib/postLoginPrefetch";
 
 type AuthErrorLike = { message?: unknown; code?: unknown; status?: unknown; name?: unknown; cause?: unknown; stack?: unknown };
 type QueryResult<T> = { data: T | null; error: unknown };
@@ -302,6 +303,9 @@ const Login = () => {
         if (import.meta.env.DEV) {
           console.log("REDIRECT_DECISION", { source: "AuthIdentityProvider", dest, userId, clinicId: context.clinic?.id ?? null, role: context.role, reason: "existing-session" });
         }
+        if (context.clinic?.id && !context.isPlatformAdmin) {
+          void prefetchEssentialClinicData({ queryClient, userId, clinicId: context.clinic.id });
+        }
         updateDiagnostic("redirect", "success", dest);
         navigate(dest, { replace: true });
       } catch (error) {
@@ -479,6 +483,17 @@ const Login = () => {
       });
       setLoginError(getAuthErrorMessage(postLoginError));
       return;
+    }
+
+    // Pré-carrega em paralelo o que praticamente toda tela usa
+    // (specialties, procedures, professionals, rooms, insurances, payment
+    // methods). Não bloqueia o redirect — `allSettled` por dentro.
+    if (postLoginContext.clinic?.id && !postLoginContext.isPlatformAdmin) {
+      void prefetchEssentialClinicData({
+        queryClient,
+        userId: data.user.id,
+        clinicId: postLoginContext.clinic.id,
+      });
     }
 
     toast({

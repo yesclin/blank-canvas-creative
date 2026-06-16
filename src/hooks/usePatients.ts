@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { usePlanLimitGate } from "@/hooks/usePlanLimitGate";
 import { useClinicData } from "@/hooks/useClinicData";
+import { getCachedClinicContext } from "@/hooks/useClinicContext";
 
 export interface PatientInsurance {
   id: string;
@@ -106,19 +107,9 @@ export interface PatientFormData {
   clinical_restrictions?: string;
 }
 
-async function getClinicId(): Promise<string> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Usuário não autenticado");
-  
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("clinic_id")
-    .eq("user_id", user.id)
-    .single();
-    
-  if (!profile?.clinic_id) throw new Error("Clínica não encontrada");
-  return profile.clinic_id;
-}
+// `getClinicId` deprecado: lê do cache validado via `getCachedClinicContext`,
+// eliminando o `supabase.auth.getUser()` por mutação.
+
 
 // Fetch all patients
 export function usePatients() {
@@ -218,7 +209,7 @@ export function useCreatePatient() {
       if (!allowed) {
         throw new Error('PLAN_LIMIT_REACHED');
       }
-      const clinicId = await getClinicId();
+      const { clinicId } = getCachedClinicContext(queryClient);
       
       // Insert patient
       const { data: patient, error: patientError } = await supabase
@@ -328,7 +319,7 @@ export function useUpdatePatient() {
   
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: PatientFormData }) => {
-      const clinicId = await getClinicId();
+      const { clinicId } = getCachedClinicContext(queryClient);
 
       const { data: updated, error } = await supabase
         .from("patients")

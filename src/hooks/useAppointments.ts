@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { usePlanLimitGate } from "@/hooks/usePlanLimitGate";
+import { getCachedClinicContext } from "@/hooks/useClinicContext";
 
 export type AppointmentStatus = 
   | "nao_confirmado"
@@ -72,19 +73,10 @@ export interface AppointmentFormData {
   expected_value?: number;
 }
 
-async function getClinicId(): Promise<string> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Usuário não autenticado");
-  
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("clinic_id")
-    .eq("user_id", user.id)
-    .single();
-    
-  if (!profile?.clinic_id) throw new Error("Clínica não encontrada");
-  return profile.clinic_id;
-}
+// `getClinicId` deprecado: cada chamada disparava `supabase.auth.getUser()`
+// (network) + query `profiles`. Agora lemos o `clinicId` já validado do cache
+// via `getCachedClinicContext`. Zero round-trips por ação.
+
 
 function calculateEndTime(startTime: string, durationMinutes: number): string {
   const [hours, minutes] = startTime.split(":").map(Number);
@@ -166,7 +158,7 @@ export function useCreateAppointment() {
         throw new Error('PLAN_LIMIT_REACHED');
       }
 
-      const clinicId = await getClinicId();
+      const { clinicId } = getCachedClinicContext(queryClient);
       const endTime = calculateEndTime(data.start_time, data.duration_minutes);
 
       // Resolve expected value: form value first, then fall back to the procedure's price

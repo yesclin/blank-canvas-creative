@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthIdentity } from "@/hooks/useAuthIdentity";
+import { useClinicContext } from "@/hooks/useClinicContext";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import type { 
   Appointment, 
@@ -146,31 +147,14 @@ export function useSpecialtiesList(clinicId?: string) {
   });
 }
 
-// Helper hook to get clinic_id without useClinicData (avoids hook order issues)
+// Substituído por `useClinicContext`: zero round-trips, lê do cache validado
+// pelo AuthIdentityProvider + useActiveClinicScope. Mantém a mesma forma
+// (`{ data, isLoading }`) para não quebrar os consumidores deste arquivo.
 function useClinicId() {
-  const { userId, isLoading } = useAuthIdentity();
-  return useQuery({
-    queryKey: ["clinic-id-only", userId],
-    queryFn: async () => {
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-      if (authError) throw authError;
-
-      const userId = authData.user?.id;
-      if (!userId) return null;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("clinic_id")
-        .eq("user_id", userId)
-        .maybeSingle();
-      return profile?.clinic_id || null;
-    },
-    enabled: !isLoading && !!userId,
-    staleTime: 5 * 60_000,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  });
+  const { clinicId, isLoading } = useClinicContext();
+  return { data: clinicId, isLoading } as { data: string | null; isLoading: boolean };
 }
+
 
 // ============= INSURANCES =============
 export function useInsurancesList(clinicId?: string | null) {
