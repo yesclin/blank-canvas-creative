@@ -18,7 +18,8 @@ import { PageSkeleton } from "@/components/app/PageSkeleton";
 import CookieConsent from "@/components/CookieConsent";
 import { usePageResumeRecovery } from "@/hooks/usePageResumeRecovery";
 import { AuthIdentityProvider, useAuthIdentity } from "@/hooks/useAuthIdentity";
-import { logReactQueryEvent } from "@/lib/queryClientDiagnostics";
+import { logLateRefetch, logReactQueryEvent } from "@/lib/queryClientDiagnostics";
+import { RouteFreshnessMarker } from "@/components/app/RouteFreshnessMarker";
 
 // Páginas Públicas — lazy para não pesar no boot inicial.
 const Index = lazyWithTimeout(() => import("./pages/Index"), "Index");
