@@ -1,36 +1,67 @@
-Do I know what the issue is? Sim: o frontend está abortando o diagnóstico em 6s e o login em 10s, então o app transforma lentidão/indisponibilidade do Supabase Auth em `NETWORK_ERROR` antes de sabermos se `/auth/v1/health` e `/auth/v1/token` responderiam. O Network já mostra `auth/v1/token` como `Failed to fetch`, sem evidência de env errado. Não encontrei Service Worker em `public`, nem CSP explícita em `index.html`/`vite.config.ts`.
+## Causa raiz do duplo carregamento
 
-Plano de correção:
+Não é a página clicada — é a **cadeia de identidade** que sofre um "reset" cerca de 1 s depois de cada navegação. Sequência observada:
 
-1. Ajustar diagnóstico sem mascarar o erro
-- Trocar o timeout de `auth/v1/health` de 6s para 15s somente no diagnóstico.
-- Fazer o fetch direto exatamente com `apikey` e `Authorization: Bearer <anon key>`.
-- Logar duração, status HTTP, body parcial, `TypeError/AbortError`, e classificar como `CORS_ERROR`, `ERR_FAILED`, `TIMEOUT`, `HTTP_401`, `HTTP_5XX` ou `OK`.
+1. Usuário clica no menu → React Router troca a rota → Suspense mostra `PageSkeleton` enquanto o chunk lazy carrega → conteúdo aparece com dados do cache (1º "loading").
+2. Logo em seguida, `supabase.auth.onAuthStateChange` dispara `INITIAL_SESSION`/`TOKEN_REFRESHED` (e o `resolve()` do `AuthIdentityProvider` também conclui). Isso faz:
+   - `AuthIdentityProvider.applyUserId(...)` reaplicar o **mesmo** userId, mas, na primeira passagem (`prevUserId === undefined`), o ramo `isInitial` não dispara reset; nas passagens seguintes alguns caminhos chamam `emitIdentityChanged` e `clearReactQueryCache` mesmo sem troca real de usuário.
+   - `AuthSessionGuard` tem **uma segunda** assinatura de `onAuthStateChange` que também chama `hardReset` → `clearReactQueryCache(qc)` → `cancelQueries()` + `resetQueries({type:"active"})`. Isso reseta TODAS as queries ativas da tela recém-aberta.
+   - `useActiveClinicScope` e `useClinicData` escutam `yesclin:identity-changed` e chamam `invalidateQueries`, recarregando profile/clínica/permissões mesmo quando o usuário não mudou.
+3. `PermissionsProvider.fetchPermissions` usa `useCallback([fetchPermissionsOnce, scope, scopeLoading])`. Como `scope` vem de `query.data ?? EMPTY` (referência nova a cada refetch), o `useEffect([fetchPermissions])` re-executa, chama a RPC `get_user_all_permissions` outra vez e, no caminho de reset do listener `yesclin:identity-changed`, faz `setState({isLoading:true})` → `ProtectedRoute` cai no skeleton (2º "loading").
 
-2. Remover abortos prematuros do login real
-- Remover o `withTimeout(..., 10000)` em `supabase.auth.signInWithPassword` ou aumentar para 30s apenas como proteção de UI.
-- Garantir que nenhum `AbortController` de 6s seja usado no `signInWithPassword`.
-- Manter timeouts curtos apenas em consultas pós-login (`profile`, `clinic`, `role`) sem bloquear a sessão autenticada.
+Resultado: tela aparece → ~1 s depois um reset global tira o conteúdo → quando profile/clinic/permissions reassentam, a tela volta.
 
-3. Verificar bloqueios do app
-- Confirmar por busca que não há Service Worker, `window.fetch` monkey patch, MSW/workbox, proxy ou CSP bloqueando Supabase.
-- Se existir algum interceptador, excluir `https://*.supabase.co/auth/v1/*` do interceptador.
-- Se houver CSP, garantir `connect-src https://*.supabase.co wss://*.supabase.co`.
+## Correções (estruturais, não cosméticas)
 
-4. Melhorar evidência no painel DEV
-- Exibir `health: pending/ok/status/timeout`, duração em ms e resultado do último `token`.
-- Exibir claramente se falhou em `env`, `health`, `token`, `auth credentials` ou `post-login data`.
+Arquivos e mudanças mínimas, mantendo todas as garantias atuais de troca real de usuário/logout:
 
-5. Teste obrigatório em navegador limpo
-- Usar Playwright com contexto novo (equivalente a aba anônima) e sem `localStorage/sessionStorage/cookies`.
-- Abrir `/login`, capturar console e rede.
-- Tentar login válido e verificar se `/auth/v1/health` responde OK e se `/auth/v1/token` retorna session.
-- Recarregar e validar que a sessão persiste.
+### 1. `src/hooks/useAuthIdentity.ts`
+- Em `applyUserId`, só emitir `yesclin:identity-changed` e chamar `clearReactQueryCache` quando `prevUserId && prevUserId !== nextUserId` ou em logout real. Quando `prevUserId === nextUserId` (refresh/getUser confirmando o mesmo user), retornar cedo sem efeito colateral.
+- No listener `onIdentityChanged`, não chamar `resolve()` em `setTimeout(0)` se o `detail.next` for igual ao `userIdRef.current` (evita ping-pong).
+- Tratar `INITIAL_SESSION`/`SIGNED_IN`/`USER_UPDATED` como no-op quando o userId já é o atual.
 
-6. Se ainda falhar fora do app
-- Se `health` e `token` também falharem com fetch direto sem interceptadores, a correção não é no React: precisa ajustar/recuperar o Supabase Auth do projeto `yfljqgmbnplkdjfhvunq`.
-- Conferir no Supabase Dashboard: projeto ativo, Auth saudável, Authentication > URL Configuration com Site URL do preview/produção e Redirect URLs incluindo os domínios Lovable.
+### 2. `src/components/app/AuthSessionGuard.tsx`
+- Manter como guard de segurança, mas **remover** o `clearReactQueryCache` quando o evento for `INITIAL_SESSION` com o mesmo user, ou quando `prev === newUserId`. `hardReset` só roda em logout real, troca real de user ou quarentena de mismatch.
+- Não chamar `emitIdentityChanged` quando a identidade não mudou (atualmente `hardReset` sempre emite).
 
-Arquivos previstos:
-- `src/pages/Login.tsx` para diagnóstico, timeouts e logs de login.
-- Possivelmente nenhum outro arquivo se não houver CSP/interceptador encontrado.
+### 3. `src/hooks/usePermissions.tsx`
+- Trocar a dependência do `useCallback` de `scope` por primitivos: `[fetchPermissionsOnce, scope.userId, scope.clinicId, scope.role, scopeLoading]`. Assim, refetchs do `useActiveClinicScope` que devolvem o mesmo conteúdo (referência nova) não recriam `fetchPermissions` nem re-executam o `useEffect`.
+- No listener `yesclin:identity-changed`, só fazer `setState({isLoading:true,...})` quando `detail.next !== state.role's userId` (comparar com `activeUserIdRef.current`). Caso contrário, ignorar.
+- Remover o `bootTimeout` global de 10 s quando `state.role` já existe (evita recriação a cada re-render).
+
+### 4. `src/hooks/useActiveClinicScope.ts`
+- No listener `yesclin:identity-changed`, comparar `detail.prev`/`detail.next` antes de `invalidateQueries`. Se forem iguais (ou ambos nulos), ignorar.
+- `select` da query: devolver objeto memoizado por `(userId, clinicId, role, …)` para que a referência de `scope` só mude quando o conteúdo mudar (estabiliza consumidores).
+
+### 5. `src/hooks/useClinicData.ts`
+- Mesma proteção no listener: só invalida `["clinic-data"]` se o `detail.next` for diferente do `userId` atual ou se o evento for `yesclin:support-session-changed` real.
+
+### 6. `src/lib/queryClientDiagnostics.ts`
+- Adicionar guard `if (!reason.includes("logout") && !reason.includes("mismatch") && !reason.includes("user-switch")) return;` em `clearReactQueryCache` (defensa em profundidade).
+- Manter `hardClearReactQueryCache` intacto para logout.
+
+### 7. Logs de diagnóstico temporários (DEV-only)
+Adicionar `console.log("[DOUBLE_LOAD_DEBUG] …")` em:
+- `AuthIdentityProvider.applyUserId` mostrando `{prev,next,reason,willResetCache}`.
+- `AuthSessionGuard` mostrando `{event,prev,newUserId,willHardReset}`.
+- `useActiveClinicScope` listener com `{prev,next,willInvalidate}`.
+- `useClinicData` listener com `{prev,next,willInvalidate}`.
+- `PermissionsProvider.fetchPermissions` com `{reason:"effect-run", scopeUserId, role}` e no caminho do listener `{reason:"identity-listener", willReset}`.
+- `ProtectedRoute` já loga `GLOBAL LOADING ON/OFF`; manter.
+
+Com esses logs, o segundo `GLOBAL LOADING ON` após o clique deve mostrar a origem exata (qual provider iniciou o reset).
+
+## Critérios de aceite
+
+- Clicar em qualquer item do menu: 1 transição → 1 skeleton (do `Suspense` do chunk lazy) → conteúdo. **Nunca** um segundo skeleton ~1 s depois.
+- Console em DEV mostra **um** `GLOBAL LOADING ON` por navegação (do `Suspense`), seguido de `GLOBAL LOADING OFF`. Nenhum `clearReactQueryCache` é registrado em cliques normais.
+- Network: nenhum refetch automático de `profiles`, `user_roles`, `clinics`, `get_user_all_permissions` ao trocar de rota dentro do `staleTime` (5 min).
+- Logout real continua limpando cache completamente.
+- Troca real de usuário (login com outra conta) continua disparando reset (testado via `yesclin:identity-changed` com `next !== prev`).
+- StrictMode mantido; comportamento idêntico em build de produção.
+
+## Riscos / pontos de atenção
+
+- `AuthSessionGuard` e `AuthIdentityProvider` mantêm assinaturas paralelas de `onAuthStateChange` — ambas precisam aplicar os mesmos guards "no-op quando user é o mesmo", senão uma fica chamando a outra via `emitIdentityChanged`.
+- Memoizar `scope` exige estabilizar também o objeto `EMPTY` (já é constante) e evitar spreads desnecessários.
+- Após validar com os logs, remover os `[DOUBLE_LOAD_DEBUG]` antes de fechar a tarefa.
