@@ -107,19 +107,9 @@ export interface PatientFormData {
   clinical_restrictions?: string;
 }
 
-async function getClinicId(): Promise<string> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Usuário não autenticado");
-  
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("clinic_id")
-    .eq("user_id", user.id)
-    .single();
-    
-  if (!profile?.clinic_id) throw new Error("Clínica não encontrada");
-  return profile.clinic_id;
-}
+// `getClinicId` deprecado: lê do cache validado via `getCachedClinicContext`,
+// eliminando o `supabase.auth.getUser()` por mutação.
+
 
 // Fetch all patients
 export function usePatients() {
