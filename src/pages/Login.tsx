@@ -303,6 +303,9 @@ const Login = () => {
         if (import.meta.env.DEV) {
           console.log("REDIRECT_DECISION", { source: "AuthIdentityProvider", dest, userId, clinicId: context.clinic?.id ?? null, role: context.role, reason: "existing-session" });
         }
+        if (context.clinic?.id && !context.isPlatformAdmin) {
+          void prefetchEssentialClinicData({ queryClient, userId, clinicId: context.clinic.id });
+        }
         updateDiagnostic("redirect", "success", dest);
         navigate(dest, { replace: true });
       } catch (error) {
