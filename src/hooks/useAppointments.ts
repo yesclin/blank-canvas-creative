@@ -158,7 +158,7 @@ export function useCreateAppointment() {
         throw new Error('PLAN_LIMIT_REACHED');
       }
 
-      const clinicId = await getClinicId();
+      const { clinicId } = getCachedClinicContext(queryClient);
       const endTime = calculateEndTime(data.start_time, data.duration_minutes);
 
       // Resolve expected value: form value first, then fall back to the procedure's price
