@@ -3,6 +3,17 @@ import type { QueryClient } from "@tanstack/react-query";
 type CacheMeta = Record<string, unknown>;
 
 export function clearReactQueryCache(queryClient: QueryClient, reason: string, meta: CacheMeta = {}) {
+  // Defesa em profundidade: só fazer reset global do cache em eventos REAIS
+  // de troca de identidade / logout / mismatch. Refresh de token, INITIAL_SESSION
+  // com o mesmo user e re-validações de getUser NÃO devem disparar reset —
+  // isso causava o "segundo loading" ~1s após cada navegação.
+  const allowed = /logout|mismatch|switch|signed_out|intentional|trocou user/i;
+  if (!allowed.test(reason)) {
+    if (import.meta.env.DEV) {
+      console.log("[DOUBLE_LOAD_DEBUG] clearReactQueryCache IGNORADO", { reason, ...meta });
+    }
+    return;
+  }
   if (import.meta.env.DEV) {
     console.warn("[RQ_CACHE] clear", { reason, ...meta });
   }
