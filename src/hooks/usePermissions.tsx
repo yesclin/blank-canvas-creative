@@ -151,26 +151,31 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     return { kind: "ok" as const, role, isOwner, isAdmin, professionalId, permissions, userId };
   }, []);
 
+  const scopeUserId = scope.userId;
+  const scopeClinicId = scope.clinicId;
+  const scopeRole = scope.role;
+
   const fetchPermissions = useCallback(async () => {
     if (scopeLoading) return;
     const reqId = ++requestRef.current;
-    if (!scope.userId) {
+    if (!scopeUserId) {
       activeUserIdRef.current = null;
       setState(EMPTY_PERMISSIONS_STATE);
       return;
     }
-    activeUserIdRef.current = scope.userId;
+    activeUserIdRef.current = scopeUserId;
     setState((current) =>
-      current.role === scope.role && current.permissions.length > 0
+      current.role === scopeRole && current.permissions.length > 0
         ? current
         : { permissions: [], role: null, isLoading: true, isAdmin: false, isOwner: false, professionalId: null },
     );
+    const snapshotScope: ActiveClinicScope = { ...scope, userId: scopeUserId, clinicId: scopeClinicId, role: scopeRole };
     const maxAttempts = 3;
     let lastError: unknown = null;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        const result = await fetchPermissionsOnce(reqId, scope);
-        if (reqId !== requestRef.current) return; // resposta obsoleta
+        const result = await fetchPermissionsOnce(reqId, snapshotScope);
+        if (reqId !== requestRef.current) return;
         if (result.kind === "stale") return;
         if (result.kind === "no-user") {
           clearUnsafeAuthCache();
@@ -182,7 +187,6 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
           setState(EMPTY_PERMISSIONS_STATE);
           return;
         }
-        // Última checagem antes de aplicar: o usuário não pode ter mudado.
         if (activeUserIdRef.current !== result.userId) return;
         setState({
           permissions: result.permissions,
@@ -209,20 +213,24 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     console.error("[APP_ERROR] permissions fetch failed — estado limpo para evitar dados antigos", lastError);
     clearUnsafeAuthCache();
     setState(EMPTY_PERMISSIONS_STATE);
-  }, [fetchPermissionsOnce, scope, scopeLoading]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchPermissionsOnce, scopeUserId, scopeClinicId, scopeRole, scopeLoading]);
 
   useEffect(() => {
+    if (import.meta.env.DEV) {
+      console.log("[DOUBLE_LOAD_DEBUG] PermissionsProvider effect run", { scopeUserId, scopeClinicId, scopeRole, scopeLoading });
+    }
     fetchPermissions();
 
-    const bootTimeout = window.setTimeout(() => {
-      setState((current) => {
-        if (!current.isLoading) return current;
-        console.error("[BOOT_TIMEOUT] PermissionsProvider demorou demais");
-        return { permissions: [], role: null, isLoading: false, isAdmin: false, isOwner: false, professionalId: null };
-      });
-    }, 10000);
-
-    const onIdentityChanged = () => {
+    const onIdentityChanged = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { next?: string | null; prev?: string | null } | undefined;
+      const nextUserId = detail?.next ?? null;
+      if (nextUserId === (activeUserIdRef.current ?? null)) {
+        if (import.meta.env.DEV) {
+          console.log("[DOUBLE_LOAD_DEBUG] Permissions identity-changed IGNORADO (mesmo user)", { nextUserId });
+        }
+        return;
+      }
       requestRef.current++;
       activeUserIdRef.current = null;
       clearUnsafeAuthCache();
@@ -233,12 +241,11 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     }
 
     return () => {
-      window.clearTimeout(bootTimeout);
       if (typeof window !== "undefined") {
         window.removeEventListener("yesclin:identity-changed", onIdentityChanged);
       }
     };
-  }, [fetchPermissions]);
+  }, [fetchPermissions, scopeUserId, scopeClinicId, scopeRole, scopeLoading]);
 
   // ===== Effective state with view-mode override (impersonation) =====
   // realRole comes from DB (state.role); when an owner is "viewing as" another
