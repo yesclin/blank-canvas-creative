@@ -209,7 +209,7 @@ export function useCreatePatient() {
       if (!allowed) {
         throw new Error('PLAN_LIMIT_REACHED');
       }
-      const clinicId = await getClinicId();
+      const { clinicId } = getCachedClinicContext(queryClient);
       
       // Insert patient
       const { data: patient, error: patientError } = await supabase
@@ -319,7 +319,7 @@ export function useUpdatePatient() {
   
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: PatientFormData }) => {
-      const clinicId = await getClinicId();
+      const { clinicId } = getCachedClinicContext(queryClient);
 
       const { data: updated, error } = await supabase
         .from("patients")
