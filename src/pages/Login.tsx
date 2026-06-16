@@ -482,6 +482,17 @@ const Login = () => {
       return;
     }
 
+    // Pré-carrega em paralelo o que praticamente toda tela usa
+    // (specialties, procedures, professionals, rooms, insurances, payment
+    // methods). Não bloqueia o redirect — `allSettled` por dentro.
+    if (postLoginContext.clinic?.id && !postLoginContext.isPlatformAdmin) {
+      void prefetchEssentialClinicData({
+        queryClient,
+        userId: data.user.id,
+        clinicId: postLoginContext.clinic.id,
+      });
+    }
+
     toast({
       title: "Bem-vindo!",
       description: "Login realizado com sucesso.",
