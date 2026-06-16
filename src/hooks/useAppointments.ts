@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { usePlanLimitGate } from "@/hooks/usePlanLimitGate";
+import { getCachedClinicContext } from "@/hooks/useClinicContext";
 
 export type AppointmentStatus = 
   | "nao_confirmado"
