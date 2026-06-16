@@ -9,6 +9,25 @@ import { clearUnsafeAuthCache } from "./lib/authSessionIsolation";
 // localStorage/sessionStorage como fonte de verdade do usuário autenticado.
 clearUnsafeAuthCache();
 
+// O app NÃO usa Service Worker / PWA. Se algum SW residual ficou registrado
+// (de um preview anterior, por exemplo), ele pode servir HTML/JS/JSON
+// desatualizado e mascarar o cache do React Query. Desregistramos no boot e
+// limpamos as Cache Storage associadas — é seguro e idempotente.
+if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+  void navigator.serviceWorker.getRegistrations().then((regs) => {
+    regs.forEach((reg) => {
+      void reg.unregister().then((ok) => {
+        if (ok && import.meta.env.DEV) console.warn("[SW] unregister:", reg.scope);
+      });
+    });
+  }).catch(() => { /* ignore */ });
+  if ("caches" in window) {
+    void caches.keys().then((keys) => {
+      keys.forEach((k) => { void caches.delete(k); });
+    }).catch(() => { /* ignore */ });
+  }
+}
+
 declare global {
   interface Window {
     __ycLastEvent?: string;
