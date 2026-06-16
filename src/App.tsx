@@ -184,7 +184,9 @@ const queryClient = new QueryClient({
 
 if (import.meta.env.DEV) {
   queryClient.getQueryCache().subscribe(logReactQueryEvent);
+  queryClient.getQueryCache().subscribe(logLateRefetch);
 }
+
 
 function RouteBoundary({ children, scope }: { children: ReactNode; scope: string }) {
   return (
