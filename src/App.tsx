@@ -333,6 +333,7 @@ function AppRouter() {
                 <BrowserRouter>
                   <PasswordRecoveryHandler />
                   <RouterReadyLog />
+                  <RouteFreshnessMarker />
                   <Routes>
                     {/* Páginas Públicas */}
                     <Route path="/" element={moduleRoute(<Index />, "Página inicial")} />
