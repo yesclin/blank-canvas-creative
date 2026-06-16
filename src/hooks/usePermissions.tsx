@@ -169,7 +169,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         ? current
         : { permissions: [], role: null, isLoading: true, isAdmin: false, isOwner: false, professionalId: null },
     );
-    const snapshotScope: ActiveClinicScope = { ...scope, userId: scopeUserId, clinicId: scopeClinicId, role: scopeRole };
+    const snapshotScope = { userId: scopeUserId, clinicId: scopeClinicId, role: scopeRole } as ActiveClinicScope;
     const maxAttempts = 3;
     let lastError: unknown = null;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
