@@ -38,12 +38,15 @@ export function useMarketingStats() {
     fetchStats();
   }, [fetchStats]);
 
-  // Realtime subscription
+  // Realtime subscription — nome do canal DEVE incluir clinicId (regra do
+  // projeto). Antes era "marketing-stats" global, o que reusava o mesmo
+  // canal entre tenants e disparava reconexões a cada montagem de página
+  // de marketing (visível como segundo carregamento).
   useEffect(() => {
     if (!clinic?.id) return;
 
     const channel = supabase
-      .channel("marketing-stats")
+      .channel(`marketing-stats-${clinic.id}`)
       .on(
         "postgres_changes",
         {

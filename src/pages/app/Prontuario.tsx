@@ -2036,14 +2036,9 @@ export default function Prontuario() {
     return <PatientSelector onSelectPatient={handleSelectPatient} />;
   }
 
-  // Logs temporários para diagnóstico do fluxo do prontuário
-  if (typeof window !== 'undefined') {
-    console.log("[PRONTUARIO] route patientId:", patientId);
-    console.log("[PRONTUARIO] loaded patient:", patient);
-    console.log("[PRONTUARIO] patientLoading:", patientLoading);
-    console.log("[PRONTUARIO] activeAppointment:", activeAppointment);
-    console.log("[PRONTUARIO] clinic loaded:", !!clinic?.id);
-  }
+  // Logs de diagnóstico removidos: estavam dentro do corpo do componente e
+  // disparavam em CADA render (10+/segundo), mascarando o diagnóstico real do
+  // duplo carregamento. Se precisar instrumentar novamente, use useEffect.
 
   // Patient ID provided in URL but not found.
   // Só mostramos a mensagem de erro quando temos certeza:
