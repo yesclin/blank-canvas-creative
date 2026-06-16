@@ -91,12 +91,19 @@ export function useGlobalActiveAppointments() {
   // Preserve last known appointments to prevent flicker during refetch/loading
   const lastKnownRef = useRef<Appointment[]>([]);
 
+  // IMPORTANTE: a queryKey NÃO depende de `professionalId`. Esse id chega
+  // ~1s DEPOIS das permissões resolverem; se entrasse na key, a query
+  // rodaria uma vez com "all", depois rodaria de novo com o id real —
+  // exatamente o "segundo carregamento ~1s depois" que aparecia em toda
+  // /app/*. Agora o fetch é sempre scopado por clinic e o filtro por
+  // profissional é aplicado no cliente, garantindo um único fetch por
+  // navegação independente da ordem de hidratação das permissões.
   const query = useQuery({
-    queryKey: ["global-active-appointments", clinicId, isProfessional ? professionalId : "all"],
+    queryKey: ["global-active-appointments", clinicId],
     queryFn: async (): Promise<Appointment[]> => {
       if (!clinicId) return [];
 
-      let q = supabase
+      const { data, error } = await supabase
         .from("appointments")
         .select(ACTIVE_APPOINTMENT_SELECT)
         .eq("clinic_id", clinicId)
@@ -105,11 +112,6 @@ export function useGlobalActiveAppointments() {
         .is("finished_at", null)
         .order("started_at", { ascending: false });
 
-      if (isProfessional && professionalId) {
-        q = q.eq("professional_id", professionalId);
-      }
-
-      const { data, error } = await q;
       if (error) {
         console.error("Error fetching global active appointments:", error);
         throw error;
@@ -117,7 +119,7 @@ export function useGlobalActiveAppointments() {
 
       return (data || []).map(mapAppointmentRow).filter(isGloballyActiveAppointment);
     },
-    enabled: !!clinicId && !permLoading && !clinicLoading,
+    enabled: !!clinicId && !clinicLoading,
     staleTime: 30_000,
     gcTime: 5 * 60_000,
     refetchInterval: false,
@@ -126,9 +128,20 @@ export function useGlobalActiveAppointments() {
     refetchOnMount: false,
     retry: 1,
     throwOnError: false,
-    // Keep previous data during refetch to prevent UI flicker
     placeholderData: (prev) => prev,
   });
+
+  // Filtro client-side por profissional — aplicado APÓS o fetch. Não altera
+  // a queryKey, portanto não causa segundo carregamento quando permissões
+  // chegam tarde.
+  const filteredData = (() => {
+    if (!query.data) return query.data;
+    if (permLoading) return query.data;
+    if (isProfessional && professionalId) {
+      return query.data.filter((apt) => apt.professional_id === professionalId);
+    }
+    return query.data;
+  })();
 
   const hasConfirmedEmpty = query.isSuccess && !query.isFetching && (query.data?.length ?? 0) === 0;
 
