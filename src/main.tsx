@@ -12,6 +12,7 @@ clearUnsafeAuthCache();
 declare global {
   interface Window {
     __ycLastEvent?: string;
+    __ycRouteRenderedAt?: number;
   }
 }
 
