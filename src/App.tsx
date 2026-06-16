@@ -147,15 +147,36 @@ function lazyWithTimeout<T extends { default: ComponentType<any> }>(
   });
 }
 
+/**
+ * Política global de cache — stale-while-revalidate.
+ *
+ * - `staleTime: 30s`: dentro desse janela, navegar entre telas reaproveita
+ *   o cache **sem nenhuma chamada de rede** (zero loading global).
+ * - Passado esse tempo, ao remontar a query mostramos o dado em cache
+ *   imediatamente e validamos no servidor em background (`refetchOnMount: true`).
+ *   Como os componentes leem `data ?? undefined` e não `isLoading`, a UI não
+ *   pisca — só é substituída se vier algo novo.
+ * - `refetchOnWindowFocus: true`: ao voltar para a aba, valida frescor (uma
+ *   vez, throttled pelo `staleTime`).
+ * - `refetchOnReconnect: true`: ao recuperar internet, revalida o que tiver
+ *   ficado obsoleto.
+ * - `gcTime: 30min`: mantém o cache disponível para retornos rápidos.
+ *
+ * Hooks que precisam de janela diferente devem importar presets de
+ * `@/lib/queryFreshness` em vez de inventar um número.
+ */
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      // Cache básico: evita refetch em remontagens rápidas (ex.: troca de aba)
       staleTime: 30_000,
-      gcTime: 5 * 60_000,
+      gcTime: 30 * 60_000,
+      refetchOnMount: true,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+    },
+    mutations: {
+      retry: 0,
     },
   },
 });
