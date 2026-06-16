@@ -143,19 +143,19 @@ export function useGlobalActiveAppointments() {
     return query.data;
   })();
 
-  const hasConfirmedEmpty = query.isSuccess && !query.isFetching && (query.data?.length ?? 0) === 0;
+  const hasConfirmedEmpty = query.isSuccess && !query.isFetching && (filteredData?.length ?? 0) === 0;
 
   // Update lastKnownRef only when the server has returned a confirmed result
   useEffect(() => {
-    if (query.isSuccess && Array.isArray(query.data)) {
-      lastKnownRef.current = query.data;
+    if (query.isSuccess && Array.isArray(filteredData)) {
+      lastKnownRef.current = filteredData;
     }
-  }, [query.data, query.isSuccess]);
+  }, [filteredData, query.isSuccess]);
 
   // Stable appointments: keep the last valid non-empty result during transient states
   const appointments = (() => {
-    if (query.data && query.data.length > 0) {
-      return query.data;
+    if (filteredData && filteredData.length > 0) {
+      return filteredData;
     }
 
     if (hasConfirmedEmpty) {
@@ -166,7 +166,7 @@ export function useGlobalActiveAppointments() {
       return lastKnownRef.current;
     }
 
-    return query.data ?? [];
+    return filteredData ?? [];
   })();
 
   // Realtime subscription for appointment status changes
