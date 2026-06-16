@@ -1,23 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useClinicContext } from "@/hooks/useClinicContext";
 
-async function getClinicId(): Promise<string> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Usuário não autenticado");
-  const { data } = await supabase
-    .from("user_roles")
-    .select("clinic_id")
-    .eq("user_id", user.id)
-    .single();
-  if (!data?.clinic_id) throw new Error("Clínica não encontrada");
-  return data.clinic_id;
-}
-
+/**
+ * Helpers de seleção para CRM.
+ *
+ * Cada hook usa `useClinicContext` (cache validado) em vez de chamar
+ * `supabase.auth.getUser()` por execução. Antes, abrir um Lead chamava
+ * `getUser()` 5 vezes em paralelo.
+ */
 export function useCrmSpecialties() {
+  const { clinicId, isReady } = useClinicContext();
   return useQuery({
-    queryKey: ["crm-specialties"],
+    queryKey: ["crm-specialties", clinicId],
+    enabled: isReady,
+    staleTime: 5 * 60_000,
     queryFn: async () => {
-      const clinicId = await getClinicId();
       const { data, error } = await supabase
         .from("specialties")
         .select("id, name")
@@ -30,14 +28,16 @@ export function useCrmSpecialties() {
 }
 
 export function useCrmProcedures() {
+  const { clinicId, isReady } = useClinicContext();
   return useQuery({
-    queryKey: ["crm-procedures"],
+    queryKey: ["crm-procedures", clinicId],
+    enabled: isReady && !!clinicId,
+    staleTime: 5 * 60_000,
     queryFn: async () => {
-      const clinicId = await getClinicId();
       const { data, error } = await supabase
         .from("procedures")
         .select("id, name")
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", clinicId!)
         .eq("is_active", true)
         .order("name");
       if (error) throw error;
@@ -47,16 +47,18 @@ export function useCrmProcedures() {
 }
 
 export function useCrmProfessionals() {
+  const { clinicId, isReady } = useClinicContext();
   return useQuery({
-    queryKey: ["crm-professionals"],
+    queryKey: ["crm-professionals", clinicId],
+    enabled: isReady && !!clinicId,
+    staleTime: 5 * 60_000,
     queryFn: async () => {
-      const clinicId = await getClinicId();
       const { data, error } = await supabase
         .from("professionals")
-        .select("id, name")
-        .eq("clinic_id", clinicId)
+        .select("id, name:full_name")
+        .eq("clinic_id", clinicId!)
         .eq("is_active", true)
-        .order("name");
+        .order("full_name");
       if (error) throw error;
       return data || [];
     },
@@ -64,14 +66,16 @@ export function useCrmProfessionals() {
 }
 
 export function useCrmUsers() {
+  const { clinicId, isReady } = useClinicContext();
   return useQuery({
-    queryKey: ["crm-users"],
+    queryKey: ["crm-users", clinicId],
+    enabled: isReady && !!clinicId,
+    staleTime: 5 * 60_000,
     queryFn: async () => {
-      const clinicId = await getClinicId();
       const { data, error } = await supabase
         .from("profiles")
         .select("user_id, full_name")
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", clinicId!)
         .eq("is_active", true)
         .order("full_name");
       if (error) throw error;
@@ -81,14 +85,16 @@ export function useCrmUsers() {
 }
 
 export function useCrmLeadsForSelect() {
+  const { clinicId, isReady } = useClinicContext();
   return useQuery({
-    queryKey: ["crm-leads-select"],
+    queryKey: ["crm-leads-select", clinicId],
+    enabled: isReady && !!clinicId,
+    staleTime: 60_000,
     queryFn: async () => {
-      const clinicId = await getClinicId();
       const { data, error } = await supabase
         .from("crm_leads")
         .select("id, name, phone, email")
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", clinicId!)
         .not("status", "eq", "arquivado")
         .order("name");
       if (error) throw error;
