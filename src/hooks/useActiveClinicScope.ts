@@ -135,19 +135,28 @@ export function useActiveClinicScope() {
   // TOKEN_REFRESHED e INITIAL_SESSION são ignorados para não causar refetch
   // em background a cada clique no menu.
   useEffect(() => {
-    const invalidate = () => {
+    const onSupport = () => {
       setSupportScopeKey(`${window.sessionStorage.getItem("yesclin_support_admin_user_id") ?? ""}:${window.sessionStorage.getItem("yesclin_support_clinic_id") ?? ""}`);
       queryClient.invalidateQueries({ queryKey: ["active-clinic-scope"] });
     };
-    const onSupport = () => invalidate();
+    const onIdentityChanged = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { prev?: string | null; next?: string | null } | undefined;
+      const prev = detail?.prev ?? null;
+      const next = detail?.next ?? null;
+      if (prev === next) {
+        if (import.meta.env.DEV) console.log("[DOUBLE_LOAD_DEBUG] scope identity-changed IGNORADO", { prev, next });
+        return;
+      }
+      onSupport();
+    };
     if (typeof window !== "undefined") {
       window.addEventListener("yesclin:support-session-changed", onSupport);
-      window.addEventListener("yesclin:identity-changed", onSupport);
+      window.addEventListener("yesclin:identity-changed", onIdentityChanged);
     }
     return () => {
       if (typeof window !== "undefined") {
         window.removeEventListener("yesclin:support-session-changed", onSupport);
-        window.removeEventListener("yesclin:identity-changed", onSupport);
+        window.removeEventListener("yesclin:identity-changed", onIdentityChanged);
       }
     };
   }, [queryClient]);
