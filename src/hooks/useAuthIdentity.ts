@@ -189,9 +189,18 @@ export function AuthIdentityProvider({ children }: { children: ReactNode }) {
     });
 
     const onIdentityChanged = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { next?: string | null; prev?: string | null } | undefined;
+      const nextUserId = detail?.next ?? null;
+      // Evita ping-pong: se o evento corresponde ao userId que já temos,
+      // ignora completamente (sem applyUserId, sem resolve()).
+      if (nextUserId === (userIdRef.current ?? null)) {
+        if (import.meta.env.DEV) {
+          console.log("[DOUBLE_LOAD_DEBUG] identity-changed ignorado (mesmo user)", { nextUserId });
+        }
+        return;
+      }
       requestId++;
-      const detail = (event as CustomEvent).detail as { next?: string | null } | undefined;
-      applyUserId(detail?.next ?? null, "yesclin:identity-changed");
+      applyUserId(nextUserId, "yesclin:identity-changed");
       setTimeout(() => {
         if (!cancelled) void resolve();
       }, 0);

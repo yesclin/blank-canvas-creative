@@ -55,9 +55,6 @@ export function AuthSessionGuard() {
 
       const expected = explicitPrevious ?? getTabExpectedUserId();
       if (expected && expected !== newUserId) {
-        // Mismatch detectado: bloquear a sessão local divergente. Aceitar a
-        // nova identidade automaticamente é justamente o vazamento reportado:
-        // a UI pode passar a mostrar B para uma aba que esperava A.
         quarantineMismatchedAuthSession(`${eventLabel} user divergente`, expected, newUserId);
         try { clearReactQueryCache(qc, "auth-guard-mismatch", { expected, newUserId }); } catch { /* ignore */ }
         currentUserIdRef.current = null;
@@ -66,6 +63,10 @@ export function AuthSessionGuard() {
 
       if (prev && prev !== newUserId) {
         hardReset(`${eventLabel} trocou user`, prev, newUserId);
+      } else if (import.meta.env.DEV) {
+        // Mesmo user — NUNCA fazer reset/emitIdentityChanged aqui.
+        // Era essa a causa do "segundo loading" 1s após cada navegação.
+        console.log("[DOUBLE_LOAD_DEBUG] AuthSessionGuard mesmo user — no-op", { event: eventLabel, userId: newUserId });
       }
       clearSupportSessionIfMismatch(newUserId);
       clearUnsafeAuthCache();

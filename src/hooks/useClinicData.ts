@@ -161,10 +161,20 @@ export function useClinicData() {
     const invalidate = () => {
       queryClient.invalidateQueries({ queryKey: ["clinic-data"] });
     };
-    window.addEventListener("yesclin:identity-changed", invalidate);
+    const onIdentityChanged = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { prev?: string | null; next?: string | null } | undefined;
+      const prev = detail?.prev ?? null;
+      const next = detail?.next ?? null;
+      if (prev === next) {
+        if (import.meta.env.DEV) console.log("[DOUBLE_LOAD_DEBUG] clinic-data identity-changed IGNORADO", { prev, next });
+        return;
+      }
+      invalidate();
+    };
+    window.addEventListener("yesclin:identity-changed", onIdentityChanged);
     window.addEventListener("yesclin:support-session-changed", invalidate);
     return () => {
-      window.removeEventListener("yesclin:identity-changed", invalidate);
+      window.removeEventListener("yesclin:identity-changed", onIdentityChanged);
       window.removeEventListener("yesclin:support-session-changed", invalidate);
     };
   }, [queryClient]);
