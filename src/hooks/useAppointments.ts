@@ -73,19 +73,10 @@ export interface AppointmentFormData {
   expected_value?: number;
 }
 
-async function getClinicId(): Promise<string> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Usuário não autenticado");
-  
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("clinic_id")
-    .eq("user_id", user.id)
-    .single();
-    
-  if (!profile?.clinic_id) throw new Error("Clínica não encontrada");
-  return profile.clinic_id;
-}
+// `getClinicId` deprecado: cada chamada disparava `supabase.auth.getUser()`
+// (network) + query `profiles`. Agora lemos o `clinicId` já validado do cache
+// via `getCachedClinicContext`. Zero round-trips por ação.
+
 
 function calculateEndTime(startTime: string, durationMinutes: number): string {
   const [hours, minutes] = startTime.split(":").map(Number);
