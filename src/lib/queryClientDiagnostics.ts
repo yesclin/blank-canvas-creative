@@ -57,7 +57,7 @@ export function logReactQueryEvent(event: unknown) {
  * Loga refetches "tardios" — disparados DEPOIS da tela já ter renderizado.
  * Útil para identificar qual query/provider está causando flicker pós-load.
  *
- * Janela: marcamos o início de cada rota em `window.__ycRouteRenderedAt` (em
+ * Janela: marcamos o início de cada rota em `(window as Window & { __ycRouteRenderedAt?: number }).__ycRouteRenderedAt` (em
  * `RouteFreshnessMarker`). Qualquer query que entre em `fetching` mais de
  * `LATE_THRESHOLD_MS` depois disso é considerada tardia.
  */
@@ -67,7 +67,7 @@ export function logLateRefetch(event: unknown) {
   const payload = event as { type?: string; query?: { queryKey?: unknown; state?: { fetchStatus?: string } } };
   if (payload.type !== "updated") return;
   if (payload.query?.state?.fetchStatus !== "fetching") return;
-  const renderedAt = window.__ycRouteRenderedAt;
+  const renderedAt = (window as Window & { __ycRouteRenderedAt?: number }).__ycRouteRenderedAt;
   if (!renderedAt) return;
   const elapsed = performance.now() - renderedAt;
   if (elapsed < LATE_THRESHOLD_MS) return;
