@@ -135,13 +135,12 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
       // Último procedimento
       const ultimoProc = procedimentos?.[0] || null;
 
-      // Buscar evoluções/sessões de estética
+      // Buscar evoluções/sessões (sem filtro de especialidade — schema usa specialty_id)
       const { data: sessoes } = await supabase
         .from('clinical_evolutions')
         .select('id, created_at')
         .eq('patient_id', patientId)
         .eq('clinic_id', clinicId)
-        .eq('specialty', 'estetica')
         .order('created_at', { ascending: false })
         .limit(50);
 
@@ -171,12 +170,14 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
         .eq('patient_id', patientId)
         .eq('clinic_id', clinicId);
 
-      // Buscar termos assinados (tabela nova + legacy)
+      // Buscar termos assinados
+      // - clinical_consent_acceptances: filtrar não revogados via revoked_at
+      // - patient_consents: tabela não possui revoked_at; filtrar por status
       const [termosNew, termosLegacy] = await Promise.all([
         supabase.from('clinical_consent_acceptances').select('id', { count: 'exact', head: true })
           .eq('patient_id', patientId).eq('clinic_id', clinicId).is('revoked_at', null),
         supabase.from('patient_consents').select('id', { count: 'exact', head: true })
-          .eq('patient_id', patientId).eq('clinic_id', clinicId).is('revoked_at', null),
+          .eq('patient_id', patientId).eq('clinic_id', clinicId).neq('status', 'revoked'),
       ]);
       const totalTermos = (termosNew.count || 0) + (termosLegacy.count || 0);
 
