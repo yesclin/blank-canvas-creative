@@ -29,6 +29,7 @@ import type { AgendaFilters as FiltersType, ViewMode, Appointment, AppointmentSt
 import { toast } from "sonner";
 import { validateProcedureStock, StockValidationResult } from "@/hooks/useProcedureStockValidation";
 import { supabase } from "@/integrations/supabase/client";
+import { useClinicContext } from "@/hooks/useClinicContext";
 import type { ActiveAppointment } from "@/hooks/prontuario/useActiveAppointment";
 import { useGlobalActiveAppointment } from "@/contexts/GlobalActiveAppointmentContext";
 import { removeGlobalActiveAppointment, upsertGlobalActiveAppointment } from "@/lib/globalActiveAppointments";
