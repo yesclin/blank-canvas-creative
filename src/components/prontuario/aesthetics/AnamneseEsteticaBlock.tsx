@@ -476,10 +476,11 @@ export function AnamneseEsteticaBlock({
   const { generateAnamnesisPdf, generating: exportingPdf } = useInstitutionalPdf();
 
   const handlePrint = useCallback(async () => {
-    // Strict guards — only the explicitly selected record is exported
-    if (!patientId || !selectedRecordId || !currentRecord) {
+    // Use the record currently open on screen; selectedRecordId is optional
+    // (when viewing a freshly opened/created record it may not be set yet).
+    if (!patientId || !currentRecord?.id) {
       const { toast } = await import('sonner');
-      toast.error('Selecione uma anamnese para gerar o PDF.');
+      toast.error('Abra uma anamnese para gerar o PDF.');
       return;
     }
 
