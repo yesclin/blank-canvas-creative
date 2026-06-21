@@ -31,8 +31,9 @@ interface AgendaGridProps {
 }
 
 const SLOT_MIN = 30;
-const SLOT_PX = 60;
+const SLOT_PX = 74;
 const PX_PER_MIN = SLOT_PX / SLOT_MIN;
+const MIN_CARD_HEIGHT = 44;
 const DAY_START_HOUR = 8;
 const DAY_START_MIN = DAY_START_HOUR * 60;
 
@@ -294,7 +295,7 @@ export function AgendaGrid({
                       ? toMinutes(endStr)
                       : startMin + (apt.duration_minutes || 30);
                     const top = (startMin - DAY_START_MIN) * PX_PER_MIN;
-                    const height = Math.max(24, (endMin - startMin) * PX_PER_MIN - 2);
+                    const height = Math.max(MIN_CARD_HEIGHT, (endMin - startMin) * PX_PER_MIN - 2);
                     if (top + height <= 0 || top >= TOTAL_HEIGHT) return null;
                     return (
                       <div
@@ -409,7 +410,7 @@ export function AgendaGrid({
                       ? toMinutes(endStr)
                       : startMin + (apt.duration_minutes || 30);
                     const top = (startMin - DAY_START_MIN) * PX_PER_MIN;
-                    const height = Math.max(20, (endMin - startMin) * PX_PER_MIN - 2);
+                    const height = Math.max(MIN_CARD_HEIGHT, (endMin - startMin) * PX_PER_MIN - 2);
                     if (top + height <= 0 || top >= TOTAL_HEIGHT) return null;
                     return (
                       <div
