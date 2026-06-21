@@ -31,8 +31,9 @@ interface AgendaGridProps {
 }
 
 const SLOT_MIN = 30;
-const SLOT_PX = 60;
+const SLOT_PX = 74;
 const PX_PER_MIN = SLOT_PX / SLOT_MIN;
+const MIN_CARD_HEIGHT = 44;
 const DAY_START_HOUR = 8;
 const DAY_START_MIN = DAY_START_HOUR * 60;
 
