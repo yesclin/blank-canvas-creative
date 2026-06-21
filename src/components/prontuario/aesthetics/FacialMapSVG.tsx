@@ -350,9 +350,11 @@
        )}
        
        {/* Application Points */}
-       {filteredApplications.map((app) => {
-         const x = (app.position_x / 100) * 400;
-         const y = (app.position_y / 100) * 520;
+      {filteredApplications.map((app) => {
+        // Points are stored as percentages relative to the SVG viewBox (500x650),
+        // matching exactly what handleSvgClick computes from getBoundingClientRect.
+        const x = (app.position_x / 100) * 500;
+        const y = (app.position_y / 100) * 650;
          const isSelected = selectedPointId === app.id;
          const color = PROCEDURE_COLORS[app.procedure_type];
          
