@@ -68,6 +68,7 @@ export interface UseConflictDetectionParams {
   isFitIn?: boolean;
   selectedSpecialtyId?: string;
   activeSpecialtyIds?: string[];
+  scheduleBlocks?: ScheduleBlock[];
 }
 
 export function useConflictDetection({
