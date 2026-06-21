@@ -55,6 +55,9 @@ export interface EsteticaSummaryData {
   ultima_sessao: string | null;
   dias_desde_ultima_sessao: number | null;
   
+  // Mapa facial
+  total_mapas_faciais: number;
+
   // Fotos
   total_fotos_antes_depois: number;
   
