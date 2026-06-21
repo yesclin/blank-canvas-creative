@@ -1039,7 +1039,12 @@ export function UnifiedSignatureWizard({
               <Button variant="outline" onClick={() => setStep("selfie")} disabled={signing}>
                 Voltar
               </Button>
-              <Button onClick={handleSubmit} disabled={!canSubmit}>
+              <Button
+                onClick={handleSubmit}
+                disabled={signing}
+                title={submitBlockers.length > 0 ? `Faltando: ${submitBlockers.join(" • ")}` : undefined}
+                className={submitBlockers.length > 0 ? "opacity-60" : undefined}
+              >
                 {signing ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
