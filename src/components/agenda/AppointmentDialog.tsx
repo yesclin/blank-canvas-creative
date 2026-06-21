@@ -99,6 +99,8 @@ interface AppointmentDialogProps {
   /** If provided, the patient field will be pre-filled and locked */
   lockedPatientId?: string;
   lockedPatientName?: string;
+  /** Schedule blocks for conflict detection */
+  scheduleBlocks?: import('@/types/agenda').ScheduleBlock[];
 }
 
 export function AppointmentDialog({
