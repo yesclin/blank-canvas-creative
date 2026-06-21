@@ -40,6 +40,7 @@ export default function Pacientes() {
   const { data: professionals = [] } = useProfessionals();
   const createPatient = useCreatePatient();
   const updatePatient = useUpdatePatient();
+  const { data: lastAppointmentsMap = {} } = useLastAppointmentsMap();
 
   // Fetch attended patient IDs for professional users
   const { data: attendedPatientIds = [] } = useQuery({
