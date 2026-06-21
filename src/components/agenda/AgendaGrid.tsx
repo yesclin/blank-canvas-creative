@@ -30,11 +30,24 @@ interface AgendaGridProps {
   onSlotClick?: (data: SlotClickData) => void;
 }
 
+const SLOT_MIN = 30;
+const SLOT_PX = 60;
+const PX_PER_MIN = SLOT_PX / SLOT_MIN;
+const DAY_START_HOUR = 8;
+const DAY_START_MIN = DAY_START_HOUR * 60;
+
 const timeSlots = Array.from({ length: 20 }, (_, i) => {
-  const hour = 8 + Math.floor(i / 2);
+  const hour = DAY_START_HOUR + Math.floor(i / 2);
   const minute = (i % 2) * 30;
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 });
+
+const TOTAL_HEIGHT = timeSlots.length * SLOT_PX;
+
+const toMinutes = (t: string) => {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+};
 
 export function AgendaGrid({
   appointments,
