@@ -14,6 +14,7 @@ import {
   useInsurances,
   useProfessionals,
   usePatientAppointments,
+  useLastAppointmentsMap,
   type Patient,
   type PatientFormData,
 } from '@/hooks/usePatients';
