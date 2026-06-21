@@ -394,12 +394,14 @@ export function UnifiedSignatureWizard({
     if (mode === "saved") return !!savedDataUrl;
     return false;
   }, [mode, hasInk, savedDataUrl]);
-  const canSubmit = useMemo(() => {
-    if (signing) return false;
-    if (password.trim().length < 6) return false;
-    if (!canProceedFromSign) return false;
-    return true;
-  }, [signing, password, canProceedFromSign]);
+  const submitBlockers = useMemo(() => {
+    const reasons: string[] = [];
+    if (!confirmAccuracy || !confirmIrreversible) reasons.push("Confirme a revisão do documento (etapa Revisar)");
+    if (!canProceedFromSign) reasons.push(mode === "saved" ? "Selecione uma assinatura salva" : "Faça sua assinatura manuscrita");
+    if (password.trim().length < 6) reasons.push("Digite sua senha (mínimo 6 caracteres)");
+    return reasons;
+  }, [confirmAccuracy, confirmIrreversible, canProceedFromSign, password, mode]);
+  const canSubmit = !signing && submitBlockers.length === 0;
 
   // ─── Submit ────────────────────────────────────────────────
   const handleSubmit = async () => {
