@@ -155,19 +155,30 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
         diasDesdeUltimaSessao = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       }
 
-      // Buscar fotos antes/depois
-      const { count: totalFotos } = await supabase
-        .from('aesthetic_before_after')
+      // Buscar fotos antes/depois (tabela nova + legacy)
+      const [fotosNew, fotosLegacy] = await Promise.all([
+        supabase.from('aesthetic_before_after').select('id', { count: 'exact', head: true })
+          .eq('patient_id', patientId).eq('clinic_id', clinicId),
+        supabase.from('before_after_records').select('id', { count: 'exact', head: true })
+          .eq('patient_id', patientId).eq('clinic_id', clinicId),
+      ]);
+      const totalFotos = (fotosNew.count || 0) + (fotosLegacy.count || 0);
+
+      // Buscar mapas faciais
+      const { count: totalMapasFaciais } = await supabase
+        .from('facial_maps')
         .select('id', { count: 'exact', head: true })
         .eq('patient_id', patientId)
         .eq('clinic_id', clinicId);
 
-      // Buscar termos assinados
-      const { count: totalTermos } = await supabase
-        .from('clinical_consent_acceptances')
-        .select('id', { count: 'exact', head: true })
-        .eq('patient_id', patientId)
-        .eq('clinic_id', clinicId);
+      // Buscar termos assinados (tabela nova + legacy)
+      const [termosNew, termosLegacy] = await Promise.all([
+        supabase.from('clinical_consent_acceptances').select('id', { count: 'exact', head: true })
+          .eq('patient_id', patientId).eq('clinic_id', clinicId).is('revoked_at', null),
+        supabase.from('patient_consents').select('id', { count: 'exact', head: true })
+          .eq('patient_id', patientId).eq('clinic_id', clinicId).is('revoked_at', null),
+      ]);
+      const totalTermos = (termosNew.count || 0) + (termosLegacy.count || 0);
 
       // Buscar alertas clínicos ativos
       const { data: alertas } = await supabase
@@ -195,7 +206,7 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
         }
       }
 
-      return {
+      const result: EsteticaSummaryData = {
         total_procedimentos: totalProcedimentos,
         procedimentos_por_tipo: procedimentosResumo,
         ultimo_procedimento: ultimoProc ? {
@@ -206,14 +217,31 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
         total_sessoes: totalSessoes,
         ultima_sessao: ultimaSessao,
         dias_desde_ultima_sessao: diasDesdeUltimaSessao,
-        total_fotos_antes_depois: totalFotos || 0,
-        total_termos_assinados: totalTermos || 0,
+        total_mapas_faciais: totalMapasFaciais || 0,
+        total_fotos_antes_depois: totalFotos,
+        total_termos_assinados: totalTermos,
         status_tratamento: statusTratamento,
         total_alertas: alertas?.length || 0,
       };
+
+      if (import.meta.env.DEV) {
+        console.log('[VisaoGeralEstetica] overview data', {
+          patientId,
+          clinicId,
+          procedures: procedimentos?.length || 0,
+          lastProcedure: ultimoProc,
+          facialMaps: totalMapasFaciais,
+          beforeAfter: { new: fotosNew.count, legacy: fotosLegacy.count },
+          consents: { new: termosNew.count, legacy: termosLegacy.count },
+          alerts: alertas?.length || 0,
+        });
+      }
+
+      return result;
     },
     enabled: !!patientId && !!clinicId,
   });
+
 
   // Buscar alertas clínicos ativos
   // IMPORTANTE: queryKey compartilha o prefixo ['aesthetic-alerts', patientId]
