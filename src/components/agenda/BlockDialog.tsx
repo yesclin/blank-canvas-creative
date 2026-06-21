@@ -24,11 +24,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import type { Professional } from "@/types/agenda";
 
 const blockSchema = z.object({
   title: z.string().min(1, "Informe o título"),
@@ -38,6 +42,7 @@ const blockSchema = z.object({
   start_time: z.string().optional(),
   end_time: z.string().optional(),
   reason: z.string().optional(),
+  professional_id: z.string().optional(),
 });
 
 type BlockFormData = z.infer<typeof blockSchema>;
@@ -45,10 +50,14 @@ type BlockFormData = z.infer<typeof blockSchema>;
 interface BlockDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit?: (data: BlockFormData) => void;
+  clinicId?: string | null;
+  professionals?: Professional[];
+  onSaved?: () => void;
 }
 
-export function BlockDialog({ open, onOpenChange, onSubmit }: BlockDialogProps) {
+export function BlockDialog({ open, onOpenChange, clinicId, professionals = [], onSaved }: BlockDialogProps) {
+  const queryClient = useQueryClient();
+  const [saving, setSaving] = useState(false);
   const form = useForm<BlockFormData>({
     resolver: zodResolver(blockSchema),
     defaultValues: {
@@ -59,16 +68,42 @@ export function BlockDialog({ open, onOpenChange, onSubmit }: BlockDialogProps) 
       start_time: "08:00",
       end_time: "18:00",
       reason: "",
+      professional_id: "all",
     },
   });
 
   const watchAllDay = form.watch("all_day");
 
-  const handleSubmit = (data: BlockFormData) => {
-    onSubmit?.(data);
-    toast.success("Bloqueio criado com sucesso!");
-    onOpenChange(false);
-    form.reset();
+  const handleSubmit = async (data: BlockFormData) => {
+    if (!clinicId) {
+      toast.error("Clínica não identificada.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("schedule_blocks").insert({
+        clinic_id: clinicId,
+        professional_id: data.professional_id && data.professional_id !== "all" ? data.professional_id : null,
+        title: data.title,
+        reason: data.reason || null,
+        start_date: format(data.start_date, "yyyy-MM-dd"),
+        end_date: format(data.end_date, "yyyy-MM-dd"),
+        all_day: data.all_day,
+        start_time: data.all_day ? null : (data.start_time || null),
+        end_time: data.all_day ? null : (data.end_time || null),
+      });
+      if (error) throw error;
+      toast.success("Bloqueio criado com sucesso!");
+      await queryClient.invalidateQueries({ queryKey: ["schedule-blocks"] });
+      onSaved?.();
+      onOpenChange(false);
+      form.reset();
+    } catch (err: any) {
+      console.error("[BlockDialog] save error", err);
+      toast.error(err?.message || "Erro ao criar bloqueio.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
