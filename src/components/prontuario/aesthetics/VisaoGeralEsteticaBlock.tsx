@@ -284,12 +284,14 @@ export function VisaoGeralEsteticaBlock({
           icon={MapPin}
           moduleKey="facial_map"
           onNavigate={onNavigateToModule}
-          hasData={summary.total_procedimentos > 0}
+          hasData={summary.total_mapas_faciais > 0}
         >
-          {summary.total_procedimentos > 0 ? (
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">Mapeamento Ativo</span>
+          {summary.total_mapas_faciais > 0 ? (
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold">{summary.total_mapas_faciais}</span>
+              <span className="text-muted-foreground">
+                {summary.total_mapas_faciais === 1 ? 'mapa' : 'mapas'}
+              </span>
             </div>
           ) : (
             <>
