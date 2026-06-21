@@ -263,8 +263,8 @@ export function AgendaGrid({
             {Object.entries(groupedAppointments).map(([group, apts]) => {
               const profId = groupBy === 'professional' ? professionalNameToId[group] : undefined;
               return (
-                <div key={group} className="relative border-l" style={{ height: TOTAL_HEIGHT }}>
-                  {/* 30-min slot backgrounds (click to create) */}
+                <div key={group} className="relative border-l overflow-hidden" style={{ height: TOTAL_HEIGHT }}>
+                  {/* Layer 1: 30-min slot backgrounds + click-to-create (z-[1]) */}
                   {timeSlots.map((time, i) => {
                     const pastSlot = isSlotInPast(selectedDate, time);
                     const block = !pastSlot ? isSlotBlocked(selectedDate, time, profId) : null;
@@ -273,19 +273,18 @@ export function AgendaGrid({
                       <div
                         key={`${group}-${time}`}
                         className={cn(
-                          "absolute left-0 right-0 border-b",
+                          "absolute left-0 right-0 border-b z-[1] overflow-hidden",
                           pastSlot && "bg-muted/30",
                           block && "bg-muted/40",
                           clickable && "cursor-pointer hover:bg-primary/5 transition-colors"
                         )}
                         style={{ top: i * SLOT_PX, height: SLOT_PX }}
                         onClick={clickable ? () => onSlotClick({ date: selectedDate, time, professionalId: profId }) : undefined}
-                      >
-                        {block ? renderBlockedSlot(block) : pastSlot ? renderPastSlot(time) : renderEmptySlot(selectedDate, time, profId)}
-                      </div>
+                        title={block ? `${block.title}${block.reason ? ` — ${block.reason}` : ''}` : pastSlot ? 'Horário já passou' : undefined}
+                      />
                     );
                   })}
-                  {/* Appointments positioned by minute */}
+                  {/* Layer 2: Appointments positioned by minute (z-20) */}
                   {apts.map(apt => {
                     const startStr = apt.start_time?.slice(0, 5);
                     const endStr = apt.end_time?.slice(0, 5);
@@ -300,7 +299,7 @@ export function AgendaGrid({
                     return (
                       <div
                         key={apt.id}
-                        className="absolute left-1 right-1 z-10"
+                        className="absolute left-1 right-1 z-20"
                         style={{ top, height }}
                       >
                         <AppointmentCard
