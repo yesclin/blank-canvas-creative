@@ -84,6 +84,7 @@ export function useConflictDetection({
   isFitIn = false,
   selectedSpecialtyId,
   activeSpecialtyIds,
+  scheduleBlocks = [],
 }: UseConflictDetectionParams): ConflictCheckResult {
   return useMemo(() => {
     const conflicts: ScheduleConflict[] = [];
