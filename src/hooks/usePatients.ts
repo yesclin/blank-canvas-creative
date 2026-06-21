@@ -495,6 +495,58 @@ export function usePatientAppointments(patientId: string | null) {
   });
 }
 
+// Build a map of patientId -> last valid past appointment date for the clinic
+const INVALID_LAST_APPT_STATUSES = new Set([
+  "canceled",
+  "cancelled",
+  "cancelado",
+  "no_show",
+  "falta",
+  "faltou",
+  "deleted",
+  "excluido",
+]);
+
+export function useLastAppointmentsMap() {
+  const { clinic } = useClinicData();
+
+  return useQuery({
+    queryKey: ["patients-last-appointments", clinic?.id],
+    queryFn: async () => {
+      if (!clinic?.id) return {} as Record<string, string>;
+      const todayStr = new Date().toISOString().slice(0, 10);
+
+      const { data, error } = await supabase
+        .from("appointments")
+        .select("patient_id, scheduled_date, start_time, status")
+        .eq("clinic_id", clinic.id)
+        .lte("scheduled_date", todayStr)
+        .not("patient_id", "is", null)
+        .order("scheduled_date", { ascending: false })
+        .order("start_time", { ascending: false })
+        .limit(1000);
+
+      if (error) throw error;
+
+      const map: Record<string, string> = {};
+      for (const row of data || []) {
+        const status = (row.status || "").toString().toLowerCase();
+        if (INVALID_LAST_APPT_STATUSES.has(status)) continue;
+        if (!row.patient_id) continue;
+        const dateStr = `${row.scheduled_date}T${row.start_time ?? "00:00:00"}`;
+        if (!map[row.patient_id] || map[row.patient_id] < dateStr) {
+          map[row.patient_id] = dateStr;
+        }
+      }
+      return map;
+    },
+    enabled: !!clinic?.id,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}
+
 // Fetch insurances for dropdown
 export function useInsurances() {
   const { clinic } = useClinicData();
