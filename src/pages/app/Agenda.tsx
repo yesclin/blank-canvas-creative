@@ -939,7 +939,7 @@ export default function Agenda() {
       <BlockDialog
         open={blockDialogOpen}
         onOpenChange={setBlockDialogOpen}
-        clinicId={scheduleBlocks[0]?.clinic_id ?? professionals[0]?.clinic_id ?? null}
+        clinicId={clinicId}
         professionals={professionals}
         onSaved={() => queryClient.invalidateQueries({ queryKey: ['schedule-blocks'] })}
       />
