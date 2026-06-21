@@ -299,5 +299,6 @@ export function useConflictDetection({
     isFitIn,
     selectedSpecialtyId,
     activeSpecialtyIds,
+    scheduleBlocks,
   ]);
 }
