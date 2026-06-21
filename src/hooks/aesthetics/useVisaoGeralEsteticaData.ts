@@ -319,6 +319,7 @@ function getEmptySummary(): EsteticaSummaryData {
     ultima_sessao: null,
     dias_desde_ultima_sessao: null,
     total_fotos_antes_depois: 0,
+    total_mapas_faciais: 0,
     total_termos_assinados: 0,
     status_tratamento: 'aguardando',
     total_alertas: 0,
