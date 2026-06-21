@@ -417,6 +417,7 @@ export function AppointmentDialog({
     isFitIn: watchIsFitIn || mode === 'fitIn',
     selectedSpecialtyId: watchSpecialtyId,
     activeSpecialtyIds,
+    scheduleBlocks,
   });
 
   const handleSubmit = (data: AppointmentFormData) => {
