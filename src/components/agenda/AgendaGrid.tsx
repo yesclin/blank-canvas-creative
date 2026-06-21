@@ -263,8 +263,8 @@ export function AgendaGrid({
             {Object.entries(groupedAppointments).map(([group, apts]) => {
               const profId = groupBy === 'professional' ? professionalNameToId[group] : undefined;
               return (
-                <div key={group} className="relative border-l" style={{ height: TOTAL_HEIGHT }}>
-                  {/* 30-min slot backgrounds (click to create) */}
+                <div key={group} className="relative border-l overflow-hidden" style={{ height: TOTAL_HEIGHT }}>
+                  {/* Layer 1: 30-min slot backgrounds + click-to-create (z-[1]) */}
                   {timeSlots.map((time, i) => {
                     const pastSlot = isSlotInPast(selectedDate, time);
                     const block = !pastSlot ? isSlotBlocked(selectedDate, time, profId) : null;
@@ -273,19 +273,18 @@ export function AgendaGrid({
                       <div
                         key={`${group}-${time}`}
                         className={cn(
-                          "absolute left-0 right-0 border-b",
+                          "absolute left-0 right-0 border-b z-[1] overflow-hidden",
                           pastSlot && "bg-muted/30",
                           block && "bg-muted/40",
                           clickable && "cursor-pointer hover:bg-primary/5 transition-colors"
                         )}
                         style={{ top: i * SLOT_PX, height: SLOT_PX }}
                         onClick={clickable ? () => onSlotClick({ date: selectedDate, time, professionalId: profId }) : undefined}
-                      >
-                        {block ? renderBlockedSlot(block) : pastSlot ? renderPastSlot(time) : renderEmptySlot(selectedDate, time, profId)}
-                      </div>
+                        title={block ? `${block.title}${block.reason ? ` — ${block.reason}` : ''}` : pastSlot ? 'Horário já passou' : undefined}
+                      />
                     );
                   })}
-                  {/* Appointments positioned by minute */}
+                  {/* Layer 2: Appointments positioned by minute (z-20) */}
                   {apts.map(apt => {
                     const startStr = apt.start_time?.slice(0, 5);
                     const endStr = apt.end_time?.slice(0, 5);
@@ -300,7 +299,7 @@ export function AgendaGrid({
                     return (
                       <div
                         key={apt.id}
-                        className="absolute left-1 right-1 z-10"
+                        className="absolute left-1 right-1 z-20"
                         style={{ top, height }}
                       >
                         <AppointmentCard
@@ -330,14 +329,14 @@ export function AgendaGrid({
         <ScrollArea className="h-[600px]">
           <div className="grid grid-cols-8">
             {/* Header */}
-            <div className="sticky top-0 z-10 bg-muted border-b p-2 text-center text-sm font-medium">
+            <div className="sticky top-0 z-30 bg-muted border-b p-2 text-center text-sm font-medium">
               Hora
             </div>
             {weekDays.map(day => (
-              <div 
-                key={day.toISOString()} 
+              <div
+                key={day.toISOString()}
                 className={cn(
-                  "sticky top-0 z-10 bg-muted border-b border-l p-2 text-center",
+                  "sticky top-0 z-30 bg-muted border-b border-l p-2 text-center",
                   isSameDay(day, new Date()) && "bg-primary/10"
                 )}
               >
@@ -352,71 +351,92 @@ export function AgendaGrid({
                 </div>
               </div>
             ))}
-            
-            {/* Time slots */}
-            {timeSlots.filter((_, i) => i % 2 === 0).map(time => (
-              <>
-                <div key={`time-${time}`} className="border-b p-2 text-xs text-muted-foreground text-center bg-muted/30">
-                  {time}
+
+            {/* Time labels column */}
+            <div className="relative bg-muted/30" style={{ height: TOTAL_HEIGHT }}>
+              {timeSlots.filter((_, i) => i % 2 === 0).map((time) => {
+                const i = timeSlots.indexOf(time);
+                return (
+                  <div
+                    key={`wtime-${time}`}
+                    className="absolute left-0 right-0 border-b text-xs text-muted-foreground text-center px-2 flex items-start justify-center pt-1"
+                    style={{ top: i * SLOT_PX, height: SLOT_PX * 2 }}
+                  >
+                    {time}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Day columns with minute-precise appointments */}
+            {weekDays.map(day => {
+              const dayStr = format(day, 'yyyy-MM-dd');
+              const dayAppointments = filteredAppointments.filter(a => a.scheduled_date === dayStr);
+              const isWeekend = [0, 6].includes(day.getDay());
+              return (
+                <div
+                  key={`wcol-${dayStr}`}
+                  className={cn("relative border-l overflow-hidden", isWeekend && "bg-muted/20")}
+                  style={{ height: TOTAL_HEIGHT }}
+                >
+                  {/* Layer 1: 30-min slot backgrounds */}
+                  {timeSlots.map((time, i) => {
+                    const pastSlot = isSlotInPast(day, time);
+                    const block = !pastSlot ? isSlotBlocked(day, time) : null;
+                    const clickable = !block && !pastSlot && !!onSlotClick;
+                    return (
+                      <div
+                        key={`${dayStr}-${time}`}
+                        className={cn(
+                          "absolute left-0 right-0 border-b z-[1]",
+                          pastSlot && "bg-muted/30",
+                          block && "bg-muted/40",
+                          clickable && "cursor-pointer hover:bg-primary/5 transition-colors"
+                        )}
+                        style={{ top: i * SLOT_PX, height: SLOT_PX }}
+                        onClick={clickable ? () => onSlotClick({ date: day, time }) : undefined}
+                        title={block ? `${block.title}${block.reason ? ` — ${block.reason}` : ''}` : undefined}
+                      />
+                    );
+                  })}
+                  {/* Layer 2: Appointments */}
+                  {dayAppointments.map(apt => {
+                    const startStr = apt.start_time?.slice(0, 5);
+                    const endStr = apt.end_time?.slice(0, 5);
+                    if (!startStr) return null;
+                    const startMin = toMinutes(startStr);
+                    const endMin = endStr
+                      ? toMinutes(endStr)
+                      : startMin + (apt.duration_minutes || 30);
+                    const top = (startMin - DAY_START_MIN) * PX_PER_MIN;
+                    const height = Math.max(20, (endMin - startMin) * PX_PER_MIN - 2);
+                    if (top + height <= 0 || top >= TOTAL_HEIGHT) return null;
+                    return (
+                      <div
+                        key={apt.id}
+                        className="absolute left-1 right-1 z-20"
+                        style={{ top, height }}
+                      >
+                        <AppointmentCard
+                          appointment={apt}
+                          compact
+                          onClick={onAppointmentClick}
+                          onStatusChange={onStatusChange}
+                          onReschedule={onReschedule}
+                          onLaunchSale={onLaunchSale}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
-                {weekDays.map(day => {
-                  const dayStr = format(day, 'yyyy-MM-dd');
-                  const slotAppointments = filteredAppointments.filter(
-                    a => a.scheduled_date === dayStr && a.start_time.slice(0, 2) === time.slice(0, 2)
-                  );
-                  const isWeekend = [0, 6].includes(day.getDay());
-                  const isEmpty = slotAppointments.length === 0;
-                  const pastSlot = isEmpty ? isSlotInPast(day, time) : false;
-                  const block = isEmpty && !pastSlot ? isSlotBlocked(day, time) : null;
-                  
-                  return (
-                    <div 
-                      key={`${dayStr}-${time}`} 
-                      className={cn(
-                        "border-b border-l p-1 min-h-[80px] relative",
-                        isWeekend && "bg-muted/20",
-                        pastSlot && "bg-muted/30",
-                        block && "bg-muted/40",
-                        isEmpty && !block && !pastSlot && onSlotClick && "cursor-pointer hover:bg-primary/5 transition-colors"
-                      )}
-                      onClick={isEmpty && !block && !pastSlot && onSlotClick ? () => onSlotClick({ date: day, time }) : undefined}
-                    >
-                      {slotAppointments.length > 0 ? (
-                        <>
-                          {slotAppointments.slice(0, 2).map(apt => (
-                            <AppointmentCard
-                              key={apt.id}
-                              appointment={apt}
-                              compact
-                              onClick={onAppointmentClick}
-                              onStatusChange={onStatusChange}
-                              onReschedule={onReschedule}
-                              onLaunchSale={onLaunchSale}
-                            />
-                          ))}
-                          {slotAppointments.length > 2 && (
-                            <div className="text-xs text-muted-foreground text-center mt-1">
-                              +{slotAppointments.length - 2} mais
-                            </div>
-                          )}
-                        </>
-                      ) : block ? (
-                        renderBlockedSlot(block)
-                      ) : pastSlot ? (
-                        renderPastSlot(time)
-                      ) : (
-                        renderEmptySlot(day, time)
-                      )}
-                    </div>
-                  );
-                })}
-              </>
-            ))}
+              );
+            })}
           </div>
         </ScrollArea>
       </div>
     );
   }
+
 
   // Monthly View
   if (viewMode === 'monthly') {
