@@ -521,8 +521,9 @@ export function UnifiedSignatureWizard({
           </Alert>
         )}
 
-        {/* Context diagnostics — useful when missing fields, also available
-            on demand to inspect what was passed in. */}
+        {/* Context diagnostics — DEV only. Never exposed in production
+            because it contains raw IDs and snapshot payload. */}
+        {import.meta.env.DEV && (
         <details
           open={hasMissingContext}
           className="rounded-md border bg-muted/30 text-xs"
@@ -530,7 +531,7 @@ export function UnifiedSignatureWizard({
           <summary className="flex items-center justify-between gap-2 px-3 py-2 cursor-pointer select-none">
             <span className="flex items-center gap-2 font-medium text-foreground">
               <Bug className="h-3.5 w-3.5" />
-              Diagnóstico do contexto
+              Diagnóstico do contexto (dev)
               {hasMissingContext && (
                 <Badge variant="destructive" className="text-[10px] h-4 px-1.5">
                   {missingFields.length} campo{missingFields.length > 1 ? "s" : ""} ausente{missingFields.length > 1 ? "s" : ""}
@@ -578,6 +579,7 @@ export function UnifiedSignatureWizard({
             </pre>
           </div>
         </details>
+        )}
 
         {!hasMissingContext && (
         <>
