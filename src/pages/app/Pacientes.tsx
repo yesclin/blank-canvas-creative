@@ -360,7 +360,7 @@ export default function Pacientes() {
               plan_name: '',
             } : undefined,
             total_appointments: 0,
-            last_appointment_date: null,
+            last_appointment_date: lastAppointmentsMap[p.id] || null,
           })) as any}
           onViewPatient={handleViewPatient as any}
           onEditPatient={handleEditPatient as any}
