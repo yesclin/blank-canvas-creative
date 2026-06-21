@@ -476,19 +476,26 @@ export function AnamneseEsteticaBlock({
   const { generateAnamnesisPdf, generating: exportingPdf } = useInstitutionalPdf();
 
   const handlePrint = useCallback(async () => {
-    // Use the record currently open on screen; selectedRecordId is optional
-    // (when viewing a freshly opened/created record it may not be set yet).
-    if (!patientId || !currentRecord?.id) {
+    // Resolve the record actually open on screen. Priority:
+    //   1. currentRecord (advanced/standard hook)
+    //   2. v2Records entry matching selectedRecordId (when the typed hook
+    //      hasn't hydrated or fetched a different "latest" record)
+    //   3. v2Records[0] (only one anamnesis visible on screen)
+    const fallbackV2 = selectedRecordId
+      ? v2Records.find((r) => r.id === selectedRecordId)
+      : (v2Records.length === 1 ? v2Records[0] : undefined);
+    const effectiveRecord: any = currentRecord ?? fallbackV2 ?? null;
+
+    if (!patientId || !effectiveRecord?.id) {
       const { toast } = await import('sonner');
       toast.error('Abra uma anamnese para gerar o PDF.');
       return;
     }
 
-    const recordResponses = (currentRecord.responses ?? {}) as Record<string, unknown>;
+    const recordResponses = (effectiveRecord.responses ?? {}) as Record<string, unknown>;
 
-    // Field structure: prefer persisted snapshot (preserves the original template),
-    // otherwise fall back to current dynamic fields (advanced) or template structure (standard).
-    const snapshot = (currentRecord.structure_snapshot ?? null) as
+    // Field structure: prefer persisted snapshot, else dynamic/template fallback.
+    const snapshot = (effectiveRecord.structure_snapshot ?? null) as
       | Array<{ id: string; label: string; section?: string; type?: string }>
       | null;
     const fallbackFields = isAdvanced
@@ -505,15 +512,15 @@ export function AnamneseEsteticaBlock({
         id: patientId,
       },
       {
-        id: currentRecord.id,
+        id: effectiveRecord.id,
         structured_data: recordResponses,
-        created_at: currentRecord.created_at,
+        created_at: effectiveRecord.created_at,
         created_by_name: professionalName || undefined,
-        template_id: currentRecord.template_id || activeTemplate?.id,
-        template_name: activeTemplate?.name,
-        signed_at: currentRecord.signed_at,
+        template_id: effectiveRecord.template_id || activeTemplate?.id,
+        template_name: activeTemplate?.name || effectiveRecord.template_name,
+        signed_at: effectiveRecord.signed_at,
       },
-      [], // no legacy SecaoAnamnese — sections are derived from dynamicStructure below
+      [],
       {
         name: professionalName || undefined,
         crm: professionalRegistration || undefined,
@@ -524,6 +531,7 @@ export function AnamneseEsteticaBlock({
     patientId,
     selectedRecordId,
     currentRecord,
+    v2Records,
     isAdvanced,
     dynamicFields,
     activeTemplate,
