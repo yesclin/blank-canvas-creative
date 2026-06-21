@@ -810,13 +810,66 @@ export default function Agenda() {
         </TabsContent>
 
         <TabsContent value="bloqueios">
-          <div className="text-center py-12 text-muted-foreground">
-            <Ban className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Nenhum bloqueio configurado</p>
-            <Button variant="outline" className="mt-4" onClick={() => setBlockDialogOpen(true)}>
-              Criar Bloqueio
-            </Button>
-          </div>
+          {scheduleBlocks.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Ban className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Nenhum bloqueio configurado</p>
+              <Button variant="outline" className="mt-4" onClick={() => setBlockDialogOpen(true)}>
+                Criar Bloqueio
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex justify-end">
+                <Button size="sm" onClick={() => setBlockDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" /> Novo bloqueio
+                </Button>
+              </div>
+              <div className="border rounded-lg divide-y">
+                {scheduleBlocks.map((block) => {
+                  const prof = professionals.find(p => p.id === block.professional_id);
+                  return (
+                    <div key={block.id} className="p-4 flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Ban className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{block.title}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {block.start_date === block.end_date
+                            ? format(new Date(block.start_date + 'T00:00:00'), "dd/MM/yyyy")
+                            : `${format(new Date(block.start_date + 'T00:00:00'), "dd/MM/yyyy")} → ${format(new Date(block.end_date + 'T00:00:00'), "dd/MM/yyyy")}`}
+                          {' • '}
+                          {block.all_day ? 'Dia inteiro' : `${block.start_time?.slice(0,5)} às ${block.end_time?.slice(0,5)}`}
+                          {' • '}
+                          {prof ? prof.full_name : 'Toda a clínica'}
+                        </p>
+                        {block.reason && (
+                          <p className="text-xs text-muted-foreground">Motivo: {block.reason}</p>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={async () => {
+                          if (!confirm(`Excluir o bloqueio "${block.title}"?`)) return;
+                          const { error } = await supabase.from('schedule_blocks').delete().eq('id', block.id);
+                          if (error) {
+                            toast.error(error.message);
+                          } else {
+                            toast.success('Bloqueio excluído');
+                            queryClient.invalidateQueries({ queryKey: ['schedule-blocks'] });
+                          }
+                        }}
+                      >
+                        Excluir
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 
