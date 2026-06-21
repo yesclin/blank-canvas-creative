@@ -394,16 +394,23 @@ export function UnifiedSignatureWizard({
     if (mode === "saved") return !!savedDataUrl;
     return false;
   }, [mode, hasInk, savedDataUrl]);
-  const canSubmit = useMemo(() => {
-    if (signing) return false;
-    if (password.trim().length < 6) return false;
-    if (!canProceedFromSign) return false;
-    return true;
-  }, [signing, password, canProceedFromSign]);
+  const submitBlockers = useMemo(() => {
+    const reasons: string[] = [];
+    if (!confirmAccuracy || !confirmIrreversible) reasons.push("Confirme a revisão do documento (etapa Revisar)");
+    if (!canProceedFromSign) reasons.push(mode === "saved" ? "Selecione uma assinatura salva" : "Faça sua assinatura manuscrita");
+    if (password.trim().length < 6) reasons.push("Digite sua senha (mínimo 6 caracteres)");
+    return reasons;
+  }, [confirmAccuracy, confirmIrreversible, canProceedFromSign, password, mode]);
+  const canSubmit = !signing && submitBlockers.length === 0;
 
   // ─── Submit ────────────────────────────────────────────────
   const handleSubmit = async () => {
-    if (!context || !canSubmit) return;
+    if (!context) return;
+    if (submitBlockers.length > 0) {
+      toast.error("Não foi possível assinar", { description: submitBlockers.join(" • ") });
+      return;
+    }
+    if (signing) return;
 
     let handwrittenDataUrl: string | undefined;
     if (mode === "handwritten") {
@@ -977,7 +984,7 @@ export function UnifiedSignatureWizard({
                     <li>Snapshot imutável do documento e da assinatura usada</li>
                     <li>Hash SHA-256 do documento final</li>
                     <li>IP, navegador, dispositivo e carimbo de tempo</li>
-                    <li>Selfie de verificação {selfieDataUrl ? "✓" : "(não capturada)"}</li>
+                    <li>Selfie de verificação {selfieDataUrl ? "✓ capturada" : "(opcional — não capturada)"}</li>
                     <li>Geolocalização: {geolocation?.status === "granted" ? "✓ capturada" : geolocation?.status === "denied" ? "negada" : "indisponível"}</li>
                     <li>Eventos completos da timeline na trilha de auditoria</li>
                   </ul>
@@ -1032,7 +1039,12 @@ export function UnifiedSignatureWizard({
               <Button variant="outline" onClick={() => setStep("selfie")} disabled={signing}>
                 Voltar
               </Button>
-              <Button onClick={handleSubmit} disabled={!canSubmit}>
+              <Button
+                onClick={handleSubmit}
+                disabled={signing}
+                title={submitBlockers.length > 0 ? `Faltando: ${submitBlockers.join(" • ")}` : undefined}
+                className={submitBlockers.length > 0 ? "opacity-60" : undefined}
+              >
                 {signing ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
