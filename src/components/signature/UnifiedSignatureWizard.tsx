@@ -984,7 +984,7 @@ export function UnifiedSignatureWizard({
                     <li>Snapshot imutável do documento e da assinatura usada</li>
                     <li>Hash SHA-256 do documento final</li>
                     <li>IP, navegador, dispositivo e carimbo de tempo</li>
-                    <li>Selfie de verificação {selfieDataUrl ? "✓" : "(não capturada)"}</li>
+                    <li>Selfie de verificação {selfieDataUrl ? "✓ capturada" : "(opcional — não capturada)"}</li>
                     <li>Geolocalização: {geolocation?.status === "granted" ? "✓ capturada" : geolocation?.status === "denied" ? "negada" : "indisponível"}</li>
                     <li>Eventos completos da timeline na trilha de auditoria</li>
                   </ul>
