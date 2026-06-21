@@ -918,6 +918,7 @@ export default function Agenda() {
         defaultStartTime={defaultStartTime}
         lockedProfessionalId={lockedProfessionalIdForDialog}
         existingAppointments={appointments}
+        scheduleBlocks={scheduleBlocks}
         clinicSchedule={clinicSchedule}
         professionalSchedules={professionalSchedules}
         onSubmit={handleAppointmentSubmit}
