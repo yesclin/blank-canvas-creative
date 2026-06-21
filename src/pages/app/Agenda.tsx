@@ -64,6 +64,8 @@ export default function Agenda() {
   const navigate = useNavigate();
   const location = useLocation();
   const { role, professionalId: userProfessionalId } = usePermissions();
+  const { clinicId } = useClinicContext();
+
   
   // Check if navigated from patient profile with pre-selected patient
   const locationState = location.state as { patientId?: string; patientName?: string } | null;
