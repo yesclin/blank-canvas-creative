@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { format } from 'date-fns';
-import type { Appointment, Professional } from '@/types/agenda';
+import type { Appointment, Professional, ScheduleBlock } from '@/types/agenda';
 import { WeekSchedule } from '@/components/config/EnhancedWorkingHoursCard';
 
 // =============================================
