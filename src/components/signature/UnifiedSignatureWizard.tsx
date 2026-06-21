@@ -405,7 +405,12 @@ export function UnifiedSignatureWizard({
 
   // ─── Submit ────────────────────────────────────────────────
   const handleSubmit = async () => {
-    if (!context || !canSubmit) return;
+    if (!context) return;
+    if (submitBlockers.length > 0) {
+      toast.error("Não foi possível assinar", { description: submitBlockers.join(" • ") });
+      return;
+    }
+    if (signing) return;
 
     let handwrittenDataUrl: string | undefined;
     if (mode === "handwritten") {
