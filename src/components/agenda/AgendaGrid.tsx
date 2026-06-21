@@ -30,11 +30,24 @@ interface AgendaGridProps {
   onSlotClick?: (data: SlotClickData) => void;
 }
 
+const SLOT_MIN = 30;
+const SLOT_PX = 60;
+const PX_PER_MIN = SLOT_PX / SLOT_MIN;
+const DAY_START_HOUR = 8;
+const DAY_START_MIN = DAY_START_HOUR * 60;
+
 const timeSlots = Array.from({ length: 20 }, (_, i) => {
-  const hour = 8 + Math.floor(i / 2);
+  const hour = DAY_START_HOUR + Math.floor(i / 2);
   const minute = (i % 2) * 30;
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 });
+
+const TOTAL_HEIGHT = timeSlots.length * SLOT_PX;
+
+const toMinutes = (t: string) => {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+};
 
 export function AgendaGrid({
   appointments,
@@ -224,63 +237,86 @@ export function AgendaGrid({
         <ScrollArea className="h-[600px]">
           <div className="grid" style={{ gridTemplateColumns: groupBy !== 'general' ? `80px repeat(${Object.keys(groupedAppointments).length}, minmax(200px, 1fr))` : '80px 1fr' }}>
             {/* Header */}
-            <div className="sticky top-0 z-10 bg-muted border-b p-2 text-center text-sm font-medium">
+            <div className="sticky top-0 z-20 bg-muted border-b p-2 text-center text-sm font-medium">
               Hora
             </div>
             {Object.keys(groupedAppointments).map(group => (
-              <div key={group} className="sticky top-0 z-10 bg-muted border-b border-l p-2 text-center text-sm font-medium truncate">
+              <div key={group} className="sticky top-0 z-20 bg-muted border-b border-l p-2 text-center text-sm font-medium truncate">
                 {group}
               </div>
             ))}
-            
-            {/* Time slots */}
-            {timeSlots.map(time => (
-              <>
-                <div key={`time-${time}`} className="border-b p-2 text-xs text-muted-foreground text-center bg-muted/30">
+
+            {/* Time labels column */}
+            <div className="relative bg-muted/30" style={{ height: TOTAL_HEIGHT }}>
+              {timeSlots.map((time, i) => (
+                <div
+                  key={`time-${time}`}
+                  className="absolute left-0 right-0 border-b text-xs text-muted-foreground text-center px-2 flex items-start justify-center pt-1"
+                  style={{ top: i * SLOT_PX, height: SLOT_PX }}
+                >
                   {time}
                 </div>
-                {Object.entries(groupedAppointments).map(([group, apts]) => {
-                  const slotAppointments = apts.filter(a => a.start_time.slice(0, 5) === time);
-                  const isEmpty = slotAppointments.length === 0;
-                  const profId = groupBy === 'professional' ? professionalNameToId[group] : undefined;
-                  const pastSlot = isEmpty ? isSlotInPast(selectedDate, time) : false;
-                  const block = isEmpty && !pastSlot ? isSlotBlocked(selectedDate, time, profId) : null;
-                  
-                  return (
-                    <div
-                      key={`${group}-${time}`}
-                      className={cn(
-                        "border-b border-l p-1 min-h-[60px] relative",
-                        pastSlot && "bg-muted/30",
-                        block && "bg-muted/40",
-                        isEmpty && !block && !pastSlot && onSlotClick && "cursor-pointer hover:bg-primary/5 transition-colors"
-                      )}
-                      onClick={isEmpty && !block && !pastSlot && onSlotClick ? () => onSlotClick({ date: selectedDate, time, professionalId: profId }) : undefined}
-                    >
-                      {slotAppointments.length > 0 ? (
-                        slotAppointments.map(apt => (
-                          <AppointmentCard
-                            key={apt.id}
-                            appointment={apt}
-                            compact
-                            onClick={onAppointmentClick}
-                            onStatusChange={onStatusChange}
-                            onReschedule={onReschedule}
-                            onLaunchSale={onLaunchSale}
-                          />
-                        ))
-                      ) : block ? (
-                        renderBlockedSlot(block)
-                      ) : pastSlot ? (
-                        renderPastSlot(time)
-                      ) : (
-                        renderEmptySlot(selectedDate, time, profId)
-                      )}
-                    </div>
-                  );
-                })}
-              </>
-            ))}
+              ))}
+            </div>
+
+            {/* Group columns with minute-precise appointments */}
+            {Object.entries(groupedAppointments).map(([group, apts]) => {
+              const profId = groupBy === 'professional' ? professionalNameToId[group] : undefined;
+              return (
+                <div key={group} className="relative border-l" style={{ height: TOTAL_HEIGHT }}>
+                  {/* 30-min slot backgrounds (click to create) */}
+                  {timeSlots.map((time, i) => {
+                    const pastSlot = isSlotInPast(selectedDate, time);
+                    const block = !pastSlot ? isSlotBlocked(selectedDate, time, profId) : null;
+                    const clickable = !block && !pastSlot && !!onSlotClick;
+                    return (
+                      <div
+                        key={`${group}-${time}`}
+                        className={cn(
+                          "absolute left-0 right-0 border-b",
+                          pastSlot && "bg-muted/30",
+                          block && "bg-muted/40",
+                          clickable && "cursor-pointer hover:bg-primary/5 transition-colors"
+                        )}
+                        style={{ top: i * SLOT_PX, height: SLOT_PX }}
+                        onClick={clickable ? () => onSlotClick({ date: selectedDate, time, professionalId: profId }) : undefined}
+                      >
+                        {block ? renderBlockedSlot(block) : pastSlot ? renderPastSlot(time) : renderEmptySlot(selectedDate, time, profId)}
+                      </div>
+                    );
+                  })}
+                  {/* Appointments positioned by minute */}
+                  {apts.map(apt => {
+                    const startStr = apt.start_time?.slice(0, 5);
+                    const endStr = apt.end_time?.slice(0, 5);
+                    if (!startStr) return null;
+                    const startMin = toMinutes(startStr);
+                    const endMin = endStr
+                      ? toMinutes(endStr)
+                      : startMin + (apt.duration_minutes || 30);
+                    const top = (startMin - DAY_START_MIN) * PX_PER_MIN;
+                    const height = Math.max(24, (endMin - startMin) * PX_PER_MIN - 2);
+                    if (top + height <= 0 || top >= TOTAL_HEIGHT) return null;
+                    return (
+                      <div
+                        key={apt.id}
+                        className="absolute left-1 right-1 z-10"
+                        style={{ top, height }}
+                      >
+                        <AppointmentCard
+                          appointment={apt}
+                          compact
+                          onClick={onAppointmentClick}
+                          onStatusChange={onStatusChange}
+                          onReschedule={onReschedule}
+                          onLaunchSale={onLaunchSale}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
           </div>
         </ScrollArea>
       </div>
