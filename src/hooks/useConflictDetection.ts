@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { format } from 'date-fns';
-import type { Appointment, Professional } from '@/types/agenda';
+import type { Appointment, Professional, ScheduleBlock } from '@/types/agenda';
 import { WeekSchedule } from '@/components/config/EnhancedWorkingHoursCard';
 
 // =============================================
@@ -68,6 +68,7 @@ export interface UseConflictDetectionParams {
   isFitIn?: boolean;
   selectedSpecialtyId?: string;
   activeSpecialtyIds?: string[];
+  scheduleBlocks?: ScheduleBlock[];
 }
 
 export function useConflictDetection({
@@ -83,6 +84,7 @@ export function useConflictDetection({
   isFitIn = false,
   selectedSpecialtyId,
   activeSpecialtyIds,
+  scheduleBlocks = [],
 }: UseConflictDetectionParams): ConflictCheckResult {
   return useMemo(() => {
     const conflicts: ScheduleConflict[] = [];
@@ -241,6 +243,37 @@ export function useConflictDetection({
       }
     }
     
+    // 3. Check schedule blocks (CRITICAL)
+    for (const block of scheduleBlocks) {
+      if (dateStr < block.start_date || dateStr > block.end_date) continue;
+      // Scope: clinic-wide blocks apply to everyone; professional blocks only to that pro
+      if (block.professional_id && block.professional_id !== professionalId) continue;
+
+      if (block.all_day) {
+        conflicts.push({
+          id: `block_${block.id}`,
+          type: 'during_block',
+          severity: 'critical',
+          message: 'Horário bloqueado',
+          details: `${block.title}${block.reason ? ` — ${block.reason}` : ''} (dia inteiro)`,
+        });
+        continue;
+      }
+      if (block.start_time && block.end_time) {
+        const blockStart = timeToMinutes(block.start_time);
+        const blockEnd = timeToMinutes(block.end_time);
+        if (startMinutes < blockEnd && endMinutes > blockStart) {
+          conflicts.push({
+            id: `block_${block.id}`,
+            type: 'during_block',
+            severity: 'critical',
+            message: 'Horário bloqueado para agendamentos',
+            details: `${block.title} — ${formatTimeForDisplay(block.start_time)} às ${formatTimeForDisplay(block.end_time)}`,
+          });
+        }
+      }
+    }
+
     // Analyze results
     const hasCriticalConflict = conflicts.some(c => c.severity === 'critical');
     const hasWarningConflict = conflicts.some(c => c.severity === 'warning');
@@ -266,5 +299,6 @@ export function useConflictDetection({
     isFitIn,
     selectedSpecialtyId,
     activeSpecialtyIds,
+    scheduleBlocks,
   ]);
 }

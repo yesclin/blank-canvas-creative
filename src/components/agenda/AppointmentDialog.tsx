@@ -99,6 +99,8 @@ interface AppointmentDialogProps {
   /** If provided, the patient field will be pre-filled and locked */
   lockedPatientId?: string;
   lockedPatientName?: string;
+  /** Schedule blocks for conflict detection */
+  scheduleBlocks?: import('@/types/agenda').ScheduleBlock[];
 }
 
 export function AppointmentDialog({
@@ -121,6 +123,7 @@ export function AppointmentDialog({
   onCreatePatient,
   lockedPatientId,
   lockedPatientName,
+  scheduleBlocks = [],
 }: AppointmentDialogProps) {
   const { enabledSpecialties, selectedSpecialtyId } = useGlobalSpecialty();
   const resolvedClinicSpecialty = useMemo(
@@ -414,6 +417,7 @@ export function AppointmentDialog({
     isFitIn: watchIsFitIn || mode === 'fitIn',
     selectedSpecialtyId: watchSpecialtyId,
     activeSpecialtyIds,
+    scheduleBlocks,
   });
 
   const handleSubmit = (data: AppointmentFormData) => {
