@@ -264,6 +264,30 @@ export function BlockDialog({ open, onOpenChange, clinicId, professionals = [], 
 
             <FormField
               control={form.control}
+              name="professional_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Profissional</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || "all"}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Toda a clínica" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="all">Toda a clínica</SelectItem>
+                      {professionals.map(p => (
+                        <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="reason"
               render={({ field }) => (
                 <FormItem>
@@ -281,10 +305,10 @@ export function BlockDialog({ open, onOpenChange, clinicId, professionals = [], 
             />
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
                 Cancelar
               </Button>
-              <Button type="submit">Criar Bloqueio</Button>
+              <Button type="submit" disabled={saving}>{saving ? "Salvando..." : "Criar Bloqueio"}</Button>
             </DialogFooter>
           </form>
         </Form>
