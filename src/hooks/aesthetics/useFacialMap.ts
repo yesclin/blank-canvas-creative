@@ -141,6 +141,10 @@ export function useFacialMap(
   const mapQueryKey = ['facial-map', patientId, appointmentId];
   const pointsQueryKey = ['facial-map-points', currentMapId];
   const imagesQueryKey = ['facial-map-images', currentMapId];
+  const invalidateOverview = () => {
+    queryClient.invalidateQueries({ queryKey: ['estetica-summary', patientId] });
+    queryClient.invalidateQueries({ queryKey: ['estetica-summary'] });
+  };
 
   const getContextSnapshot = () => ({
     clinic_id: clinic?.id || null,
@@ -481,6 +485,7 @@ export function useFacialMap(
     },
     onSuccess: (newMap) => {
       queryClient.invalidateQueries({ queryKey: mapQueryKey });
+      invalidateOverview();
       setCurrentMapId(newMap.id);
       toast.success('Mapa facial pronto');
     },
@@ -499,6 +504,7 @@ export function useFacialMap(
       queryClient.setQueryData(mapQueryKey, newMap);
       // The new map has no points, so set empty array
       queryClient.setQueryData(['facial-map-points', newMap.id], []);
+      invalidateOverview();
       setCurrentMapId(newMap.id);
       toast.success('Nova sessão criada');
     },
