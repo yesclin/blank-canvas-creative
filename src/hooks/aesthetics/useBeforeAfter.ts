@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useClinicData } from '@/hooks/useClinicData';
+import { invalidatePatientOverviewQueries } from '@/hooks/prontuario/invalidatePatientOverviewQueries';
 import { toast } from 'sonner';
 import type { AestheticBeforeAfter, ViewAngle } from '@/components/prontuario/aesthetics/types';
 
@@ -181,8 +182,7 @@ export function useBeforeAfter(patientId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
-      queryClient.invalidateQueries({ queryKey: ['estetica-summary', patientId] });
-      queryClient.invalidateQueries({ queryKey: ['estetica-summary'] });
+      invalidatePatientOverviewQueries(queryClient, patientId, clinic?.id);
       toast.success('Registro criado com sucesso');
     },
     onError: (error: Error) => {
@@ -214,8 +214,7 @@ export function useBeforeAfter(patientId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
-      queryClient.invalidateQueries({ queryKey: ['estetica-summary', patientId] });
-      queryClient.invalidateQueries({ queryKey: ['estetica-summary'] });
+      invalidatePatientOverviewQueries(queryClient, patientId, clinic?.id);
       toast.success('Registro atualizado');
     },
     onError: (error) => {
@@ -236,8 +235,7 @@ export function useBeforeAfter(patientId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
-      queryClient.invalidateQueries({ queryKey: ['estetica-summary', patientId] });
-      queryClient.invalidateQueries({ queryKey: ['estetica-summary'] });
+      invalidatePatientOverviewQueries(queryClient, patientId, clinic?.id);
       toast.success('Registro removido');
     },
     onError: (error) => {
