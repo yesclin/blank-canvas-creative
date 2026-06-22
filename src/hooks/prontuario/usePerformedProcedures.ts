@@ -104,10 +104,10 @@ export function useCreatePerformedProcedure(patientId: string, appointmentId?: s
       }
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_created, variables) => {
       qc.invalidateQueries({ queryKey: queryKey(patientId, appointmentId) });
       qc.invalidateQueries({ queryKey: ['performed-procedures', patientId] });
-      invalidatePatientOverviewQueries(qc, patientId, data.clinic_id);
+      invalidatePatientOverviewQueries(qc, patientId, variables.clinic_id);
       qc.invalidateQueries({ queryKey: ['timeline-procedures'] });
       toast.success('Procedimento registrado com sucesso');
     },
