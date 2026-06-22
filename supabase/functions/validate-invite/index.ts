@@ -84,7 +84,7 @@ const handler = async (req: Request): Promise<Response> => {
         clinics (name)
       `)
       .eq("token", token)
-      .single();
+      .maybeSingle();
 
     if (inviteError || !invitation) {
       console.error("Invitation not found:", inviteError);
