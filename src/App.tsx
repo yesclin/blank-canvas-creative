@@ -166,6 +166,10 @@ function lazyWithTimeout<T extends { default: ComponentType<any> }>(
  * Hooks que precisam de janela diferente devem importar presets de
  * `@/lib/queryFreshness` em vez de inventar um número.
  */
+import { QueryCache, MutationCache } from "@tanstack/react-query";
+import { toast as globalToast } from "sonner";
+import { translateError } from "@/lib/translateError";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -180,7 +184,33 @@ const queryClient = new QueryClient({
       retry: 0,
     },
   },
+  queryCache: new QueryCache({
+    onError: (error) => {
+      console.error("[QUERY_ERROR]", error);
+    },
+  }),
+  mutationCache: new MutationCache({
+    onError: (error, _vars, _ctx, mutation) => {
+      console.error("[MUTATION_ERROR]", error);
+      if (!mutation.options.onError) {
+        globalToast.error(translateError(error));
+      }
+    },
+  }),
 });
+
+if (typeof window !== "undefined") {
+  const w = window as typeof window & { __ycGlobalErrorBound?: boolean };
+  if (!w.__ycGlobalErrorBound) {
+    w.__ycGlobalErrorBound = true;
+    window.addEventListener("unhandledrejection", (event) => {
+      console.error("[UNHANDLED_REJECTION]", event.reason);
+    });
+    window.addEventListener("error", (event) => {
+      console.error("[WINDOW_ERROR]", event.error || event.message);
+    });
+  }
+}
 
 if (import.meta.env.DEV) {
   queryClient.getQueryCache().subscribe(logReactQueryEvent);
