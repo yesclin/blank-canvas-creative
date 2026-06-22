@@ -177,6 +177,9 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
       return data as EsteticaPatientData | null;
     },
     enabled: !!patientId && !!clinicId,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   // Buscar resumo consolidado
@@ -433,6 +436,9 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
       return result;
     },
     enabled: !!patientId && !!clinicId,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
 
