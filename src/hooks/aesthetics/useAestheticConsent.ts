@@ -345,6 +345,8 @@ export function useAestheticConsent(patientId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: ['estetica-summary', patientId] });
+      queryClient.invalidateQueries({ queryKey: ['estetica-summary'] });
       toast.success('Termo aceito e assinado com sucesso');
     },
     onError: (error: any) => {

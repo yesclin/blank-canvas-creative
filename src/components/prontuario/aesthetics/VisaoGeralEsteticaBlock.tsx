@@ -287,11 +287,16 @@ export function VisaoGeralEsteticaBlock({
           hasData={summary.total_mapas_faciais > 0}
         >
           {summary.total_mapas_faciais > 0 ? (
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold">{summary.total_mapas_faciais}</span>
-              <span className="text-muted-foreground">
-                {summary.total_mapas_faciais === 1 ? 'mapa' : 'mapas'}
-              </span>
+            <div className="space-y-1">
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold">{summary.total_marcacoes_faciais || summary.total_mapas_faciais}</span>
+                <span className="text-muted-foreground">
+                  {summary.total_marcacoes_faciais === 1 ? 'marcação' : 'marcações'}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {summary.total_mapas_faciais === 1 ? '1 mapa registrado' : `${summary.total_mapas_faciais} mapas registrados`}
+              </p>
             </div>
           ) : (
             <>
