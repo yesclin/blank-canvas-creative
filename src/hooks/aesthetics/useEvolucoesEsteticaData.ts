@@ -108,6 +108,10 @@ export function useEvolucoesEsteticaData({ patientId, appointmentId }: UseEvoluc
   const queryClient = useQueryClient();
 
   const queryKey = ['evolucoes-estetica', patientId, clinic?.id];
+  const invalidateOverview = () => {
+    queryClient.invalidateQueries({ queryKey: ['estetica-summary', patientId] });
+    queryClient.invalidateQueries({ queryKey: ['estetica-summary'] });
+  };
 
   // Fetch evolutions
   const { data: evolucoes = [], isLoading } = useQuery({
@@ -264,6 +268,7 @@ export function useEvolucoesEsteticaData({ patientId, appointmentId }: UseEvoluc
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
+      invalidateOverview();
       toast.success('Evolução salva como rascunho');
     },
     onError: (error: Error) => {
@@ -308,6 +313,7 @@ export function useEvolucoesEsteticaData({ patientId, appointmentId }: UseEvoluc
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
+      invalidateOverview();
       toast.success('Evolução assinada com sucesso');
     },
     onError: (error: Error) => {
@@ -347,6 +353,7 @@ export function useEvolucoesEsteticaData({ patientId, appointmentId }: UseEvoluc
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
+      invalidateOverview();
       toast.success('Evolução atualizada');
     },
     onError: (error) => {
