@@ -360,7 +360,11 @@ export default function ConfigUsuarios() {
           </TabsTrigger>
           <TabsTrigger value="audit" className="gap-2">
             <History className="h-4 w-4" />
-            Auditoria
+            Auditoria de usuários
+          </TabsTrigger>
+          <TabsTrigger value="system-audit" className="gap-2">
+            <History className="h-4 w-4" />
+            Auditoria do sistema
           </TabsTrigger>
         </TabsList>
 
