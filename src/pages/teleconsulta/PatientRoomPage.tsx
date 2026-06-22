@@ -127,17 +127,10 @@ export default function PatientRoomPage() {
       return;
     }
     try {
-      const { data: apt, error: aptError } = await supabase
-        .from("appointments")
-        .select(`
-          id, clinic_id, meeting_status, care_mode, scheduled_date, start_time, end_time,
-          professionals:professional_id(full_name),
-          specialties:specialty_id(name),
-          clinics:clinic_id(name, logo_url)
-        `)
-        .eq("meeting_id", token)
-        .eq("care_mode", "teleconsulta")
-        .maybeSingle();
+      const { data: apt, error: aptError } = await supabase.rpc(
+        "get_teleconsulta_by_token",
+        { p_token: token }
+      );
 
       if (aptError) throw aptError;
       if (!apt) {
@@ -148,6 +141,18 @@ export default function PatientRoomPage() {
 
       const a = apt as any;
 
+      if (a.token_status === "expired") {
+        setErrorMsg("Link expirado");
+        setStatus("invalid");
+        return;
+      }
+
+      if (a.token_status === "revoked") {
+        setErrorMsg("Link revogado");
+        setStatus("invalid");
+        return;
+      }
+
       // Check if already ended
       if (a.meeting_status === "encerrada") {
         setRoomData(buildRoomData(a));
@@ -156,14 +161,6 @@ export default function PatientRoomPage() {
       }
 
       setRoomData(buildRoomData(a));
-
-      // Update meeting_status to paciente_entrou
-      await supabase
-        .from("appointments")
-        .update({
-          meeting_status: a.meeting_status === "em_andamento" ? "em_andamento" : "paciente_entrou",
-        })
-        .eq("id", a.id);
 
       logEvent(a.id, a.clinic_id, "paciente_entrou");
 
@@ -195,27 +192,19 @@ export default function PatientRoomPage() {
   });
 
   const logEvent = async (aptId: string, cId: string, eventType: string) => {
-    await supabase
-      .from("teleconsultation_events" as any)
-      .insert({
-        clinic_id: cId,
-        teleconsultation_session_id: aptId,
-        appointment_id: aptId,
-        event_type: eventType,
-        actor_type: "patient",
-      })
-      .catch(() => {});
+    if (!token) return;
+    await supabase.rpc("log_teleconsulta_event_by_token", {
+      p_token: token,
+      p_event_type: eventType,
+      p_payload: {},
+    }).catch(() => {});
   };
 
   const pollForStatus = (aptId: string, cId: string) => {
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(async () => {
       try {
-        const { data } = await supabase
-          .from("appointments")
-          .select("meeting_status")
-          .eq("id", aptId)
-          .single();
+        const { data } = await supabase.rpc("get_teleconsulta_by_token", { p_token: token });
 
         const ms = (data as any)?.meeting_status;
         if (ms === "em_andamento") {
