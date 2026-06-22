@@ -1,12 +1,20 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, type MouseEvent as ReactMouseEvent } from 'react';
 import { format, addDays, startOfWeek, isSameDay, isBefore, startOfDay, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { AppointmentCard } from './AppointmentCard';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Lock } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { Appointment, ViewMode, GroupBy, Professional, Room, Specialty, ScheduleBlock } from '@/types/agenda';
+
+const SNAP_MIN = 15;
+const minutesToTime = (mins: number) => {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+};
 
 export interface SlotClickData {
   date: Date;
