@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useClinicData } from '@/hooks/useClinicData';
+import { invalidatePatientOverviewQueries } from '@/hooks/prontuario/invalidatePatientOverviewQueries';
 import { toast } from 'sonner';
 import { logAppError } from '@/lib/logAppError';
 import { newTraceId } from '@/lib/traceId';
@@ -345,8 +346,7 @@ export function useAestheticConsent(patientId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
-      queryClient.invalidateQueries({ queryKey: ['estetica-summary', patientId] });
-      queryClient.invalidateQueries({ queryKey: ['estetica-summary'] });
+      invalidatePatientOverviewQueries(queryClient, patientId, clinic?.id);
       toast.success('Termo aceito e assinado com sucesso');
     },
     onError: (error: any) => {
