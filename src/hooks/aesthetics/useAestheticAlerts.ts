@@ -10,6 +10,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useClinicData } from '@/hooks/useClinicData';
+import { invalidatePatientOverviewQueries } from '@/hooks/prontuario/invalidatePatientOverviewQueries';
 import { toast } from 'sonner';
 import type { AlertSeverity, AlertType } from '@/types/prontuario';
 
@@ -97,6 +98,7 @@ export function useAestheticAlerts(patientId: string | null) {
    * - 'estetica-summary' → recalcula o resumo agregado.
    */
   const invalidateAllAlertCaches = () => {
+    invalidatePatientOverviewQueries(queryClient, patientId, clinic?.id);
     queryClient.invalidateQueries({
       predicate: (q) => {
         const k = q.queryKey;

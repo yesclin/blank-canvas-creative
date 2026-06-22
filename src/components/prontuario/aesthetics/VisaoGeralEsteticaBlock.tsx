@@ -170,6 +170,7 @@ export function VisaoGeralEsteticaBlock({
   const diasDesdeUltimoProc = summary.ultimo_procedimento
     ? differenceInDays(new Date(), new Date(summary.ultimo_procedimento.data))
     : null;
+  const activeAlertCount = Math.max(summary.total_alertas, alerts.length);
 
   return (
     <div className="space-y-4">
@@ -229,7 +230,7 @@ export function VisaoGeralEsteticaBlock({
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-bold">{summary.total_procedimentos}</span>
             <span className="text-muted-foreground">
-              {summary.total_procedimentos === 1 ? 'aplicação' : 'aplicações'}
+              {summary.total_procedimentos === 1 ? 'procedimento registrado' : 'procedimentos registrados'}
             </span>
           </div>
           {summary.procedimentos_por_tipo.length > 0 && (
@@ -254,10 +255,10 @@ export function VisaoGeralEsteticaBlock({
           {summary.ultimo_procedimento ? (
             <>
               <p className="text-lg font-semibold">
-                {format(new Date(summary.ultimo_procedimento.data), "dd/MM/yyyy", { locale: ptBR })}
+                {summary.ultimo_procedimento.tipo}{summary.ultimo_procedimento.produto ? ` - ${summary.ultimo_procedimento.produto}` : ''}
               </p>
               <p className="text-sm text-muted-foreground">
-                {summary.ultimo_procedimento.tipo}{summary.ultimo_procedimento.produto ? ` - ${summary.ultimo_procedimento.produto}` : ''}
+                {format(new Date(summary.ultimo_procedimento.data), "dd/MM/yyyy", { locale: ptBR })}
               </p>
               {diasDesdeUltimoProc !== null && (
                 <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
@@ -288,12 +289,16 @@ export function VisaoGeralEsteticaBlock({
         >
           {summary.total_mapas_faciais > 0 ? (
             <div className="space-y-1">
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">{summary.total_marcacoes_faciais || summary.total_mapas_faciais}</span>
-                <span className="text-muted-foreground">
-                  {summary.total_marcacoes_faciais === 1 ? 'marcação' : 'marcações'}
-                </span>
-              </div>
+              {summary.total_marcacoes_faciais > 0 ? (
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold">{summary.total_marcacoes_faciais}</span>
+                  <span className="text-muted-foreground">
+                    {summary.total_marcacoes_faciais === 1 ? 'marcação' : 'marcações'}
+                  </span>
+                </div>
+              ) : (
+                <p className="text-lg font-semibold">Mapa registrado</p>
+              )}
               <p className="text-xs text-muted-foreground">
                 {summary.total_mapas_faciais === 1 ? '1 mapa registrado' : `${summary.total_mapas_faciais} mapas registrados`}
               </p>
@@ -356,13 +361,13 @@ export function VisaoGeralEsteticaBlock({
           icon={AlertTriangle}
           moduleKey="alertas"
           onNavigate={undefined} // Estética não tem bloco de alertas específico por ora
-          hasData={alerts.length > 0}
+          hasData={activeAlertCount > 0}
         >
-          {alerts.length > 0 ? (
+          {activeAlertCount > 0 ? (
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-accent-foreground">{alerts.length}</span>
+              <span className="text-3xl font-bold text-accent-foreground">{activeAlertCount}</span>
               <span className="text-muted-foreground">
-                {alerts.length === 1 ? 'alerta ativo' : 'alertas ativos'}
+                {activeAlertCount === 1 ? 'alerta ativo' : 'alertas ativos'}
               </span>
             </div>
           ) : (

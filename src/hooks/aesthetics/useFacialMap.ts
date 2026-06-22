@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useClinicData } from '@/hooks/useClinicData';
+import { invalidatePatientOverviewQueries } from '@/hooks/prontuario/invalidatePatientOverviewQueries';
 import { toast } from 'sonner';
 import type { 
   FacialMap, 
@@ -142,8 +143,7 @@ export function useFacialMap(
   const pointsQueryKey = ['facial-map-points', currentMapId];
   const imagesQueryKey = ['facial-map-images', currentMapId];
   const invalidateOverview = () => {
-    queryClient.invalidateQueries({ queryKey: ['estetica-summary', patientId] });
-    queryClient.invalidateQueries({ queryKey: ['estetica-summary'] });
+    invalidatePatientOverviewQueries(queryClient, patientId, clinic?.id);
   };
 
   const getContextSnapshot = () => ({

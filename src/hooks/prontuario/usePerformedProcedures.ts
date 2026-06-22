@@ -3,6 +3,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { invalidatePatientOverviewQueries } from '@/hooks/prontuario/invalidatePatientOverviewQueries';
 import { toast } from 'sonner';
 
 export interface PerformedProcedure {
@@ -103,11 +104,10 @@ export function useCreatePerformedProcedure(patientId: string, appointmentId?: s
       }
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_created, variables) => {
       qc.invalidateQueries({ queryKey: queryKey(patientId, appointmentId) });
       qc.invalidateQueries({ queryKey: ['performed-procedures', patientId] });
-      qc.invalidateQueries({ queryKey: ['estetica-summary'] });
-      qc.invalidateQueries({ queryKey: ['visao-geral-estetica'] });
+      invalidatePatientOverviewQueries(qc, patientId, variables.clinic_id);
       qc.invalidateQueries({ queryKey: ['timeline-procedures'] });
       toast.success('Procedimento registrado com sucesso');
     },
@@ -129,7 +129,7 @@ export function useDeletePerformedProcedure(patientId: string, appointmentId?: s
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKey(patientId, appointmentId) });
-      qc.invalidateQueries({ queryKey: ['estetica-summary'] });
+      invalidatePatientOverviewQueries(qc, patientId);
       qc.invalidateQueries({ queryKey: ['timeline-procedures'] });
       toast.success('Procedimento removido');
     },
