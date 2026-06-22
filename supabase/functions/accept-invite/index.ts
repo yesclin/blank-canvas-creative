@@ -153,7 +153,8 @@ const handler = async (req: Request): Promise<Response> => {
         .select("id")
         .eq("user_id", existingUser.id)
         .eq("clinic_id", invitation.clinic_id)
-        .single();
+        .maybeSingle();
+
 
       if (existingProfile) {
         // Mark invitation as cancelled since user already exists
