@@ -114,8 +114,8 @@ export function useTeleconsultaActions() {
         .select("id, care_mode, meeting_id, meeting_link")
         .eq("id", appointmentId)
         .eq("clinic_id", clinicId)
-        .maybeSingle()
-        .limit(1);
+        .limit(1)
+        .maybeSingle();
 
       if (appointmentError) throw appointmentError;
       if (!appointment || (appointment as any).care_mode !== "teleconsulta") {
