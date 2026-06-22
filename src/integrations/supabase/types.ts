@@ -15161,6 +15161,7 @@ export type Database = {
           registration_number: string
         }[]
       }
+      get_teleconsulta_by_token: { Args: { p_token: string }; Returns: Json }
       get_user_all_permissions:
         | {
             Args: { _user_id: string }
