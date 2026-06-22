@@ -91,22 +91,28 @@ export function useCreatePerformedProcedure(patientId: string, appointmentId?: s
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreatePerformedProcedureInput) => {
+      console.log('[performed_procedure] saving', input);
       const { data, error } = await supabase
         .from('clinical_performed_procedures')
         .insert(input)
         .select()
         .single();
-      if (error) throw error;
+      if (error) {
+        console.error('[performed_procedure] save error', error);
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKey(patientId, appointmentId) });
+      qc.invalidateQueries({ queryKey: ['performed-procedures', patientId] });
       qc.invalidateQueries({ queryKey: ['estetica-summary'] });
+      qc.invalidateQueries({ queryKey: ['visao-geral-estetica'] });
       qc.invalidateQueries({ queryKey: ['timeline-procedures'] });
       toast.success('Procedimento registrado com sucesso');
     },
-    onError: () => {
-      toast.error('Erro ao registrar procedimento');
+    onError: (err: any) => {
+      toast.error(err?.message || 'Erro ao registrar procedimento');
     },
   });
 }
