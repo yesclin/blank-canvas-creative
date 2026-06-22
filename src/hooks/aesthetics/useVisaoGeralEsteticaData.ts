@@ -329,7 +329,7 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
         safeOverviewQuery('patient_consents', supabase
           .from('patient_consents')
           .select('id, status, granted_at, revoked_at, term_id')
-          .eq('patient_id', patientId).eq('clinic_id', clinicId).neq('status', 'revoked')),
+          .eq('patient_id', patientId).eq('clinic_id', clinicId)),
       ]);
       const clinicalTerms = ((termosNew.data as any[]) || []).filter((term) => !term.revoked_at && term.status !== 'revoked');
       const patientTerms = ((termosLegacy.data as any[]) || []).filter((term) => !term.revoked_at && term.status !== 'revoked');
@@ -474,7 +474,7 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
   const alertsData = alertsQuery.data || [];
   const summaryWithLiveAlerts: EsteticaSummaryData = {
     ...summaryData,
-    total_alertas: alertsData.length,
+    total_alertas: Math.max(summaryData.total_alertas, alertsData.length),
   };
 
   return {
