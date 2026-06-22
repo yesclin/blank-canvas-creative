@@ -1,12 +1,20 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, type MouseEvent as ReactMouseEvent } from 'react';
 import { format, addDays, startOfWeek, isSameDay, isBefore, startOfDay, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { AppointmentCard } from './AppointmentCard';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Lock } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { Appointment, ViewMode, GroupBy, Professional, Room, Specialty, ScheduleBlock } from '@/types/agenda';
+
+const SNAP_MIN = 15;
+const minutesToTime = (mins: number) => {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+};
 
 export interface SlotClickData {
   date: Date;
@@ -179,6 +187,43 @@ export function AgendaGrid({
     return false;
   }, []);
 
+  // Compute the clicked time from the Y position within a day column container,
+  // snapping to SNAP_MIN. Returns null if the click was on an interactive child
+  // (appointment card) that already handled the event.
+  const computeClickedTime = useCallback((e: ReactMouseEvent<HTMLDivElement>): string | null => {
+    const container = e.currentTarget;
+    const rect = container.getBoundingClientRect();
+    const y = e.clientY - rect.top + container.scrollTop;
+    const rawMinutes = y / PX_PER_MIN;
+    const snapped = Math.max(0, Math.round(rawMinutes / SNAP_MIN) * SNAP_MIN);
+    const totalMin = DAY_START_MIN + snapped;
+    const maxMin = DAY_START_MIN + timeSlots.length * SLOT_MIN - SNAP_MIN;
+    return minutesToTime(Math.min(totalMin, maxMin));
+  }, []);
+
+  const handleColumnClick = useCallback(
+    (
+      e: ReactMouseEvent<HTMLDivElement>,
+      date: Date,
+      professionalId?: string,
+    ) => {
+      if (!onSlotClick) return;
+      const time = computeClickedTime(e);
+      if (!time) return;
+      if (isSlotInPast(date, time)) {
+        toast.error('Horário indisponível — tempo já decorrido.');
+        return;
+      }
+      const block = isSlotBlocked(date, time, professionalId);
+      if (block) {
+        toast.error('Este horário está bloqueado para agendamentos.');
+        return;
+      }
+      onSlotClick({ date, time, professionalId });
+    },
+    [onSlotClick, computeClickedTime, isSlotInPast, isSlotBlocked],
+  );
+
   // Render a past slot cell
   const renderPastSlot = (time: string) => (
     <TooltipProvider>
@@ -264,23 +309,29 @@ export function AgendaGrid({
             {Object.entries(groupedAppointments).map(([group, apts]) => {
               const profId = groupBy === 'professional' ? professionalNameToId[group] : undefined;
               return (
-                <div key={group} className="relative border-l overflow-hidden" style={{ height: TOTAL_HEIGHT }}>
-                  {/* Layer 1: 30-min slot backgrounds + click-to-create (z-[1]) */}
+                <div
+                  key={group}
+                  className={cn(
+                    "relative border-l overflow-hidden",
+                    onSlotClick && "cursor-pointer"
+                  )}
+                  style={{ height: TOTAL_HEIGHT }}
+                  onClick={onSlotClick ? (e) => handleColumnClick(e, selectedDate, profId) : undefined}
+                >
+                  {/* Layer 1: 30-min slot backgrounds (visual + block/past tinting) */}
                   {timeSlots.map((time, i) => {
                     const pastSlot = isSlotInPast(selectedDate, time);
                     const block = !pastSlot ? isSlotBlocked(selectedDate, time, profId) : null;
-                    const clickable = !block && !pastSlot && !!onSlotClick;
                     return (
                       <div
                         key={`${group}-${time}`}
                         className={cn(
-                          "absolute left-0 right-0 border-b z-[1] overflow-hidden",
+                          "absolute left-0 right-0 border-b z-[1] overflow-hidden pointer-events-none",
                           pastSlot && "bg-muted/30",
                           block && "bg-muted/40",
-                          clickable && "cursor-pointer hover:bg-primary/5 transition-colors"
+                          !pastSlot && !block && onSlotClick && "hover:bg-primary/5 transition-colors"
                         )}
                         style={{ top: i * SLOT_PX, height: SLOT_PX }}
-                        onClick={clickable ? () => onSlotClick({ date: selectedDate, time, professionalId: profId }) : undefined}
                         title={block ? `${block.title}${block.reason ? ` — ${block.reason}` : ''}` : pastSlot ? 'Horário já passou' : undefined}
                       />
                     );
@@ -302,6 +353,7 @@ export function AgendaGrid({
                         key={apt.id}
                         className="absolute left-1 right-1 z-20"
                         style={{ top, height }}
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <AppointmentCard
                           appointment={apt}
@@ -377,25 +429,28 @@ export function AgendaGrid({
               return (
                 <div
                   key={`wcol-${dayStr}`}
-                  className={cn("relative border-l overflow-hidden", isWeekend && "bg-muted/20")}
+                  className={cn(
+                    "relative border-l overflow-hidden",
+                    isWeekend && "bg-muted/20",
+                    onSlotClick && "cursor-pointer"
+                  )}
                   style={{ height: TOTAL_HEIGHT }}
+                  onClick={onSlotClick ? (e) => handleColumnClick(e, day) : undefined}
                 >
-                  {/* Layer 1: 30-min slot backgrounds */}
+                  {/* Layer 1: 30-min slot backgrounds (visual only) */}
                   {timeSlots.map((time, i) => {
                     const pastSlot = isSlotInPast(day, time);
                     const block = !pastSlot ? isSlotBlocked(day, time) : null;
-                    const clickable = !block && !pastSlot && !!onSlotClick;
                     return (
                       <div
                         key={`${dayStr}-${time}`}
                         className={cn(
-                          "absolute left-0 right-0 border-b z-[1]",
+                          "absolute left-0 right-0 border-b z-[1] pointer-events-none",
                           pastSlot && "bg-muted/30",
                           block && "bg-muted/40",
-                          clickable && "cursor-pointer hover:bg-primary/5 transition-colors"
+                          !pastSlot && !block && onSlotClick && "hover:bg-primary/5 transition-colors"
                         )}
                         style={{ top: i * SLOT_PX, height: SLOT_PX }}
-                        onClick={clickable ? () => onSlotClick({ date: day, time }) : undefined}
                         title={block ? `${block.title}${block.reason ? ` — ${block.reason}` : ''}` : undefined}
                       />
                     );
@@ -417,6 +472,7 @@ export function AgendaGrid({
                         key={apt.id}
                         className="absolute left-1 right-1 z-20"
                         style={{ top, height }}
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <AppointmentCard
                           appointment={apt}
