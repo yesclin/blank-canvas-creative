@@ -1,21 +1,38 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
-// Allowed origins for CORS - restrict to known domains
-const ALLOWED_ORIGINS = [
-  "https://id-preview--e2305a67-dd71-4dc6-bb28-50ab8384c9ab.lovable.app",
+// Allowed origins for CORS — accept production domains and any Lovable
+// preview/sandbox/published host so the public accept page always works.
+const ALLOWED_EXACT_ORIGINS = [
+  "https://yesclin.com.br",
+  "https://www.yesclin.com.br",
   "https://yesclin.com",
   "https://www.yesclin.com",
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://localhost:8080",
 ];
+const ALLOWED_ORIGIN_PATTERNS: RegExp[] = [
+  /^https:\/\/[a-z0-9-]+\.lovable\.app$/i,
+  /^https:\/\/[a-z0-9-]+\.lovableproject\.com$/i,
+  /^https:\/\/[a-z0-9-]+\.lovable\.dev$/i,
+  /^https:\/\/[a-z0-9.-]+\.yesclin\.com(\.br)?$/i,
+];
+
+function isAllowedOrigin(origin: string): boolean {
+  if (!origin) return false;
+  if (ALLOWED_EXACT_ORIGINS.includes(origin)) return true;
+  return ALLOWED_ORIGIN_PATTERNS.some((re) => re.test(origin));
+}
 
 function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") || "";
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-  
+  const allowedOrigin = isAllowedOrigin(origin) ? origin : ALLOWED_EXACT_ORIGINS[0];
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Vary": "Origin",
   };
 }
 
