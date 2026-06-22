@@ -193,12 +193,16 @@ export function AppointmentDialog({
     }
   }, [open, appointment, mode, lockedProfessionalId]);
 
-  // If lockedProfessionalId changes, update the form
+  // If lockedProfessionalId changes OR dialog opens, sync to form and clear stale error
   useEffect(() => {
-    if (lockedProfessionalId) {
-      form.setValue("professional_id", lockedProfessionalId);
+    if (open && lockedProfessionalId) {
+      form.setValue("professional_id", lockedProfessionalId, {
+        shouldValidate: true,
+        shouldDirty: false,
+      });
+      form.clearErrors("professional_id");
     }
-  }, [lockedProfessionalId, form]);
+  }, [open, lockedProfessionalId, form]);
 
   // If lockedPatientId changes, update the form
   useEffect(() => {
