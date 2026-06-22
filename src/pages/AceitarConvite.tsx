@@ -68,24 +68,20 @@ export default function AceitarConvite() {
 
   const validateInvitation = async () => {
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-invite?token=${token}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+      console.log("invite token from url", token);
+      const { data: result, error: invokeError } = await supabase.functions.invoke(
+        "validate-invite",
+        { body: { token } }
       );
+      console.log("validate invite response", result);
+      if (invokeError) console.error("validate invite error", invokeError);
 
-      const result = await response.json();
-
-      if (!response.ok || !result.valid) {
-        // Determine error type for better UX
-        const errorMsg = result.error || "Convite inválido";
-        if (errorMsg.toLowerCase().includes("expirou") || errorMsg.toLowerCase().includes("expired")) {
+      if (invokeError || !result?.valid) {
+        const errorMsg = result?.error || invokeError?.message || "Convite inválido";
+        const lower = errorMsg.toLowerCase();
+        if (lower.includes("expirou") || lower.includes("expired") || lower.includes("expirado")) {
           setErrorType("expired");
-        } else if (errorMsg.toLowerCase().includes("usado") || errorMsg.toLowerCase().includes("aceito")) {
+        } else if (lower.includes("usado") || lower.includes("aceito") || lower.includes("utilizado")) {
           setErrorType("used");
         } else {
           setErrorType("invalid");
