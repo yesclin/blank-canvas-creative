@@ -57,6 +57,7 @@ export interface EsteticaSummaryData {
   
   // Mapa facial
   total_mapas_faciais: number;
+  total_marcacoes_faciais: number;
 
   // Fotos
   total_fotos_antes_depois: number;
@@ -74,6 +75,65 @@ export interface EsteticaSummaryData {
 interface UseVisaoGeralEsteticaDataParams {
   patientId: string | null;
   clinicId: string | null;
+}
+
+async function safeOverviewQuery<T>(label: string, query: PromiseLike<{ data: T | null; error: any; count?: number | null }>) {
+  const { data, error, count } = await query;
+  if (error) {
+    console.error(`[VisaoGeralEstetica] ${label} query failed`, error);
+    return { data: null as T | null, count: 0 };
+  }
+  return { data, count: count ?? (Array.isArray(data) ? data.length : 0) };
+}
+
+function getRowDate(row: any, fallback?: string | null) {
+  return row?.performed_at || row?.created_at || row?.updated_at || fallback || null;
+}
+
+function countAnnotationMarks(annotations: unknown): number {
+  if (!annotations) return 0;
+  if (Array.isArray(annotations)) return annotations.length;
+  if (typeof annotations !== 'object') return 0;
+
+  const data = annotations as Record<string, any>;
+  const candidates = [data.points, data.applications, data.annotations, data.markers, data.items];
+  const arrayCandidate = candidates.find(Array.isArray);
+  if (arrayCandidate) return arrayCandidate.length;
+  return Object.keys(data).length > 0 ? 1 : 0;
+}
+
+function extractEvolutionProcedures(evolutions: any[] = []) {
+  return evolutions.flatMap((evolution) => {
+    const content = (evolution?.content || {}) as Record<string, any>;
+    const candidates = [
+      content.procedures,
+      content.procedimentos,
+      content.procedimentos_realizados,
+      content.performed_procedures,
+      content.procedures_performed,
+    ].filter(Array.isArray) as any[][];
+
+    if (content.procedure_name || content.procedimento_nome) {
+      candidates.push([{ procedure_name: content.procedure_name || content.procedimento_nome }]);
+    }
+
+    return candidates.flat().map((item) => {
+      const name = typeof item === 'string'
+        ? item
+        : item?.procedure_name || item?.name || item?.nome || item?.procedimento || item?.title;
+
+      if (!name) return null;
+
+      return {
+        id: `${evolution.id}-${name}`,
+        procedure_name: String(name),
+        region: typeof item === 'object' ? (item.region || item.regiao || null) : null,
+        performed_at: getRowDate(item, evolution.created_at),
+        created_at: evolution.created_at,
+        source: 'clinical_evolutions',
+      };
+    }).filter(Boolean);
+  });
 }
 
 export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeralEsteticaDataParams) {
