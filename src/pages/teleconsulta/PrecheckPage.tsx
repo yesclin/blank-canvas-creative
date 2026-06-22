@@ -38,6 +38,7 @@ interface AppointmentInfo {
   id: string;
   clinic_id: string;
   patient_id: string;
+  teleconsultation_session_id?: string | null;
   patient_name: string;
   patient_birth_date: string | null;
   professional_name: string;
@@ -138,6 +139,20 @@ export default function PrecheckPage() {
 
       const a = apt;
 
+      if (a.token_status === "expired") {
+        setError("Link de teleconsulta expirado");
+        setErrorType("outside_window");
+        setLoading(false);
+        return;
+      }
+
+      if (a.token_status === "revoked") {
+        setError("Link de teleconsulta revogado");
+        setErrorType("invalid");
+        setLoading(false);
+        return;
+      }
+
       // Consulta encerrada
       if (a.meeting_status === "encerrada") {
         setError("Esta consulta já foi encerrada");
@@ -171,6 +186,7 @@ export default function PrecheckPage() {
     id: a.id,
     clinic_id: a.clinic_id,
     patient_id: a.patient_id,
+    teleconsultation_session_id: a.teleconsultation_session_id || a.session?.id || null,
     patient_name: a.patients?.full_name || "Paciente",
     patient_birth_date: a.patients?.birth_date || null,
     professional_name: a.professionals?.full_name || "Profissional",
@@ -188,14 +204,13 @@ export default function PrecheckPage() {
   // ── Event logging helper ──
   const logEvent = async (aptId: string, clinicId: string, eventType: string, payload?: Record<string, unknown>) => {
     try {
-      await supabase.from("teleconsultation_events").insert({
-        clinic_id: clinicId,
-        teleconsultation_session_id: aptId,
-        appointment_id: aptId,
-        event_type: eventType,
-        actor_type: "patient",
-        payload: payload || null,
+      if (!token) return;
+      const { error } = await supabase.rpc("log_teleconsulta_event_by_token", {
+        p_token: token,
+        p_event_type: eventType,
+        p_payload: payload || {},
       });
+      if (error) console.log("teleconsulta validation error", error);
     } catch {
       // Non-blocking
     }
