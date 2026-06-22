@@ -190,13 +190,24 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
       console.log('overview patient', patientId);
       console.log('overview clinic', clinicId);
 
-      const [proceduresResult, evolutionsResult] = await Promise.all([
+      const [proceduresResult, legacyProceduresResult, appointmentProceduresResult, evolutionsResult] = await Promise.all([
         safeOverviewQuery('clinical_performed_procedures', supabase
           .from('clinical_performed_procedures')
           .select('id, procedure_id, procedure_name, region, status, performed_at, created_at, procedures(name)')
           .eq('patient_id', patientId)
           .eq('clinic_id', clinicId)
           .order('performed_at', { ascending: false })),
+        safeOverviewQuery('patient_procedures', (supabase as any)
+          .from('patient_procedures')
+          .select('id, procedure_id, procedure_name, name, title, status, performed_at, procedure_date, created_at, procedures(name)')
+          .eq('patient_id', patientId)
+          .eq('clinic_id', clinicId)),
+        safeOverviewQuery('appointments_with_procedure', supabase
+          .from('appointments')
+          .select('id, procedure_id, appointment_type, scheduled_date, start_time, started_at, finished_at, created_at, status, procedures(name)')
+          .eq('patient_id', patientId)
+          .eq('clinic_id', clinicId)
+          .not('procedure_id', 'is', null)),
         safeOverviewQuery('clinical_evolutions', supabase
           .from('clinical_evolutions')
           .select('id, content, created_at, updated_at')
@@ -206,10 +217,23 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
           .limit(50)),
       ]);
 
-      const procedimentos = [
+      const procedimentos = uniqueById([
         ...((proceduresResult.data as any[]) || []).map((p) => ({ ...p, source: 'clinical_performed_procedures' })),
+        ...((legacyProceduresResult.data as any[]) || []).map((p) => ({
+          ...p,
+          procedure_name: getProcedureName(p),
+          performed_at: p.performed_at || p.procedure_date || p.created_at,
+          source: 'patient_procedures',
+        })),
+        ...((appointmentProceduresResult.data as any[]) || []).map((appointment) => ({
+          ...appointment,
+          id: `appointment-${appointment.id}`,
+          procedure_name: appointment.procedures?.name || appointment.appointment_type || 'Procedimento agendado',
+          performed_at: getAppointmentDate(appointment),
+          source: 'appointments',
+        })),
         ...extractEvolutionProcedures((evolutionsResult.data as any[]) || []),
-      ].sort((a, b) => new Date(getRowDate(b) || 0).getTime() - new Date(getRowDate(a) || 0).getTime());
+      ]).sort((a, b) => new Date(getRowDate(b) || 0).getTime() - new Date(getRowDate(a) || 0).getTime());
 
       // Agrupar por nome de procedimento
       const procedimentosPorTipo: Record<string, { quantidade: number; ultima_data: string | null }> = {};
