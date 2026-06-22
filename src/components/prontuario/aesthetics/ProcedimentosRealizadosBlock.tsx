@@ -240,7 +240,29 @@ export function ProcedimentosRealizadosBlock({
   };
 
   const handleSave = useCallback(() => {
-    if (!procedureName.trim() || !clinicId) return;
+    console.log('[ProcedimentosRealizadosBlock] saving procedure', {
+      patientId,
+      clinicId,
+      appointmentId,
+      professionalId,
+      specialtyId,
+      procedureId,
+      name: procedureName,
+      price,
+      status,
+      region,
+      technique,
+      productLines,
+    });
+
+    if (!procedureName.trim()) {
+      toast.error('Informe o nome do procedimento.');
+      return;
+    }
+    if (!clinicId || !patientId) {
+      toast.error('Contexto da clínica/paciente indisponível.');
+      return;
+    }
 
     const numericPrice = price === '' ? null : Number(price);
 
