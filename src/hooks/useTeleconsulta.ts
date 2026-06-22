@@ -109,6 +109,19 @@ export function useTeleconsultaActions() {
         throw new Error(`Dados obrigatórios ausentes: ${missing.join(', ')}`);
       }
 
+      const { data: appointment, error: appointmentError } = await supabase
+        .from("appointments")
+        .select("id, care_mode, meeting_id, meeting_link")
+        .eq("id", appointmentId)
+        .eq("clinic_id", clinicId)
+        .maybeSingle()
+        .limit(1);
+
+      if (appointmentError) throw appointmentError;
+      if (!appointment || (appointment as any).care_mode !== "teleconsulta") {
+        throw new Error("Agendamento de teleconsulta não encontrado");
+      }
+
       // Check if session already exists
       const { data: existingSession, error: checkError } = await supabase
         .from("teleconsultation_sessions")
@@ -153,25 +166,49 @@ export function useTeleconsultaActions() {
         session = newSession;
       }
 
-      // Generate token + patient link if not already set
-      const token =
+      // Generate or reuse the exact public token stored for this teleconsulta.
+      let token =
         (session as any)?.external_meeting_id ||
-        (typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID().replace(/-/g, "")
-          : Math.random().toString(36).slice(2) + Date.now().toString(36));
+        (session as any)?.access_token_patient ||
+        (appointment as any)?.meeting_id ||
+        "";
+
+      if (!token) {
+        const { data: generatedToken, error: tokenError } = await supabase.rpc(
+          "generate_teleconsultation_token",
+          {
+            p_appointment_id: appointmentId,
+            p_actor: "patient",
+            p_token_type: "precheck",
+            p_expiration_minutes: 60 * 24 * 30,
+          }
+        );
+
+        if (tokenError) {
+          console.error("[Gerar Sala] Erro ao gerar token público:", tokenError);
+          throw tokenError;
+        }
+        token = String(generatedToken || "");
+      }
 
       const origin = typeof window !== "undefined" ? window.location.origin : "";
       const meetingLink = `${origin}/teleconsulta/${token}/precheck`;
 
       // Persist token on session for later joins
-      if (!(session as any)?.external_meeting_id) {
-        await supabase
+      if (!(session as any)?.external_meeting_id || !(session as any)?.join_url_patient || !(session as any)?.access_token_patient) {
+        const { error: sessionUpdateError } = await supabase
           .from("teleconsultation_sessions")
           .update({
             external_meeting_id: token,
+            access_token_patient: token,
             join_url_patient: meetingLink,
           })
           .eq("id", (session as any).id);
+
+        if (sessionUpdateError) {
+          console.error("[Gerar Sala] Erro ao persistir token na sessão:", sessionUpdateError);
+          throw sessionUpdateError;
+        }
       }
 
       // Update appointment
