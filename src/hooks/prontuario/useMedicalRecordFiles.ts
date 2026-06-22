@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useClinicData } from '@/hooks/useClinicData';
+import { invalidatePatientOverviewQueries } from '@/hooks/prontuario/invalidatePatientOverviewQueries';
 import { toast } from 'sonner';
 
 /**
@@ -36,6 +38,7 @@ export interface FileInput {
 
 export function useMedicalRecordFiles() {
   const { clinic } = useClinicData();
+  const queryClient = useQueryClient();
   const [files, setFiles] = useState<MedicalRecordFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -102,6 +105,7 @@ export function useMedicalRecordFiles() {
 
       toast.success('Arquivo anexado');
       await fetchFilesForPatient(input.patient_id);
+      invalidatePatientOverviewQueries(queryClient, input.patient_id, clinic.id);
       return data.id;
     } catch (err) {
       console.error('Error uploading file:', err);
@@ -122,6 +126,7 @@ export function useMedicalRecordFiles() {
 
       toast.success('Arquivo removido');
       await fetchFilesForPatient(patientId);
+      invalidatePatientOverviewQueries(queryClient, patientId, clinic?.id);
       return true;
     } catch (err) {
       console.error('Error deleting file:', err);
