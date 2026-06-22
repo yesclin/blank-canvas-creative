@@ -13,21 +13,43 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getEmailService } from "../_shared/email-service.ts";
 import { generateWelcomeEmail } from "../_shared/email-templates.ts";
 
-// Allowed origins for CORS - restrict to known domains
-const ALLOWED_ORIGINS = [
-  "https://id-preview--e2305a67-dd71-4dc6-bb28-50ab8384c9ab.lovable.app",
+// Allowed origins for CORS
+const ALLOWED_ORIGIN_EXACT = new Set([
+  "https://yesclin.com.br",
+  "https://www.yesclin.com.br",
   "https://yesclin.com",
   "https://www.yesclin.com",
+  "https://yescin.lovable.app",
+  "http://localhost:8080",
+  "http://localhost:5173",
+  "http://localhost:3000",
+]);
+
+const ALLOWED_ORIGIN_SUFFIX = [
+  ".lovable.app",
+  ".lovableproject.com",
+  ".lovable.dev",
 ];
+
+function isAllowedOrigin(origin: string): boolean {
+  if (!origin) return false;
+  if (ALLOWED_ORIGIN_EXACT.has(origin)) return true;
+  try {
+    const host = new URL(origin).hostname;
+    return ALLOWED_ORIGIN_SUFFIX.some((s) => host.endsWith(s));
+  } catch {
+    return false;
+  }
+}
 
 function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") || "";
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-  
+  const allowOrigin = isAllowedOrigin(origin) ? origin : "*";
   return {
-    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Origin": allowOrigin,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
   };
 }
 
