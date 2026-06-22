@@ -408,8 +408,8 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
             clinical_media: clinicalImageMedia,
           },
           consents: {
-            clinical_consent_acceptances: termosNew.count || 0,
-            patient_consents: termosLegacy.count || 0,
+            clinical_consent_acceptances: clinicalTerms,
+            patient_consents: patientTerms,
           },
           alerts: alertas,
         },
