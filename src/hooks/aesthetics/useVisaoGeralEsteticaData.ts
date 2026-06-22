@@ -163,13 +163,29 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
         return getEmptySummary();
       }
 
-      // Buscar procedimentos realizados (fonte de verdade: clinical_performed_procedures)
-      const { data: procedimentos } = await supabase
-        .from('clinical_performed_procedures')
-        .select('id, procedure_name, region, status, performed_at')
-        .eq('patient_id', patientId)
-        .eq('clinic_id', clinicId)
-        .order('performed_at', { ascending: false });
+      console.log('[VisaoGeralEstetica] overview patient', patientId);
+      console.log('[VisaoGeralEstetica] overview clinic', clinicId);
+
+      const [proceduresResult, evolutionsResult] = await Promise.all([
+        safeOverviewQuery('clinical_performed_procedures', supabase
+          .from('clinical_performed_procedures')
+          .select('id, procedure_name, region, status, performed_at, created_at')
+          .eq('patient_id', patientId)
+          .eq('clinic_id', clinicId)
+          .order('performed_at', { ascending: false })),
+        safeOverviewQuery('clinical_evolutions', supabase
+          .from('clinical_evolutions')
+          .select('id, content, created_at, updated_at')
+          .eq('patient_id', patientId)
+          .eq('clinic_id', clinicId)
+          .order('created_at', { ascending: false })
+          .limit(50)),
+      ]);
+
+      const procedimentos = [
+        ...((proceduresResult.data as any[]) || []).map((p) => ({ ...p, source: 'clinical_performed_procedures' })),
+        ...extractEvolutionProcedures((evolutionsResult.data as any[]) || []),
+      ].sort((a, b) => new Date(getRowDate(b) || 0).getTime() - new Date(getRowDate(a) || 0).getTime());
 
       // Agrupar por nome de procedimento
       const procedimentosPorTipo: Record<string, { quantidade: number; ultima_data: string | null }> = {};
@@ -181,7 +197,7 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
         }
         procedimentosPorTipo[nome].quantidade++;
         if (!procedimentosPorTipo[nome].ultima_data) {
-          procedimentosPorTipo[nome].ultima_data = p.performed_at;
+          procedimentosPorTipo[nome].ultima_data = getRowDate(p);
         }
       });
 
@@ -195,14 +211,7 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
       // Último procedimento
       const ultimoProc = procedimentos?.[0] || null;
 
-      // Buscar evoluções/sessões (sem filtro de especialidade — schema usa specialty_id)
-      const { data: sessoes } = await supabase
-        .from('clinical_evolutions')
-        .select('id, created_at')
-        .eq('patient_id', patientId)
-        .eq('clinic_id', clinicId)
-        .order('created_at', { ascending: false })
-        .limit(50);
+      const sessoes = (evolutionsResult.data as any[]) || [];
 
       const totalSessoes = sessoes?.length || 0;
       const ultimaSessao = sessoes?.[0]?.created_at || null;
@@ -216,38 +225,61 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
 
       // Buscar fotos antes/depois (tabela nova + legacy)
       const [fotosNew, fotosLegacy] = await Promise.all([
-        supabase.from('aesthetic_before_after').select('id', { count: 'exact', head: true })
-          .eq('patient_id', patientId).eq('clinic_id', clinicId),
-        supabase.from('before_after_records').select('id', { count: 'exact', head: true })
-          .eq('patient_id', patientId).eq('clinic_id', clinicId),
+        safeOverviewQuery('aesthetic_before_after', supabase.from('aesthetic_before_after').select('id', { count: 'exact', head: true })
+          .eq('patient_id', patientId).eq('clinic_id', clinicId)),
+        safeOverviewQuery('before_after_records', supabase.from('before_after_records').select('id', { count: 'exact', head: true })
+          .eq('patient_id', patientId).eq('clinic_id', clinicId)),
       ]);
       const totalFotos = (fotosNew.count || 0) + (fotosLegacy.count || 0);
 
-      // Buscar mapas faciais
-      const { count: totalMapasFaciais } = await supabase
-        .from('facial_maps')
-        .select('id', { count: 'exact', head: true })
-        .eq('patient_id', patientId)
-        .eq('clinic_id', clinicId);
+      // Buscar mapas faciais e marcações (tabela canônica + aplicações + anotações interativas)
+      const [facialMapsResult, interactiveMapsResult] = await Promise.all([
+        safeOverviewQuery('facial_maps', supabase
+          .from('facial_maps')
+          .select('id, data, created_at')
+          .eq('patient_id', patientId)
+          .eq('clinic_id', clinicId)),
+        safeOverviewQuery('interactive_map_annotations', supabase
+          .from('interactive_map_annotations')
+          .select('id, annotations, created_at')
+          .eq('patient_id', patientId)
+          .eq('clinic_id', clinicId)),
+      ]);
+
+      const facialMaps = (facialMapsResult.data as any[]) || [];
+      const interactiveMaps = (interactiveMapsResult.data as any[]) || [];
+      const mapIds = facialMaps.map((map) => map.id).filter(Boolean);
+      const applicationsResult = mapIds.length > 0
+        ? await safeOverviewQuery('facial_map_applications', supabase
+          .from('facial_map_applications')
+          .select('id, facial_map_id, data, created_at')
+          .in('facial_map_id', mapIds))
+        : { data: [] as any[], count: 0 };
+
+      const totalMapasFaciais = facialMaps.length + interactiveMaps.length;
+      const totalMarcacoesFaciais =
+        (((applicationsResult.data as any[]) || []).length) +
+        interactiveMaps.reduce((total, map) => total + countAnnotationMarks(map.annotations), 0);
 
       // Buscar termos assinados
       // - clinical_consent_acceptances: filtrar não revogados via revoked_at
       // - patient_consents: tabela não possui revoked_at; filtrar por status
       const [termosNew, termosLegacy] = await Promise.all([
-        supabase.from('clinical_consent_acceptances').select('id', { count: 'exact', head: true })
-          .eq('patient_id', patientId).eq('clinic_id', clinicId).is('revoked_at', null),
-        supabase.from('patient_consents').select('id', { count: 'exact', head: true })
-          .eq('patient_id', patientId).eq('clinic_id', clinicId).neq('status', 'revoked'),
+        safeOverviewQuery('clinical_consent_acceptances', supabase.from('clinical_consent_acceptances').select('id', { count: 'exact', head: true })
+          .eq('patient_id', patientId).eq('clinic_id', clinicId).is('revoked_at', null)),
+        safeOverviewQuery('patient_consents', supabase.from('patient_consents').select('id', { count: 'exact', head: true })
+          .eq('patient_id', patientId).eq('clinic_id', clinicId).neq('status', 'revoked')),
       ]);
       const totalTermos = (termosNew.count || 0) + (termosLegacy.count || 0);
 
       // Buscar alertas clínicos ativos
-      const { data: alertas } = await supabase
+      const alertasResult = await safeOverviewQuery('clinical_alerts', supabase
         .from('clinical_alerts')
         .select('id')
         .eq('patient_id', patientId)
         .eq('clinic_id', clinicId)
-        .eq('is_active', true);
+        .eq('is_active', true));
+      const alertas = (alertasResult.data as any[]) || [];
 
       // Determinar status do tratamento
       const totalProcedimentos = procedimentos?.length || 0;
@@ -255,7 +287,7 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
       
       if (totalProcedimentos > 0) {
         const diasDesdeUltimoProc = ultimoProc
-          ? Math.ceil(Math.abs(new Date().getTime() - new Date(ultimoProc.performed_at).getTime()) / (1000 * 60 * 60 * 24))
+          ? Math.ceil(Math.abs(new Date().getTime() - new Date(getRowDate(ultimoProc) || '').getTime()) / (1000 * 60 * 60 * 24))
           : null;
 
         if (diasDesdeUltimoProc !== null && diasDesdeUltimoProc <= 30) {
@@ -273,30 +305,27 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
         ultimo_procedimento: ultimoProc ? {
           tipo: ultimoProc.procedure_name,
           produto: ultimoProc.region || '',
-          data: ultimoProc.performed_at,
+          data: getRowDate(ultimoProc) || new Date().toISOString(),
         } : null,
         total_sessoes: totalSessoes,
         ultima_sessao: ultimaSessao,
         dias_desde_ultima_sessao: diasDesdeUltimaSessao,
-        total_mapas_faciais: totalMapasFaciais || 0,
+        total_mapas_faciais: totalMapasFaciais,
+        total_marcacoes_faciais: totalMarcacoesFaciais,
         total_fotos_antes_depois: totalFotos,
         total_termos_assinados: totalTermos,
         status_tratamento: statusTratamento,
-        total_alertas: alertas?.length || 0,
+        total_alertas: alertas.length || 0,
       };
 
-      if (import.meta.env.DEV) {
-        console.log('[VisaoGeralEstetica] overview data', {
-          patientId,
-          clinicId,
-          procedures: procedimentos?.length || 0,
-          lastProcedure: ultimoProc,
-          facialMaps: totalMapasFaciais,
-          beforeAfter: { new: fotosNew.count, legacy: fotosLegacy.count },
-          consents: { new: termosNew.count, legacy: termosLegacy.count },
-          alerts: alertas?.length || 0,
-        });
-      }
+      console.log('[VisaoGeralEstetica] overview data', {
+        procedures: procedimentos.length,
+        lastProcedure: ultimoProc,
+        facialMap: { maps: totalMapasFaciais, applications: totalMarcacoesFaciais },
+        beforeAfter: { new: fotosNew.count, legacy: fotosLegacy.count, total: totalFotos },
+        terms: { new: termosNew.count, legacy: termosLegacy.count, total: totalTermos },
+        alerts: alertas.length || 0,
+      });
 
       return result;
     },
