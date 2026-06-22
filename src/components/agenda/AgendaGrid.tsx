@@ -309,23 +309,29 @@ export function AgendaGrid({
             {Object.entries(groupedAppointments).map(([group, apts]) => {
               const profId = groupBy === 'professional' ? professionalNameToId[group] : undefined;
               return (
-                <div key={group} className="relative border-l overflow-hidden" style={{ height: TOTAL_HEIGHT }}>
-                  {/* Layer 1: 30-min slot backgrounds + click-to-create (z-[1]) */}
+                <div
+                  key={group}
+                  className={cn(
+                    "relative border-l overflow-hidden",
+                    onSlotClick && "cursor-pointer"
+                  )}
+                  style={{ height: TOTAL_HEIGHT }}
+                  onClick={onSlotClick ? (e) => handleColumnClick(e, selectedDate, profId) : undefined}
+                >
+                  {/* Layer 1: 30-min slot backgrounds (visual + block/past tinting) */}
                   {timeSlots.map((time, i) => {
                     const pastSlot = isSlotInPast(selectedDate, time);
                     const block = !pastSlot ? isSlotBlocked(selectedDate, time, profId) : null;
-                    const clickable = !block && !pastSlot && !!onSlotClick;
                     return (
                       <div
                         key={`${group}-${time}`}
                         className={cn(
-                          "absolute left-0 right-0 border-b z-[1] overflow-hidden",
+                          "absolute left-0 right-0 border-b z-[1] overflow-hidden pointer-events-none",
                           pastSlot && "bg-muted/30",
                           block && "bg-muted/40",
-                          clickable && "cursor-pointer hover:bg-primary/5 transition-colors"
+                          !pastSlot && !block && onSlotClick && "hover:bg-primary/5 transition-colors"
                         )}
                         style={{ top: i * SLOT_PX, height: SLOT_PX }}
-                        onClick={clickable ? () => onSlotClick({ date: selectedDate, time, professionalId: profId }) : undefined}
                         title={block ? `${block.title}${block.reason ? ` — ${block.reason}` : ''}` : pastSlot ? 'Horário já passou' : undefined}
                       />
                     );
@@ -347,6 +353,7 @@ export function AgendaGrid({
                         key={apt.id}
                         className="absolute left-1 right-1 z-20"
                         style={{ top, height }}
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <AppointmentCard
                           appointment={apt}
