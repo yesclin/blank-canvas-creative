@@ -239,7 +239,7 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
       const procedimentosPorTipo: Record<string, { quantidade: number; ultima_data: string | null }> = {};
       
       (procedimentos || []).forEach(p => {
-        const nome = p.procedure_name || p.procedures?.name || 'Outros';
+        const nome = getProcedureName(p);
         if (!procedimentosPorTipo[nome]) {
           procedimentosPorTipo[nome] = { quantidade: 0, ultima_data: null };
         }
@@ -362,7 +362,7 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
         total_procedimentos: totalProcedimentos,
         procedimentos_por_tipo: procedimentosResumo,
         ultimo_procedimento: ultimoProc ? {
-          tipo: ultimoProc.procedure_name || ultimoProc.procedures?.name || 'Procedimento',
+          tipo: getProcedureName(ultimoProc),
           produto: ultimoProc.region || '',
           data: getRowDate(ultimoProc) || new Date().toISOString(),
         } : null,
@@ -377,13 +377,38 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
         total_alertas: alertas.length || 0,
       };
 
-      console.log('overview data', {
-        procedures: procedimentos.length,
-        lastProcedure: ultimoProc,
-        facialMap: { maps: totalMapasFaciais, applications: totalMarcacoesFaciais },
-        beforeAfter: { new: fotosNew.count, legacy: fotosLegacy.count, total: totalFotos },
-        terms: { new: termosNew.count, legacy: termosLegacy.count, total: totalTermos },
-        alerts: alertas.length || 0,
+      console.log('PRONTUARIO OVERVIEW DEBUG', {
+        patientId,
+        clinicId,
+        proceduresCount: totalProcedimentos,
+        lastProcedure: result.ultimo_procedimento,
+        facialMapCount: totalMapasFaciais || totalMarcacoesFaciais,
+        beforeAfterCount: totalFotos,
+        consentCount: totalTermos,
+        alertCount: alertas.length || 0,
+        rawData: {
+          procedures: {
+            clinical_performed_procedures: proceduresResult.data || [],
+            patient_procedures: legacyProceduresResult.data || [],
+            appointments: appointmentProceduresResult.data || [],
+            clinical_evolutions: evolutionsResult.data || [],
+          },
+          facialMap: {
+            facial_maps: facialMaps,
+            facial_map_applications: facialApplications,
+            interactive_map_annotations: interactiveMaps,
+          },
+          beforeAfter: {
+            aesthetic_before_after: fotosNew.count || 0,
+            before_after_records: fotosLegacy.count || 0,
+            clinical_media: clinicalImageMedia,
+          },
+          consents: {
+            clinical_consent_acceptances: termosNew.count || 0,
+            patient_consents: termosLegacy.count || 0,
+          },
+          alerts: alertas,
+        },
       });
 
       return result;
