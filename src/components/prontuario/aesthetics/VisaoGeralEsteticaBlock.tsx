@@ -170,6 +170,7 @@ export function VisaoGeralEsteticaBlock({
   const diasDesdeUltimoProc = summary.ultimo_procedimento
     ? differenceInDays(new Date(), new Date(summary.ultimo_procedimento.data))
     : null;
+  const activeAlertCount = Math.max(summary.total_alertas, alerts.length);
 
   return (
     <div className="space-y-4">
@@ -360,13 +361,13 @@ export function VisaoGeralEsteticaBlock({
           icon={AlertTriangle}
           moduleKey="alertas"
           onNavigate={undefined} // Estética não tem bloco de alertas específico por ora
-          hasData={alerts.length > 0}
+          hasData={activeAlertCount > 0}
         >
-          {alerts.length > 0 ? (
+          {activeAlertCount > 0 ? (
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-accent-foreground">{alerts.length}</span>
+              <span className="text-3xl font-bold text-accent-foreground">{activeAlertCount}</span>
               <span className="text-muted-foreground">
-                {alerts.length === 1 ? 'alerta ativo' : 'alertas ativos'}
+                {activeAlertCount === 1 ? 'alerta ativo' : 'alertas ativos'}
               </span>
             </div>
           ) : (
