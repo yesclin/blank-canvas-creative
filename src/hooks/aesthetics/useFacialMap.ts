@@ -683,6 +683,7 @@ export function useFacialMap(
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: imagesQueryKey });
+      invalidateOverview();
       toast.success('Imagem adicionada');
     },
     onError: (error) => {
@@ -703,6 +704,7 @@ export function useFacialMap(
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: imagesQueryKey });
+      invalidateOverview();
       toast.success('Imagem removida');
     },
     onError: (error) => {
@@ -725,6 +727,7 @@ export function useFacialMap(
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: mapQueryKey });
+      invalidateOverview();
       toast.success('Observações atualizadas');
     },
     onError: (error) => {
