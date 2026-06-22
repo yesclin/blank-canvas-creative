@@ -106,6 +106,7 @@ export default function PrecheckPage() {
   }, [token]);
 
   const loadAppointmentByToken = async () => {
+    console.log("teleconsulta token", token);
     if (!token) {
       setError("Token inválido");
       setErrorType("invalid");
@@ -114,29 +115,28 @@ export default function PrecheckPage() {
     }
 
     try {
-      const { data: apt, error: aptError } = await supabase
-        .from("appointments")
-        .select(`
-          id, clinic_id, patient_id, scheduled_date, start_time, end_time,
-          meeting_link, meeting_status, care_mode, precheck_status,
-          patients:patient_id(full_name, birth_date),
-          professionals:professional_id(full_name),
-          specialties:specialty_id(name),
-          clinics:clinic_id(name, logo_url)
-        `)
-        .eq("meeting_id", token)
-        .eq("care_mode", "teleconsulta")
-        .maybeSingle();
+      // Use SECURITY DEFINER RPC so anonymous users (paciente) can validate
+      // the public precheck link without authentication / RLS blocking.
+      const { data: rpcData, error: rpcError } = await supabase.rpc(
+        "get_teleconsulta_by_token",
+        { p_token: token }
+      );
 
-      if (aptError) throw aptError;
-      if (!apt) {
+      console.log("teleconsulta session found", rpcData);
+      if (rpcError) {
+        console.log("teleconsulta validation error", rpcError);
+        throw rpcError;
+      }
+
+      const apt = rpcData as any;
+      if (!apt || !apt.id) {
         setError("Agendamento não encontrado ou link inválido");
         setErrorType("invalid");
         setLoading(false);
         return;
       }
 
-      const a = apt as any;
+      const a = apt;
 
       // Consulta encerrada
       if (a.meeting_status === "encerrada") {
@@ -154,23 +154,9 @@ export default function PrecheckPage() {
         return;
       }
 
-      // Also check via prechecks table for safety
-      const { data: existingPrecheck } = await supabase
-        .from("teleconsultation_prechecks")
-        .select("id")
-        .eq("appointment_id", a.id)
-        .maybeSingle();
-
-      if (existingPrecheck) {
-        setAppointmentInfo(buildInfo(a));
-        setCompleted(true);
-        setLoading(false);
-        return;
-      }
-
       setAppointmentInfo(buildInfo(a));
 
-      // Log token validation event
+      // Log token validation event (best-effort, may fail for anon — ignored)
       logEvent(a.id, a.clinic_id, "token_validado");
     } catch (err) {
       console.error(err);
