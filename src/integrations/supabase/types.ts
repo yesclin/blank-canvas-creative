@@ -1271,36 +1271,66 @@ export type Database = {
       audit_logs: {
         Row: {
           action: string
+          appointment_id: string | null
           clinic_id: string
           created_at: string
+          description: string | null
+          entity_type: string | null
           id: string
+          ip_address: unknown
+          module: string | null
           new_data: Json | null
           old_data: Json | null
+          patient_id: string | null
           record_id: string | null
           table_name: string
+          user_agent: string | null
+          user_email: string | null
           user_id: string | null
+          user_name: string | null
+          user_role: string | null
         }
         Insert: {
           action: string
+          appointment_id?: string | null
           clinic_id: string
           created_at?: string
+          description?: string | null
+          entity_type?: string | null
           id?: string
+          ip_address?: unknown
+          module?: string | null
           new_data?: Json | null
           old_data?: Json | null
+          patient_id?: string | null
           record_id?: string | null
           table_name: string
+          user_agent?: string | null
+          user_email?: string | null
           user_id?: string | null
+          user_name?: string | null
+          user_role?: string | null
         }
         Update: {
           action?: string
+          appointment_id?: string | null
           clinic_id?: string
           created_at?: string
+          description?: string | null
+          entity_type?: string | null
           id?: string
+          ip_address?: unknown
+          module?: string | null
           new_data?: Json | null
           old_data?: Json | null
+          patient_id?: string | null
           record_id?: string | null
           table_name?: string
+          user_agent?: string | null
+          user_email?: string | null
           user_id?: string | null
+          user_name?: string | null
+          user_role?: string | null
         }
         Relationships: [
           {

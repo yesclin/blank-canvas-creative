@@ -26,6 +26,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PermissionsManager } from "@/components/permissions/PermissionsManager";
 import { UserAuditLog } from "@/components/config/UserAuditLog";
+import { SystemAuditLog } from "@/components/config/SystemAuditLog";
 import { useClinicUsers, ClinicUser } from "@/hooks/useClinicUsers";
 import { useUserInvitations } from "@/hooks/useUserInvitations";
 import { useSpecialties } from "@/hooks/useSpecialties";
@@ -359,7 +360,11 @@ export default function ConfigUsuarios() {
           </TabsTrigger>
           <TabsTrigger value="audit" className="gap-2">
             <History className="h-4 w-4" />
-            Auditoria
+            Auditoria de usuários
+          </TabsTrigger>
+          <TabsTrigger value="system-audit" className="gap-2">
+            <History className="h-4 w-4" />
+            Auditoria do sistema
           </TabsTrigger>
         </TabsList>
 
@@ -864,6 +869,10 @@ export default function ConfigUsuarios() {
 
         <TabsContent value="audit">
           <UserAuditLog clinicId={clinicId} />
+        </TabsContent>
+
+        <TabsContent value="system-audit">
+          <SystemAuditLog clinicId={clinicId} />
         </TabsContent>
       </Tabs>
 
