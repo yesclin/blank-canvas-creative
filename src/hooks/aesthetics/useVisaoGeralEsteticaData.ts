@@ -315,7 +315,10 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
         ...(((directApplicationsResult.data as any[]) || []).map((app) => ({ ...app, source: 'facial_map_applications_direct' }))),
       ]);
 
-      const totalMapasFaciais = facialMaps.length + interactiveMaps.length;
+      const totalMapasFaciais = Math.max(
+        facialMaps.length + interactiveMaps.length,
+        facialApplications.length > 0 ? 1 : 0,
+      );
       const totalMarcacoesFaciais =
         facialApplications.length +
         interactiveMaps.reduce((total, map) => total + countAnnotationMarks(map.annotations), 0);
