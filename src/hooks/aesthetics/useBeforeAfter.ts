@@ -181,6 +181,8 @@ export function useBeforeAfter(patientId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: ['estetica-summary', patientId] });
+      queryClient.invalidateQueries({ queryKey: ['estetica-summary'] });
       toast.success('Registro criado com sucesso');
     },
     onError: (error: Error) => {
@@ -212,6 +214,8 @@ export function useBeforeAfter(patientId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: ['estetica-summary', patientId] });
+      queryClient.invalidateQueries({ queryKey: ['estetica-summary'] });
       toast.success('Registro atualizado');
     },
     onError: (error) => {
@@ -232,6 +236,8 @@ export function useBeforeAfter(patientId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: ['estetica-summary', patientId] });
+      queryClient.invalidateQueries({ queryKey: ['estetica-summary'] });
       toast.success('Registro removido');
     },
     onError: (error) => {
