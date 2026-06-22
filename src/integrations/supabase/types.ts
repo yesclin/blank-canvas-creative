@@ -15062,6 +15062,18 @@ export type Database = {
       }
       clinic_can_mutate: { Args: { _clinic_id: string }; Returns: boolean }
       clinic_specialty_summary: { Args: { _clinic_id: string }; Returns: Json }
+      complete_teleconsulta_precheck_by_token: {
+        Args: {
+          p_camera_ok: boolean
+          p_connection_ok: boolean
+          p_consent_accepted: boolean
+          p_identification_confirmed: boolean
+          p_microphone_ok: boolean
+          p_notes?: string
+          p_token: string
+        }
+        Returns: boolean
+      }
       count_active_super_admins: { Args: never; Returns: number }
       count_platform_admins: { Args: never; Returns: number }
       create_sale_transaction: {
@@ -15194,6 +15206,10 @@ export type Database = {
       is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
       is_platform_super_admin: { Args: { _user_id: string }; Returns: boolean }
       is_recepcionista: { Args: { _user_id?: string }; Returns: boolean }
+      log_teleconsulta_event_by_token: {
+        Args: { p_event_type: string; p_payload?: Json; p_token: string }
+        Returns: boolean
+      }
       log_teleconsultation_event: {
         Args: {
           p_actor_label?: string
@@ -15255,6 +15271,10 @@ export type Database = {
       seed_default_payment_methods: {
         Args: { _clinic_id: string }
         Returns: undefined
+      }
+      start_teleconsulta_precheck_by_token: {
+        Args: { p_token: string }
+        Returns: boolean
       }
       submit_pre_registration: {
         Args: { _data: Json; _token: string }
