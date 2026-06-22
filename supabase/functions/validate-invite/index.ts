@@ -48,11 +48,20 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Starting validate-invite function");
 
     const url = new URL(req.url);
-    const token = url.searchParams.get("token");
+    let token = url.searchParams.get("token");
+    if (!token && req.method === "POST") {
+      try {
+        const body = await req.json();
+        token = body?.token ?? null;
+      } catch (_) {
+        // ignore body parse errors
+      }
+    }
+    console.log("[validate-invite] token received:", token ? `${token.slice(0, 8)}…(${token.length})` : null);
 
     if (!token) {
       return new Response(
-        JSON.stringify({ error: "Token não fornecido" }),
+        JSON.stringify({ valid: false, error: "Token não fornecido" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
