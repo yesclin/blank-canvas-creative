@@ -422,8 +422,15 @@ export const handler = async (req: Request): Promise<Response> => {
     console.log("[send-invite] Invitation ready:", invitation.id, "(reused:", !!invitationId, ")");
 
     // Generate accept URL
-    const baseUrl = req.headers.get("origin") || "https://yesclin.com";
+    // Prefer explicit APP_URL env var (production domain). Fall back to the
+    // caller origin only when it's not a Lovable preview host, then to the
+    // canonical production domain. This prevents emailing preview URLs.
+    const appUrlEnv = (Deno.env.get("APP_URL") || Deno.env.get("SITE_URL") || "").trim().replace(/\/$/, "");
+    const callerOrigin = (req.headers.get("origin") || "").trim().replace(/\/$/, "");
+    const isPreviewOrigin = /lovable\.(app|dev)|lovableproject\.com/i.test(callerOrigin);
+    const baseUrl = appUrlEnv || (callerOrigin && !isPreviewOrigin ? callerOrigin : "https://yesclin.com.br");
     const acceptUrl = `${baseUrl}/aceitar-convite?token=${invitation.token}`;
+    console.log("[send-invite] Accept URL base:", baseUrl, "(APP_URL set:", !!appUrlEnv, ")");
 
     // Send invitation email using shared service and template.
     // If RESEND_API_KEY is not configured, degrade gracefully: keep the
