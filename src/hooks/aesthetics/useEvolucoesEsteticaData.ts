@@ -8,6 +8,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useClinicData } from '@/hooks/useClinicData';
+import { invalidatePatientOverviewQueries } from '@/hooks/prontuario/invalidatePatientOverviewQueries';
 import { toast } from 'sonner';
 
 const LOG_PREFIX = {
@@ -109,8 +110,7 @@ export function useEvolucoesEsteticaData({ patientId, appointmentId }: UseEvoluc
 
   const queryKey = ['evolucoes-estetica', patientId, clinic?.id];
   const invalidateOverview = () => {
-    queryClient.invalidateQueries({ queryKey: ['estetica-summary', patientId] });
-    queryClient.invalidateQueries({ queryKey: ['estetica-summary'] });
+    invalidatePatientOverviewQueries(queryClient, patientId, clinic?.id);
   };
 
   // Fetch evolutions
