@@ -169,7 +169,7 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
       const [proceduresResult, evolutionsResult] = await Promise.all([
         safeOverviewQuery('clinical_performed_procedures', supabase
           .from('clinical_performed_procedures')
-          .select('id, procedure_name, region, status, performed_at, created_at')
+          .select('id, procedure_id, procedure_name, region, status, performed_at, created_at, procedures(name)')
           .eq('patient_id', patientId)
           .eq('clinic_id', clinicId)
           .order('performed_at', { ascending: false })),
@@ -191,7 +191,7 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
       const procedimentosPorTipo: Record<string, { quantidade: number; ultima_data: string | null }> = {};
       
       (procedimentos || []).forEach(p => {
-        const nome = p.procedure_name || 'Outros';
+        const nome = p.procedure_name || p.procedures?.name || 'Outros';
         if (!procedimentosPorTipo[nome]) {
           procedimentosPorTipo[nome] = { quantidade: 0, ultima_data: null };
         }
@@ -303,7 +303,7 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
         total_procedimentos: totalProcedimentos,
         procedimentos_por_tipo: procedimentosResumo,
         ultimo_procedimento: ultimoProc ? {
-          tipo: ultimoProc.procedure_name,
+          tipo: ultimoProc.procedure_name || ultimoProc.procedures?.name || 'Procedimento',
           produto: ultimoProc.region || '',
           data: getRowDate(ultimoProc) || new Date().toISOString(),
         } : null,
