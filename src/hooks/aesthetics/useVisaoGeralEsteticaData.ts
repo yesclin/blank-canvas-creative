@@ -102,7 +102,7 @@ function countAnnotationMarks(annotations: unknown): number {
   return Object.keys(data).length > 0 ? 1 : 0;
 }
 
-function extractEvolutionProcedures(evolutions: any[] = []) {
+function extractEvolutionProcedures(evolutions: any[] = []): any[] {
   return evolutions.flatMap((evolution) => {
     const content = (evolution?.content || {}) as Record<string, any>;
     const candidates = [
