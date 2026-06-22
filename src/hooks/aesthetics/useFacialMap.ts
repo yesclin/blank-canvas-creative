@@ -523,6 +523,7 @@ export function useFacialMap(
       } else {
         queryClient.invalidateQueries({ queryKey: pointsQueryKey });
       }
+      invalidateOverview();
       toast.success('Ponto de aplicação adicionado');
     },
     onError: (error) => {
@@ -618,6 +619,7 @@ export function useFacialMap(
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: pointsQueryKey });
+      invalidateOverview();
       toast.success('Ponto atualizado');
     },
     onError: (error) => {
@@ -638,6 +640,7 @@ export function useFacialMap(
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: pointsQueryKey });
+      invalidateOverview();
       toast.success('Ponto removido');
     },
     onError: (error) => {
