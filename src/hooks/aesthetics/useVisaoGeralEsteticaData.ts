@@ -162,25 +162,26 @@ function uniqueById<T extends Record<string, any>>(rows: T[]) {
 export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeralEsteticaDataParams) {
   // Buscar dados do paciente
   const patientQuery = useQuery({
-    queryKey: ['estetica-patient', patientId],
+    queryKey: ['estetica-patient', patientId, clinicId],
     queryFn: async () => {
-      if (!patientId) return null;
+      if (!patientId || !clinicId) return null;
       
       const { data, error } = await supabase
         .from('patients')
         .select('id, full_name, birth_date, gender, phone')
         .eq('id', patientId)
+        .eq('clinic_id', clinicId)
         .maybeSingle();
       
       if (error) throw error;
       return data as EsteticaPatientData | null;
     },
-    enabled: !!patientId,
+    enabled: !!patientId && !!clinicId,
   });
 
   // Buscar resumo consolidado
   const summaryQuery = useQuery({
-    queryKey: ['estetica-summary', patientId, clinicId],
+    queryKey: ['prontuario-overview', patientId, clinicId],
     queryFn: async (): Promise<EsteticaSummaryData> => {
       if (!patientId || !clinicId) {
         return getEmptySummary();
