@@ -320,16 +320,20 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
         facialApplications.length +
         interactiveMaps.reduce((total, map) => total + countAnnotationMarks(map.annotations), 0);
 
-      // Buscar termos assinados
-      // - clinical_consent_acceptances: filtrar não revogados via revoked_at
-      // - patient_consents: tabela não possui revoked_at; filtrar por status
+      // Buscar termos assinados vinculados ao paciente e suas tabelas de termos
       const [termosNew, termosLegacy] = await Promise.all([
-        safeOverviewQuery('clinical_consent_acceptances', supabase.from('clinical_consent_acceptances').select('id', { count: 'exact', head: true })
+        safeOverviewQuery('clinical_consent_acceptances', supabase
+          .from('clinical_consent_acceptances')
+          .select('id, status, accepted_at, revoked_at, consent_term_id, clinical_consent_terms(id, title, consent_type)')
           .eq('patient_id', patientId).eq('clinic_id', clinicId).is('revoked_at', null)),
-        safeOverviewQuery('patient_consents', supabase.from('patient_consents').select('id', { count: 'exact', head: true })
+        safeOverviewQuery('patient_consents', supabase
+          .from('patient_consents')
+          .select('id, status, granted_at, revoked_at, term_id, consent_terms(id, title, term_type)')
           .eq('patient_id', patientId).eq('clinic_id', clinicId).neq('status', 'revoked')),
       ]);
-      const totalTermos = (termosNew.count || 0) + (termosLegacy.count || 0);
+      const clinicalTerms = ((termosNew.data as any[]) || []).filter((term) => !term.revoked_at && term.status !== 'revoked');
+      const patientTerms = ((termosLegacy.data as any[]) || []).filter((term) => !term.revoked_at && term.status !== 'revoked');
+      const totalTermos = clinicalTerms.length + patientTerms.length;
 
       // Buscar alertas clínicos ativos
       const alertasResult = await safeOverviewQuery('clinical_alerts', supabase
