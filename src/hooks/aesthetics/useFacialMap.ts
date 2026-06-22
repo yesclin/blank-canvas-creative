@@ -766,6 +766,7 @@ export function useFacialMap(
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: mapQueryKey });
       queryClient.invalidateQueries({ queryKey: ['facial-map-history', patientId] });
+      invalidateOverview();
       toast.success('Sessão concluída com sucesso');
     },
     onError: (error) => {
@@ -804,6 +805,7 @@ export function useFacialMap(
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: mapQueryKey });
       queryClient.invalidateQueries({ queryKey: ['facial-map-history', patientId] });
+      invalidateOverview();
       toast.success('Sessão reaberta com sucesso');
     },
     onError: (error) => {
@@ -860,6 +862,7 @@ export function useFacialMap(
     onSuccess: (newMap) => {
       queryClient.invalidateQueries({ queryKey: mapQueryKey });
       queryClient.invalidateQueries({ queryKey: ['facial-map-points', newMap.id] });
+      invalidateOverview();
       setCurrentMapId(newMap.id);
       toast.success('Sessão duplicada como base para nova sessão');
     },
