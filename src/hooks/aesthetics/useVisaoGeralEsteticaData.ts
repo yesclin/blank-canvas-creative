@@ -420,6 +420,8 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
           consents: {
             clinical_consent_acceptances: clinicalTerms,
             patient_consents: patientTerms,
+            clinical_consent_terms: clinicalTermRows.data || [],
+            consent_terms: legacyTermRows.data || [],
           },
           alerts: alertas,
         },
