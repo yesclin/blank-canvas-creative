@@ -429,25 +429,28 @@ export function AgendaGrid({
               return (
                 <div
                   key={`wcol-${dayStr}`}
-                  className={cn("relative border-l overflow-hidden", isWeekend && "bg-muted/20")}
+                  className={cn(
+                    "relative border-l overflow-hidden",
+                    isWeekend && "bg-muted/20",
+                    onSlotClick && "cursor-pointer"
+                  )}
                   style={{ height: TOTAL_HEIGHT }}
+                  onClick={onSlotClick ? (e) => handleColumnClick(e, day) : undefined}
                 >
-                  {/* Layer 1: 30-min slot backgrounds */}
+                  {/* Layer 1: 30-min slot backgrounds (visual only) */}
                   {timeSlots.map((time, i) => {
                     const pastSlot = isSlotInPast(day, time);
                     const block = !pastSlot ? isSlotBlocked(day, time) : null;
-                    const clickable = !block && !pastSlot && !!onSlotClick;
                     return (
                       <div
                         key={`${dayStr}-${time}`}
                         className={cn(
-                          "absolute left-0 right-0 border-b z-[1]",
+                          "absolute left-0 right-0 border-b z-[1] pointer-events-none",
                           pastSlot && "bg-muted/30",
                           block && "bg-muted/40",
-                          clickable && "cursor-pointer hover:bg-primary/5 transition-colors"
+                          !pastSlot && !block && onSlotClick && "hover:bg-primary/5 transition-colors"
                         )}
                         style={{ top: i * SLOT_PX, height: SLOT_PX }}
-                        onClick={clickable ? () => onSlotClick({ date: day, time }) : undefined}
                         title={block ? `${block.title}${block.reason ? ` — ${block.reason}` : ''}` : undefined}
                       />
                     );
@@ -469,6 +472,7 @@ export function AgendaGrid({
                         key={apt.id}
                         className="absolute left-1 right-1 z-20"
                         style={{ top, height }}
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <AppointmentCard
                           appointment={apt}
