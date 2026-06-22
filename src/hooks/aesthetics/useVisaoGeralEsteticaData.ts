@@ -272,21 +272,28 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
       }
 
       // Buscar fotos antes/depois (tabela nova + legacy)
-      const [fotosNew, fotosLegacy] = await Promise.all([
+      const [fotosNew, fotosLegacy, clinicalMediaResult] = await Promise.all([
         safeOverviewQuery('aesthetic_before_after', supabase.from('aesthetic_before_after').select('id', { count: 'exact', head: true })
           .eq('patient_id', patientId).eq('clinic_id', clinicId)),
         safeOverviewQuery('before_after_records', supabase.from('before_after_records').select('id', { count: 'exact', head: true })
           .eq('patient_id', patientId).eq('clinic_id', clinicId)),
+        safeOverviewQuery('clinical_media', supabase.from('clinical_media').select('id, category, file_type')
+          .eq('patient_id', patientId).eq('clinic_id', clinicId)),
       ]);
-      const totalFotos = (fotosNew.count || 0) + (fotosLegacy.count || 0);
+      const clinicalImageMedia = ((clinicalMediaResult.data as any[]) || []).filter(isClinicalImageMedia);
+      const totalFotos = (fotosNew.count || 0) + (fotosLegacy.count || 0) + clinicalImageMedia.length;
 
       // Buscar mapas faciais e marcações (tabela canônica + aplicações + anotações interativas)
-      const [facialMapsResult, interactiveMapsResult] = await Promise.all([
+      const [facialMapsResult, directApplicationsResult, interactiveMapsResult] = await Promise.all([
         safeOverviewQuery('facial_maps', supabase
           .from('facial_maps')
           .select('id, data, created_at')
           .eq('patient_id', patientId)
           .eq('clinic_id', clinicId)),
+        safeOverviewQuery('facial_map_applications_direct', supabase
+          .from('facial_map_applications')
+          .select('id, facial_map_id, data, created_at')
+          .contains('data', { patient_id: patientId, clinic_id: clinicId })),
         safeOverviewQuery('interactive_map_annotations', supabase
           .from('interactive_map_annotations')
           .select('id, annotations, created_at')
@@ -303,10 +310,14 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
           .select('id, facial_map_id, data, created_at')
           .in('facial_map_id', mapIds))
         : { data: [] as any[], count: 0 };
+      const facialApplications = uniqueById([
+        ...(((applicationsResult.data as any[]) || []).map((app) => ({ ...app, source: 'facial_map_applications_by_map' }))),
+        ...(((directApplicationsResult.data as any[]) || []).map((app) => ({ ...app, source: 'facial_map_applications_direct' }))),
+      ]);
 
       const totalMapasFaciais = facialMaps.length + interactiveMaps.length;
       const totalMarcacoesFaciais =
-        (((applicationsResult.data as any[]) || []).length) +
+        facialApplications.length +
         interactiveMaps.reduce((total, map) => total + countAnnotationMarks(map.annotations), 0);
 
       // Buscar termos assinados
