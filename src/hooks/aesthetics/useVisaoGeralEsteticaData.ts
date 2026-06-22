@@ -163,8 +163,8 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
         return getEmptySummary();
       }
 
-      console.log('[VisaoGeralEstetica] overview patient', patientId);
-      console.log('[VisaoGeralEstetica] overview clinic', clinicId);
+      console.log('overview patient', patientId);
+      console.log('overview clinic', clinicId);
 
       const [proceduresResult, evolutionsResult] = await Promise.all([
         safeOverviewQuery('clinical_performed_procedures', supabase
@@ -318,7 +318,7 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
         total_alertas: alertas.length || 0,
       };
 
-      console.log('[VisaoGeralEstetica] overview data', {
+      console.log('overview data', {
         procedures: procedimentos.length,
         lastProcedure: ultimoProc,
         facialMap: { maps: totalMapasFaciais, applications: totalMarcacoesFaciais },
