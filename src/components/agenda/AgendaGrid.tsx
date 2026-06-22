@@ -187,6 +187,43 @@ export function AgendaGrid({
     return false;
   }, []);
 
+  // Compute the clicked time from the Y position within a day column container,
+  // snapping to SNAP_MIN. Returns null if the click was on an interactive child
+  // (appointment card) that already handled the event.
+  const computeClickedTime = useCallback((e: ReactMouseEvent<HTMLDivElement>): string | null => {
+    const container = e.currentTarget;
+    const rect = container.getBoundingClientRect();
+    const y = e.clientY - rect.top + container.scrollTop;
+    const rawMinutes = y / PX_PER_MIN;
+    const snapped = Math.max(0, Math.round(rawMinutes / SNAP_MIN) * SNAP_MIN);
+    const totalMin = DAY_START_MIN + snapped;
+    const maxMin = DAY_START_MIN + timeSlots.length * SLOT_MIN - SNAP_MIN;
+    return minutesToTime(Math.min(totalMin, maxMin));
+  }, []);
+
+  const handleColumnClick = useCallback(
+    (
+      e: ReactMouseEvent<HTMLDivElement>,
+      date: Date,
+      professionalId?: string,
+    ) => {
+      if (!onSlotClick) return;
+      const time = computeClickedTime(e);
+      if (!time) return;
+      if (isSlotInPast(date, time)) {
+        toast.error('Horário indisponível — tempo já decorrido.');
+        return;
+      }
+      const block = isSlotBlocked(date, time, professionalId);
+      if (block) {
+        toast.error('Este horário está bloqueado para agendamentos.');
+        return;
+      }
+      onSlotClick({ date, time, professionalId });
+    },
+    [onSlotClick, computeClickedTime, isSlotInPast, isSlotBlocked],
+  );
+
   // Render a past slot cell
   const renderPastSlot = (time: string) => (
     <TooltipProvider>
