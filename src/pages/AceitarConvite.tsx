@@ -117,24 +117,16 @@ export default function AceitarConvite() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/accept-invite`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            token,
-            password,
-          }),
-        }
+      const { data: result, error: invokeError } = await supabase.functions.invoke(
+        "accept-invite",
+        { body: { token, password } }
       );
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Erro ao aceitar convite");
+      if (invokeError) {
+        throw new Error(invokeError.message || "Erro ao aceitar convite");
+      }
+      if (result?.error) {
+        throw new Error(result.error);
       }
 
       // Auto-login after account creation
