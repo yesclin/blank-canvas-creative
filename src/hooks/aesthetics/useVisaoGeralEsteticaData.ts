@@ -475,6 +475,9 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
       }) as EsteticaAlert[];
     },
     enabled: !!patientId && !!clinicId,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   // Override total_alertas with the actual alerts list length so the
