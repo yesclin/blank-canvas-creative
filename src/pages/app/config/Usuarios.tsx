@@ -870,6 +870,10 @@ export default function ConfigUsuarios() {
         <TabsContent value="audit">
           <UserAuditLog clinicId={clinicId} />
         </TabsContent>
+
+        <TabsContent value="system-audit">
+          <SystemAuditLog clinicId={clinicId} />
+        </TabsContent>
       </Tabs>
 
       {/* Edit User Dialog */}
