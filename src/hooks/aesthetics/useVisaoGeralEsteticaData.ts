@@ -136,6 +136,29 @@ function extractEvolutionProcedures(evolutions: any[] = []): any[] {
   });
 }
 
+function getAppointmentDate(row: any) {
+  if (!row) return null;
+  if (row.started_at || row.finished_at || row.created_at) return row.started_at || row.finished_at || row.created_at;
+  if (row.scheduled_date && row.start_time) return `${row.scheduled_date}T${row.start_time}`;
+  return row.scheduled_date || null;
+}
+
+function getProcedureName(row: any) {
+  return row?.procedure_name || row?.procedures?.name || row?.name || row?.title || row?.appointment_type || 'Procedimento';
+}
+
+function isClinicalImageMedia(row: any) {
+  const category = String(row?.category || '').toLowerCase();
+  const fileType = String(row?.file_type || '').toLowerCase();
+  return ['image', 'photo', 'foto', 'before_after', 'antes_depois', 'before', 'after'].includes(category) || fileType.startsWith('image/');
+}
+
+function uniqueById<T extends Record<string, any>>(rows: T[]) {
+  const map = new Map<string, T>();
+  rows.forEach((row, index) => map.set(String(row.id || `${row.source || 'row'}-${index}`), row));
+  return Array.from(map.values());
+}
+
 export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeralEsteticaDataParams) {
   // Buscar dados do paciente
   const patientQuery = useQuery({
