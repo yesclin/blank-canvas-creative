@@ -38,6 +38,7 @@ interface AppointmentInfo {
   id: string;
   clinic_id: string;
   patient_id: string;
+  teleconsultation_session_id?: string | null;
   patient_name: string;
   patient_birth_date: string | null;
   professional_name: string;
@@ -138,6 +139,20 @@ export default function PrecheckPage() {
 
       const a = apt;
 
+      if (a.token_status === "expired") {
+        setError("Link de teleconsulta expirado");
+        setErrorType("outside_window");
+        setLoading(false);
+        return;
+      }
+
+      if (a.token_status === "revoked") {
+        setError("Link de teleconsulta revogado");
+        setErrorType("invalid");
+        setLoading(false);
+        return;
+      }
+
       // Consulta encerrada
       if (a.meeting_status === "encerrada") {
         setError("Esta consulta já foi encerrada");
@@ -171,6 +186,7 @@ export default function PrecheckPage() {
     id: a.id,
     clinic_id: a.clinic_id,
     patient_id: a.patient_id,
+    teleconsultation_session_id: a.teleconsultation_session_id || a.session?.id || null,
     patient_name: a.patients?.full_name || "Paciente",
     patient_birth_date: a.patients?.birth_date || null,
     professional_name: a.professionals?.full_name || "Profissional",
@@ -188,14 +204,13 @@ export default function PrecheckPage() {
   // ── Event logging helper ──
   const logEvent = async (aptId: string, clinicId: string, eventType: string, payload?: Record<string, unknown>) => {
     try {
-      await supabase.from("teleconsultation_events").insert({
-        clinic_id: clinicId,
-        teleconsultation_session_id: aptId,
-        appointment_id: aptId,
-        event_type: eventType,
-        actor_type: "patient",
-        payload: payload || null,
+      if (!token) return;
+      const { error } = await supabase.rpc("log_teleconsulta_event_by_token", {
+        p_token: token,
+        p_event_type: eventType,
+        p_payload: payload || {},
       });
+      if (error) console.log("teleconsulta validation error", error);
     } catch {
       // Non-blocking
     }
@@ -356,7 +371,7 @@ export default function PrecheckPage() {
       setCurrentStep(STEPS[idx + 1]);
       // Update appointment precheck to in-progress
       if (appointmentInfo && currentStep === "info") {
-        supabase.from("appointments").update({ precheck_status: "em_progresso" }).eq("id", appointmentInfo.id);
+        supabase.rpc("start_teleconsulta_precheck_by_token", { p_token: token });
       }
     }
   };
@@ -371,27 +386,23 @@ export default function PrecheckPage() {
     if (!appointmentInfo || !token) return;
     setSubmitting(true);
     try {
-      await supabase.from("teleconsultation_prechecks").insert({
-        clinic_id: appointmentInfo.clinic_id,
-        appointment_id: appointmentInfo.id,
-        patient_id: appointmentInfo.patient_id,
-        camera_ok: cameraStatus === "ok",
-        microphone_ok: micStatus === "ok",
-        internet_ok: internetStatus === "ok",
-        identity_confirmed: identityConfirmed,
-        consent_accepted: consentAccepted,
-        completed_at: new Date().toISOString(),
-        notes: uploadedFiles.length > 0 ? `${uploadedFiles.length} arquivo(s) enviado(s)` : null,
-      });
+      const { data: completedOk, error: completeError } = await supabase.rpc(
+        "complete_teleconsulta_precheck_by_token",
+        {
+          p_token: token,
+          p_identification_confirmed: identityConfirmed,
+          p_consent_accepted: consentAccepted,
+          p_camera_ok: cameraStatus === "ok",
+          p_microphone_ok: micStatus === "ok",
+          p_connection_ok: internetStatus === "ok",
+          p_notes: uploadedFiles.length > 0 ? `${uploadedFiles.length} arquivo(s) enviado(s)` : null,
+        }
+      );
 
-      await supabase
-        .from("appointments")
-        .update({
-          precheck_status: "concluido",
-          consent_telehealth_accepted: consentAccepted,
-          consent_telehealth_accepted_at: consentAccepted ? new Date().toISOString() : null,
-        })
-        .eq("id", appointmentInfo.id);
+      if (completeError || !completedOk) {
+        console.log("teleconsulta validation error", completeError || completedOk);
+        throw completeError || new Error("Token inválido ou expirado");
+      }
 
       logEvent(appointmentInfo.id, appointmentInfo.clinic_id, "precheck_concluido");
       setCompleted(true);
