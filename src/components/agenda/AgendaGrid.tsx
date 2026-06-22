@@ -195,7 +195,7 @@ export function AgendaGrid({
     const rect = container.getBoundingClientRect();
     const y = e.clientY - rect.top + container.scrollTop;
     const rawMinutes = y / PX_PER_MIN;
-    const snapped = Math.max(0, Math.round(rawMinutes / SNAP_MIN) * SNAP_MIN);
+    const snapped = Math.max(0, Math.floor(rawMinutes / SNAP_MIN) * SNAP_MIN);
     const totalMin = DAY_START_MIN + snapped;
     const maxMin = DAY_START_MIN + timeSlots.length * SLOT_MIN - SNAP_MIN;
     return minutesToTime(Math.min(totalMin, maxMin));
