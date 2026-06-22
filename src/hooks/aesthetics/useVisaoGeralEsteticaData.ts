@@ -324,15 +324,25 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
       const [termosNew, termosLegacy] = await Promise.all([
         safeOverviewQuery('clinical_consent_acceptances', supabase
           .from('clinical_consent_acceptances')
-          .select('id, status, accepted_at, revoked_at, consent_term_id, clinical_consent_terms(id, title, consent_type)')
+          .select('id, status, accepted_at, revoked_at, consent_term_id, term_title, consent_type')
           .eq('patient_id', patientId).eq('clinic_id', clinicId).is('revoked_at', null)),
         safeOverviewQuery('patient_consents', supabase
           .from('patient_consents')
-          .select('id, status, granted_at, revoked_at, term_id, consent_terms(id, title, term_type)')
+          .select('id, status, granted_at, revoked_at, term_id')
           .eq('patient_id', patientId).eq('clinic_id', clinicId).neq('status', 'revoked')),
       ]);
       const clinicalTerms = ((termosNew.data as any[]) || []).filter((term) => !term.revoked_at && term.status !== 'revoked');
       const patientTerms = ((termosLegacy.data as any[]) || []).filter((term) => !term.revoked_at && term.status !== 'revoked');
+      const clinicalTermIds = clinicalTerms.map((term) => term.consent_term_id).filter(Boolean);
+      const legacyTermIds = patientTerms.map((term) => term.term_id).filter(Boolean);
+      const [clinicalTermRows, legacyTermRows] = await Promise.all([
+        clinicalTermIds.length > 0
+          ? safeOverviewQuery('clinical_consent_terms', supabase.from('clinical_consent_terms').select('id, title, consent_type').eq('clinic_id', clinicId).in('id', clinicalTermIds))
+          : { data: [] as any[], count: 0 },
+        legacyTermIds.length > 0
+          ? safeOverviewQuery('consent_terms', supabase.from('consent_terms').select('id, title, term_type').eq('clinic_id', clinicId).in('id', legacyTermIds))
+          : { data: [] as any[], count: 0 },
+      ]);
       const totalTermos = clinicalTerms.length + patientTerms.length;
 
       // Buscar alertas clínicos ativos
