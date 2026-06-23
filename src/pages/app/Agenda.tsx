@@ -656,8 +656,10 @@ export default function Agenda() {
     });
   }, [appointmentDialogMode, selectedAppointment, createAppointmentMutation, rescheduleAppointmentMutation, refetchAppointments]);
 
-  // Default to logged-in user's professional ID if no tab selected
-  const lockedProfessionalIdForDialog = effectiveSelectedProfessionalId || userProfessionalId || undefined;
+  // Default to the agenda context: selected tab, professional filter, or logged-in professional.
+  // Only lock the field for users who are restricted to their own professional agenda.
+  const defaultProfessionalIdForDialog = effectiveSelectedProfessionalId || filters.professionalId || userProfessionalId || undefined;
+  const lockedProfessionalIdForDialog = role === 'profissional' && userProfessionalId ? userProfessionalId : undefined;
 
   // Count active filters
   const activeFiltersCount = [
@@ -916,6 +918,7 @@ export default function Agenda() {
         appointment={selectedAppointment}
         defaultDate={defaultDialogDate || selectedDate}
         defaultStartTime={defaultStartTime}
+        defaultProfessionalId={defaultProfessionalIdForDialog}
         lockedProfessionalId={lockedProfessionalIdForDialog}
         existingAppointments={appointments}
         scheduleBlocks={scheduleBlocks}

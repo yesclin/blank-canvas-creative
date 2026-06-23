@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, type FormEvent } from "react";
 import { useGlobalSpecialty } from "@/hooks/useGlobalSpecialty";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -52,11 +52,23 @@ import { ProcedureProductsPreview } from "./ProcedureProductsPreview";
 import { PatientAutocomplete } from "./PatientAutocomplete";
 import { WeekSchedule } from "@/components/config/EnhancedWorkingHoursCard";
 
+const requiredId = (message: string) => z.preprocess(
+  (value) => (value == null ? "" : typeof value === "string" ? value.trim() : value),
+  z.string().min(1, message)
+);
+
+const normalizeProfessionalName = (value?: string | null) =>
+  (value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+
 const appointmentSchema = z.object({
   patient_id: z.string().min(1, "Selecione um paciente"),
-  professional_id: z.string().min(1, "Selecione um profissional"),
+  professional_id: requiredId("Selecione um profissional"),
   procedure_id: z.string().optional(),
-  specialty_id: z.string().min(1, "Selecione uma especialidade"),
+  specialty_id: requiredId("Selecione uma especialidade"),
   room_id: z.string().optional(),
   scheduled_date: z.date({ required_error: "Selecione uma data" }),
   start_time: z.string().min(1, "Informe o horário"),
@@ -87,6 +99,8 @@ interface AppointmentDialogProps {
   defaultStartTime?: string;
   /** If provided, the professional field will be pre-filled and locked */
   lockedProfessionalId?: string;
+  /** If provided, the professional field will be pre-filled but can still be changed */
+  defaultProfessionalId?: string;
   onSubmit?: (data: AppointmentFormData) => void;
   /** All existing appointments for slot suggestion calculation */
   existingAppointments?: Appointment[];
@@ -116,6 +130,7 @@ export function AppointmentDialog({
   defaultDate,
   defaultStartTime,
   lockedProfessionalId,
+  defaultProfessionalId,
   onSubmit,
   existingAppointments = [],
   clinicSchedule = null,
@@ -151,7 +166,9 @@ export function AppointmentDialog({
     resolver: zodResolver(appointmentSchema),
     defaultValues: {
       patient_id: lockedPatientId || appointment?.patient_id || "",
-      professional_id: lockedProfessionalId || appointment?.professional_id || "",
+      professional_id: appointment
+        ? lockedProfessionalId || appointment.professional_id || ""
+        : lockedProfessionalId || defaultProfessionalId || "",
       procedure_id: appointment?.procedure_id || "",
       specialty_id: appointment?.specialty_id || globalSpecialtyId || "",
       room_id: appointment?.room_id || "",
@@ -168,6 +185,109 @@ export function AppointmentDialog({
       meeting_provider: appointment?.meeting_provider || "",
     },
   });
+  const wasOpenRef = useRef(false);
+
+  // Start every new/fit-in dialog opening from the current agenda context.
+  // This prevents stale values/errors from a previous open from surviving visually.
+  useEffect(() => {
+    const justOpened = open && !wasOpenRef.current;
+    wasOpenRef.current = open;
+
+    if (!justOpened || appointment) return;
+
+    form.reset({
+      patient_id: lockedPatientId || "",
+      professional_id: lockedProfessionalId || defaultProfessionalId || "",
+      procedure_id: "",
+      specialty_id: globalSpecialtyId || "",
+      room_id: "",
+      scheduled_date: defaultDate || new Date(),
+      start_time: defaultStartTime || "08:00",
+      duration_minutes: "30",
+      appointment_type: mode === "fitIn" ? "encaixe" : "consulta",
+      payment_type: "particular",
+      insurance_id: "",
+      expected_value: 0,
+      notes: "",
+      is_fit_in: mode === "fitIn",
+      care_mode: "presencial",
+      meeting_provider: "",
+    });
+    form.clearErrors();
+  }, [appointment, defaultDate, defaultProfessionalId, defaultStartTime, form, globalSpecialtyId, lockedPatientId, lockedProfessionalId, mode, open]);
+
+  const resolveProfessionalId = useCallback(() => {
+    const candidates = appointment
+      ? [form.getValues("professional_id"), lockedProfessionalId, appointment.professional_id]
+      : [form.getValues("professional_id"), lockedProfessionalId, defaultProfessionalId];
+
+    for (const candidate of candidates) {
+      const normalizedId = typeof candidate === "string" ? candidate.trim() : "";
+      if (normalizedId && professionals.some((professional) => professional.id === normalizedId)) {
+        return normalizedId;
+      }
+    }
+
+    // Safety net for stale form states where the UI has a professional name,
+    // but the internal field accidentally contains the name instead of the UUID.
+    const possibleName =
+      form.getValues("professional_id") ||
+      appointment?.professional?.full_name ||
+      "";
+    const normalizedName = normalizeProfessionalName(possibleName);
+
+    if (normalizedName) {
+      const matchedByName = professionals.find(
+        (professional) => normalizeProfessionalName(professional.full_name) === normalizedName
+      );
+      if (matchedByName) return matchedByName.id;
+    }
+
+    return "";
+  }, [appointment?.professional?.full_name, appointment?.professional_id, defaultProfessionalId, form, lockedProfessionalId, professionals]);
+
+  const syncProfessionalSelection = useCallback((shouldValidate = true) => {
+    const resolvedProfessionalId = resolveProfessionalId();
+
+    if (!resolvedProfessionalId) return "";
+
+    if (form.getValues("professional_id") !== resolvedProfessionalId) {
+      form.setValue("professional_id", resolvedProfessionalId, {
+        shouldValidate,
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+    } else if (shouldValidate) {
+      form.trigger("professional_id");
+    }
+
+    form.clearErrors("professional_id");
+    return resolvedProfessionalId;
+  }, [form, resolveProfessionalId]);
+
+  const fillSpecialtyFromProfessional = useCallback((professionalId: string, shouldValidate = true) => {
+    if (!professionalId) return;
+
+    const professional = professionals.find((item) => item.id === professionalId);
+    const fallbackSpecialtyId = appointment?.specialty_id || professional?.specialty_id || globalSpecialtyId || "";
+
+    if (!fallbackSpecialtyId) return;
+
+    const specialtyExists = specialties.some((specialty) => specialty.id === fallbackSpecialtyId)
+      || enabledSpecialties.some((specialty) => specialty.id === fallbackSpecialtyId);
+
+    if (!specialtyExists && fallbackSpecialtyId !== appointment?.specialty_id) return;
+
+    if (form.getValues("specialty_id") !== fallbackSpecialtyId) {
+      form.setValue("specialty_id", fallbackSpecialtyId, {
+        shouldValidate,
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+    }
+
+    if (shouldValidate) form.clearErrors("specialty_id");
+  }, [appointment?.specialty_id, enabledSpecialties, form, globalSpecialtyId, professionals, specialties]);
 
   // Reset form values when dialog opens with an appointment (reschedule mode)
   useEffect(() => {
@@ -191,18 +311,18 @@ export function AppointmentDialog({
         meeting_provider: appointment.meeting_provider || "",
       });
     }
-  }, [open, appointment, mode, lockedProfessionalId]);
+  }, [open, appointment, mode, lockedProfessionalId, defaultProfessionalId, form]);
 
-  // If lockedProfessionalId changes OR dialog opens, sync to form and clear stale error
+  // If lockedProfessionalId changes, professionals load, or dialog opens,
+  // keep the visible professional and the internal professional_id in sync.
   useEffect(() => {
-    if (open && lockedProfessionalId) {
-      form.setValue("professional_id", lockedProfessionalId, {
-        shouldValidate: true,
-        shouldDirty: false,
-      });
-      form.clearErrors("professional_id");
+    if (!open) return;
+
+    const resolvedProfessionalId = syncProfessionalSelection(true);
+    if (resolvedProfessionalId) {
+      fillSpecialtyFromProfessional(resolvedProfessionalId, true);
     }
-  }, [open, lockedProfessionalId, form]);
+  }, [open, lockedProfessionalId, defaultProfessionalId, appointment?.professional_id, professionals, syncProfessionalSelection, fillSpecialtyFromProfessional]);
 
   // If lockedPatientId changes, update the form
   useEffect(() => {
@@ -238,7 +358,7 @@ export function AppointmentDialog({
 
 
   // Fetch professional-specific specialties — ALWAYS filter by selected professional
-  const selectedProfId = lockedProfessionalId || watchProfessionalId || null;
+  const selectedProfId = watchProfessionalId || lockedProfessionalId || defaultProfessionalId || null;
   const { data: professionalSpecialties = [] } = useProfessionalSpecialties(selectedProfId);
   const clinicSpecialties = enabledSpecialties;
 
@@ -271,22 +391,34 @@ export function AppointmentDialog({
   // Auto-select when only one specialty; clear if current selection is no longer available
   useEffect(() => {
     const currentSpecialtyId = form.getValues("specialty_id");
+    const setSpecialty = (specialtyId: string) => {
+      form.setValue("specialty_id", specialtyId, {
+        shouldValidate: true,
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+      if (specialtyId) form.clearErrors("specialty_id");
+    };
     
     if (availableSpecialties.length === 1) {
       // Auto-select the only available specialty
-      form.setValue("specialty_id", availableSpecialties[0].id);
+      setSpecialty(availableSpecialties[0].id);
     } else if (currentSpecialtyId && availableSpecialties.length > 0) {
       const stillAvailable = availableSpecialties.some(s => s.id === currentSpecialtyId);
       if (!stillAvailable) {
         const fallbackSpecialtyId = resolvedClinicSpecialty && availableSpecialties.some(s => s.id === resolvedClinicSpecialty.id)
           ? resolvedClinicSpecialty.id
           : "";
-        form.setValue("specialty_id", fallbackSpecialtyId);
+        setSpecialty(fallbackSpecialtyId);
       }
     } else if (!currentSpecialtyId && resolvedClinicSpecialty && availableSpecialties.some(s => s.id === resolvedClinicSpecialty.id)) {
-      form.setValue("specialty_id", resolvedClinicSpecialty.id);
+      setSpecialty(resolvedClinicSpecialty.id);
+    } else if (!currentSpecialtyId && availableSpecialties.length > 0) {
+      // The hook returns primary specialties first, so this fills a valid specialty
+      // as soon as the selected/default professional's specialties are loaded.
+      setSpecialty(availableSpecialties[0].id);
     } else if (availableSpecialties.length === 0) {
-      form.setValue("specialty_id", "");
+      setSpecialty("");
     }
   }, [watchProfessionalId, availableSpecialties, form, resolvedClinicSpecialty]);
 
@@ -425,6 +557,24 @@ export function AppointmentDialog({
   });
 
   const handleSubmit = (data: AppointmentFormData) => {
+    const submittedProfessionalId = data.professional_id?.trim() || "";
+    const resolvedProfessionalId = syncProfessionalSelection(true)
+      || (professionals.some((professional) => professional.id === submittedProfessionalId) ? submittedProfessionalId : "");
+    fillSpecialtyFromProfessional(resolvedProfessionalId, true);
+    const normalizedData = {
+      ...data,
+      professional_id: resolvedProfessionalId,
+      specialty_id: form.getValues("specialty_id") || data.specialty_id?.trim() || "",
+    };
+
+    if (!normalizedData.professional_id) {
+      form.setError("professional_id", {
+        type: "required",
+        message: "Selecione um profissional",
+      });
+      return;
+    }
+
     // Check for critical conflicts - block save
     if (conflictResult.hasCriticalConflict) {
       toast.error("Não é possível salvar com conflitos críticos. Corrija os itens indicados.");
@@ -438,7 +588,15 @@ export function AppointmentDialog({
     }
     
     // Warning conflicts for non-admin/owner - still allow save (warnings don't block)
-    performSave(data);
+    performSave(normalizedData);
+  };
+
+  const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
+    const resolvedProfessionalId = syncProfessionalSelection(true);
+    if (resolvedProfessionalId) {
+      fillSpecialtyFromProfessional(resolvedProfessionalId, true);
+    }
+    form.handleSubmit(handleSubmit)(event);
   };
   
   const performSave = (data: AppointmentFormData) => {
@@ -454,6 +612,7 @@ export function AppointmentDialog({
   
   const handleConflictConfirm = () => {
     setShowConflictConfirm(false);
+    syncProfessionalSelection(false);
     performSave(form.getValues());
   };
 
@@ -478,7 +637,7 @@ export function AppointmentDialog({
         </DialogHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <form onSubmit={handleFormSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Patient Selection */}
               <FormField
@@ -533,7 +692,14 @@ export function AppointmentDialog({
                           <span className="truncate">{displayProfessional.full_name}</span>
                         </div>
                       ) : (
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            form.clearErrors("professional_id");
+                            fillSpecialtyFromProfessional(value, true);
+                          }}
+                          value={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione" />
