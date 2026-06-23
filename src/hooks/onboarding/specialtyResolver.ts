@@ -18,25 +18,20 @@ export const STANDARD_SPECIALTY_CATALOG: Record<string, { name: string; descript
   "pediatria": { name: "Pediatria", description: "Atendimento infantil" },
 };
 
-// Legacy slug mapping for backwards compatibility — maps any input slug
-// (catalog key, onboarding curated id, official) to the official slug
-// used by the front-end whitelist in src/constants/officialSpecialties.ts.
+// Legacy slug mapping for backwards compatibility — maps short aliases
+// to their canonical STANDARD_SPECIALTY_CATALOG key.
 const LEGACY_SLUG_MAP: Record<string, string> = {
-  "pilates": "pilates",
-  "fisioterapia-pilates": "pilates",
-  "estetica": "estetica",
-  "estetica-harmonizacao-facial": "estetica",
-  "clinica-geral": "geral",
-  "geral": "geral",
+  "pilates": "fisioterapia-pilates",
+  "estetica": "estetica-harmonizacao-facial",
 };
 
 /**
- * Normalize a slug to handle legacy mappings — always returns the official slug
- * when the input is a known standard specialty key/id.
+ * Normalize a slug to handle legacy mappings (returns the catalog key).
  */
 export function normalizeSlug(slug: string): string {
   return LEGACY_SLUG_MAP[slug] || slug;
 }
+
 
 
 /**
