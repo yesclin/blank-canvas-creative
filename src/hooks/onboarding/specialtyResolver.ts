@@ -95,16 +95,21 @@ export async function resolveSpecialtyBySlug(
       throw new Error("Não foi possível concluir a configuração. Tente novamente.");
     }
     
+    // Compute the official whitelist slug to persist on the row, so that
+    // useEnabledSpecialties can match by slug (primary) instead of relying
+    // only on a case-sensitive name match.
+    const officialSlug = getSpecialtySlug(catalogEntry.name);
+
     if (existing) {
-      // Activate and return existing
+      // Activate and ensure the official slug is set (back-fill for legacy rows)
       await supabase
         .from("specialties")
-        .update({ is_active: true })
+        .update({ is_active: true, ...(officialSlug ? { slug: officialSlug } : {}) })
         .eq("id", existing.id);
-      
+
       return { id: existing.id, name: existing.name, isNew: false };
     }
-    
+
     // Create new standard specialty for this clinic
     const { data: created, error: createErr } = await supabase
       .from("specialties")
@@ -115,9 +120,11 @@ export async function resolveSpecialtyBySlug(
         clinic_id: clinicId,
         specialty_type: "padrao",
         is_active: true,
+        ...(officialSlug ? { slug: officialSlug } : {}),
       })
       .select("id, name")
       .single();
+
     
     if (createErr) {
       // Check if it's a duplicate error (race condition)
