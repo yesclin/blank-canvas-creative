@@ -683,7 +683,14 @@ export function AppointmentDialog({
                           <span className="truncate">{displayProfessional.full_name}</span>
                         </div>
                       ) : (
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            form.clearErrors("professional_id");
+                            fillSpecialtyFromProfessional(value, true);
+                          }}
+                          value={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione" />
