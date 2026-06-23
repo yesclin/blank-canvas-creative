@@ -937,12 +937,56 @@ export default function Agenda() {
         open={patientFormOpen}
         onOpenChange={setPatientFormOpen}
         insurances={insurances.map(i => ({ id: i.id, name: i.name }))}
-        onSave={() => {
-          setPatientFormOpen(false);
-          queryClient.invalidateQueries({ queryKey: ["patients-list"] });
-          toast.success("Paciente cadastrado! Busque novamente no campo de paciente.");
+        isSaving={createPatient.isPending}
+        onSave={async (data) => {
+          const formData: PatientFullFormData = {
+            full_name: data.full_name,
+            birth_date: data.birth_date || undefined,
+            gender: data.gender || undefined,
+            cpf: data.cpf || undefined,
+            rg: data.rg || undefined,
+            marital_status: data.marital_status || undefined,
+            phone: data.phone || undefined,
+            email: data.email || undefined,
+            address_street: data.address_street || undefined,
+            address_number: data.address_number || undefined,
+            address_complement: data.address_complement || undefined,
+            address_neighborhood: data.address_neighborhood || undefined,
+            address_city: data.address_city || undefined,
+            address_state: data.address_state || undefined,
+            address_zip: data.address_zip || undefined,
+            notes: data.notes || undefined,
+            has_insurance: data.payment_type === 'insurance',
+            insurance_id: data.insurance_id || undefined,
+            card_number: data.card_number || undefined,
+            valid_until: data.valid_until || undefined,
+            has_guardian: data.has_guardian,
+            guardian_name: data.guardian_name || undefined,
+            guardian_relationship: data.guardian_relationship || undefined,
+            guardian_cpf: data.guardian_cpf || undefined,
+            guardian_rg: data.guardian_rg || undefined,
+            guardian_phone: data.guardian_phone || undefined,
+            guardian_email: data.guardian_email || undefined,
+            allergies: data.allergies ?? '',
+            chronic_diseases: data.chronic_diseases ?? '',
+            current_medications: data.current_medications ?? '',
+            clinical_restrictions: data.clinical_restrictions ?? '',
+          };
+          try {
+            const created = await createPatient.mutateAsync(formData);
+            await queryClient.invalidateQueries({ queryKey: ["patients-list", clinicId] });
+            await queryClient.refetchQueries({ queryKey: ["patients-list", clinicId] });
+            setPatientFormOpen(false);
+            // Auto-select the newly created patient in the open appointment dialog
+            setLockedPatientId(created.id);
+            setLockedPatientName(created.full_name);
+          } catch (err) {
+            console.error("Erro ao cadastrar paciente a partir do agendamento:", err);
+            // Toast already shown by mutation onError; keep modal open
+          }
         }}
       />
+
 
       <BlockDialog
         open={blockDialogOpen}
