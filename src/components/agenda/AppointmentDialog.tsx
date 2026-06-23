@@ -99,6 +99,8 @@ interface AppointmentDialogProps {
   defaultStartTime?: string;
   /** If provided, the professional field will be pre-filled and locked */
   lockedProfessionalId?: string;
+  /** If provided, the professional field will be pre-filled but can still be changed */
+  defaultProfessionalId?: string;
   onSubmit?: (data: AppointmentFormData) => void;
   /** All existing appointments for slot suggestion calculation */
   existingAppointments?: Appointment[];
@@ -128,6 +130,7 @@ export function AppointmentDialog({
   defaultDate,
   defaultStartTime,
   lockedProfessionalId,
+  defaultProfessionalId,
   onSubmit,
   existingAppointments = [],
   clinicSchedule = null,
@@ -163,7 +166,7 @@ export function AppointmentDialog({
     resolver: zodResolver(appointmentSchema),
     defaultValues: {
       patient_id: lockedPatientId || appointment?.patient_id || "",
-      professional_id: lockedProfessionalId || appointment?.professional_id || "",
+      professional_id: lockedProfessionalId || defaultProfessionalId || appointment?.professional_id || "",
       procedure_id: appointment?.procedure_id || "",
       specialty_id: appointment?.specialty_id || globalSpecialtyId || "",
       room_id: appointment?.room_id || "",
@@ -192,7 +195,7 @@ export function AppointmentDialog({
 
     form.reset({
       patient_id: lockedPatientId || "",
-      professional_id: lockedProfessionalId || "",
+      professional_id: lockedProfessionalId || defaultProfessionalId || "",
       procedure_id: "",
       specialty_id: globalSpecialtyId || "",
       room_id: "",
@@ -209,12 +212,13 @@ export function AppointmentDialog({
       meeting_provider: "",
     });
     form.clearErrors();
-  }, [appointment, defaultDate, defaultStartTime, form, globalSpecialtyId, lockedPatientId, lockedProfessionalId, mode, open]);
+  }, [appointment, defaultDate, defaultProfessionalId, defaultStartTime, form, globalSpecialtyId, lockedPatientId, lockedProfessionalId, mode, open]);
 
   const resolveProfessionalId = useCallback(() => {
     const candidates = [
       form.getValues("professional_id"),
       lockedProfessionalId,
+      defaultProfessionalId,
       appointment?.professional_id,
     ];
 
@@ -241,7 +245,7 @@ export function AppointmentDialog({
     }
 
     return "";
-  }, [appointment?.professional?.full_name, appointment?.professional_id, form, lockedProfessionalId, professionals]);
+  }, [appointment?.professional?.full_name, appointment?.professional_id, defaultProfessionalId, form, lockedProfessionalId, professionals]);
 
   const syncProfessionalSelection = useCallback((shouldValidate = true) => {
     const resolvedProfessionalId = resolveProfessionalId();
@@ -291,7 +295,7 @@ export function AppointmentDialog({
     if (open && appointment) {
       form.reset({
         patient_id: appointment.patient_id || "",
-        professional_id: lockedProfessionalId || appointment.professional_id || "",
+        professional_id: lockedProfessionalId || defaultProfessionalId || appointment.professional_id || "",
         procedure_id: appointment.procedure_id || "",
         specialty_id: appointment.specialty_id || "",
         room_id: appointment.room_id || "",
@@ -308,7 +312,7 @@ export function AppointmentDialog({
         meeting_provider: appointment.meeting_provider || "",
       });
     }
-  }, [open, appointment, mode, lockedProfessionalId]);
+  }, [open, appointment, mode, lockedProfessionalId, defaultProfessionalId, form]);
 
   // If lockedProfessionalId changes, professionals load, or dialog opens,
   // keep the visible professional and the internal professional_id in sync.
@@ -319,7 +323,7 @@ export function AppointmentDialog({
     if (resolvedProfessionalId) {
       fillSpecialtyFromProfessional(resolvedProfessionalId, true);
     }
-  }, [open, lockedProfessionalId, appointment?.professional_id, professionals, syncProfessionalSelection, fillSpecialtyFromProfessional]);
+  }, [open, lockedProfessionalId, defaultProfessionalId, appointment?.professional_id, professionals, syncProfessionalSelection, fillSpecialtyFromProfessional]);
 
   // If lockedPatientId changes, update the form
   useEffect(() => {
@@ -355,7 +359,7 @@ export function AppointmentDialog({
 
 
   // Fetch professional-specific specialties — ALWAYS filter by selected professional
-  const selectedProfId = lockedProfessionalId || watchProfessionalId || null;
+  const selectedProfId = watchProfessionalId || lockedProfessionalId || defaultProfessionalId || null;
   const { data: professionalSpecialties = [] } = useProfessionalSpecialties(selectedProfId);
   const clinicSpecialties = enabledSpecialties;
 
