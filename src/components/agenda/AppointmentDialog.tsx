@@ -414,6 +414,10 @@ export function AppointmentDialog({
       }
     } else if (!currentSpecialtyId && resolvedClinicSpecialty && availableSpecialties.some(s => s.id === resolvedClinicSpecialty.id)) {
       setSpecialty(resolvedClinicSpecialty.id);
+    } else if (!currentSpecialtyId && availableSpecialties.length > 0) {
+      // The hook returns primary specialties first, so this fills a valid specialty
+      // as soon as the selected/default professional's specialties are loaded.
+      setSpecialty(availableSpecialties[0].id);
     } else if (availableSpecialties.length === 0) {
       setSpecialty("");
     }
