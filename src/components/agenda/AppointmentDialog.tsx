@@ -519,10 +519,11 @@ export function AppointmentDialog({
 
   const handleSubmit = (data: AppointmentFormData) => {
     const resolvedProfessionalId = syncProfessionalSelection(true) || data.professional_id?.trim() || "";
+    fillSpecialtyFromProfessional(resolvedProfessionalId, true);
     const normalizedData = {
       ...data,
       professional_id: resolvedProfessionalId,
-      specialty_id: data.specialty_id?.trim() || form.getValues("specialty_id") || "",
+      specialty_id: form.getValues("specialty_id") || data.specialty_id?.trim() || "",
     };
 
     if (!normalizedData.professional_id) {
@@ -532,8 +533,6 @@ export function AppointmentDialog({
       });
       return;
     }
-
-    fillSpecialtyFromProfessional(normalizedData.professional_id, true);
 
     // Check for critical conflicts - block save
     if (conflictResult.hasCriticalConflict) {
@@ -552,7 +551,10 @@ export function AppointmentDialog({
   };
 
   const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
-    syncProfessionalSelection(true);
+    const resolvedProfessionalId = syncProfessionalSelection(true);
+    if (resolvedProfessionalId) {
+      fillSpecialtyFromProfessional(resolvedProfessionalId, true);
+    }
     form.handleSubmit(handleSubmit)(event);
   };
   
