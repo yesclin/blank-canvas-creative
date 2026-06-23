@@ -356,22 +356,30 @@ export function AppointmentDialog({
   // Auto-select when only one specialty; clear if current selection is no longer available
   useEffect(() => {
     const currentSpecialtyId = form.getValues("specialty_id");
+    const setSpecialty = (specialtyId: string) => {
+      form.setValue("specialty_id", specialtyId, {
+        shouldValidate: true,
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+      if (specialtyId) form.clearErrors("specialty_id");
+    };
     
     if (availableSpecialties.length === 1) {
       // Auto-select the only available specialty
-      form.setValue("specialty_id", availableSpecialties[0].id);
+      setSpecialty(availableSpecialties[0].id);
     } else if (currentSpecialtyId && availableSpecialties.length > 0) {
       const stillAvailable = availableSpecialties.some(s => s.id === currentSpecialtyId);
       if (!stillAvailable) {
         const fallbackSpecialtyId = resolvedClinicSpecialty && availableSpecialties.some(s => s.id === resolvedClinicSpecialty.id)
           ? resolvedClinicSpecialty.id
           : "";
-        form.setValue("specialty_id", fallbackSpecialtyId);
+        setSpecialty(fallbackSpecialtyId);
       }
     } else if (!currentSpecialtyId && resolvedClinicSpecialty && availableSpecialties.some(s => s.id === resolvedClinicSpecialty.id)) {
-      form.setValue("specialty_id", resolvedClinicSpecialty.id);
+      setSpecialty(resolvedClinicSpecialty.id);
     } else if (availableSpecialties.length === 0) {
-      form.setValue("specialty_id", "");
+      setSpecialty("");
     }
   }, [watchProfessionalId, availableSpecialties, form, resolvedClinicSpecialty]);
 
