@@ -53,7 +53,7 @@ import { PatientAutocomplete } from "./PatientAutocomplete";
 import { WeekSchedule } from "@/components/config/EnhancedWorkingHoursCard";
 
 const requiredId = (message: string) => z.preprocess(
-  (value) => (typeof value === "string" ? value.trim() : value),
+  (value) => (value == null ? "" : typeof value === "string" ? value.trim() : value),
   z.string().min(1, message)
 );
 
