@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, type FormEvent } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, type FormEvent } from "react";
 import { useGlobalSpecialty } from "@/hooks/useGlobalSpecialty";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -180,6 +180,36 @@ export function AppointmentDialog({
       meeting_provider: appointment?.meeting_provider || "",
     },
   });
+  const wasOpenRef = useRef(false);
+
+  // Start every new/fit-in dialog opening from the current agenda context.
+  // This prevents stale values/errors from a previous open from surviving visually.
+  useEffect(() => {
+    const justOpened = open && !wasOpenRef.current;
+    wasOpenRef.current = open;
+
+    if (!justOpened || appointment) return;
+
+    form.reset({
+      patient_id: lockedPatientId || "",
+      professional_id: lockedProfessionalId || "",
+      procedure_id: "",
+      specialty_id: globalSpecialtyId || "",
+      room_id: "",
+      scheduled_date: defaultDate || new Date(),
+      start_time: defaultStartTime || "08:00",
+      duration_minutes: "30",
+      appointment_type: mode === "fitIn" ? "encaixe" : "consulta",
+      payment_type: "particular",
+      insurance_id: "",
+      expected_value: 0,
+      notes: "",
+      is_fit_in: mode === "fitIn",
+      care_mode: "presencial",
+      meeting_provider: "",
+    });
+    form.clearErrors();
+  }, [appointment, defaultDate, defaultStartTime, form, globalSpecialtyId, lockedPatientId, lockedProfessionalId, mode, open]);
 
   const resolveProfessionalId = useCallback(() => {
     const candidates = [
