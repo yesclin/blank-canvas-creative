@@ -656,8 +656,9 @@ export default function Agenda() {
     });
   }, [appointmentDialogMode, selectedAppointment, createAppointmentMutation, rescheduleAppointmentMutation, refetchAppointments]);
 
-  // Default to logged-in user's professional ID if no tab selected
-  const lockedProfessionalIdForDialog = effectiveSelectedProfessionalId || userProfessionalId || undefined;
+  // Default to the agenda context: selected tab, professional filter, or logged-in professional.
+  // This guarantees the visible professional name and saved professional_id stay synchronized.
+  const lockedProfessionalIdForDialog = effectiveSelectedProfessionalId || filters.professionalId || userProfessionalId || undefined;
 
   // Count active filters
   const activeFiltersCount = [
