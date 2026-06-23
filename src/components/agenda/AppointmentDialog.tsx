@@ -166,7 +166,9 @@ export function AppointmentDialog({
     resolver: zodResolver(appointmentSchema),
     defaultValues: {
       patient_id: lockedPatientId || appointment?.patient_id || "",
-      professional_id: lockedProfessionalId || defaultProfessionalId || appointment?.professional_id || "",
+      professional_id: appointment
+        ? lockedProfessionalId || appointment.professional_id || ""
+        : lockedProfessionalId || defaultProfessionalId || "",
       procedure_id: appointment?.procedure_id || "",
       specialty_id: appointment?.specialty_id || globalSpecialtyId || "",
       room_id: appointment?.room_id || "",
@@ -215,12 +217,9 @@ export function AppointmentDialog({
   }, [appointment, defaultDate, defaultProfessionalId, defaultStartTime, form, globalSpecialtyId, lockedPatientId, lockedProfessionalId, mode, open]);
 
   const resolveProfessionalId = useCallback(() => {
-    const candidates = [
-      form.getValues("professional_id"),
-      lockedProfessionalId,
-      defaultProfessionalId,
-      appointment?.professional_id,
-    ];
+    const candidates = appointment
+      ? [form.getValues("professional_id"), lockedProfessionalId, appointment.professional_id]
+      : [form.getValues("professional_id"), lockedProfessionalId, defaultProfessionalId];
 
     for (const candidate of candidates) {
       const normalizedId = typeof candidate === "string" ? candidate.trim() : "";
@@ -295,7 +294,7 @@ export function AppointmentDialog({
     if (open && appointment) {
       form.reset({
         patient_id: appointment.patient_id || "",
-        professional_id: lockedProfessionalId || defaultProfessionalId || appointment.professional_id || "",
+        professional_id: lockedProfessionalId || appointment.professional_id || "",
         procedure_id: appointment.procedure_id || "",
         specialty_id: appointment.specialty_id || "",
         room_id: appointment.room_id || "",
