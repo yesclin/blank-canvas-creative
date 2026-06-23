@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, type FormEvent } from "react";
 import { useGlobalSpecialty } from "@/hooks/useGlobalSpecialty";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -52,11 +52,23 @@ import { ProcedureProductsPreview } from "./ProcedureProductsPreview";
 import { PatientAutocomplete } from "./PatientAutocomplete";
 import { WeekSchedule } from "@/components/config/EnhancedWorkingHoursCard";
 
+const requiredId = (message: string) => z.preprocess(
+  (value) => (typeof value === "string" ? value.trim() : value),
+  z.string().min(1, message)
+);
+
+const normalizeProfessionalName = (value?: string | null) =>
+  (value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+
 const appointmentSchema = z.object({
   patient_id: z.string().min(1, "Selecione um paciente"),
-  professional_id: z.string().min(1, "Selecione um profissional"),
+  professional_id: requiredId("Selecione um profissional"),
   procedure_id: z.string().optional(),
-  specialty_id: z.string().min(1, "Selecione uma especialidade"),
+  specialty_id: requiredId("Selecione uma especialidade"),
   room_id: z.string().optional(),
   scheduled_date: z.date({ required_error: "Selecione uma data" }),
   start_time: z.string().min(1, "Informe o horário"),
