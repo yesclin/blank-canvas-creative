@@ -558,7 +558,9 @@ export function AppointmentDialog({
   });
 
   const handleSubmit = (data: AppointmentFormData) => {
-    const resolvedProfessionalId = syncProfessionalSelection(true) || data.professional_id?.trim() || "";
+    const submittedProfessionalId = data.professional_id?.trim() || "";
+    const resolvedProfessionalId = syncProfessionalSelection(true)
+      || (professionals.some((professional) => professional.id === submittedProfessionalId) ? submittedProfessionalId : "");
     fillSpecialtyFromProfessional(resolvedProfessionalId, true);
     const normalizedData = {
       ...data,
