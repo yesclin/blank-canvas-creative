@@ -324,12 +324,14 @@ export function AppointmentDialog({
     }
   }, [open, lockedProfessionalId, defaultProfessionalId, appointment?.professional_id, professionals, syncProfessionalSelection, fillSpecialtyFromProfessional]);
 
-  // If lockedPatientId changes, update the form
+  // If lockedPatientId changes, update the form (also used to auto-select a newly created patient)
   useEffect(() => {
     if (lockedPatientId) {
-      form.setValue("patient_id", lockedPatientId);
+      form.setValue("patient_id", lockedPatientId, { shouldValidate: true, shouldDirty: false });
+      form.clearErrors("patient_id");
     }
   }, [lockedPatientId, form]);
+
 
   // Update form when slot-click defaults change
   useEffect(() => {
