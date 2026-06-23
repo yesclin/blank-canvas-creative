@@ -573,7 +573,7 @@ export function SpecialtiesSection() {
                       {activeCustom.length > 0 && (
                         <div className="space-y-2">
                           <h4 className="text-sm font-medium text-primary">Habilitadas ({activeCustom.length})</h4>
-                          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                          <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
                             {activeCustom.map((s) => (
                               <div key={s.id} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
                                 <div className="flex-1 min-w-0">
@@ -597,7 +597,7 @@ export function SpecialtiesSection() {
                       {inactiveCustom.length > 0 && (
                         <div className="space-y-2">
                           <h4 className="text-sm font-medium text-muted-foreground">Desabilitadas ({inactiveCustom.length})</h4>
-                          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                          <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
                             {inactiveCustom.map((s) => (
                               <div key={s.id} className="flex items-center justify-between p-3 rounded-lg border border-dashed bg-muted/30 opacity-70">
                                 <div className="flex-1 min-w-0">
