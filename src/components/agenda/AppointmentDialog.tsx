@@ -233,6 +233,8 @@ export function AppointmentDialog({
   }, [form, resolveProfessionalId]);
 
   const fillSpecialtyFromProfessional = useCallback((professionalId: string, shouldValidate = true) => {
+    if (!professionalId) return;
+
     const professional = professionals.find((item) => item.id === professionalId);
     const fallbackSpecialtyId = appointment?.specialty_id || professional?.specialty_id || globalSpecialtyId || "";
 
