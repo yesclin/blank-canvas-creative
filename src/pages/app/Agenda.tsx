@@ -24,6 +24,8 @@ import { ProductSaleDialog } from "@/components/agenda/ProductSaleDialog";
 import { AppointmentDetailDrawer } from "@/components/agenda/AppointmentDetailDrawer";
 import { StockValidationDialog } from "@/components/agenda/StockValidationDialog";
 import { PatientFormDialog } from "@/components/pacientes/PatientFormDialog";
+import { useCreatePatient, type PatientFormData as PatientFullFormData } from "@/hooks/usePatients";
+
 import { useQueryClient } from "@tanstack/react-query";
 import type { AgendaFilters as FiltersType, ViewMode, Appointment, AppointmentStatus } from "@/types/agenda";
 import { toast } from "sonner";
