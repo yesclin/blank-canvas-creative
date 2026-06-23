@@ -101,6 +101,8 @@ export default function Agenda() {
   // Patient creation from appointment dialog
   const [patientFormOpen, setPatientFormOpen] = useState(false);
   const queryClient = useQueryClient();
+  const createPatient = useCreatePatient();
+
   const {
     appointments: globalActiveAppointments,
     refresh: refreshGlobalActive,
