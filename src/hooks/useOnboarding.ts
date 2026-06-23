@@ -58,7 +58,9 @@ export function useOnboarding() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [clinicId, setClinicId] = useState<string | null>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const loadingRef = useRef(isLoading);
+
 
   useEffect(() => {
     loadingRef.current = isLoading;
