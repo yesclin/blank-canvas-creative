@@ -482,7 +482,7 @@ export function SpecialtiesSection() {
                     </div>
                   )}
 
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                     {filteredOfficial.map((spec) => {
                       const existing = enabledBySlug[spec.slug];
                       const isEnabled = existing?.is_active ?? false;
@@ -493,39 +493,43 @@ export function SpecialtiesSection() {
                       return (
                         <div
                           key={spec.slug}
-                          className={`relative flex items-start gap-3 p-4 rounded-xl border transition-all ${
+                          className={`relative w-full min-h-[140px] p-5 rounded-xl border transition-all ${
                             isEnabled ? "bg-primary/5 border-primary/30" : "bg-card hover:bg-muted/50"
                           }`}
                         >
-                          <div className={`w-9 h-9 rounded-lg ${colorClass} flex items-center justify-center shrink-0`}>
-                            {isToggling ? (
-                              <Loader2 className="h-5 w-5 text-white animate-spin" />
-                            ) : (
-                              <Icon className="h-5 w-5 text-white" />
+                          <div className="flex items-start gap-4">
+                            <div className={`w-10 h-10 rounded-lg ${colorClass} flex items-center justify-center shrink-0`}>
+                              {isToggling ? (
+                                <Loader2 className="h-5 w-5 text-white animate-spin" />
+                              ) : (
+                                <Icon className="h-5 w-5 text-white" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0" style={{ wordBreak: "normal", overflowWrap: "normal", hyphens: "none" }}>
+                              <h3 className="text-base font-semibold leading-snug break-normal whitespace-normal">
+                                {spec.name}
+                              </h3>
+                              <p className="text-sm text-muted-foreground leading-relaxed break-normal whitespace-normal mt-1">
+                                {SPECIALTY_DESCRIPTIONS[spec.slug]}
+                              </p>
+                              {isEnabled && (
+                                <Badge
+                                  variant="outline"
+                                  className="mt-2 text-[10px] bg-primary/10 text-primary border-primary/30"
+                                >
+                                  Ativa
+                                </Badge>
+                              )}
+                            </div>
+                            {isOwner && (
+                              <Switch
+                                checked={isEnabled}
+                                onCheckedChange={() => handleToggleStandard(spec.slug, spec.name)}
+                                disabled={isToggling}
+                                className="shrink-0 mt-1"
+                              />
                             )}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <span className="font-medium text-sm block">{spec.name}</span>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {SPECIALTY_DESCRIPTIONS[spec.slug]}
-                            </p>
-                          </div>
-                          {isOwner && (
-                            <Switch
-                              checked={isEnabled}
-                              onCheckedChange={() => handleToggleStandard(spec.slug, spec.name)}
-                              disabled={isToggling}
-                              className="shrink-0"
-                            />
-                          )}
-                          {isEnabled && (
-                            <Badge
-                              variant="outline"
-                              className="absolute top-2 right-12 text-[10px] bg-primary/10 text-primary border-primary/30"
-                            >
-                              Ativa
-                            </Badge>
-                          )}
                         </div>
                       );
                     })}
@@ -569,7 +573,7 @@ export function SpecialtiesSection() {
                       {activeCustom.length > 0 && (
                         <div className="space-y-2">
                           <h4 className="text-sm font-medium text-primary">Habilitadas ({activeCustom.length})</h4>
-                          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                          <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
                             {activeCustom.map((s) => (
                               <div key={s.id} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
                                 <div className="flex-1 min-w-0">
@@ -593,7 +597,7 @@ export function SpecialtiesSection() {
                       {inactiveCustom.length > 0 && (
                         <div className="space-y-2">
                           <h4 className="text-sm font-medium text-muted-foreground">Desabilitadas ({inactiveCustom.length})</h4>
-                          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                          <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
                             {inactiveCustom.map((s) => (
                               <div key={s.id} className="flex items-center justify-between p-3 rounded-lg border border-dashed bg-muted/30 opacity-70">
                                 <div className="flex-1 min-w-0">
