@@ -181,6 +181,79 @@ export function AppointmentDialog({
     },
   });
 
+  const resolveProfessionalId = useCallback(() => {
+    const candidates = [
+      form.getValues("professional_id"),
+      lockedProfessionalId,
+      appointment?.professional_id,
+    ];
+
+    for (const candidate of candidates) {
+      const normalizedId = typeof candidate === "string" ? candidate.trim() : "";
+      if (normalizedId && professionals.some((professional) => professional.id === normalizedId)) {
+        return normalizedId;
+      }
+    }
+
+    // Safety net for stale form states where the UI has a professional name,
+    // but the internal field accidentally contains the name instead of the UUID.
+    const possibleName =
+      form.getValues("professional_id") ||
+      appointment?.professional?.full_name ||
+      "";
+    const normalizedName = normalizeProfessionalName(possibleName);
+
+    if (normalizedName) {
+      const matchedByName = professionals.find(
+        (professional) => normalizeProfessionalName(professional.full_name) === normalizedName
+      );
+      if (matchedByName) return matchedByName.id;
+    }
+
+    return "";
+  }, [appointment?.professional?.full_name, appointment?.professional_id, form, lockedProfessionalId, professionals]);
+
+  const syncProfessionalSelection = useCallback((shouldValidate = true) => {
+    const resolvedProfessionalId = resolveProfessionalId();
+
+    if (!resolvedProfessionalId) return "";
+
+    if (form.getValues("professional_id") !== resolvedProfessionalId) {
+      form.setValue("professional_id", resolvedProfessionalId, {
+        shouldValidate,
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+    } else if (shouldValidate) {
+      form.trigger("professional_id");
+    }
+
+    form.clearErrors("professional_id");
+    return resolvedProfessionalId;
+  }, [form, resolveProfessionalId]);
+
+  const fillSpecialtyFromProfessional = useCallback((professionalId: string, shouldValidate = true) => {
+    const professional = professionals.find((item) => item.id === professionalId);
+    const fallbackSpecialtyId = appointment?.specialty_id || professional?.specialty_id || globalSpecialtyId || "";
+
+    if (!fallbackSpecialtyId) return;
+
+    const specialtyExists = specialties.some((specialty) => specialty.id === fallbackSpecialtyId)
+      || enabledSpecialties.some((specialty) => specialty.id === fallbackSpecialtyId);
+
+    if (!specialtyExists && fallbackSpecialtyId !== appointment?.specialty_id) return;
+
+    if (form.getValues("specialty_id") !== fallbackSpecialtyId) {
+      form.setValue("specialty_id", fallbackSpecialtyId, {
+        shouldValidate,
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+    }
+
+    if (shouldValidate) form.clearErrors("specialty_id");
+  }, [appointment?.specialty_id, enabledSpecialties, form, globalSpecialtyId, professionals, specialties]);
+
   // Reset form values when dialog opens with an appointment (reschedule mode)
   useEffect(() => {
     if (open && appointment) {
@@ -205,16 +278,16 @@ export function AppointmentDialog({
     }
   }, [open, appointment, mode, lockedProfessionalId]);
 
-  // If lockedProfessionalId changes OR dialog opens, sync to form and clear stale error
+  // If lockedProfessionalId changes, professionals load, or dialog opens,
+  // keep the visible professional and the internal professional_id in sync.
   useEffect(() => {
-    if (open && lockedProfessionalId) {
-      form.setValue("professional_id", lockedProfessionalId, {
-        shouldValidate: true,
-        shouldDirty: false,
-      });
-      form.clearErrors("professional_id");
+    if (!open) return;
+
+    const resolvedProfessionalId = syncProfessionalSelection(true);
+    if (resolvedProfessionalId) {
+      fillSpecialtyFromProfessional(resolvedProfessionalId, true);
     }
-  }, [open, lockedProfessionalId, form]);
+  }, [open, lockedProfessionalId, appointment?.professional_id, professionals, syncProfessionalSelection, fillSpecialtyFromProfessional]);
 
   // If lockedPatientId changes, update the form
   useEffect(() => {
