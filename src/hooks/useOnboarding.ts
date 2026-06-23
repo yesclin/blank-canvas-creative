@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { withTimeout } from "@/lib/asyncTimeout";
@@ -8,6 +9,7 @@ import {
   STANDARD_SPECIALTY_CATALOG,
   normalizeSlug
 } from "./onboarding/specialtyResolver";
+
 
 export interface OnboardingProgress {
   id: string;
