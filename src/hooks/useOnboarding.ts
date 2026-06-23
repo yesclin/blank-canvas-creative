@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { withTimeout } from "@/lib/asyncTimeout";
@@ -8,6 +9,7 @@ import {
   STANDARD_SPECIALTY_CATALOG,
   normalizeSlug
 } from "./onboarding/specialtyResolver";
+
 
 export interface OnboardingProgress {
   id: string;
@@ -56,7 +58,9 @@ export function useOnboarding() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [clinicId, setClinicId] = useState<string | null>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const loadingRef = useRef(isLoading);
+
 
   useEffect(() => {
     loadingRef.current = isLoading;
@@ -244,19 +248,28 @@ export function useOnboarding() {
           slugToResolve, 
           prefs.primary_specialty_name
         );
-        
-        if (resolved.isNew) {
-          try {
-            await enableCoreModulesForSpecialty(clinicId, resolved.id);
-          } catch (moduleErr) {
-            console.error("Error enabling modules (non-fatal):", moduleErr);
-          }
+
+        // Always enable core modules (idempotent) — don't gate on isNew, so
+        // re-running onboarding or selecting an already-existing specialty
+        // still wires up the prontuário modules for that specialty.
+        try {
+          await enableCoreModulesForSpecialty(clinicId, resolved.id);
+        } catch (moduleErr) {
+          console.error("Error enabling modules (non-fatal):", moduleErr);
         }
 
         await supabase
           .from("clinics")
           .update({ primary_specialty_id: resolved.id })
           .eq("id", clinicId);
+
+        console.info("[ONBOARDING_COMPLETE] specialty linked", {
+          clinicId,
+          slug: slugToResolve,
+          resolvedId: resolved.id,
+          resolvedName: resolved.name,
+          isNew: resolved.isNew,
+        });
       } catch (resolveErr) {
         // Non-fatal: specialty may already be linked or not selected
         console.error("Error resolving specialty (non-fatal):", resolveErr);
@@ -286,11 +299,26 @@ export function useOnboarding() {
     });
     setShouldShowOnboarding(false);
 
+    // Invalidate caches so the prontuário/global specialty context picks up
+    // the newly provisioned specialty without requiring a manual reload.
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["enabled-specialties", clinicId] }),
+      queryClient.invalidateQueries({ queryKey: ["enabled-specialties"] }),
+      queryClient.invalidateQueries({ queryKey: ["all-specialties", clinicId] }),
+      queryClient.invalidateQueries({ queryKey: ["clinic-specialties", clinicId] }),
+      queryClient.invalidateQueries({ queryKey: ["current-clinic"] }),
+      queryClient.invalidateQueries({ queryKey: ["global-specialty"] }),
+      queryClient.invalidateQueries({ queryKey: ["clinic", clinicId] }),
+      queryClient.invalidateQueries({ queryKey: ["clinic-data"] }),
+      queryClient.invalidateQueries({ queryKey: ["clinic_specialty_modules", clinicId] }),
+    ]);
+
     toast({
       title: "Configuração concluída! 🎉",
       description: "Seu sistema está pronto para uso.",
     });
-  }, [progress, clinicId, toast]);
+  }, [progress, clinicId, toast, queryClient]);
+
 
 
 
