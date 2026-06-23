@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef, type FormEvent } from "react";
+import { useState, useEffect, useMemo, useCallback, type FormEvent } from "react";
 import { useGlobalSpecialty } from "@/hooks/useGlobalSpecialty";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -518,6 +518,23 @@ export function AppointmentDialog({
   });
 
   const handleSubmit = (data: AppointmentFormData) => {
+    const resolvedProfessionalId = syncProfessionalSelection(true) || data.professional_id?.trim() || "";
+    const normalizedData = {
+      ...data,
+      professional_id: resolvedProfessionalId,
+      specialty_id: data.specialty_id?.trim() || form.getValues("specialty_id") || "",
+    };
+
+    if (!normalizedData.professional_id) {
+      form.setError("professional_id", {
+        type: "required",
+        message: "Selecione um profissional",
+      });
+      return;
+    }
+
+    fillSpecialtyFromProfessional(normalizedData.professional_id, true);
+
     // Check for critical conflicts - block save
     if (conflictResult.hasCriticalConflict) {
       toast.error("Não é possível salvar com conflitos críticos. Corrija os itens indicados.");
@@ -531,7 +548,12 @@ export function AppointmentDialog({
     }
     
     // Warning conflicts for non-admin/owner - still allow save (warnings don't block)
-    performSave(data);
+    performSave(normalizedData);
+  };
+
+  const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
+    syncProfessionalSelection(true);
+    form.handleSubmit(handleSubmit)(event);
   };
   
   const performSave = (data: AppointmentFormData) => {
@@ -547,6 +569,7 @@ export function AppointmentDialog({
   
   const handleConflictConfirm = () => {
     setShowConflictConfirm(false);
+    syncProfessionalSelection(false);
     performSave(form.getValues());
   };
 
