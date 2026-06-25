@@ -16,6 +16,7 @@ export const STANDARD_SPECIALTY_CATALOG: Record<string, { name: string; descript
   "odontologia": { name: "Odontologia", description: "Saúde bucal com odontograma digital" },
   "dermatologia": { name: "Dermatologia", description: "Cuidados com a pele" },
   "pediatria": { name: "Pediatria", description: "Atendimento infantil" },
+  "other_specialty": { name: "Outra Especialidade / Atendimento Geral", description: "Modelo básico de prontuário para atendimentos não cobertos pelas especialidades oficiais." },
 };
 
 // Legacy slug mapping for backwards compatibility — maps short aliases
@@ -74,6 +75,21 @@ export async function resolveSpecialtyBySlug(
   customName?: string
 ): Promise<{ id: string; name: string; isNew: boolean }> {
   const normalizedSlug = normalizeSlug(slug);
+
+  // Persist alias display name for the "other_specialty" wildcard
+  if (normalizedSlug === "other_specialty" && customName && customName.trim()) {
+    const displayName = customName.trim().slice(0, 60);
+    const { error: aliasErr } = await supabase
+      .from("clinic_specialty_aliases")
+      .upsert(
+        { clinic_id: clinicId, base_specialty_key: "other_specialty", display_name: displayName },
+        { onConflict: "clinic_id,base_specialty_key" }
+      );
+    if (aliasErr) {
+      console.error("Error saving specialty alias:", aliasErr);
+    }
+  }
+
   
   // CASE 1: Standard specialty
   if (isStandardSpecialtySlug(normalizedSlug)) {
@@ -148,67 +164,14 @@ export async function resolveSpecialtyBySlug(
     return { id: created.id, name: created.name, isNew: true };
   }
   
-  // CASE 2: Custom specialty
+  // Custom specialty creation is DISABLED. The system only supports the official
+  // whitelist plus the "other_specialty" wildcard (handled above as a standard slug).
   if (slug.startsWith("personalizada:") || customName) {
-    const specialtyName = customName || parseCustomSlug(slug) || slug;
-    
-    // Try to find existing custom specialty
-    const { data: existing, error: findErr } = await supabase
-      .from("specialties")
-      .select("id, name")
-      .eq("clinic_id", clinicId)
-      .eq("name", specialtyName)
-      .maybeSingle();
-    
-    if (findErr) {
-      console.error("Error finding custom specialty:", findErr);
-      throw new Error("Não foi possível concluir a configuração. Tente novamente.");
-    }
-    
-    if (existing) {
-      // Activate and return existing
-      await supabase
-        .from("specialties")
-        .update({ is_active: true })
-        .eq("id", existing.id);
-      
-      return { id: existing.id, name: existing.name, isNew: false };
-    }
-    
-    // Create new custom specialty
-    const { data: created, error: createErr } = await supabase
-      .from("specialties")
-      .insert({
-        name: specialtyName,
-        description: null,
-        area: "Personalizada",
-        clinic_id: clinicId,
-        specialty_type: "personalizada",
-        is_active: true,
-      })
-      .select("id, name")
-      .single();
-    
-    if (createErr) {
-      if (createErr.code === "23505") {
-        // Retry find for race condition
-        const { data: retryFind } = await supabase
-          .from("specialties")
-          .select("id, name")
-          .eq("clinic_id", clinicId)
-          .eq("name", specialtyName)
-          .single();
-        
-        if (retryFind) {
-          return { id: retryFind.id, name: retryFind.name, isNew: false };
-        }
-      }
-      console.error("Error creating custom specialty:", createErr);
-      throw new Error("Não foi possível concluir a configuração. Tente novamente.");
-    }
-    
-    return { id: created.id, name: created.name, isNew: true };
+    throw new Error(
+      'Especialidades personalizadas não são mais permitidas. Selecione "Outra Especialidade / Atendimento Geral" e informe o nome de exibição.'
+    );
   }
+
   
   // CASE 3: Direct UUID reference (specialty already exists)
   // This handles cases where primary_specialty_id is already set
