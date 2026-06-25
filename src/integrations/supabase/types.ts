@@ -3637,6 +3637,7 @@ export type Database = {
           public_booking_enabled: boolean
           public_booking_settings: Json
           slug: string | null
+          technical_responsible_professional_id: string | null
           updated_at: string
           whatsapp: string | null
         }
@@ -3669,6 +3670,7 @@ export type Database = {
           public_booking_enabled?: boolean
           public_booking_settings?: Json
           slug?: string | null
+          technical_responsible_professional_id?: string | null
           updated_at?: string
           whatsapp?: string | null
         }
@@ -3701,6 +3703,7 @@ export type Database = {
           public_booking_enabled?: boolean
           public_booking_settings?: Json
           slug?: string | null
+          technical_responsible_professional_id?: string | null
           updated_at?: string
           whatsapp?: string | null
         }
@@ -3710,6 +3713,13 @@ export type Database = {
             columns: ["primary_specialty_id"]
             isOneToOne: false
             referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinics_technical_responsible_professional_id_fkey"
+            columns: ["technical_responsible_professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
         ]
@@ -11725,13 +11735,19 @@ export type Database = {
           avatar_url: string | null
           clinic_id: string
           color: string | null
+          council: string | null
+          council_state: string | null
           created_at: string
+          display_name: string | null
           email: string | null
           full_name: string
           id: string
           is_active: boolean
+          is_technical_responsible: boolean
           phone: string | null
+          primary_specialty_id: string | null
           registration_number: string | null
+          rqe: string | null
           specialty_id: string | null
           updated_at: string
           user_id: string | null
@@ -11740,13 +11756,19 @@ export type Database = {
           avatar_url?: string | null
           clinic_id: string
           color?: string | null
+          council?: string | null
+          council_state?: string | null
           created_at?: string
+          display_name?: string | null
           email?: string | null
           full_name: string
           id?: string
           is_active?: boolean
+          is_technical_responsible?: boolean
           phone?: string | null
+          primary_specialty_id?: string | null
           registration_number?: string | null
+          rqe?: string | null
           specialty_id?: string | null
           updated_at?: string
           user_id?: string | null
@@ -11755,13 +11777,19 @@ export type Database = {
           avatar_url?: string | null
           clinic_id?: string
           color?: string | null
+          council?: string | null
+          council_state?: string | null
           created_at?: string
+          display_name?: string | null
           email?: string | null
           full_name?: string
           id?: string
           is_active?: boolean
+          is_technical_responsible?: boolean
           phone?: string | null
+          primary_specialty_id?: string | null
           registration_number?: string | null
+          rqe?: string | null
           specialty_id?: string | null
           updated_at?: string
           user_id?: string | null
@@ -11786,6 +11814,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "public_clinic_booking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professionals_primary_specialty_id_fkey"
+            columns: ["primary_specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
             referencedColumns: ["id"]
           },
           {
@@ -14801,6 +14836,8 @@ export type Database = {
         Row: {
           accepted_at: string | null
           clinic_id: string
+          council: string | null
+          council_state: string | null
           created_at: string
           email: string
           expires_at: string
@@ -14809,9 +14846,11 @@ export type Database = {
           invited_by: string
           is_professional: boolean
           permissions: string[] | null
+          primary_specialty_id: string | null
           professional_type: string | null
           registration_number: string | null
           role: Database["public"]["Enums"]["app_role"]
+          rqe: string | null
           specialty_ids: string[]
           status: Database["public"]["Enums"]["invitation_status"]
           token: string
@@ -14820,6 +14859,8 @@ export type Database = {
         Insert: {
           accepted_at?: string | null
           clinic_id: string
+          council?: string | null
+          council_state?: string | null
           created_at?: string
           email: string
           expires_at?: string
@@ -14828,9 +14869,11 @@ export type Database = {
           invited_by: string
           is_professional?: boolean
           permissions?: string[] | null
+          primary_specialty_id?: string | null
           professional_type?: string | null
           registration_number?: string | null
           role?: Database["public"]["Enums"]["app_role"]
+          rqe?: string | null
           specialty_ids?: string[]
           status?: Database["public"]["Enums"]["invitation_status"]
           token?: string
@@ -14839,6 +14882,8 @@ export type Database = {
         Update: {
           accepted_at?: string | null
           clinic_id?: string
+          council?: string | null
+          council_state?: string | null
           created_at?: string
           email?: string
           expires_at?: string
@@ -14847,9 +14892,11 @@ export type Database = {
           invited_by?: string
           is_professional?: boolean
           permissions?: string[] | null
+          primary_specialty_id?: string | null
           professional_type?: string | null
           registration_number?: string | null
           role?: Database["public"]["Enums"]["app_role"]
+          rqe?: string | null
           specialty_ids?: string[]
           status?: Database["public"]["Enums"]["invitation_status"]
           token?: string
@@ -15106,6 +15153,23 @@ export type Database = {
       }
       count_active_super_admins: { Args: never; Returns: number }
       count_platform_admins: { Args: never; Returns: number }
+      create_professional_from_invitation: {
+        Args: {
+          p_clinic_id: string
+          p_council?: string
+          p_council_state?: string
+          p_display_name?: string
+          p_email: string
+          p_full_name: string
+          p_primary_specialty_id?: string
+          p_professional_type?: string
+          p_registration_number?: string
+          p_rqe?: string
+          p_specialty_ids?: string[]
+          p_user_id: string
+        }
+        Returns: string
+      }
       create_sale_transaction: {
         Args: { p_clinic_id: string; p_payload: Json; p_user_id: string }
         Returns: Json
