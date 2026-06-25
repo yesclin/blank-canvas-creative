@@ -75,6 +75,21 @@ export async function resolveSpecialtyBySlug(
   customName?: string
 ): Promise<{ id: string; name: string; isNew: boolean }> {
   const normalizedSlug = normalizeSlug(slug);
+
+  // Persist alias display name for the "other_specialty" wildcard
+  if (normalizedSlug === "other_specialty" && customName && customName.trim()) {
+    const displayName = customName.trim().slice(0, 60);
+    const { error: aliasErr } = await supabase
+      .from("clinic_specialty_aliases")
+      .upsert(
+        { clinic_id: clinicId, base_specialty_key: "other_specialty", display_name: displayName },
+        { onConflict: "clinic_id,base_specialty_key" }
+      );
+    if (aliasErr) {
+      console.error("Error saving specialty alias:", aliasErr);
+    }
+  }
+
   
   // CASE 1: Standard specialty
   if (isStandardSpecialtySlug(normalizedSlug)) {
