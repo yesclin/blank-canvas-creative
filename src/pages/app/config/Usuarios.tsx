@@ -76,6 +76,10 @@ interface NewUserFormState {
   professionalType: string;
   registrationNumber: string;
   selectedSpecialtyIds: string[];
+  primarySpecialtyId: string;
+  council: string;
+  councilState: string;
+  rqe: string;
   permissions: Record<string, ModuleAction[]>;
 }
 
@@ -87,6 +91,10 @@ const initialFormState: NewUserFormState = {
   professionalType: "",
   registrationNumber: "",
   selectedSpecialtyIds: [],
+  primarySpecialtyId: "",
+  council: "",
+  councilState: "",
+  rqe: "",
   permissions: {},
 };
 
@@ -202,6 +210,10 @@ export default function ConfigUsuarios() {
         professionalType: "",
         registrationNumber: "",
         selectedSpecialtyIds: [],
+        primarySpecialtyId: "",
+        council: "",
+        councilState: "",
+        rqe: "",
       }),
     }));
   }, []);
@@ -236,6 +248,20 @@ export default function ConfigUsuarios() {
         toast.error("Selecione pelo menos uma especialidade para o profissional");
         return;
       }
+      // Validate registration when council requires it
+      const primary = specialties.find(
+        (s) => s.id === (newUserForm.primarySpecialtyId || newUserForm.selectedSpecialtyIds[0])
+      );
+      const { getCouncilRuleBySpecialtyName } = await import("@/constants/specialtyCouncilMap");
+      const rule = getCouncilRuleBySpecialtyName(primary?.name);
+      if (
+        rule.required &&
+        newUserForm.council !== "NAO_SE_APLICA" &&
+        !newUserForm.registrationNumber.trim()
+      ) {
+        toast.error("Informe o número de registro profissional");
+        return;
+      }
     }
 
     // Bloqueio por limite do plano (apenas para profissionais)
@@ -259,6 +285,10 @@ export default function ConfigUsuarios() {
       professionalType: newUserForm.professionalType || undefined,
       registrationNumber: newUserForm.registrationNumber || undefined,
       specialtyIds: isProfessional ? newUserForm.selectedSpecialtyIds : undefined,
+      primarySpecialtyId: newUserForm.primarySpecialtyId || undefined,
+      council: newUserForm.council || undefined,
+      councilState: newUserForm.councilState || undefined,
+      rqe: newUserForm.rqe || undefined,
     });
 
     if (success) {
@@ -449,6 +479,14 @@ export default function ConfigUsuarios() {
                                 loadingSpecialties={loadingSpecialties}
                                 clinicId={clinicId}
                                 onSpecialtyAdded={refetchSpecialties}
+                                primarySpecialtyId={newUserForm.primarySpecialtyId}
+                                onPrimarySpecialtyChange={(v) => setNewUserForm(prev => ({ ...prev, primarySpecialtyId: v }))}
+                                council={newUserForm.council}
+                                onCouncilChange={(v) => setNewUserForm(prev => ({ ...prev, council: v }))}
+                                councilState={newUserForm.councilState}
+                                onCouncilStateChange={(v) => setNewUserForm(prev => ({ ...prev, councilState: v }))}
+                                rqe={newUserForm.rqe}
+                                onRqeChange={(v) => setNewUserForm(prev => ({ ...prev, rqe: v }))}
                               />
                             </>
                           )}
