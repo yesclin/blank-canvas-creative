@@ -33,7 +33,10 @@ export const OFFICIAL_SPECIALTIES: readonly OfficialSpecialtyDef[] = [
   { name: "Odontologia", slug: "odontologia" },
   { name: "Dermatologia", slug: "dermatologia" },
   { name: "Pediatria", slug: "pediatria" },
+  { name: "Outra Especialidade / Atendimento Geral", slug: "other_specialty" },
 ] as const;
+
+export const OTHER_SPECIALTY_SLUG = "other_specialty";
 
 /** Flat array of names for backward compatibility */
 export const OFFICIAL_SPECIALTY_NAMES: readonly string[] = OFFICIAL_SPECIALTIES.map(s => s.name);
