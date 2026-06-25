@@ -16,6 +16,7 @@ export const STANDARD_SPECIALTY_CATALOG: Record<string, { name: string; descript
   "odontologia": { name: "Odontologia", description: "Saúde bucal com odontograma digital" },
   "dermatologia": { name: "Dermatologia", description: "Cuidados com a pele" },
   "pediatria": { name: "Pediatria", description: "Atendimento infantil" },
+  "other_specialty": { name: "Outra Especialidade / Atendimento Geral", description: "Modelo básico de prontuário para atendimentos não cobertos pelas especialidades oficiais." },
 };
 
 // Legacy slug mapping for backwards compatibility — maps short aliases
