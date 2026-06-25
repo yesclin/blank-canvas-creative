@@ -70,7 +70,7 @@ export function OnboardingWizard() {
   return (
     <Dialog open={shouldShowOnboarding} onOpenChange={() => {}}>
       <DialogContent 
-        className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto"
+        className="sm:max-w-4xl max-h-[90vh] overflow-y-auto"
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >

@@ -353,7 +353,7 @@ export function SpecialtiesStep({
 
       {/* Curated Specialties Grid */}
       <div className="space-y-4">
-        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
           {filteredSpecialties.map((specialty) => {
             const isSelected = selectedId === specialty.id;
             const Icon = specialty.icon;
@@ -389,9 +389,9 @@ export function SpecialtiesStep({
                 >
                   <Icon className="h-5 w-5 text-white" />
                 </div>
-                <div className="flex-1 min-w-0 pr-6">
-                  <span className={`font-medium text-sm block break-words leading-snug ${isSelected ? "text-primary" : ""}`}>{specialty.name}</span>
-                  <p className="text-xs text-muted-foreground mt-1 break-words leading-snug">{specialty.description}</p>
+                <div className="flex-1 min-w-0 pr-6" style={{ wordBreak: "normal", overflowWrap: "normal", hyphens: "none" }}>
+                  <span className={`font-medium text-sm block whitespace-normal break-normal leading-snug ${isSelected ? "text-primary" : ""}`}>{specialty.name}</span>
+                  <p className="text-xs text-muted-foreground mt-1 whitespace-normal break-normal leading-snug">{specialty.description}</p>
                 </div>
                 {isSelected && (
                   <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
@@ -407,7 +407,7 @@ export function SpecialtiesStep({
         {filteredCustom.length > 0 && (
           <div className="space-y-2">
             <h4 className="text-sm font-medium text-muted-foreground">Personalizadas</h4>
-            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
               {filteredCustom.map((specialty) => {
                 const customId = `custom-${specialty.id}`;
                 const isSelected = selectedId === customId;
@@ -441,9 +441,9 @@ export function SpecialtiesStep({
                       <div className={`w-9 h-9 rounded-lg bg-secondary flex items-center justify-center shrink-0 transition-transform ${isSelected ? "scale-110 bg-primary/20" : ""}`}>
                         <Sparkles className={`h-5 w-5 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
                       </div>
-                      <div className="flex-1 min-w-0 pr-6">
-                        <span className={`font-medium text-sm block break-words leading-snug ${isSelected ? "text-primary" : ""}`}>{specialty.name}</span>
-                        <p className="text-xs text-muted-foreground mt-1 break-words leading-snug">Personalizada</p>
+                      <div className="flex-1 min-w-0 pr-6" style={{ wordBreak: "normal", overflowWrap: "normal", hyphens: "none" }}>
+                        <span className={`font-medium text-sm block whitespace-normal break-normal leading-snug ${isSelected ? "text-primary" : ""}`}>{specialty.name}</span>
+                        <p className="text-xs text-muted-foreground mt-1 whitespace-normal break-normal leading-snug">Personalizada</p>
                       </div>
                       {isSelected && (
                         <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
