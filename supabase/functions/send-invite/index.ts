@@ -96,6 +96,10 @@ interface InviteRequest {
   professionalType?: string;
   registrationNumber?: string;
   specialtyIds?: string[];
+  primarySpecialtyId?: string;
+  council?: string;
+  councilState?: string;
+  rqe?: string;
   // When set, reuse the existing invitation (same token) instead of creating
   // a new one. Used by the "Reenviar convite" action.
   invitationId?: string;
@@ -259,6 +263,10 @@ export const handler = async (req: Request): Promise<Response> => {
       professionalType,
       registrationNumber,
       specialtyIds,
+      primarySpecialtyId,
+      council,
+      councilState,
+      rqe,
       invitationId,
     }: InviteRequest = await req.json();
 
@@ -404,6 +412,10 @@ export const handler = async (req: Request): Promise<Response> => {
           professional_type: professionalType || null,
           registration_number: registrationNumber || null,
           specialty_ids: specialtyIds || [],
+          primary_specialty_id: primarySpecialtyId || null,
+          council: council || null,
+          council_state: councilState || null,
+          rqe: rqe || null,
         })
         .select()
         .single();

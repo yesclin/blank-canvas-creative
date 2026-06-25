@@ -261,6 +261,11 @@ const handler = async (req: Request): Promise<Response> => {
             p_professional_type: invitation.professional_type || null,
             p_registration_number: invitation.registration_number || null,
             p_specialty_ids: invitation.specialty_ids || [],
+            p_council: invitation.council || null,
+            p_council_state: invitation.council_state || null,
+            p_rqe: invitation.rqe || null,
+            p_primary_specialty_id: invitation.primary_specialty_id || null,
+            p_display_name: invitation.full_name,
           });
 
         if (profError) {
