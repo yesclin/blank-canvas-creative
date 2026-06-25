@@ -2094,6 +2094,55 @@ export type Database = {
           },
         ]
       }
+      clinic_specialty_aliases: {
+        Row: {
+          base_specialty_key: string
+          clinic_id: string
+          created_at: string
+          display_name: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          base_specialty_key: string
+          clinic_id: string
+          created_at?: string
+          display_name: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          base_specialty_key?: string
+          clinic_id?: string
+          created_at?: string
+          display_name?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_specialty_aliases_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_effective_features"
+            referencedColumns: ["clinic_id"]
+          },
+          {
+            foreignKeyName: "clinic_specialty_aliases_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinic_specialty_aliases_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "public_clinic_booking"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinic_specialty_modules: {
         Row: {
           clinic_id: string
