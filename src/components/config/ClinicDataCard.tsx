@@ -194,8 +194,41 @@ export function ClinicDataCard({
     toast({ title: "Link atualizado!" });
   };
 
+  const handleToggleEnabled = async (next: boolean) => {
+    if (!clinicId || !canManageBooking) return;
+    const previous = bookingEnabled;
+    setBookingEnabled(next);
+    setTogglingEnabled(true);
+    const { error } = await supabase
+      .from("clinics")
+      .update({ public_booking_enabled: next })
+      .eq("id", clinicId);
+    setTogglingEnabled(false);
+    if (error) {
+      setBookingEnabled(previous);
+      toast({ title: "Erro ao atualizar status", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: next ? "Agendamento online ativado" : "Agendamento online desativado" });
+  };
 
-  const handlePhoneChange = (value: string, setter: (v: string) => void) => {
+  const handleToggleSetting = async (key: keyof BookingSettings, value: boolean | string) => {
+    if (!clinicId || !canManageBooking) return;
+    const previous = settings;
+    const next: BookingSettings = { ...settings, [key]: value } as BookingSettings;
+    if (key === "only_existing_patients" && value === true) next.allow_new_patients = false;
+    if (key === "allow_new_patients" && value === true) next.only_existing_patients = false;
+    setSettings(next);
+    const { error } = await supabase
+      .from("clinics")
+      .update({ public_booking_settings: next as any })
+      .eq("id", clinicId);
+    if (error) {
+      setSettings(previous);
+      toast({ title: "Erro ao salvar configuração", description: error.message, variant: "destructive" });
+    }
+  };
+
     const masked = maskPhone(value);
     setter(masked);
   };
