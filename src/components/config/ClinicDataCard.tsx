@@ -229,6 +229,7 @@ export function ClinicDataCard({
     }
   };
 
+  const handlePhoneChange = (value: string, setter: (v: string) => void) => {
     const masked = maskPhone(value);
     setter(masked);
   };
