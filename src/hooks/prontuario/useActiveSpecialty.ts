@@ -33,7 +33,8 @@ export type SpecialtyKey =
   | 'dermatologia'
   | 'fisioterapia'
   | 'pilates'
-  | 'pediatria';
+  | 'pediatria'
+  | 'other_specialty';
 
 export interface SpecialtyOption {
   id: string;

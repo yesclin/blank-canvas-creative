@@ -103,6 +103,7 @@ import { useLgpdEnforcement } from "@/hooks/lgpd";
 import { useProntuarioPrint } from "@/hooks/prontuario/useProntuarioPrint";
 import { useConsolidatedFillerPdf } from "@/hooks/aesthetics/useConsolidatedFillerPdf";
 import { useClinicData } from "@/hooks/useClinicData";
+import { useSpecialtyDisplayName } from "@/hooks/useSpecialtyDisplayName";
 import { PatientHeader } from "@/components/prontuario/PatientHeader";
 import { ProntuarioHeader } from "@/components/prontuario/ProntuarioHeader";
 import { ProntuarioSearchBar, type SearchResult } from "@/components/prontuario/ProntuarioSearchBar";
@@ -852,7 +853,11 @@ export default function Prontuario() {
   }, [urlTab, navItems]);
 
   const shouldHoldProntuarioRendering = specialtyLoading || !isSpecialtyResolved;
-  const resolvedSpecialtyName = activeSpecialty?.name ?? activeSpecialtyName ?? undefined;
+  const specialtyDisplayName = useSpecialtyDisplayName(clinic?.id, {
+    slug: activeSpecialtySlug ?? activeSpecialty?.slug ?? activeSpecialtyKey,
+    name: activeSpecialty?.name ?? activeSpecialtyName,
+  });
+  const resolvedSpecialtyName = specialtyDisplayName || activeSpecialty?.name || activeSpecialtyName || undefined;
   const resolvedSpecialtyId = activeSpecialty?.id ?? activeSpecialtyId;
 
   // Handle search result click — focus on the specific record + navigate to its tab

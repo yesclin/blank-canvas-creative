@@ -37,6 +37,7 @@ const SPECIALTY_ICONS: Record<string, React.ElementType> = {
   odontologia: Smile,
   dermatologia: Heart,
   pediatria: Baby,
+  other_specialty: Sparkles,
 };
 
 const SPECIALTY_COLORS: Record<string, string> = {
@@ -49,6 +50,7 @@ const SPECIALTY_COLORS: Record<string, string> = {
   odontologia: "bg-cyan-500",
   dermatologia: "bg-rose-500",
   pediatria: "bg-amber-500",
+  other_specialty: "bg-slate-600",
 };
 
 const SPECIALTY_DESCRIPTIONS: Record<string, string> = {
@@ -61,6 +63,7 @@ const SPECIALTY_DESCRIPTIONS: Record<string, string> = {
   odontologia: "Saúde bucal com odontograma digital",
   dermatologia: "Cuidados com a pele",
   pediatria: "Atendimento infantil",
+  other_specialty: "Modelo básico para especialidades ainda não listadas",
 };
 
 interface ClinicSpecialty {
@@ -74,7 +77,7 @@ interface ClinicSpecialty {
 
 export function SpecialtiesSection() {
   const { clinic } = useClinicData();
-  const { isOwner } = usePermissions();
+  const { canManageSpecialties } = usePermissions();
   const { ensureCanCreate } = usePlanLimitGate();
   const queryClient = useQueryClient();
 
@@ -88,6 +91,8 @@ export function SpecialtiesSection() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [togglingSlug, setTogglingSlug] = useState<string | null>(null);
   const [provisionResult, setProvisionResult] = useState<Record<string, unknown> | null>(null);
+  const [otherDialogOpen, setOtherDialogOpen] = useState(false);
+  const [otherDisplayName, setOtherDisplayName] = useState("");
 
   // Fetch clinic specialties
   const { data: clinicSpecialties = [], isLoading } = useQuery({
@@ -104,6 +109,41 @@ export function SpecialtiesSection() {
     },
     enabled: !!clinic?.id,
   });
+
+  const { data: specialtyAliases = [] } = useQuery({
+    queryKey: ["clinic-specialty-aliases", clinic?.id],
+    queryFn: async () => {
+      if (!clinic?.id) return [];
+      const { data, error } = await supabase
+        .from("clinic_specialty_aliases")
+        .select("base_specialty_key, display_name")
+        .eq("clinic_id", clinic.id);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!clinic?.id,
+  });
+
+  const otherAlias = specialtyAliases.find((a) => a.base_specialty_key === "other_specialty")?.display_name;
+
+  const validateOtherDisplayName = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return "Informe o nome de exibição.";
+    if (trimmed.length > 60) return "Use no máximo 60 caracteres.";
+    if (/[<>`{};]/.test(trimmed)) return "Remova caracteres inválidos.";
+    const normalized = trimmed.toLowerCase();
+    const duplicateOfficial = OFFICIAL_SPECIALTIES.some(
+      (s) => s.slug !== "other_specialty" && s.name.toLowerCase() === normalized
+    );
+    const duplicateClinic = clinicSpecialties.some(
+      (s) => s.slug !== "other_specialty" && s.name.toLowerCase() === normalized
+    );
+    const duplicateAlias = specialtyAliases.some(
+      (a) => a.base_specialty_key !== "other_specialty" && a.display_name.toLowerCase() === normalized
+    );
+    if (duplicateOfficial || duplicateClinic || duplicateAlias) return "Já existe uma especialidade com esse nome nesta clínica.";
+    return null;
+  };
 
   // Separate standard vs custom
   const standardSpecialties = clinicSpecialties.filter(s => s.specialty_type === "padrao");
@@ -136,8 +176,17 @@ export function SpecialtiesSection() {
   const enabledCount = OFFICIAL_SPECIALTIES.filter(s => enabledBySlug[s.slug]?.is_active).length;
 
   /** Activate a standard specialty using the provision_specialty RPC */
-  const handleActivateStandard = async (slug: string, name: string) => {
-    if (!clinic?.id || !isOwner) return;
+  const handleActivateStandard = async (slug: string, name: string, displayName?: string) => {
+    if (!clinic?.id || !canManageSpecialties) return;
+
+    const normalizedDisplayName = displayName?.trim();
+    if (slug === "other_specialty") {
+      const validationError = validateOtherDisplayName(normalizedDisplayName ?? "");
+      if (validationError) {
+        toast.error(validationError);
+        return;
+      }
+    }
 
     // Bloqueio por limite do plano antes de provisionar
     const allowed = await ensureCanCreate('specialties');
@@ -170,12 +219,22 @@ export function SpecialtiesSection() {
       }
 
       // Provision tabs, templates, and activate the specialty
-      const { data, error } = await supabase.rpc("provision_specialty", {
+      const { error } = await supabase.rpc("provision_specialty", {
         _clinic_id: clinic.id,
         _specialty_slug: slug,
       });
 
       if (error) throw error;
+
+      if (slug === "other_specialty" && normalizedDisplayName) {
+        const { error: aliasError } = await supabase
+          .from("clinic_specialty_aliases")
+          .upsert(
+            { clinic_id: clinic.id, base_specialty_key: "other_specialty", display_name: normalizedDisplayName.slice(0, 60) },
+            { onConflict: "clinic_id,base_specialty_key" }
+          );
+        if (aliasError) throw aliasError;
+      }
 
       // Auto-link all active professionals to the newly activated specialty
       const specialtyRecord = await supabase
@@ -205,8 +264,8 @@ export function SpecialtiesSection() {
         }
       }
 
-      setProvisionResult(data as Record<string, unknown>);
-      toast.success(`"${name}" ativada com sucesso!`, {
+      setProvisionResult({ specialty_name: normalizedDisplayName || name, tabs_created: "padrão", templates_created: "básico" });
+      toast.success(`"${normalizedDisplayName || name}" ativada com sucesso!`, {
         description: `Abas de prontuário, templates e vínculos profissionais provisionados automaticamente.`,
       });
 
@@ -264,6 +323,11 @@ export function SpecialtiesSection() {
     if (existing?.is_active) {
       setConfirmDeactivate(existing);
     } else {
+      if (slug === "other_specialty") {
+        setOtherDisplayName(otherAlias || "");
+        setOtherDialogOpen(true);
+        return;
+      }
       handleActivateStandard(slug, name);
     }
   };
@@ -372,6 +436,8 @@ export function SpecialtiesSection() {
     queryClient.invalidateQueries({ queryKey: ["specialties-management", clinic.id] });
     queryClient.invalidateQueries({ queryKey: ["custom-specialties", clinic.id] });
     queryClient.invalidateQueries({ queryKey: ["professional-specialties"] });
+    queryClient.invalidateQueries({ queryKey: ["clinic-specialty-aliases", clinic.id] });
+    queryClient.invalidateQueries({ queryKey: ["clinic-specialty-alias", clinic.id, "other_specialty"] });
   };
 
   const openEditDialog = (specialty: ClinicSpecialty) => {
@@ -521,7 +587,7 @@ export function SpecialtiesSection() {
                                 </Badge>
                               )}
                             </div>
-                            {isOwner && (
+                            {canManageSpecialties && (
                               <Switch
                                 checked={isEnabled}
                                 onCheckedChange={() => handleToggleStandard(spec.slug, spec.name)}
@@ -544,7 +610,7 @@ export function SpecialtiesSection() {
                         Especialidades exclusivas desta clínica.
                       </p>
                     </div>
-                    {isOwner && (
+                    {canManageSpecialties && (
                       <Button onClick={() => setIsCreateDialogOpen(true)}>
                         <Plus className="h-4 w-4 mr-2" />
                         Nova
@@ -561,7 +627,7 @@ export function SpecialtiesSection() {
                       <p className="text-sm text-muted-foreground max-w-sm">
                         Crie especialidades exclusivas quando as padrão do Yesclin não atenderem.
                       </p>
-                      {isOwner && (
+                      {canManageSpecialties && (
                         <Button onClick={() => setIsCreateDialogOpen(true)} className="mt-4">
                           <Plus className="h-4 w-4 mr-2" />
                           Criar especialidade
@@ -580,7 +646,7 @@ export function SpecialtiesSection() {
                                   <span className="font-medium truncate block">{s.name}</span>
                                   {s.description && <span className="text-xs text-muted-foreground truncate block">{s.description}</span>}
                                 </div>
-                                {isOwner && (
+                                {canManageSpecialties && (
                                   <div className="flex items-center gap-1 ml-2">
                                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(s)}>
                                       <Pencil className="h-4 w-4" />
@@ -603,7 +669,7 @@ export function SpecialtiesSection() {
                                 <div className="flex-1 min-w-0">
                                   <span className="font-medium truncate text-muted-foreground block">{s.name}</span>
                                 </div>
-                                {isOwner && (
+                                {canManageSpecialties && (
                                   <div className="flex items-center gap-1 ml-2">
                                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(s)}>
                                       <Pencil className="h-4 w-4" />
@@ -650,6 +716,46 @@ export function SpecialtiesSection() {
             <Button variant="outline" onClick={closeDialog} disabled={isSubmitting}>Cancelar</Button>
             <Button onClick={editingSpecialty ? handleEditCustom : handleCreateCustom} disabled={isSubmitting || !newName.trim()}>
               {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...</> : editingSpecialty ? "Salvar" : <><Plus className="mr-2 h-4 w-4" /> Criar</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={otherDialogOpen} onOpenChange={setOtherDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Nome de exibição</DialogTitle>
+            <DialogDescription>
+              Informe como “Outra Especialidade / Atendimento Geral” deve aparecer nesta clínica.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-4">
+            <Label htmlFor="other-specialty-name">Nome de exibição <span className="text-destructive">*</span></Label>
+            <Input
+              id="other-specialty-name"
+              placeholder="Ex: Quiropraxia, Acupuntura, Podologia..."
+              value={otherDisplayName}
+              maxLength={60}
+              onChange={(e) => setOtherDisplayName(e.target.value)}
+              autoFocus
+            />
+            <p className="text-xs text-muted-foreground">Máximo de 60 caracteres. Internamente o sistema continuará usando o modelo básico oficial.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOtherDialogOpen(false)} disabled={togglingSlug === "other_specialty"}>Cancelar</Button>
+            <Button
+              onClick={async () => {
+                const validationError = validateOtherDisplayName(otherDisplayName);
+                if (validationError) {
+                  toast.error(validationError);
+                  return;
+                }
+                await handleActivateStandard("other_specialty", "Outra Especialidade / Atendimento Geral", otherDisplayName);
+                setOtherDialogOpen(false);
+              }}
+              disabled={togglingSlug === "other_specialty" || !otherDisplayName.trim()}
+            >
+              {togglingSlug === "other_specialty" ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...</> : "Salvar e ativar"}
             </Button>
           </DialogFooter>
         </DialogContent>

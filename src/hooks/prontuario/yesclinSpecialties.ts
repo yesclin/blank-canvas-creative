@@ -101,6 +101,18 @@ const CLINICA_GERAL_BLOCKS: ClinicalBlockKey[] = [
   'timeline',         // 11. Histórico / Linha do Tempo
 ];
 
+const OTHER_SPECIALTY_BLOCKS: ClinicalBlockKey[] = [
+  'resumo',
+  'anamnese',
+  'evolucao',
+  'conduta',
+  'procedimentos_realizados',
+  'documentos_clinicos',
+  'exames',
+  'alertas',
+  'timeline',
+];
+
 export const YESCLIN_SUPPORTED_SPECIALTIES: YesclinSpecialty[] = [
   {
     key: 'geral',
@@ -108,6 +120,13 @@ export const YESCLIN_SUPPORTED_SPECIALTIES: YesclinSpecialty[] = [
     description: 'Atendimento médico ambulatorial com evoluções, conduta e acompanhamento clínico',
     enabledBlocks: CLINICA_GERAL_BLOCKS,
     icon: 'Stethoscope',
+  },
+  {
+    key: 'other_specialty',
+    name: 'Outra Especialidade / Atendimento Geral',
+    description: 'Modelo básico para especialidades ainda não listadas, com anamnese, evolução, conduta, documentos e anexos',
+    enabledBlocks: OTHER_SPECIALTY_BLOCKS,
+    icon: 'Layers',
   },
   /**
    * PSICOLOGIA - Blocos clínicos específicos
@@ -438,6 +457,7 @@ export const YESCLIN_SPECIALTY_LABELS: Record<SpecialtyKey, string> = {
   fisioterapia: 'Fisioterapia',
   pilates: 'Pilates',
   pediatria: 'Pediatria',
+  other_specialty: 'Outra Especialidade / Atendimento Geral',
 };
 
 /**
@@ -488,6 +508,10 @@ export const SPECIALTY_NAME_TO_KEY_MAP: Record<string, SpecialtyKey> = {
   'pilates clínico': 'pilates',
   'pediatria': 'pediatria',
   'pediatra': 'pediatria',
+  'other_specialty': 'other_specialty',
+  'outra especialidade / atendimento geral': 'other_specialty',
+  'outra especialidade': 'other_specialty',
+  'atendimento geral': 'other_specialty',
 };
 
 /**

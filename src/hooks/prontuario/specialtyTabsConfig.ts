@@ -79,6 +79,7 @@ export const SPECIALTY_TABS: Record<SpecialtyKey, ClinicalBlockKey[]> = {
   fisioterapia: ['procedimentos_realizados'],
   pilates: ['avaliacao_funcional'],
   pediatria: [],
+  other_specialty: ['procedimentos_realizados'],
 };
 
 /**
@@ -204,6 +205,17 @@ const SPECIALTY_BLOCK_LABEL_OVERRIDES: Partial<Record<SpecialtyKey, Partial<Reco
     exames: 'Exames / Documentos',
     alertas: 'Alertas Pediátricos',
     timeline: 'Linha do Tempo',
+  },
+  other_specialty: {
+    resumo: 'Visão Geral',
+    anamnese: 'Anamnese Básica',
+    evolucao: 'Evolução',
+    conduta: 'Plano / Conduta',
+    procedimentos_realizados: 'Procedimentos Realizados',
+    documentos_clinicos: 'Documentos',
+    exames: 'Anexos',
+    alertas: 'Alertas',
+    timeline: 'Histórico',
   },
 };
 
