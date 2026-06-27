@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { fetchClinicSpecialtyAliases, getSpecialtyDisplayName } from "@/lib/specialtyDisplay";
 
 export interface ActiveAppointment {
   id: string;
@@ -104,6 +105,20 @@ async function mapActiveAppointmentWithFallback(data: any): Promise<ActiveAppoin
     }
   }
 
+  if (mapped.resolved_specialty_id && data?.clinic_id) {
+    const aliases = await fetchClinicSpecialtyAliases(data.clinic_id);
+    const specialtyLike =
+      data.specialties ||
+      data.procedures?.specialties ||
+      (mapped.resolved_specialty_name ? { name: mapped.resolved_specialty_name } : null);
+    const displayName = getSpecialtyDisplayName(specialtyLike, aliases);
+    if (displayName) {
+      mapped.resolved_specialty_name = displayName;
+      mapped.specialty_name = displayName;
+      if (mapped.procedure_specialty_name) mapped.procedure_specialty_name = displayName;
+    }
+  }
+
   return mapped;
 }
 
@@ -131,6 +146,7 @@ export function useActiveAppointment(patientId: string | null | undefined, prefe
       
       const selectFields = `
         id,
+        clinic_id,
         scheduled_date,
         start_time,
         end_time,
@@ -144,9 +160,9 @@ export function useActiveAppointment(patientId: string | null | undefined, prefe
         procedures(
           name,
           specialty_id,
-          specialties:specialty_id(name)
+          specialties:specialty_id(name, slug)
         ),
-        specialties(name)
+        specialties(name, slug)
       `;
 
       // If we have a preferred appointment ID from URL, try it first
@@ -171,7 +187,7 @@ export function useActiveAppointment(patientId: string | null | undefined, prefe
           const preferredStartedAt = preferred.started_at ?? await getSessionStartedAt(preferred.id);
 
           if (isActiveAppointmentStatus(preferred.status) || preferredStartedAt) {
-            return mapAppointmentData(preferred, preferredStartedAt);
+            return mapActiveAppointmentWithFallback({ ...preferred, started_at: preferredStartedAt });
           }
         }
       }
