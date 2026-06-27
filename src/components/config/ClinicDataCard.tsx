@@ -99,6 +99,35 @@ export function ClinicDataCard({
     if (bookingUrl) window.open(bookingUrl, "_blank", "noopener,noreferrer");
   };
 
+  const handleShowQr = async () => {
+    if (!bookingUrl) return;
+    try {
+      const url = await QRCode.toDataURL(bookingUrl, { width: 480, margin: 2 });
+      setQrDataUrl(url);
+      setQrOpen(true);
+    } catch {
+      toast({ title: "Erro ao gerar QR Code", variant: "destructive" });
+    }
+  };
+
+  const handleDownloadQr = () => {
+    if (!qrDataUrl) return;
+    const a = document.createElement("a");
+    a.href = qrDataUrl;
+    a.download = `qrcode-agendamento-${slug || "clinica"}.png`;
+    a.click();
+  };
+
+  const handleShare = async () => {
+    if (!bookingUrl) return;
+    const shareData = { title: "Agende online", text: `Agende seu atendimento: ${name}`, url: bookingUrl };
+    if (navigator.share) {
+      try { await navigator.share(shareData); return; } catch { /* canceled */ }
+    }
+    await navigator.clipboard.writeText(bookingUrl);
+    toast({ title: "Link copiado para compartilhar!", description: bookingUrl });
+  };
+
   const handleSaveSlug = async () => {
     if (!clinicId) return;
     const clean = sanitizeSlug(slugDraft);
