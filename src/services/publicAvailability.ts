@@ -22,14 +22,6 @@ export interface PublicAvailabilityResult {
   emptyReason?: "no_schedules" | "all_blocked" | "config_error" | null;
 }
 
-interface ProfessionalSchedule {
-  day_of_week: number;
-  start_time: string;
-  end_time: string;
-  slot_duration_minutes: number;
-  is_active: boolean;
-}
-
 interface ScheduleBlock {
   start_date: string;
   end_date: string;
@@ -45,17 +37,11 @@ interface BookedSlot {
   end_time: string;
 }
 
-interface ClinicScheduleConfig {
-  start_time: string;
-  end_time: string;
-  working_days: any;
+interface EffectiveScheduleRow {
+  working_days: Record<string, any>;
   default_duration_minutes: number;
+  source: string;
 }
-
-// Map working_days strings to JS getDay() values
-const dayNameToIndex: Record<string, number> = {
-  dom: 0, seg: 1, ter: 2, qua: 3, qui: 4, sex: 5, sab: 6,
-};
 
 /**
  * Calculate available public slots for a professional in a date range.
@@ -82,21 +68,27 @@ export async function getPublicAvailabilityWithDetails(
     { _clinic_id: clinicId, _professional_id: professionalId }
   );
 
-  const effective = Array.isArray(effectiveRows) ? effectiveRows[0] : effectiveRows;
+  const effective = (Array.isArray(effectiveRows) ? effectiveRows[0] : effectiveRows) as EffectiveScheduleRow | undefined;
   console.log("[PublicAvail] effective_schedule:", {
     clinicId,
     professionalId,
-    source: (effective as any)?.source,
+    source: effective?.source,
     error: effErr?.message,
-    hasWorkingDays: !!(effective as any)?.working_days,
+    hasWorkingDays: !!effective?.working_days,
   });
 
-  if (!effective || !(effective as any).working_days) {
+  if (effErr) {
+    console.error("[PublicAvail] effective_schedule error:", effErr);
+    return { slots: [], emptyReason: "config_error" };
+  }
+
+  if (!effective?.working_days) {
     return { slots: [], emptyReason: "no_schedules" };
   }
 
-  const workingDays = (effective as any).working_days as Record<string, any>;
-  const defaultDuration = (effective as any).default_duration_minutes || 30;
+  const workingDays = normalizeWeekSchedule(effective.working_days);
+  const defaultDuration = effective.default_duration_minutes || 30;
+  const fallbackUsed = effective.source?.startsWith("clinic") ?? false;
 
   // 2. Fetch schedule blocks
   const { data: blocks } = await supabase
@@ -123,21 +115,9 @@ export async function getPublicAvailabilityWithDetails(
   const scheduleByDay = new Map<number, { startTime: string; endTime: string; slotDuration: number }[]>();
 
   dayKeys.forEach((key, idx) => {
-    const day = workingDays?.[key];
-    if (!day || day.enabled === false) return;
-    const open = (day.open || "08:00").toString().substring(0, 5);
-    const close = (day.close || "18:00").toString().substring(0, 5);
-    const slotDuration = durationMinutes || defaultDuration;
-
-    if (day.hasLunch && day.lunchStart && day.lunchEnd) {
-      const ls = day.lunchStart.toString().substring(0, 5);
-      const le = day.lunchEnd.toString().substring(0, 5);
-      scheduleByDay.set(idx, [
-        { startTime: open, endTime: ls, slotDuration },
-        { startTime: le, endTime: close, slotDuration },
-      ]);
-    } else {
-      scheduleByDay.set(idx, [{ startTime: open, endTime: close, slotDuration }]);
+    const dayPeriods = normalizeDayPeriods(workingDays?.[key], durationMinutes || defaultDuration);
+    if (dayPeriods.length > 0) {
+      scheduleByDay.set(idx, dayPeriods);
     }
   });
 
@@ -164,6 +144,7 @@ export async function getPublicAvailabilityWithDetails(
     const dayOfWeek = current.getDay();
 
     const daySchedules = scheduleByDay.get(dayOfWeek);
+    const availableSlotsForDebug: PublicSlot[] = [];
     if (daySchedules) {
       for (const sched of daySchedules) {
         const slotDuration = durationMinutes || sched.slotDuration;
@@ -187,9 +168,23 @@ export async function getPublicAvailabilityWithDetails(
           if (hasConflict(slot.startTime, slot.endTime, dayBooked)) continue;
 
           slots.push(slot);
+          availableSlotsForDebug.push(slot);
         }
       }
     }
+
+    console.log("PUBLIC BOOKING AVAILABILITY DEBUG", {
+      clinicId,
+      professionalId,
+      date: dateStr,
+      weekday: dayOfWeek,
+      professionalSchedule: effective.source?.startsWith("professional") ? workingDays : null,
+      clinicSchedule: fallbackUsed ? workingDays : null,
+      fallbackUsed,
+      blocks: blocks || [],
+      appointments: bookedByDate.get(dateStr) || [],
+      availableSlots: availableSlotsForDebug,
+    });
 
     current = addDays(current, 1);
   }
@@ -201,19 +196,66 @@ export async function getPublicAvailabilityWithDetails(
   return { slots, emptyReason };
 }
 
-/**
- * Parse working_days from clinic config (can be array of strings like ["seg","ter",...] or numbers)
- */
-function parseWorkingDays(workingDays: any): number[] {
-  if (!workingDays) return [1, 2, 3, 4, 5]; // default Mon-Fri
-  if (Array.isArray(workingDays)) {
-    return workingDays.map((d: any) => {
-      if (typeof d === "number") return d;
-      if (typeof d === "string") return dayNameToIndex[d.toLowerCase()] ?? -1;
-      return -1;
-    }).filter((d: number) => d >= 0);
+function normalizeDayPeriods(
+  dayConfig: any,
+  slotDuration: number
+): { startTime: string; endTime: string; slotDuration: number }[] {
+  if (!dayConfig) return [];
+
+  if (Array.isArray(dayConfig)) {
+    return dayConfig.flatMap((period) => normalizeDayPeriods(period, slotDuration));
   }
-  return [1, 2, 3, 4, 5];
+
+  if (dayConfig.enabled === false) return [];
+
+  const open = (dayConfig.open || dayConfig.startTime || dayConfig.start_time || "08:00").toString().substring(0, 5);
+  const close = (dayConfig.close || dayConfig.endTime || dayConfig.end_time || "18:00").toString().substring(0, 5);
+
+  if (!open || !close || open >= close) return [];
+
+  if (dayConfig.hasLunch && dayConfig.lunchStart && dayConfig.lunchEnd) {
+    const lunchStart = dayConfig.lunchStart.toString().substring(0, 5);
+    const lunchEnd = dayConfig.lunchEnd.toString().substring(0, 5);
+
+    if (lunchStart > open && lunchEnd < close && lunchStart < lunchEnd) {
+      return [
+        { startTime: open, endTime: lunchStart, slotDuration },
+        { startTime: lunchEnd, endTime: close, slotDuration },
+      ];
+    }
+  }
+
+  return [{ startTime: open, endTime: close, slotDuration }];
+}
+
+function normalizeWeekSchedule(rawWorkingDays: Record<string, any>): Record<string, any> {
+  if (!rawWorkingDays) return {};
+
+  if (rawWorkingDays.schedule && typeof rawWorkingDays.schedule === "object") {
+    return rawWorkingDays.schedule;
+  }
+
+  if (Array.isArray(rawWorkingDays.working_days)) {
+    const enabledDays = new Set(rawWorkingDays.working_days);
+    const open = rawWorkingDays.open_time || rawWorkingDays.open || "08:00";
+    const close = rawWorkingDays.close_time || rawWorkingDays.close || "18:00";
+    const lunchStart = rawWorkingDays.lunch_start || rawWorkingDays.lunchStart || "12:00";
+    const lunchEnd = rawWorkingDays.lunch_end || rawWorkingDays.lunchEnd || "13:00";
+
+    return ["dom", "seg", "ter", "qua", "qui", "sex", "sab"].reduce<Record<string, any>>((acc, dayKey) => {
+      acc[dayKey] = {
+        enabled: enabledDays.has(dayKey),
+        open,
+        close,
+        hasLunch: true,
+        lunchStart,
+        lunchEnd,
+      };
+      return acc;
+    }, {});
+  }
+
+  return rawWorkingDays;
 }
 
 function generateSlotsForPeriod(
