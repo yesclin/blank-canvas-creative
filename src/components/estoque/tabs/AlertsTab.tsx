@@ -24,6 +24,7 @@ import {
 import { StockPredictionAlerts } from "@/components/estoque/StockPredictionAlerts";
 import { EntryFormDialog } from "@/components/estoque/EntryFormDialog";
 import { useStockAlertsData } from "@/hooks/useStockAlertsData";
+import { useInventoryItems } from "@/hooks/useInventoryItems";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
