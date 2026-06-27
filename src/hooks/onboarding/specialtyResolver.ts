@@ -203,22 +203,19 @@ export async function enableCoreModulesForSpecialty(
   specialtyId: string
 ): Promise<void> {
   try {
-    const { data: coreModules } = await supabase
-      .from("clinical_modules")
-      .select("id")
-      .in("key", ["evolucao", "anamnese", "alertas", "files"]);
+    const moduleKeys = ["evolucao", "anamnese", "alertas", "files"];
 
-    if (coreModules && coreModules.length > 0) {
-      const moduleInserts = coreModules.map((m) => ({
+    if (moduleKeys.length > 0) {
+      const moduleInserts = moduleKeys.map((module_key) => ({
         clinic_id: clinicId,
         specialty_id: specialtyId,
-        module_id: m.id,
+        module_key,
         is_enabled: true,
       }));
 
       await supabase
         .from("clinic_specialty_modules")
-        .upsert(moduleInserts, { onConflict: "clinic_id,specialty_id,module_id" });
+        .upsert(moduleInserts, { onConflict: "clinic_id,specialty_id,module_key" });
     }
   } catch (err) {
     console.error("Error enabling core modules:", err);
