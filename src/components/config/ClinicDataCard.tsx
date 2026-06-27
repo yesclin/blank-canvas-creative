@@ -1,14 +1,27 @@
-import { useState, useRef } from "react";
-import { Building, Upload, Loader2, Trash2 } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Building, Upload, Loader2, Trash2, Link2, Copy, ExternalLink, RefreshCw, Check, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { maskPhone } from "@/lib/validators";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+
+const PUBLIC_BOOKING_DOMAIN = "https://yesclin.com.br";
+
+function sanitizeSlug(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
 
 interface ClinicDataCardProps {
   name: string;
@@ -40,6 +53,76 @@ export function ClinicDataCard({
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  // Booking link state
+  const [slug, setSlug] = useState("");
+  const [slugDraft, setSlugDraft] = useState("");
+  const [bookingEnabled, setBookingEnabled] = useState(false);
+  const [editingSlug, setEditingSlug] = useState(false);
+  const [savingSlug, setSavingSlug] = useState(false);
+  const [loadingBooking, setLoadingBooking] = useState(false);
+
+  useEffect(() => {
+    if (!clinicId) return;
+    let active = true;
+    setLoadingBooking(true);
+    supabase
+      .from("clinics")
+      .select("slug, public_booking_enabled")
+      .eq("id", clinicId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!active || !data) return;
+        setSlug(data.slug || "");
+        setSlugDraft(data.slug || "");
+        setBookingEnabled(!!data.public_booking_enabled);
+      })
+      .then(() => active && setLoadingBooking(false));
+    return () => {
+      active = false;
+    };
+  }, [clinicId]);
+
+  const bookingUrl = slug ? `${PUBLIC_BOOKING_DOMAIN}/agendar/${slug}` : "";
+
+  const handleCopyLink = async () => {
+    if (!bookingUrl) return;
+    await navigator.clipboard.writeText(bookingUrl);
+    toast({ title: "Link copiado!", description: bookingUrl });
+  };
+
+  const handleOpenLink = () => {
+    if (bookingUrl) window.open(bookingUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const handleSaveSlug = async () => {
+    if (!clinicId) return;
+    const clean = sanitizeSlug(slugDraft);
+    if (!clean) {
+      toast({ title: "Slug inválido", description: "Informe um identificador válido.", variant: "destructive" });
+      return;
+    }
+    setSavingSlug(true);
+    const { error } = await supabase
+      .from("clinics")
+      .update({ slug: clean })
+      .eq("id", clinicId);
+    setSavingSlug(false);
+    if (error) {
+      const dup = error.message?.toLowerCase().includes("duplicate") || error.message?.toLowerCase().includes("unique");
+      toast({
+        title: dup ? "Slug já em uso" : "Erro ao salvar slug",
+        description: dup ? "Escolha outro identificador." : error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+    setSlug(clean);
+    setSlugDraft(clean);
+    setEditingSlug(false);
+    toast({ title: "Link atualizado!" });
+  };
+
 
   const handlePhoneChange = (value: string, setter: (v: string) => void) => {
     const masked = maskPhone(value);
@@ -273,6 +356,68 @@ export function ClinicDataCard({
             />
           </div>
         </div>
+
+        <Separator />
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Link2 className="h-4 w-4 text-primary" />
+              <Label className="text-sm font-medium">Link de agendamento online</Label>
+            </div>
+            <Badge variant={bookingEnabled ? "default" : "secondary"}>
+              {bookingEnabled ? "Seu link de agendamento está ativo" : "Agendamento online desativado"}
+            </Badge>
+          </div>
+
+          {editingSlug ? (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">{PUBLIC_BOOKING_DOMAIN}/agendar/</span>
+              <Input
+                value={slugDraft}
+                onChange={(e) => setSlugDraft(sanitizeSlug(e.target.value))}
+                placeholder="minha-clinica"
+                disabled={savingSlug}
+              />
+              <Button size="sm" onClick={handleSaveSlug} disabled={savingSlug || !clinicId}>
+                {savingSlug ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setSlugDraft(slug);
+                  setEditingSlug(false);
+                }}
+                disabled={savingSlug}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 flex-wrap">
+              <Input
+                value={bookingUrl || (loadingBooking ? "Carregando..." : "Defina um identificador (slug) para gerar o link")}
+                readOnly
+                className="flex-1 min-w-[240px] font-mono text-sm"
+              />
+              <Button size="sm" variant="outline" onClick={handleCopyLink} disabled={!bookingUrl}>
+                <Copy className="h-4 w-4 mr-1" /> Copiar link
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleOpenLink} disabled={!bookingUrl}>
+                <ExternalLink className="h-4 w-4 mr-1" /> Abrir
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setEditingSlug(true)} disabled={!clinicId}>
+                <RefreshCw className="h-4 w-4 mr-1" /> {slug ? "Editar slug" : "Definir slug"}
+              </Button>
+            </div>
+          )}
+
+          <p className="text-xs text-muted-foreground">
+            Envie este link aos pacientes para agendarem direto pelo site. Ative o agendamento online em Configurações → Agenda.
+          </p>
+        </div>
+
       </CardContent>
     </Card>
   );
