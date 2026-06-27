@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
-import { Building, Upload, Loader2, Trash2, Link2, Copy, ExternalLink, RefreshCw, Check, X } from "lucide-react";
+import QRCode from "qrcode";
+import { Building, Upload, Loader2, Trash2, Link2, Copy, ExternalLink, RefreshCw, Check, X, QrCode, Share2, Download } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -61,6 +63,8 @@ export function ClinicDataCard({
   const [editingSlug, setEditingSlug] = useState(false);
   const [savingSlug, setSavingSlug] = useState(false);
   const [loadingBooking, setLoadingBooking] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState("");
 
   useEffect(() => {
     if (!clinicId) return;
@@ -93,6 +97,35 @@ export function ClinicDataCard({
 
   const handleOpenLink = () => {
     if (bookingUrl) window.open(bookingUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const handleShowQr = async () => {
+    if (!bookingUrl) return;
+    try {
+      const url = await QRCode.toDataURL(bookingUrl, { width: 480, margin: 2 });
+      setQrDataUrl(url);
+      setQrOpen(true);
+    } catch {
+      toast({ title: "Erro ao gerar QR Code", variant: "destructive" });
+    }
+  };
+
+  const handleDownloadQr = () => {
+    if (!qrDataUrl) return;
+    const a = document.createElement("a");
+    a.href = qrDataUrl;
+    a.download = `qrcode-agendamento-${slug || "clinica"}.png`;
+    a.click();
+  };
+
+  const handleShare = async () => {
+    if (!bookingUrl) return;
+    const shareData = { title: "Agende online", text: `Agende seu atendimento: ${name}`, url: bookingUrl };
+    if (navigator.share) {
+      try { await navigator.share(shareData); return; } catch { /* canceled */ }
+    }
+    await navigator.clipboard.writeText(bookingUrl);
+    toast({ title: "Link copiado para compartilhar!", description: bookingUrl });
   };
 
   const handleSaveSlug = async () => {
@@ -407,6 +440,12 @@ export function ClinicDataCard({
               <Button size="sm" variant="outline" onClick={handleOpenLink} disabled={!bookingUrl}>
                 <ExternalLink className="h-4 w-4 mr-1" /> Abrir
               </Button>
+              <Button size="sm" variant="outline" onClick={handleShowQr} disabled={!bookingUrl}>
+                <QrCode className="h-4 w-4 mr-1" /> QR Code
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleShare} disabled={!bookingUrl}>
+                <Share2 className="h-4 w-4 mr-1" /> Compartilhar
+              </Button>
               <Button size="sm" variant="ghost" onClick={() => setEditingSlug(true)} disabled={!clinicId}>
                 <RefreshCw className="h-4 w-4 mr-1" /> {slug ? "Editar slug" : "Definir slug"}
               </Button>
@@ -419,6 +458,23 @@ export function ClinicDataCard({
         </div>
 
       </CardContent>
+
+      <Dialog open={qrOpen} onOpenChange={setQrOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>QR Code de agendamento</DialogTitle>
+            <DialogDescription className="break-all">{bookingUrl}</DialogDescription>
+          </DialogHeader>
+          {qrDataUrl && (
+            <div className="flex flex-col items-center gap-3">
+              <img src={qrDataUrl} alt="QR Code" className="w-64 h-64" />
+              <Button size="sm" variant="outline" onClick={handleDownloadQr}>
+                <Download className="h-4 w-4 mr-1" /> Baixar PNG
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
