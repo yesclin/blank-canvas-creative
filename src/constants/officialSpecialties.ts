@@ -63,8 +63,14 @@ export function isOfficialSpecialty(name: string): boolean {
  * Filter an array of specialties to only include official ones.
  * Generic to work with any object that has a `name` property.
  */
-export function filterOfficialSpecialties<T extends { name: string }>(
+export function filterOfficialSpecialties<T extends { name: string; slug?: string | null }>(
   specialties: T[]
 ): T[] {
-  return specialties.filter((s) => isOfficialSpecialty(s.name));
+  return specialties.filter((s) => {
+    if (s.slug && OFFICIAL_SPECIALTIES.some((official) => official.slug === s.slug)) {
+      return true;
+    }
+
+    return isOfficialSpecialty(s.name);
+  });
 }

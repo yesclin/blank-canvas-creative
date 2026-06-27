@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { OTHER_SPECIALTY_SLUG } from "@/constants/officialSpecialties";
+import { isOtherSpecialtyLike } from "@/lib/specialtyDisplay";
 
 /**
  * Returns the per-clinic display name for a specialty.
@@ -10,17 +12,17 @@ export function useSpecialtyDisplayName(
   clinicId: string | null | undefined,
   specialty: { slug?: string | null; name?: string | null } | null | undefined,
 ) {
-  const isOther = specialty?.slug === "other_specialty";
+  const isOther = isOtherSpecialtyLike(specialty);
 
   const { data: alias } = useQuery({
-    queryKey: ["clinic-specialty-alias", clinicId, "other_specialty"],
+    queryKey: ["clinic-specialty-alias", clinicId, OTHER_SPECIALTY_SLUG],
     queryFn: async () => {
       if (!clinicId) return null;
       const { data } = await supabase
         .from("clinic_specialty_aliases")
         .select("display_name")
         .eq("clinic_id", clinicId)
-        .eq("base_specialty_key", "other_specialty")
+        .eq("base_specialty_key", OTHER_SPECIALTY_SLUG)
         .maybeSingle();
       return data?.display_name ?? null;
     },

@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { format, subMonths, eachDayOfInterval, eachMonthOfInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
+import { useClinicContext } from '@/hooks/useClinicContext';
+import { fetchClinicSpecialtyAliases, getSpecialtyDisplayName } from '@/lib/specialtyDisplay';
 import { isRevenue } from '@/utils/financeEnumMapper';
 import type {
   ReportFilters,
@@ -28,23 +30,33 @@ import type {
 // =============================================
 
 export function useReportsRealData(filters: ReportFilters) {
+  const { clinicId } = useClinicContext();
   const startDateStr = format(filters.startDate, 'yyyy-MM-dd');
   const endDateStr = format(filters.endDate, 'yyyy-MM-dd');
+
+  const { data: specialtyAliases = {} } = useQuery({
+    queryKey: ['report-specialty-aliases', clinicId],
+    queryFn: () => fetchClinicSpecialtyAliases(clinicId),
+    enabled: !!clinicId,
+  });
 
   // =============================================
   // LISTA DE PROFISSIONAIS E CONVÊNIOS
   // =============================================
   const { data: professionals = [] } = useQuery({
-    queryKey: ['report-professionals'],
+    queryKey: ['report-professionals', clinicId, specialtyAliases],
     queryFn: async () => {
       const { data } = await supabase
         .from('professionals')
-        .select('id, full_name, specialty_id, specialties:specialty_id (name)')
+        .select('id, full_name, specialty_id, specialties:specialty_id (name, slug)')
         .eq('is_active', true);
       return data?.map(p => ({ 
         id: p.id, 
         name: p.full_name, 
-        specialty: (p.specialties as unknown as { name: string } | null)?.name || '' 
+        specialty: getSpecialtyDisplayName(
+          p.specialties as unknown as { name: string; slug?: string | null } | null,
+          specialtyAliases,
+        ) || '' 
       })) || [];
     },
   });
@@ -88,7 +100,7 @@ export function useReportsRealData(filters: ReportFilters) {
           insurance_id,
           procedure_id,
           patient_id,
-          professionals:professional_id (id, full_name, specialty_id, specialties:specialty_id (name)),
+          professionals:professional_id (id, full_name, specialty_id, specialties:specialty_id (name, slug)),
           procedures:procedure_id (id, name),
           insurances:insurance_id (id, name)
         `)
@@ -397,8 +409,8 @@ export function useReportsRealData(filters: ReportFilters) {
     const bySpec = new Map<string, number>();
     
     appointmentsData.filter(a => a.status === 'finalizado').forEach(apt => {
-      const prof = apt.professionals as unknown as { specialties?: { name: string } | null } | null;
-      const spec = prof?.specialties?.name || 'Não especificada';
+      const prof = apt.professionals as unknown as { specialties?: { name: string; slug?: string | null } | null } | null;
+      const spec = getSpecialtyDisplayName(prof?.specialties, specialtyAliases) || 'Não especificada';
       bySpec.set(spec, (bySpec.get(spec) || 0) + 1);
     });
 
@@ -531,12 +543,12 @@ export function useReportsRealData(filters: ReportFilters) {
     }>();
     
     appointmentsData.forEach(apt => {
-      const prof = apt.professionals as unknown as { id: string; full_name: string; specialties?: { name: string } | null } | null;
+      const prof = apt.professionals as unknown as { id: string; full_name: string; specialties?: { name: string; slug?: string | null } | null } | null;
       if (!prof) return;
       
       const existing = byProf.get(prof.id) || { 
         name: prof.full_name, 
-        specialty: prof.specialties?.name || '',
+        specialty: getSpecialtyDisplayName(prof.specialties, specialtyAliases) || '',
         realized: 0, 
         total: 0,
         revenue: 0 

@@ -46,6 +46,7 @@ export interface Specialty {
   id: string;
   clinic_id: string;
   name: string;
+  slug?: string | null;
   description?: string;
   color: string;
   is_active: boolean;

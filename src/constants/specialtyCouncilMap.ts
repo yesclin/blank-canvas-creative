@@ -56,6 +56,7 @@ const RULES: Record<string, SpecialtyCouncilRule> = {
   odontologia:  { slug: "odontologia",  suggested: "CRO",     required: true,  rqe: "no",       allowed: ["CRO", "OUTRO"] },
   nutricao:     { slug: "nutricao",     suggested: "CRN",     required: true,  rqe: "no",       allowed: ["CRN", "OUTRO"] },
   estetica:     { slug: "estetica",     suggested: "NAO_SE_APLICA", required: false, rqe: "no", allowed: ["COREN", "CRBM", "CREFITO", "CRF", "CRO", "CRM", "OUTRO", "NAO_SE_APLICA"] },
+  other_specialty: { slug: "other_specialty", suggested: "OUTRO", required: false, rqe: "no", allowed: Object.keys(ALL_COUNCILS) as CouncilCode[] },
 };
 
 export const FALLBACK_RULE: SpecialtyCouncilRule = {
@@ -70,6 +71,11 @@ export function getCouncilRuleBySpecialtyName(name?: string | null): SpecialtyCo
   if (!name) return FALLBACK_RULE;
   const slug = getSpecialtySlug(name);
   return (slug && RULES[slug]) || FALLBACK_RULE;
+}
+
+export function getCouncilRuleBySpecialtySlug(slug?: string | null): SpecialtyCouncilRule {
+  if (!slug) return FALLBACK_RULE;
+  return RULES[slug] || FALLBACK_RULE;
 }
 
 export function getCouncilOptions(rule: SpecialtyCouncilRule): CouncilOption[] {

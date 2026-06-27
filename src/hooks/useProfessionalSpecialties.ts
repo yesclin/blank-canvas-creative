@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinicData } from "./useClinicData";
 import { toast } from "sonner";
+import { useClinicContext } from "@/hooks/useClinicContext";
+import { fetchClinicSpecialtyAliases, getSpecialtyDisplayName } from "@/lib/specialtyDisplay";
 
 export interface ProfessionalSpecialty {
   id: string;
@@ -12,6 +14,7 @@ export interface ProfessionalSpecialty {
   specialty?: {
     id: string;
     name: string;
+    slug?: string | null;
     is_active: boolean;
   };
 }
@@ -22,23 +25,28 @@ export interface ProfessionalSpecialty {
  * This ensures professionals cannot use disabled specialties.
  */
 export function useProfessionalSpecialties(professionalId: string | null) {
+  const { clinicId } = useClinicContext();
+
   return useQuery({
-    queryKey: ["professional-specialties", professionalId],
+    queryKey: ["professional-specialties", professionalId, clinicId],
     queryFn: async () => {
       if (!professionalId) return [];
       
-      const { data, error } = await supabase
-        .from("professional_specialties")
-        .select(`
-          id,
-          professional_id,
-          specialty_id,
-          is_primary,
-          created_at,
-          specialty:specialties(id, name, is_active)
-        `)
-        .eq("professional_id", professionalId)
-        .order("is_primary", { ascending: false });
+      const [{ data, error }, aliases] = await Promise.all([
+        supabase
+          .from("professional_specialties")
+          .select(`
+            id,
+            professional_id,
+            specialty_id,
+            is_primary,
+            created_at,
+            specialty:specialties(id, name, slug, is_active)
+          `)
+          .eq("professional_id", professionalId)
+          .order("is_primary", { ascending: false }),
+        fetchClinicSpecialtyAliases(clinicId),
+      ]);
       
       if (error) throw error;
       
@@ -47,7 +55,15 @@ export function useProfessionalSpecialties(professionalId: string | null) {
       return (data || [])
         .map(item => ({
           ...item,
-          specialty: item.specialty as ProfessionalSpecialty['specialty'],
+          specialty: item.specialty
+            ? {
+                ...(item.specialty as NonNullable<ProfessionalSpecialty['specialty']>),
+                name: getSpecialtyDisplayName(
+                  item.specialty as NonNullable<ProfessionalSpecialty['specialty']>,
+                  aliases,
+                ),
+              }
+            : undefined,
         }))
         .filter(item => item.specialty?.is_active !== false) as ProfessionalSpecialty[];
     },

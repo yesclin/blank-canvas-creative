@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useClinicData } from "./useClinicData";
 import { toast } from "sonner";
 import { OFFICIAL_SPECIALTIES, OFFICIAL_SPECIALTY_NAMES, getSpecialtySlug } from "@/constants/officialSpecialties";
+import { fetchClinicSpecialtyAliases, getSpecialtyDisplayName } from "@/lib/specialtyDisplay";
 
 export type SpecialtyType = 'padrao' | 'personalizada';
 
@@ -35,12 +36,15 @@ export function useEnabledSpecialties() {
     queryKey: ["enabled-specialties", clinic?.id],
     queryFn: async () => {
       // ONLY fetch clinic-specific specialties — created by provision_specialty RPC.
-      const { data, error } = await supabase
-        .from("specialties")
-        .select("id, name, slug, description, color, is_active, specialty_type, clinic_id")
-        .eq("is_active", true)
-        .eq("clinic_id", clinic!.id)
-        .order("name");
+      const [{ data, error }, aliases] = await Promise.all([
+        supabase
+          .from("specialties")
+          .select("id, name, slug, description, color, is_active, specialty_type, clinic_id")
+          .eq("is_active", true)
+          .eq("clinic_id", clinic!.id)
+          .order("name"),
+        fetchClinicSpecialtyAliases(clinic!.id),
+      ]);
       
       if (error) {
         console.error("Error fetching enabled specialties:", error);
@@ -58,6 +62,7 @@ export function useEnabledSpecialties() {
         })
         .map(s => ({
           ...s,
+          name: getSpecialtyDisplayName(s, aliases),
           // Use DB slug if it's an official slug, otherwise resolve from name
           slug: (s.slug && OFFICIAL_SPECIALTIES.some(o => o.slug === s.slug))
             ? s.slug

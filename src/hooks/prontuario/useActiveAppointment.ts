@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { fetchClinicSpecialtyAliases, getSpecialtyDisplayName } from "@/lib/specialtyDisplay";
 
 export interface ActiveAppointment {
   id: string;
@@ -38,7 +39,8 @@ function isActiveAppointmentStatus(status: string | null | undefined) {
 function mapAppointmentData(data: any, startedAtOverride?: string | null): ActiveAppointment {
   const procedureSpecialtyId = data.procedures?.specialty_id || null;
   const procedureSpecialtyName = data.procedures?.specialties?.name || null;
-  const resolvedSpecialtyId = data.specialty_id || procedureSpecialtyId;
+  const professionalSpecialtyId = data.professionals?.specialty_id || null;
+  const resolvedSpecialtyId = data.specialty_id || procedureSpecialtyId || professionalSpecialtyId;
   const resolvedSpecialtyName = data.specialties?.name || procedureSpecialtyName;
   
   return {
@@ -79,7 +81,46 @@ async function getSessionStartedAt(appointmentId: string) {
 
 async function mapActiveAppointmentWithFallback(data: any): Promise<ActiveAppointment> {
   const resolvedStartedAt = data?.started_at ?? (data?.id ? await getSessionStartedAt(data.id) : null);
-  return mapAppointmentData(data, resolvedStartedAt);
+  const mapped = mapAppointmentData(data, resolvedStartedAt);
+
+  if (!mapped.resolved_specialty_id && mapped.professional_id) {
+    const { data: linkedSpecialty, error } = await supabase
+      .from("professional_specialties")
+      .select("specialty_id, specialties:specialty_id(name, slug)")
+      .eq("professional_id", mapped.professional_id)
+      .order("is_primary", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error fetching professional specialty fallback:", error);
+    }
+
+    if (linkedSpecialty?.specialty_id) {
+      const linkedSpecialtyData = linkedSpecialty.specialties as { name?: string | null; slug?: string | null } | null;
+      const linkedSpecialtyName = linkedSpecialtyData?.name ?? null;
+      mapped.specialty_id = linkedSpecialty.specialty_id;
+      mapped.specialty_name = linkedSpecialtyName;
+      mapped.resolved_specialty_id = linkedSpecialty.specialty_id;
+      mapped.resolved_specialty_name = linkedSpecialtyName;
+    }
+  }
+
+  if (mapped.resolved_specialty_id && data?.clinic_id) {
+    const aliases = await fetchClinicSpecialtyAliases(data.clinic_id);
+    const specialtyLike =
+      data.specialties ||
+      data.procedures?.specialties ||
+      (mapped.resolved_specialty_name ? { name: mapped.resolved_specialty_name } : null);
+    const displayName = getSpecialtyDisplayName(specialtyLike, aliases);
+    if (displayName) {
+      mapped.resolved_specialty_name = displayName;
+      mapped.specialty_name = displayName;
+      if (mapped.procedure_specialty_name) mapped.procedure_specialty_name = displayName;
+    }
+  }
+
+  return mapped;
 }
 
 /**
@@ -106,6 +147,7 @@ export function useActiveAppointment(patientId: string | null | undefined, prefe
       
       const selectFields = `
         id,
+        clinic_id,
         scheduled_date,
         start_time,
         end_time,
@@ -115,13 +157,13 @@ export function useActiveAppointment(patientId: string | null | undefined, prefe
         started_at,
         procedure_id,
         specialty_id,
-        professionals(full_name),
+        professionals(full_name, specialty_id),
         procedures(
           name,
           specialty_id,
-          specialties:specialty_id(name)
+          specialties:specialty_id(name, slug)
         ),
-        specialties(name)
+        specialties(name, slug)
       `;
 
       // If we have a preferred appointment ID from URL, try it first
@@ -146,7 +188,7 @@ export function useActiveAppointment(patientId: string | null | undefined, prefe
           const preferredStartedAt = preferred.started_at ?? await getSessionStartedAt(preferred.id);
 
           if (isActiveAppointmentStatus(preferred.status) || preferredStartedAt) {
-            return mapAppointmentData(preferred, preferredStartedAt);
+            return mapActiveAppointmentWithFallback({ ...preferred, started_at: preferredStartedAt });
           }
         }
       }
