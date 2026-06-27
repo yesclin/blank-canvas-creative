@@ -367,7 +367,7 @@ export default function Agenda() {
     cacheKeys.forEach((queryKey) => {
       queryClient.setQueryData(queryKey, cacheValue);
     });
-  }, [queryClient]);
+  }, [clinicId, queryClient]);
 
   const bootstrapStartedAppointment = useCallback(async (appointment: Appointment, specialtyId?: string | null) => {
     const optimisticStartedAt = appointment.started_at ?? new Date().toISOString();
@@ -396,7 +396,7 @@ export default function Agenda() {
 
     upsertGlobalActiveAppointment(queryClient, appointmentForNavigation);
     setGlobalSelectedAppointment(appointmentForNavigation);
-    seedActiveAppointmentCache(appointmentForNavigation, specialtyId, snapshot);
+    await seedActiveAppointmentCache(appointmentForNavigation, specialtyId, snapshot);
     refreshGlobalActive();
     openProntuarioFromAppointment(appointmentForNavigation, specialtyId ?? appointmentForNavigation.specialty_id ?? null);
   }, [createSessionMutation, fetchStartedAppointmentSnapshot, openProntuarioFromAppointment, queryClient, refreshGlobalActive, seedActiveAppointmentCache, setGlobalSelectedAppointment, updateStatusMutation]);
