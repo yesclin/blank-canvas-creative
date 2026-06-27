@@ -97,8 +97,8 @@ async function mapActiveAppointmentWithFallback(data: any): Promise<ActiveAppoin
     }
 
     if (linkedSpecialty?.specialty_id) {
-      const linkedSpecialty = linkedSpecialty.specialties as { name?: string | null; slug?: string | null } | null;
-      const linkedSpecialtyName = linkedSpecialty?.name ?? null;
+      const linkedSpecialtyData = linkedSpecialty.specialties as { name?: string | null; slug?: string | null } | null;
+      const linkedSpecialtyName = linkedSpecialtyData?.name ?? null;
       mapped.specialty_id = linkedSpecialty.specialty_id;
       mapped.specialty_name = linkedSpecialtyName;
       mapped.resolved_specialty_id = linkedSpecialty.specialty_id;
