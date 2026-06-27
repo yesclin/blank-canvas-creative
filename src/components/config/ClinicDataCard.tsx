@@ -458,6 +458,23 @@ export function ClinicDataCard({
         </div>
 
       </CardContent>
+
+      <Dialog open={qrOpen} onOpenChange={setQrOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>QR Code de agendamento</DialogTitle>
+            <DialogDescription className="break-all">{bookingUrl}</DialogDescription>
+          </DialogHeader>
+          {qrDataUrl && (
+            <div className="flex flex-col items-center gap-3">
+              <img src={qrDataUrl} alt="QR Code" className="w-64 h-64" />
+              <Button size="sm" variant="outline" onClick={handleDownloadQr}>
+                <Download className="h-4 w-4 mr-1" /> Baixar PNG
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
