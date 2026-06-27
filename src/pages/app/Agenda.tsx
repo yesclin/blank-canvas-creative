@@ -35,6 +35,7 @@ import { useClinicContext } from "@/hooks/useClinicContext";
 import type { ActiveAppointment } from "@/hooks/prontuario/useActiveAppointment";
 import { useGlobalActiveAppointment } from "@/contexts/GlobalActiveAppointmentContext";
 import { removeGlobalActiveAppointment, upsertGlobalActiveAppointment } from "@/lib/globalActiveAppointments";
+import { fetchClinicSpecialtyAliases, getSpecialtyDisplayName } from "@/lib/specialtyDisplay";
 
 interface StartedAppointmentSnapshot {
   id: string;
@@ -47,6 +48,7 @@ interface StartedAppointmentSnapshot {
   started_at: string | null;
   procedure_id: string | null;
   specialty_id: string | null;
+  clinic_id?: string | null;
   professionals: {
     full_name: string | null;
   } | null;
@@ -55,10 +57,12 @@ interface StartedAppointmentSnapshot {
     specialty_id: string | null;
     specialties: {
       name: string | null;
+      slug?: string | null;
     } | null;
   } | null;
   specialties: {
     name: string | null;
+    slug?: string | null;
   } | null;
 }
 
@@ -280,6 +284,7 @@ export default function Agenda() {
       .from('appointments')
       .select(`
         id,
+        clinic_id,
         scheduled_date,
         start_time,
         end_time,
@@ -293,9 +298,9 @@ export default function Agenda() {
         procedures(
           name,
           specialty_id,
-          specialties:specialty_id(name)
+          specialties:specialty_id(name, slug)
         ),
-        specialties(name)
+        specialties(name, slug)
       `)
       .eq('id', appointmentId)
       .maybeSingle();
@@ -308,7 +313,7 @@ export default function Agenda() {
     return data as StartedAppointmentSnapshot | null;
   }, []);
 
-  const seedActiveAppointmentCache = useCallback((
+  const seedActiveAppointmentCache = useCallback(async (
     appointment: Appointment,
     specialtyId?: string | null,
     snapshot?: StartedAppointmentSnapshot | null,
@@ -319,7 +324,12 @@ export default function Agenda() {
       ?? appointment.specialty_id
       ?? null;
 
-    const resolvedSpecialtyName = snapshot?.specialties?.name
+    const aliases = await fetchClinicSpecialtyAliases(clinicId ?? appointment.clinic_id ?? snapshot?.clinic_id);
+    const specialtyLike = snapshot?.specialties ?? snapshot?.procedures?.specialties ?? appointment.specialty ?? null;
+    const displaySpecialtyName = getSpecialtyDisplayName(specialtyLike, aliases) || null;
+
+    const resolvedSpecialtyName = displaySpecialtyName
+      ?? snapshot?.specialties?.name
       ?? snapshot?.procedures?.specialties?.name
       ?? appointment.specialty?.name
       ?? null;
@@ -336,9 +346,11 @@ export default function Agenda() {
       procedure_id: appointment.procedure_id ?? null,
       procedure_name: snapshot?.procedures?.name ?? appointment.procedure?.name ?? null,
       procedure_specialty_id: snapshot?.procedures?.specialty_id ?? null,
-      procedure_specialty_name: snapshot?.procedures?.specialties?.name ?? null,
+      procedure_specialty_name: snapshot?.procedures?.specialties
+        ? getSpecialtyDisplayName(snapshot.procedures.specialties, aliases)
+        : null,
       specialty_id: resolvedSpecialtyId,
-      specialty_name: snapshot?.specialties?.name ?? appointment.specialty?.name ?? null,
+      specialty_name: displaySpecialtyName ?? snapshot?.specialties?.name ?? appointment.specialty?.name ?? null,
       resolved_specialty_id: resolvedSpecialtyId,
       resolved_specialty_name: resolvedSpecialtyName,
       started_at: snapshot?.started_at ?? appointment.started_at ?? null,
