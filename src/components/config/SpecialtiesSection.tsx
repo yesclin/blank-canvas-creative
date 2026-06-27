@@ -721,6 +721,46 @@ export function SpecialtiesSection() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={otherDialogOpen} onOpenChange={setOtherDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Nome de exibição</DialogTitle>
+            <DialogDescription>
+              Informe como “Outra Especialidade / Atendimento Geral” deve aparecer nesta clínica.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-4">
+            <Label htmlFor="other-specialty-name">Nome de exibição <span className="text-destructive">*</span></Label>
+            <Input
+              id="other-specialty-name"
+              placeholder="Ex: Quiropraxia, Acupuntura, Podologia..."
+              value={otherDisplayName}
+              maxLength={60}
+              onChange={(e) => setOtherDisplayName(e.target.value)}
+              autoFocus
+            />
+            <p className="text-xs text-muted-foreground">Máximo de 60 caracteres. Internamente o sistema continuará usando o modelo básico oficial.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOtherDialogOpen(false)} disabled={togglingSlug === "other_specialty"}>Cancelar</Button>
+            <Button
+              onClick={async () => {
+                const validationError = validateOtherDisplayName(otherDisplayName);
+                if (validationError) {
+                  toast.error(validationError);
+                  return;
+                }
+                await handleActivateStandard("other_specialty", "Outra Especialidade / Atendimento Geral", otherDisplayName);
+                setOtherDialogOpen(false);
+              }}
+              disabled={togglingSlug === "other_specialty" || !otherDisplayName.trim()}
+            >
+              {togglingSlug === "other_specialty" ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...</> : "Salvar e ativar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Deactivation confirmation */}
       <AlertDialog open={!!confirmDeactivate} onOpenChange={(open) => !open && setConfirmDeactivate(null)}>
         <AlertDialogContent>
