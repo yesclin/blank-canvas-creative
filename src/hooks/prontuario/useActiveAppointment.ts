@@ -85,7 +85,7 @@ async function mapActiveAppointmentWithFallback(data: any): Promise<ActiveAppoin
   if (!mapped.resolved_specialty_id && mapped.professional_id) {
     const { data: linkedSpecialty, error } = await supabase
       .from("professional_specialties")
-      .select("specialty_id")
+      .select("specialty_id, specialties:specialty_id(name)")
       .eq("professional_id", mapped.professional_id)
       .order("is_primary", { ascending: false })
       .limit(1)
@@ -96,8 +96,11 @@ async function mapActiveAppointmentWithFallback(data: any): Promise<ActiveAppoin
     }
 
     if (linkedSpecialty?.specialty_id) {
+      const linkedSpecialtyName = (linkedSpecialty.specialties as { name?: string | null } | null)?.name ?? null;
       mapped.specialty_id = linkedSpecialty.specialty_id;
+      mapped.specialty_name = linkedSpecialtyName;
       mapped.resolved_specialty_id = linkedSpecialty.specialty_id;
+      mapped.resolved_specialty_name = linkedSpecialtyName;
     }
   }
 
