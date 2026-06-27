@@ -12,11 +12,13 @@ import {
   CouncilCode,
   getCouncilOptions,
   getCouncilRuleBySpecialtyName,
+  getCouncilRuleBySpecialtySlug,
 } from "@/constants/specialtyCouncilMap";
 
 interface Specialty {
   id: string;
   name: string;
+  slug?: string | null;
 }
 
 interface ProfessionalFieldsProps {
@@ -95,8 +97,10 @@ export function ProfessionalFields({
   );
 
   const rule = useMemo(
-    () => getCouncilRuleBySpecialtyName(primarySpecialty?.name),
-    [primarySpecialty?.name]
+    () => primarySpecialty?.slug
+      ? getCouncilRuleBySpecialtySlug(primarySpecialty.slug)
+      : getCouncilRuleBySpecialtyName(primarySpecialty?.name),
+    [primarySpecialty?.name, primarySpecialty?.slug]
   );
   const councilOptions = useMemo(() => getCouncilOptions(rule), [rule]);
 
