@@ -74,7 +74,7 @@ interface ClinicSpecialty {
 
 export function SpecialtiesSection() {
   const { clinic } = useClinicData();
-  const { isOwner } = usePermissions();
+  const { canManageSpecialties } = usePermissions();
   const { ensureCanCreate } = usePlanLimitGate();
   const queryClient = useQueryClient();
 
@@ -88,6 +88,8 @@ export function SpecialtiesSection() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [togglingSlug, setTogglingSlug] = useState<string | null>(null);
   const [provisionResult, setProvisionResult] = useState<Record<string, unknown> | null>(null);
+  const [otherDialogOpen, setOtherDialogOpen] = useState(false);
+  const [otherDisplayName, setOtherDisplayName] = useState("");
 
   // Fetch clinic specialties
   const { data: clinicSpecialties = [], isLoading } = useQuery({
@@ -104,6 +106,41 @@ export function SpecialtiesSection() {
     },
     enabled: !!clinic?.id,
   });
+
+  const { data: specialtyAliases = [] } = useQuery({
+    queryKey: ["clinic-specialty-aliases", clinic?.id],
+    queryFn: async () => {
+      if (!clinic?.id) return [];
+      const { data, error } = await supabase
+        .from("clinic_specialty_aliases")
+        .select("base_specialty_key, display_name")
+        .eq("clinic_id", clinic.id);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!clinic?.id,
+  });
+
+  const otherAlias = specialtyAliases.find((a) => a.base_specialty_key === "other_specialty")?.display_name;
+
+  const validateOtherDisplayName = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return "Informe o nome de exibição.";
+    if (trimmed.length > 60) return "Use no máximo 60 caracteres.";
+    if (/[<>`{};]/.test(trimmed)) return "Remova caracteres inválidos.";
+    const normalized = trimmed.toLowerCase();
+    const duplicateOfficial = OFFICIAL_SPECIALTIES.some(
+      (s) => s.slug !== "other_specialty" && s.name.toLowerCase() === normalized
+    );
+    const duplicateClinic = clinicSpecialties.some(
+      (s) => s.slug !== "other_specialty" && s.name.toLowerCase() === normalized
+    );
+    const duplicateAlias = specialtyAliases.some(
+      (a) => a.base_specialty_key !== "other_specialty" && a.display_name.toLowerCase() === normalized
+    );
+    if (duplicateOfficial || duplicateClinic || duplicateAlias) return "Já existe uma especialidade com esse nome nesta clínica.";
+    return null;
+  };
 
   // Separate standard vs custom
   const standardSpecialties = clinicSpecialties.filter(s => s.specialty_type === "padrao");
@@ -136,8 +173,17 @@ export function SpecialtiesSection() {
   const enabledCount = OFFICIAL_SPECIALTIES.filter(s => enabledBySlug[s.slug]?.is_active).length;
 
   /** Activate a standard specialty using the provision_specialty RPC */
-  const handleActivateStandard = async (slug: string, name: string) => {
-    if (!clinic?.id || !isOwner) return;
+  const handleActivateStandard = async (slug: string, name: string, displayName?: string) => {
+    if (!clinic?.id || !canManageSpecialties) return;
+
+    const normalizedDisplayName = displayName?.trim();
+    if (slug === "other_specialty") {
+      const validationError = validateOtherDisplayName(normalizedDisplayName ?? "");
+      if (validationError) {
+        toast.error(validationError);
+        return;
+      }
+    }
 
     // Bloqueio por limite do plano antes de provisionar
     const allowed = await ensureCanCreate('specialties');
@@ -170,12 +216,22 @@ export function SpecialtiesSection() {
       }
 
       // Provision tabs, templates, and activate the specialty
-      const { data, error } = await supabase.rpc("provision_specialty", {
+      const { error } = await supabase.rpc("provision_specialty", {
         _clinic_id: clinic.id,
         _specialty_slug: slug,
       });
 
       if (error) throw error;
+
+      if (slug === "other_specialty" && normalizedDisplayName) {
+        const { error: aliasError } = await supabase
+          .from("clinic_specialty_aliases")
+          .upsert(
+            { clinic_id: clinic.id, base_specialty_key: "other_specialty", display_name: normalizedDisplayName.slice(0, 60) },
+            { onConflict: "clinic_id,base_specialty_key" }
+          );
+        if (aliasError) throw aliasError;
+      }
 
       // Auto-link all active professionals to the newly activated specialty
       const specialtyRecord = await supabase
@@ -205,8 +261,8 @@ export function SpecialtiesSection() {
         }
       }
 
-      setProvisionResult(data as Record<string, unknown>);
-      toast.success(`"${name}" ativada com sucesso!`, {
+      setProvisionResult({ specialty_name: normalizedDisplayName || name, tabs_created: "padrão", templates_created: "básico" });
+      toast.success(`"${normalizedDisplayName || name}" ativada com sucesso!`, {
         description: `Abas de prontuário, templates e vínculos profissionais provisionados automaticamente.`,
       });
 
@@ -264,6 +320,11 @@ export function SpecialtiesSection() {
     if (existing?.is_active) {
       setConfirmDeactivate(existing);
     } else {
+      if (slug === "other_specialty") {
+        setOtherDisplayName(otherAlias || "");
+        setOtherDialogOpen(true);
+        return;
+      }
       handleActivateStandard(slug, name);
     }
   };
@@ -372,6 +433,8 @@ export function SpecialtiesSection() {
     queryClient.invalidateQueries({ queryKey: ["specialties-management", clinic.id] });
     queryClient.invalidateQueries({ queryKey: ["custom-specialties", clinic.id] });
     queryClient.invalidateQueries({ queryKey: ["professional-specialties"] });
+    queryClient.invalidateQueries({ queryKey: ["clinic-specialty-aliases", clinic.id] });
+    queryClient.invalidateQueries({ queryKey: ["specialty-display-name", clinic.id] });
   };
 
   const openEditDialog = (specialty: ClinicSpecialty) => {
