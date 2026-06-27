@@ -5154,15 +5154,22 @@ export type Database = {
           description: string
           due_date: string | null
           id: string
+          insurance_id: string | null
           notes: string | null
           origin: string | null
+          package_id: string | null
+          paid_amount: number
           paid_at: string | null
+          parent_transaction_id: string | null
           patient_id: string | null
           payment_method: string | null
           payment_method_id: string | null
+          procedure_id: string | null
           professional_id: string | null
+          received_by: string | null
           reference_id: string | null
           reference_type: string | null
+          reversal_reason: string | null
           status: Database["public"]["Enums"]["transaction_status"]
           transaction_date: string
           type: Database["public"]["Enums"]["transaction_type"]
@@ -5178,15 +5185,22 @@ export type Database = {
           description: string
           due_date?: string | null
           id?: string
+          insurance_id?: string | null
           notes?: string | null
           origin?: string | null
+          package_id?: string | null
+          paid_amount?: number
           paid_at?: string | null
+          parent_transaction_id?: string | null
           patient_id?: string | null
           payment_method?: string | null
           payment_method_id?: string | null
+          procedure_id?: string | null
           professional_id?: string | null
+          received_by?: string | null
           reference_id?: string | null
           reference_type?: string | null
+          reversal_reason?: string | null
           status?: Database["public"]["Enums"]["transaction_status"]
           transaction_date?: string
           type: Database["public"]["Enums"]["transaction_type"]
@@ -5202,15 +5216,22 @@ export type Database = {
           description?: string
           due_date?: string | null
           id?: string
+          insurance_id?: string | null
           notes?: string | null
           origin?: string | null
+          package_id?: string | null
+          paid_amount?: number
           paid_at?: string | null
+          parent_transaction_id?: string | null
           patient_id?: string | null
           payment_method?: string | null
           payment_method_id?: string | null
+          procedure_id?: string | null
           professional_id?: string | null
+          received_by?: string | null
           reference_id?: string | null
           reference_type?: string | null
+          reversal_reason?: string | null
           status?: Database["public"]["Enums"]["transaction_status"]
           transaction_date?: string
           type?: Database["public"]["Enums"]["transaction_type"]
@@ -5253,6 +5274,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "finance_transactions_insurance_id_fkey"
+            columns: ["insurance_id"]
+            isOneToOne: false
+            referencedRelation: "insurances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_transactions_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_transactions_parent_transaction_id_fkey"
+            columns: ["parent_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "finance_transactions"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "finance_transactions_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
@@ -5264,6 +5306,13 @@ export type Database = {
             columns: ["payment_method_id"]
             isOneToOne: false
             referencedRelation: "payment_methods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_transactions_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
             referencedColumns: ["id"]
           },
           {
