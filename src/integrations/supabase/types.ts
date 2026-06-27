@@ -3773,6 +3773,214 @@ export type Database = {
           },
         ]
       }
+      commission_entries: {
+        Row: {
+          appointment_id: string | null
+          base_amount: number
+          clinic_id: string
+          commission_amount: number
+          created_at: string
+          id: string
+          notes: string | null
+          payout_id: string | null
+          professional_id: string
+          reference_date: string
+          rule_id: string | null
+          status: Database["public"]["Enums"]["commission_entry_status"]
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          base_amount?: number
+          clinic_id: string
+          commission_amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payout_id?: string | null
+          professional_id: string
+          reference_date?: string
+          rule_id?: string | null
+          status?: Database["public"]["Enums"]["commission_entry_status"]
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          base_amount?: number
+          clinic_id?: string
+          commission_amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payout_id?: string | null
+          professional_id?: string
+          reference_date?: string
+          rule_id?: string | null
+          status?: Database["public"]["Enums"]["commission_entry_status"]
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_entries_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_entries_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_effective_features"
+            referencedColumns: ["clinic_id"]
+          },
+          {
+            foreignKeyName: "commission_entries_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_entries_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "public_clinic_booking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_entries_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_entries_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "commission_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_entries_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "finance_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_rules: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          kind: Database["public"]["Enums"]["commission_rule_kind"]
+          notes: string | null
+          package_id: string | null
+          pay_trigger: string
+          percentual: number | null
+          priority: number
+          procedure_id: string | null
+          professional_id: string | null
+          specialty_id: string | null
+          updated_at: string
+          valor_fixo: number | null
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          kind: Database["public"]["Enums"]["commission_rule_kind"]
+          notes?: string | null
+          package_id?: string | null
+          pay_trigger?: string
+          percentual?: number | null
+          priority?: number
+          procedure_id?: string | null
+          professional_id?: string | null
+          specialty_id?: string | null
+          updated_at?: string
+          valor_fixo?: number | null
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: Database["public"]["Enums"]["commission_rule_kind"]
+          notes?: string | null
+          package_id?: string | null
+          pay_trigger?: string
+          percentual?: number | null
+          priority?: number
+          procedure_id?: string | null
+          professional_id?: string | null
+          specialty_id?: string | null
+          updated_at?: string
+          valor_fixo?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_rules_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_effective_features"
+            referencedColumns: ["clinic_id"]
+          },
+          {
+            foreignKeyName: "commission_rules_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_rules_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "public_clinic_booking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_rules_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_rules_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_rules_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_rules_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consent_terms: {
         Row: {
           clinic_id: string
@@ -5087,6 +5295,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      finance_audit_logs: {
+        Row: {
+          action: string
+          actor_id: string | null
+          after_data: Json | null
+          before_data: Json | null
+          clinic_id: string
+          created_at: string
+          id: string
+          reason: string | null
+          transaction_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          clinic_id: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          transaction_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          transaction_id?: string | null
+        }
+        Relationships: []
       }
       finance_categories: {
         Row: {
@@ -11572,6 +11816,83 @@ export type Database = {
           },
         ]
       }
+      professional_payouts: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          paid_at: string | null
+          payment_method: string | null
+          period_end: string
+          period_start: string
+          professional_id: string
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          period_end: string
+          period_start: string
+          professional_id: string
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          period_end?: string
+          period_start?: string
+          professional_id?: string
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_payouts_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_effective_features"
+            referencedColumns: ["clinic_id"]
+          },
+          {
+            foreignKeyName: "professional_payouts_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_payouts_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "public_clinic_booking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_payouts_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professional_schedule_config: {
         Row: {
           clinic_id: string
@@ -15540,6 +15861,13 @@ export type Database = {
         | "meu_financeiro"
         | "comercial"
       app_role: "owner" | "admin" | "profissional" | "recepcionista"
+      commission_entry_status: "pendente" | "aprovado" | "pago" | "cancelado"
+      commission_rule_kind:
+        | "percentual"
+        | "fixo"
+        | "por_procedimento"
+        | "por_especialidade"
+        | "por_pacote"
       consent_status: "granted" | "revoked" | "pending"
       document_status: "rascunho" | "assinado" | "cancelado"
       invitation_status: "pending" | "accepted" | "expired" | "cancelled"
@@ -15734,6 +16062,14 @@ export const Constants = {
         "comercial",
       ],
       app_role: ["owner", "admin", "profissional", "recepcionista"],
+      commission_entry_status: ["pendente", "aprovado", "pago", "cancelado"],
+      commission_rule_kind: [
+        "percentual",
+        "fixo",
+        "por_procedimento",
+        "por_especialidade",
+        "por_pacote",
+      ],
       consent_status: ["granted", "revoked", "pending"],
       document_status: ["rascunho", "assinado", "cancelado"],
       invitation_status: ["pending", "accepted", "expired", "cancelled"],
