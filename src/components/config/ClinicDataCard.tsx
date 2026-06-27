@@ -464,15 +464,11 @@ export function ClinicDataCard({
 
         <Separator />
 
+        {/* Link de agendamento */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Link2 className="h-4 w-4 text-primary" />
-              <Label className="text-sm font-medium">Link de agendamento online</Label>
-            </div>
-            <Badge variant={bookingEnabled ? "default" : "secondary"}>
-              {bookingEnabled ? "Seu link de agendamento está ativo" : "Agendamento online desativado"}
-            </Badge>
+          <div className="flex items-center gap-2">
+            <Link2 className="h-4 w-4 text-primary" />
+            <Label className="text-sm font-medium">Link de agendamento online</Label>
           </div>
 
           {editingSlug ? (
@@ -490,10 +486,7 @@ export function ClinicDataCard({
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => {
-                  setSlugDraft(slug);
-                  setEditingSlug(false);
-                }}
+                onClick={() => { setSlugDraft(slug); setEditingSlug(false); }}
                 disabled={savingSlug}
               >
                 <X className="h-4 w-4" />
@@ -506,28 +499,131 @@ export function ClinicDataCard({
                 readOnly
                 className="flex-1 min-w-[240px] font-mono text-sm"
               />
-              <Button size="sm" variant="outline" onClick={handleCopyLink} disabled={!bookingUrl}>
-                <Copy className="h-4 w-4 mr-1" /> Copiar link
+              <Button size="sm" variant="outline" onClick={handleCopyLink} disabled={!bookingUrl || !bookingEnabled}>
+                <Copy className="h-4 w-4 mr-1" /> Copiar Link
               </Button>
               <Button size="sm" variant="outline" onClick={handleOpenLink} disabled={!bookingUrl}>
                 <ExternalLink className="h-4 w-4 mr-1" /> Abrir
               </Button>
-              <Button size="sm" variant="outline" onClick={handleShowQr} disabled={!bookingUrl}>
-                <QrCode className="h-4 w-4 mr-1" /> QR Code
-              </Button>
-              <Button size="sm" variant="outline" onClick={handleShare} disabled={!bookingUrl}>
+              <Button size="sm" variant="outline" onClick={handleShare} disabled={!bookingUrl || !bookingEnabled}>
                 <Share2 className="h-4 w-4 mr-1" /> Compartilhar
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => setEditingSlug(true)} disabled={!clinicId}>
-                <RefreshCw className="h-4 w-4 mr-1" /> {slug ? "Editar slug" : "Definir slug"}
+              <Button size="sm" variant="outline" onClick={handleShowQr} disabled={!bookingUrl || !bookingEnabled}>
+                <QrCode className="h-4 w-4 mr-1" /> Gerar QR Code
               </Button>
+              {canManageBooking && (
+                <Button size="sm" variant="ghost" onClick={() => setEditingSlug(true)} disabled={!clinicId}>
+                  <RefreshCw className="h-4 w-4 mr-1" /> {slug ? "Editar slug" : "Definir slug"}
+                </Button>
+              )}
             </div>
           )}
-
           <p className="text-xs text-muted-foreground">
-            Envie este link aos pacientes para agendarem direto pelo site. Ative o agendamento online em Configurações → Agenda.
+            Este link é permanente. Apenas o status (ativo/desativado) muda — o endereço continua o mesmo.
           </p>
         </div>
+
+        <Separator />
+
+        {/* Card Agendamento Online */}
+        <div className="rounded-lg border bg-card p-4 space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Globe className="h-5 w-5 text-primary" />
+              <div>
+                <p className="font-medium text-foreground">Agendamento Online</p>
+                <p className="text-xs text-muted-foreground">
+                  Ative ou desative o agendamento público da clínica.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {bookingEnabled ? (
+                <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white">
+                  🟢 Agendamento Online Ativo
+                </Badge>
+              ) : (
+                <Badge className="bg-red-600 hover:bg-red-600 text-white">
+                  🔴 Agendamento Online Desativado
+                </Badge>
+              )}
+              <Switch
+                checked={bookingEnabled}
+                onCheckedChange={handleToggleEnabled}
+                disabled={!clinicId || !canManageBooking || togglingEnabled || loadingBooking}
+                aria-label="Ativar agendamento online"
+              />
+            </div>
+          </div>
+
+          {!canManageBooking && (
+            <p className="text-xs text-muted-foreground">
+              Apenas Proprietário e Administrador podem alterar estas configurações.
+            </p>
+          )}
+
+          <Separator />
+
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-foreground">Configurações avançadas</p>
+            <div className="grid sm:grid-cols-2 gap-x-6 gap-y-3">
+              {([
+                ["allow_new_patients", "Permitir novos pacientes"],
+                ["only_existing_patients", "Permitir apenas pacientes cadastrados"],
+                ["require_whatsapp_confirmation", "Exigir confirmação por WhatsApp"],
+                ["require_email_confirmation", "Exigir confirmação por e-mail"],
+                ["allow_choose_professional", "Permitir escolher profissional"],
+                ["allow_choose_specialty", "Permitir escolher especialidade"],
+                ["allow_choose_procedure", "Permitir escolher procedimento"],
+                ["show_prices", "Mostrar preços dos procedimentos"],
+                ["allow_teleconsultation", "Permitir teleconsulta"],
+                ["allow_in_person", "Permitir consulta presencial"],
+              ] as [keyof BookingSettings, string][]).map(([key, label]) => (
+                <label key={key} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <Checkbox
+                    checked={!!settings[key]}
+                    disabled={!canManageBooking}
+                    onCheckedChange={(v) => handleToggleSetting(key, v === true)}
+                  />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-foreground">Horários</p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {([
+                ["clinic", "Usar agenda da clínica"],
+                ["professional", "Usar agenda individual dos profissionais"],
+              ] as ["clinic" | "professional", string][]).map(([value, label]) => (
+                <label
+                  key={value}
+                  className={`flex items-center gap-2 rounded-md border p-3 text-sm cursor-pointer ${
+                    settings.schedule_source === value ? "border-primary bg-primary/5" : "hover:bg-muted/40"
+                  } ${!canManageBooking ? "opacity-60 cursor-not-allowed" : ""}`}
+                >
+                  <input
+                    type="radio"
+                    name="schedule_source"
+                    checked={settings.schedule_source === value}
+                    disabled={!canManageBooking}
+                    onChange={() => handleToggleSetting("schedule_source", value)}
+                  />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Bloqueios, férias, horários e encaixes são sempre respeitados.
+            </p>
+          </div>
+        </div>
+
+
 
       </CardContent>
 
