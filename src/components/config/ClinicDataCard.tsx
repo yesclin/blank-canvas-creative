@@ -58,16 +58,48 @@ export function ClinicDataCard({
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { isOwner, isAdmin } = usePermissions();
+  const canManageBooking = isOwner || isAdmin;
 
   // Booking link state
   const [slug, setSlug] = useState("");
   const [slugDraft, setSlugDraft] = useState("");
   const [bookingEnabled, setBookingEnabled] = useState(false);
+  const [togglingEnabled, setTogglingEnabled] = useState(false);
   const [editingSlug, setEditingSlug] = useState(false);
   const [savingSlug, setSavingSlug] = useState(false);
   const [loadingBooking, setLoadingBooking] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState("");
+
+  type BookingSettings = {
+    allow_new_patients?: boolean;
+    only_existing_patients?: boolean;
+    require_whatsapp_confirmation?: boolean;
+    require_email_confirmation?: boolean;
+    allow_choose_professional?: boolean;
+    allow_choose_specialty?: boolean;
+    allow_choose_procedure?: boolean;
+    show_prices?: boolean;
+    allow_teleconsultation?: boolean;
+    allow_in_person?: boolean;
+    schedule_source?: "clinic" | "professional";
+  };
+
+  const DEFAULT_SETTINGS: BookingSettings = {
+    allow_new_patients: true,
+    only_existing_patients: false,
+    require_whatsapp_confirmation: false,
+    require_email_confirmation: false,
+    allow_choose_professional: true,
+    allow_choose_specialty: true,
+    allow_choose_procedure: true,
+    show_prices: false,
+    allow_teleconsultation: true,
+    allow_in_person: true,
+    schedule_source: "clinic",
+  };
+  const [settings, setSettings] = useState<BookingSettings>(DEFAULT_SETTINGS);
 
   useEffect(() => {
     if (!clinicId) return;
@@ -75,7 +107,7 @@ export function ClinicDataCard({
     setLoadingBooking(true);
     supabase
       .from("clinics")
-      .select("slug, public_booking_enabled")
+      .select("slug, public_booking_enabled, public_booking_settings")
       .eq("id", clinicId)
       .maybeSingle()
       .then(({ data }) => {
@@ -83,6 +115,9 @@ export function ClinicDataCard({
         setSlug(data.slug || "");
         setSlugDraft(data.slug || "");
         setBookingEnabled(!!data.public_booking_enabled);
+        if (data.public_booking_settings && typeof data.public_booking_settings === "object") {
+          setSettings({ ...DEFAULT_SETTINGS, ...(data.public_booking_settings as BookingSettings) });
+        }
       })
       .then(() => active && setLoadingBooking(false));
     return () => {
