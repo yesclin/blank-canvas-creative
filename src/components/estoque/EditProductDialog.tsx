@@ -70,7 +70,7 @@ export function EditProductDialog({ open, onOpenChange, product, categories }: E
           description: form.description || undefined,
           category: form.category || undefined,
           unit: form.unit,
-          current_stock: form.current_stock,
+          // current_stock intentionally omitted: saldo só muda via movimentações (entradas, saídas, ajustes, consumo, estornos)
           min_stock: form.min_stock,
           cost_price: form.cost_price,
           sale_price: form.sale_price,
