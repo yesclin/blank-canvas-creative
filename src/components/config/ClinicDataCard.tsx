@@ -63,6 +63,8 @@ export function ClinicDataCard({
   const [editingSlug, setEditingSlug] = useState(false);
   const [savingSlug, setSavingSlug] = useState(false);
   const [loadingBooking, setLoadingBooking] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState("");
 
   useEffect(() => {
     if (!clinicId) return;
