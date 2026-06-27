@@ -37,6 +37,7 @@ const SPECIALTY_ICONS: Record<string, React.ElementType> = {
   odontologia: Smile,
   dermatologia: Heart,
   pediatria: Baby,
+  other_specialty: Sparkles,
 };
 
 const SPECIALTY_COLORS: Record<string, string> = {
@@ -49,6 +50,7 @@ const SPECIALTY_COLORS: Record<string, string> = {
   odontologia: "bg-cyan-500",
   dermatologia: "bg-rose-500",
   pediatria: "bg-amber-500",
+  other_specialty: "bg-slate-600",
 };
 
 const SPECIALTY_DESCRIPTIONS: Record<string, string> = {
@@ -61,6 +63,7 @@ const SPECIALTY_DESCRIPTIONS: Record<string, string> = {
   odontologia: "Saúde bucal com odontograma digital",
   dermatologia: "Cuidados com a pele",
   pediatria: "Atendimento infantil",
+  other_specialty: "Modelo básico para especialidades ainda não listadas",
 };
 
 interface ClinicSpecialty {
@@ -434,7 +437,7 @@ export function SpecialtiesSection() {
     queryClient.invalidateQueries({ queryKey: ["custom-specialties", clinic.id] });
     queryClient.invalidateQueries({ queryKey: ["professional-specialties"] });
     queryClient.invalidateQueries({ queryKey: ["clinic-specialty-aliases", clinic.id] });
-    queryClient.invalidateQueries({ queryKey: ["specialty-display-name", clinic.id] });
+    queryClient.invalidateQueries({ queryKey: ["clinic-specialty-alias", clinic.id, "other_specialty"] });
   };
 
   const openEditDialog = (specialty: ClinicSpecialty) => {
@@ -584,7 +587,7 @@ export function SpecialtiesSection() {
                                 </Badge>
                               )}
                             </div>
-                            {isOwner && (
+                            {canManageSpecialties && (
                               <Switch
                                 checked={isEnabled}
                                 onCheckedChange={() => handleToggleStandard(spec.slug, spec.name)}
@@ -607,7 +610,7 @@ export function SpecialtiesSection() {
                         Especialidades exclusivas desta clínica.
                       </p>
                     </div>
-                    {isOwner && (
+                    {canManageSpecialties && (
                       <Button onClick={() => setIsCreateDialogOpen(true)}>
                         <Plus className="h-4 w-4 mr-2" />
                         Nova
@@ -624,7 +627,7 @@ export function SpecialtiesSection() {
                       <p className="text-sm text-muted-foreground max-w-sm">
                         Crie especialidades exclusivas quando as padrão do Yesclin não atenderem.
                       </p>
-                      {isOwner && (
+                      {canManageSpecialties && (
                         <Button onClick={() => setIsCreateDialogOpen(true)} className="mt-4">
                           <Plus className="h-4 w-4 mr-2" />
                           Criar especialidade
@@ -643,7 +646,7 @@ export function SpecialtiesSection() {
                                   <span className="font-medium truncate block">{s.name}</span>
                                   {s.description && <span className="text-xs text-muted-foreground truncate block">{s.description}</span>}
                                 </div>
-                                {isOwner && (
+                                {canManageSpecialties && (
                                   <div className="flex items-center gap-1 ml-2">
                                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(s)}>
                                       <Pencil className="h-4 w-4" />
@@ -666,7 +669,7 @@ export function SpecialtiesSection() {
                                 <div className="flex-1 min-w-0">
                                   <span className="font-medium truncate text-muted-foreground block">{s.name}</span>
                                 </div>
-                                {isOwner && (
+                                {canManageSpecialties && (
                                   <div className="flex items-center gap-1 ml-2">
                                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(s)}>
                                       <Pencil className="h-4 w-4" />
