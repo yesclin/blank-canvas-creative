@@ -87,7 +87,7 @@ export function useStockAlertsData() {
         if (!lastMovementByItem.has(m.item_id)) lastMovementByItem.set(m.item_id, m.created_at);
       }
 
-      const nameById = new Map(items.map((i) => [i.id, i.name]));
+      const nameById = new Map<string, string>(items.map((i) => [i.id as string, i.name as string]));
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
