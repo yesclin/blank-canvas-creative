@@ -15530,7 +15530,17 @@ export type Database = {
         | "internacao"
         | "honorarios"
         | "odontologica"
-      transaction_status: "pendente" | "pago" | "cancelado" | "estornado"
+      transaction_status:
+        | "pendente"
+        | "pago"
+        | "cancelado"
+        | "estornado"
+        | "previsto"
+        | "parcial"
+        | "vencido"
+        | "em_analise"
+        | "glosado"
+        | "repassado"
       transaction_type: "receita" | "despesa"
     }
     CompositeTypes: {
@@ -15719,7 +15729,18 @@ export const Constants = {
         "honorarios",
         "odontologica",
       ],
-      transaction_status: ["pendente", "pago", "cancelado", "estornado"],
+      transaction_status: [
+        "pendente",
+        "pago",
+        "cancelado",
+        "estornado",
+        "previsto",
+        "parcial",
+        "vencido",
+        "em_analise",
+        "glosado",
+        "repassado",
+      ],
       transaction_type: ["receita", "despesa"],
     },
   },
