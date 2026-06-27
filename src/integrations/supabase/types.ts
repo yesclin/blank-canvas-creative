@@ -15693,6 +15693,14 @@ export type Database = {
         Returns: number
       }
       get_pre_registration_by_token: { Args: { _token: string }; Returns: Json }
+      get_public_effective_schedule: {
+        Args: { _clinic_id: string; _professional_id: string }
+        Returns: {
+          default_duration_minutes: number
+          source: string
+          working_days: Json
+        }[]
+      }
       get_public_professionals: {
         Args: { _clinic_id: string; _specialty_id?: string }
         Returns: {
