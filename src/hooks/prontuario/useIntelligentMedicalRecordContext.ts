@@ -133,12 +133,17 @@ export function useIntelligentMedicalRecordContext(patientId: string | null | un
 
     // Use database context if available
     if (dbContext) {
-      const hasValidContext = dbContext.is_specialty_enabled && dbContext.can_professional_access;
+      const effectiveSpecialtyId = dbContext.specialty_id || activeAppointment.resolved_specialty_id || null;
+      const effectiveSpecialtyName = dbContext.specialty_name || activeAppointment.resolved_specialty_name || null;
+      const hasDbSpecialty = !!dbContext.specialty_id;
+      const isSpecialtyEnabled = hasDbSpecialty ? !!dbContext.is_specialty_enabled : !!effectiveSpecialtyId;
+      const canProfessionalAccess = hasDbSpecialty ? !!dbContext.can_professional_access : !!effectiveSpecialtyId;
+      const hasValidContext = isSpecialtyEnabled && canProfessionalAccess;
       
       let validationError: string | null = null;
-      if (!dbContext.is_specialty_enabled) {
+      if (!isSpecialtyEnabled) {
         validationError = "A especialidade do procedimento não está habilitada na clínica";
-      } else if (!dbContext.can_professional_access) {
+      } else if (!canProfessionalAccess) {
         validationError = "Profissional não está autorizado para esta especialidade";
       } else if (!templateLoading && !resolvedTemplate) {
         validationError = "Nenhum modelo de anamnese encontrado para esta especialidade. Configure um modelo antes de prosseguir.";
@@ -153,11 +158,11 @@ export function useIntelligentMedicalRecordContext(patientId: string | null | un
         patientId: dbContext.patient_id,
         procedureId: dbContext.procedure_id,
         procedureName: dbContext.procedure_name,
-        specialtyId: dbContext.specialty_id,
-        specialtyName: dbContext.specialty_name,
+        specialtyId: effectiveSpecialtyId,
+        specialtyName: effectiveSpecialtyName,
         specialtyKey: dbContext.specialty_key,
-        isSpecialtyEnabled: dbContext.is_specialty_enabled || false,
-        canProfessionalAccess: dbContext.can_professional_access || false,
+        isSpecialtyEnabled,
+        canProfessionalAccess,
         hasActiveAppointment: true,
         isContextLocked: true,
         canEditRecords: canEdit,
