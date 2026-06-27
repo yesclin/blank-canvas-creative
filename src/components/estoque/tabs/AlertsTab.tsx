@@ -50,6 +50,7 @@ function fmtDate(iso: string | null) {
 
 export function AlertsTab() {
   const { data, isLoading } = useStockAlertsData();
+  const { data: items = [] } = useInventoryItems();
   const [filter, setFilter] = useState<FilterKey>("all");
   const [entryOpen, setEntryOpen] = useState(false);
 
