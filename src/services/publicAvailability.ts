@@ -196,9 +196,7 @@ export async function getPublicAvailabilityWithDetails(
 
   console.log("[PublicAvail] Total slots generated:", slots.length);
 
-  const emptyReason = slots.length === 0
-    ? (!hasProSchedules && !hasClinicConfig ? "no_schedules" : "all_blocked")
-    : null;
+  const emptyReason = slots.length === 0 ? "all_blocked" : null;
 
   return { slots, emptyReason };
 }
