@@ -15395,6 +15395,14 @@ export type Database = {
         Args: { _clinic_id: string; _specialty_id: string }
         Returns: number
       }
+      provision_other_specialty_defaults: {
+        Args: { _clinic_id: string; _specialty_id: string }
+        Returns: undefined
+      }
+      provision_other_specialty_medical_record_templates: {
+        Args: { _clinic_id: string; _specialty_id: string }
+        Returns: number
+      }
       provision_pilates_anamnesis_templates: {
         Args: { _clinic_id: string; _specialty_id: string }
         Returns: number
