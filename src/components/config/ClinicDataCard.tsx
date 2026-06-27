@@ -54,6 +54,76 @@ export function ClinicDataCard({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  // Booking link state
+  const [slug, setSlug] = useState("");
+  const [slugDraft, setSlugDraft] = useState("");
+  const [bookingEnabled, setBookingEnabled] = useState(false);
+  const [editingSlug, setEditingSlug] = useState(false);
+  const [savingSlug, setSavingSlug] = useState(false);
+  const [loadingBooking, setLoadingBooking] = useState(false);
+
+  useEffect(() => {
+    if (!clinicId) return;
+    let active = true;
+    setLoadingBooking(true);
+    supabase
+      .from("clinics")
+      .select("slug, public_booking_enabled")
+      .eq("id", clinicId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!active || !data) return;
+        setSlug(data.slug || "");
+        setSlugDraft(data.slug || "");
+        setBookingEnabled(!!data.public_booking_enabled);
+      })
+      .then(() => active && setLoadingBooking(false));
+    return () => {
+      active = false;
+    };
+  }, [clinicId]);
+
+  const bookingUrl = slug ? `${PUBLIC_BOOKING_DOMAIN}/agendar/${slug}` : "";
+
+  const handleCopyLink = async () => {
+    if (!bookingUrl) return;
+    await navigator.clipboard.writeText(bookingUrl);
+    toast({ title: "Link copiado!", description: bookingUrl });
+  };
+
+  const handleOpenLink = () => {
+    if (bookingUrl) window.open(bookingUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const handleSaveSlug = async () => {
+    if (!clinicId) return;
+    const clean = sanitizeSlug(slugDraft);
+    if (!clean) {
+      toast({ title: "Slug inválido", description: "Informe um identificador válido.", variant: "destructive" });
+      return;
+    }
+    setSavingSlug(true);
+    const { error } = await supabase
+      .from("clinics")
+      .update({ slug: clean })
+      .eq("id", clinicId);
+    setSavingSlug(false);
+    if (error) {
+      const dup = error.message?.toLowerCase().includes("duplicate") || error.message?.toLowerCase().includes("unique");
+      toast({
+        title: dup ? "Slug já em uso" : "Erro ao salvar slug",
+        description: dup ? "Escolha outro identificador." : error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+    setSlug(clean);
+    setSlugDraft(clean);
+    setEditingSlug(false);
+    toast({ title: "Link atualizado!" });
+  };
+
+
   const handlePhoneChange = (value: string, setter: (v: string) => void) => {
     const masked = maskPhone(value);
     setter(masked);
