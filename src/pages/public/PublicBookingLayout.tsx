@@ -19,7 +19,28 @@ export default function PublicBookingLayout() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-muted/40 to-background">
         <div className="text-center space-y-4 p-8">
           <h1 className="text-2xl font-bold text-foreground">Clínica não encontrada</h1>
-          <p className="text-muted-foreground">O link de agendamento está inativo ou não existe.</p>
+          <p className="text-muted-foreground">O link de agendamento não existe.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!clinic.public_booking_enabled) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-muted/40 to-background">
+        <div className="text-center space-y-4 p-8 max-w-md">
+          {clinic.logo_url && (
+            <img src={clinic.logo_url} alt={clinic.name} className="h-16 w-16 rounded-xl object-cover mx-auto shadow" />
+          )}
+          <h1 className="text-2xl font-bold text-foreground">{clinic.name}</h1>
+          <p className="text-muted-foreground">
+            Esta clínica desativou temporariamente o agendamento online.
+          </p>
+          {clinic.phone && (
+            <p className="text-sm text-muted-foreground">
+              Entre em contato pelo telefone <span className="font-medium text-foreground">{clinic.phone}</span>.
+            </p>
+          )}
         </div>
       </div>
     );
