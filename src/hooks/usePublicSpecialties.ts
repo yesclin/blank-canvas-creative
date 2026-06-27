@@ -6,6 +6,7 @@ export interface PublicSpecialty {
   name: string;
   color: string;
   description: string | null;
+  slug: string | null;
 }
 
 export function usePublicSpecialties(clinicId: string | undefined) {
@@ -13,13 +14,13 @@ export function usePublicSpecialties(clinicId: string | undefined) {
     queryKey: ["public-specialties", clinicId],
     queryFn: async () => {
       if (!clinicId) return [];
-      const { data, error } = await supabase
-        .from("specialties")
-        .select("id, name, color, description")
-        .eq("clinic_id", clinicId)
-        .eq("is_active", true)
-        .order("name");
-      if (error) return [];
+      const { data, error } = await supabase.rpc("get_public_specialties", {
+        _clinic_id: clinicId,
+      });
+      if (error) {
+        console.error("[usePublicSpecialties] RPC error:", error.message);
+        return [];
+      }
       return (data || []) as PublicSpecialty[];
     },
     enabled: !!clinicId,
