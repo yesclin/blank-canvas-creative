@@ -86,7 +86,7 @@ export async function getPublicAvailabilityWithDetails(
     return { slots: [], emptyReason: "no_schedules" };
   }
 
-  const workingDays = effective.working_days;
+  const workingDays = normalizeWeekSchedule(effective.working_days);
   const defaultDuration = effective.default_duration_minutes || 30;
   const fallbackUsed = effective.source?.startsWith("clinic") ?? false;
 
@@ -226,6 +226,36 @@ function normalizeDayPeriods(
   }
 
   return [{ startTime: open, endTime: close, slotDuration }];
+}
+
+function normalizeWeekSchedule(rawWorkingDays: Record<string, any>): Record<string, any> {
+  if (!rawWorkingDays) return {};
+
+  if (rawWorkingDays.schedule && typeof rawWorkingDays.schedule === "object") {
+    return rawWorkingDays.schedule;
+  }
+
+  if (Array.isArray(rawWorkingDays.working_days)) {
+    const enabledDays = new Set(rawWorkingDays.working_days);
+    const open = rawWorkingDays.open_time || rawWorkingDays.open || "08:00";
+    const close = rawWorkingDays.close_time || rawWorkingDays.close || "18:00";
+    const lunchStart = rawWorkingDays.lunch_start || rawWorkingDays.lunchStart || "12:00";
+    const lunchEnd = rawWorkingDays.lunch_end || rawWorkingDays.lunchEnd || "13:00";
+
+    return ["dom", "seg", "ter", "qua", "qui", "sex", "sab"].reduce<Record<string, any>>((acc, dayKey) => {
+      acc[dayKey] = {
+        enabled: enabledDays.has(dayKey),
+        open,
+        close,
+        hasLunch: true,
+        lunchStart,
+        lunchEnd,
+      };
+      return acc;
+    }, {});
+  }
+
+  return rawWorkingDays;
 }
 
 function generateSlotsForPeriod(
