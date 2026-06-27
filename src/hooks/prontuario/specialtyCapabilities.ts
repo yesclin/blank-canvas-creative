@@ -49,6 +49,17 @@ export const SPECIALTY_CAPABILITIES: Record<SpecialtyKey, SpecialtyCapability> =
     icon: 'Stethoscope',
   },
 
+  other_specialty: {
+    label: 'Outra Especialidade / Atendimento Geral',
+    anamnesisSlug: 'other_specialty',
+    enabledBlocks: [
+      'resumo', 'anamnese', 'evolucao', 'conduta', 'procedimentos_realizados',
+      'documentos_clinicos', 'exames', 'alertas', 'timeline',
+    ],
+    defaultModules: [...CORE_MODULES, 'procedures_module', 'advanced_uploads'],
+    icon: 'Layers',
+  },
+
   psicologia: {
     label: 'Psicologia',
     anamnesisSlug: 'psicologia',

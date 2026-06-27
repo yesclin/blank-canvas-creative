@@ -180,9 +180,15 @@ const SPECIALTY_SLUG_BY_NAME: Record<string, string> = {
   'odontologia': 'odontologia',
   'dermatologia': 'dermatologia',
   'pediatria': 'pediatria',
+  'outra especialidade / atendimento geral': 'other_specialty',
+  'outra especialidade': 'other_specialty',
+  'atendimento geral': 'other_specialty',
+  'other_specialty': 'other_specialty',
 };
 
-function resolveSpecialtySlug(name?: string | null) {
+function resolveSpecialtySlug(name?: string | null, key?: string | null) {
+  if (key === 'other_specialty') return 'other_specialty';
+  if (key && SPECIALTY_SLUG_BY_NAME[key]) return SPECIALTY_SLUG_BY_NAME[key];
   const normalized = name?.trim().toLowerCase();
   return (normalized && SPECIALTY_SLUG_BY_NAME[normalized]) || 'geral';
 }
@@ -472,7 +478,7 @@ export function AnamneseBlock({
         if (!existing.current_version_id) {
           const { error: provisionError } = await supabase.rpc('provision_specialty', {
             _clinic_id: clinic.id,
-            _specialty_slug: resolveSpecialtySlug(specialtyName),
+            _specialty_slug: resolveSpecialtySlug(specialtyName, specialtyKey),
           });
 
           if (provisionError) throw provisionError;
@@ -484,7 +490,7 @@ export function AnamneseBlock({
       }
       const { error: provisionError } = await supabase.rpc('provision_specialty', {
         _clinic_id: clinic.id,
-        _specialty_slug: resolveSpecialtySlug(specialtyName),
+        _specialty_slug: resolveSpecialtySlug(specialtyName, specialtyKey),
       });
 
       if (provisionError) throw provisionError;
@@ -497,7 +503,7 @@ export function AnamneseBlock({
     } finally {
       setCreatingDefault(false);
     }
-  }, [specialtyId, specialtyName, clinic?.id, creatingDefault, queryClient, refetchTemplates]);
+  }, [specialtyId, specialtyName, specialtyKey, clinic?.id, creatingDefault, queryClient, refetchTemplates]);
 
   // ─── Auto-provision default template if none exist ──────────────
   const autoProvisionTriggered = useRef(false);

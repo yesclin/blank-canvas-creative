@@ -96,7 +96,7 @@ BEGIN
          SELECT 1 FROM public.clinic_specialty_modules x
          WHERE x.clinic_id = csm.clinic_id
            AND x.specialty_id = v_other_id
-           AND x.module_id = csm.module_id
+           AND x.module_key = csm.module_key
        );
 
     -- Drop leftover duplicates that would violate the unique key
