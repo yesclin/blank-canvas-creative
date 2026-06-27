@@ -38,7 +38,8 @@ function isActiveAppointmentStatus(status: string | null | undefined) {
 function mapAppointmentData(data: any, startedAtOverride?: string | null): ActiveAppointment {
   const procedureSpecialtyId = data.procedures?.specialty_id || null;
   const procedureSpecialtyName = data.procedures?.specialties?.name || null;
-  const resolvedSpecialtyId = data.specialty_id || procedureSpecialtyId;
+  const professionalSpecialtyId = data.professionals?.specialty_id || null;
+  const resolvedSpecialtyId = data.specialty_id || procedureSpecialtyId || professionalSpecialtyId;
   const resolvedSpecialtyName = data.specialties?.name || procedureSpecialtyName;
   
   return {
@@ -79,7 +80,28 @@ async function getSessionStartedAt(appointmentId: string) {
 
 async function mapActiveAppointmentWithFallback(data: any): Promise<ActiveAppointment> {
   const resolvedStartedAt = data?.started_at ?? (data?.id ? await getSessionStartedAt(data.id) : null);
-  return mapAppointmentData(data, resolvedStartedAt);
+  const mapped = mapAppointmentData(data, resolvedStartedAt);
+
+  if (!mapped.resolved_specialty_id && mapped.professional_id) {
+    const { data: linkedSpecialty, error } = await supabase
+      .from("professional_specialties")
+      .select("specialty_id")
+      .eq("professional_id", mapped.professional_id)
+      .order("is_primary", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error fetching professional specialty fallback:", error);
+    }
+
+    if (linkedSpecialty?.specialty_id) {
+      mapped.specialty_id = linkedSpecialty.specialty_id;
+      mapped.resolved_specialty_id = linkedSpecialty.specialty_id;
+    }
+  }
+
+  return mapped;
 }
 
 /**
@@ -115,7 +137,7 @@ export function useActiveAppointment(patientId: string | null | undefined, prefe
         started_at,
         procedure_id,
         specialty_id,
-        professionals(full_name),
+        professionals(full_name, specialty_id),
         procedures(
           name,
           specialty_id,
