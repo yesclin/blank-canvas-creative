@@ -15,31 +15,35 @@ import type {
   ScheduleBlock,
 } from "@/types/agenda";
 import { WeekSchedule, getDefaultWeekSchedule } from "@/components/config/EnhancedWorkingHoursCard";
+import { fetchClinicSpecialtyAliases, getSpecialtyDisplayName } from "@/lib/specialtyDisplay";
 
 // ============= PROFESSIONALS =============
 export function useProfessionals(clinicId?: string | null) {
   return useQuery({
     queryKey: ["professionals", clinicId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("professionals")
-        .select(`
-          id,
-          clinic_id,
-          user_id,
-          full_name,
-          email,
-          phone,
-          specialty_id,
-          specialties:specialty_id(id, name, color),
-          registration_number,
-          avatar_url,
-          color,
-          is_active
-        `)
-        .eq("clinic_id", clinicId!)
-        .eq("is_active", true)
-        .order("full_name");
+      const [{ data, error }, aliases] = await Promise.all([
+        supabase
+          .from("professionals")
+          .select(`
+            id,
+            clinic_id,
+            user_id,
+            full_name,
+            email,
+            phone,
+            specialty_id,
+            specialties:specialty_id(id, name, slug, color),
+            registration_number,
+            avatar_url,
+            color,
+            is_active
+          `)
+          .eq("clinic_id", clinicId!)
+          .eq("is_active", true)
+          .order("full_name"),
+        fetchClinicSpecialtyAliases(clinicId),
+      ]);
       
       if (error) throw error;
       
@@ -54,7 +58,8 @@ export function useProfessionals(clinicId?: string | null) {
         specialty: p.specialties ? {
           id: p.specialties.id,
           clinic_id: p.clinic_id,
-          name: p.specialties.name,
+          name: getSpecialtyDisplayName(p.specialties, aliases),
+          slug: p.specialties.slug,
           color: p.specialties.color || "#6366f1",
           is_active: true,
         } : undefined,
@@ -133,15 +138,21 @@ export function useSpecialtiesList(clinicId?: string) {
     queryKey: ["specialties-list", clinicId],
     queryFn: async () => {
       // Only fetch specialties that belong to this clinic (not global ones)
-      const { data, error } = await supabase
-        .from("specialties")
-        .select("id, clinic_id, name, description, color, is_active")
-        .eq("is_active", true)
-        .eq("clinic_id", clinicId!)
-        .order("name");
+      const [{ data, error }, aliases] = await Promise.all([
+        supabase
+          .from("specialties")
+          .select("id, clinic_id, name, slug, description, color, is_active")
+          .eq("is_active", true)
+          .eq("clinic_id", clinicId!)
+          .order("name"),
+        fetchClinicSpecialtyAliases(clinicId),
+      ]);
       
       if (error) throw error;
-      return (data || []) as Specialty[];
+      return (data || []).map((specialty) => ({
+        ...specialty,
+        name: getSpecialtyDisplayName(specialty, aliases),
+      })) as Specialty[];
     },
     enabled: !!clinicId,
   });
@@ -203,69 +214,72 @@ export function useAppointmentsForPeriod(
   return useQuery({
     queryKey: ["appointments", clinicId, start, end],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("appointments")
-        .select(`
-          id,
-          clinic_id,
-          patient_id,
-          professional_id,
-          room_id,
-          specialty_id,
-          insurance_id,
-          procedure_id,
-          scheduled_date,
-          start_time,
-          end_time,
-          duration_minutes,
-          appointment_type,
-          status,
-          is_first_visit,
-          is_return,
-          has_pending_payment,
-          is_fit_in,
-          payment_type,
-          expected_value,
-          procedure_cost,
-          payment_status,
-          amount_expected,
-          amount_received,
-          amount_due,
-          booking_source,
-          patient_snapshot_name,
-          patient_snapshot_phone,
-          notes,
-          cancellation_reason,
-          arrived_at,
-          started_at,
-          finished_at,
-          created_at,
-          care_mode,
-          meeting_provider,
-          meeting_link,
-          meeting_id,
-          meeting_password,
-          meeting_status,
-          meeting_created_at,
-          meeting_started_at,
-          meeting_ended_at,
-          precheck_status,
-          consent_telehealth_accepted,
-          consent_telehealth_accepted_at,
-          technical_issue_count,
-          teleconsultation_notes,
-          patients!inner(id, full_name, phone, email, cpf, birth_date, gender, avatar_url, has_clinical_alert, clinical_alert_text, is_active),
-          professionals!inner(id, full_name, color, specialty_id),
-          rooms(id, name),
-          specialties(id, name, color),
-          insurances(id, name, ans_code),
-          procedures(id, name, duration_minutes, price)
-        `)
-        .eq("clinic_id", clinicId!)
-        .gte("scheduled_date", start)
-        .lte("scheduled_date", end)
-        .order("scheduled_date")
-        .order("start_time");
+      const [{ data, error }, aliases] = await Promise.all([
+        supabase
+          .from("appointments")
+          .select(`
+            id,
+            clinic_id,
+            patient_id,
+            professional_id,
+            room_id,
+            specialty_id,
+            insurance_id,
+            procedure_id,
+            scheduled_date,
+            start_time,
+            end_time,
+            duration_minutes,
+            appointment_type,
+            status,
+            is_first_visit,
+            is_return,
+            has_pending_payment,
+            is_fit_in,
+            payment_type,
+            expected_value,
+            procedure_cost,
+            payment_status,
+            amount_expected,
+            amount_received,
+            amount_due,
+            booking_source,
+            patient_snapshot_name,
+            patient_snapshot_phone,
+            notes,
+            cancellation_reason,
+            arrived_at,
+            started_at,
+            finished_at,
+            created_at,
+            care_mode,
+            meeting_provider,
+            meeting_link,
+            meeting_id,
+            meeting_password,
+            meeting_status,
+            meeting_created_at,
+            meeting_started_at,
+            meeting_ended_at,
+            precheck_status,
+            consent_telehealth_accepted,
+            consent_telehealth_accepted_at,
+            technical_issue_count,
+            teleconsultation_notes,
+            patients!inner(id, full_name, phone, email, cpf, birth_date, gender, avatar_url, has_clinical_alert, clinical_alert_text, is_active),
+            professionals!inner(id, full_name, color, specialty_id),
+            rooms(id, name),
+            specialties(id, name, slug, color),
+            insurances(id, name, ans_code),
+            procedures(id, name, duration_minutes, price)
+          `)
+          .eq("clinic_id", clinicId!)
+          .gte("scheduled_date", start)
+          .lte("scheduled_date", end)
+          .order("scheduled_date")
+          .order("start_time"),
+        fetchClinicSpecialtyAliases(clinicId),
+      ]);
       
       if (error) throw error;
       
@@ -308,7 +322,8 @@ export function useAppointmentsForPeriod(
         specialty: apt.specialties ? {
           id: apt.specialties.id,
           clinic_id: apt.clinic_id,
-          name: apt.specialties.name,
+          name: getSpecialtyDisplayName(apt.specialties, aliases),
+          slug: apt.specialties.slug,
           color: apt.specialties.color || "#6366f1",
           is_active: true,
         } : undefined,
