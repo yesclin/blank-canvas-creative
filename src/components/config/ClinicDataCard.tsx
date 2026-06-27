@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
-import { Building, Upload, Loader2, Trash2, Link2, Copy, ExternalLink, RefreshCw, Check, X } from "lucide-react";
+import QRCode from "qrcode";
+import { Building, Upload, Loader2, Trash2, Link2, Copy, ExternalLink, RefreshCw, Check, X, QrCode, Share2, Download } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
