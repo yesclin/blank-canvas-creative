@@ -23,6 +23,7 @@ import { AdjustmentFormDialog } from "@/components/estoque/AdjustmentFormDialog"
 import { BatchesTab } from "@/components/estoque/tabs/BatchesTab";
 import { MovementsListTab } from "@/components/estoque/tabs/MovementsListTab";
 import { AlertsTab } from "@/components/estoque/tabs/AlertsTab";
+import { PredictionTab } from "@/components/estoque/tabs/PredictionTab";
 import { ExpiryTab } from "@/components/estoque/tabs/ExpiryTab";
 import { InventoryKitsTab } from "@/components/catalogo-clinico/InventoryKitsTab";
 import { StockPredictionAlerts } from "@/components/estoque/StockPredictionAlerts";
