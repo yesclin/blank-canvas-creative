@@ -140,15 +140,17 @@ export function EditProductDialog({ open, onOpenChange, product, categories }: E
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label>Qtd. Atual</Label>
+              <Label>Qtd. Atual (somente leitura)</Label>
               <Input
                 type="number"
-                min={0}
-                step="0.01"
                 value={form.current_stock}
-                onChange={(e) => setForm((f) => ({ ...f, current_stock: parseFloat(e.target.value) || 0 }))}
-                disabled={isLoading}
+                readOnly
+                disabled
+                title="O saldo só pode ser alterado por movimentações: Entradas, Saídas, Ajustes de Inventário, Consumo em Procedimentos ou Estornos."
               />
+              <p className="text-xs text-muted-foreground">
+                Saldo gerado apenas por movimentações. Para alterar, use Entrada, Saída ou Ajuste de Inventário.
+              </p>
             </div>
             <div className="grid gap-2">
               <Label>Qtd. Mínima</Label>
