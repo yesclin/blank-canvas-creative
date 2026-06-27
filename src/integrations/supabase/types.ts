@@ -15622,6 +15622,7 @@ export type Database = {
         }
         Returns: string
       }
+      generate_clinic_slug: { Args: { _name: string }; Returns: string }
       generate_platform_occurrence_code: { Args: never; Returns: string }
       generate_quote_number: { Args: { p_clinic_id: string }; Returns: string }
       generate_secure_token: { Args: { p_length?: number }; Returns: string }
