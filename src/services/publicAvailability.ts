@@ -76,35 +76,29 @@ export async function getPublicAvailabilityWithDetails(
   const startStr = format(dateStart, "yyyy-MM-dd");
   const endStr = format(dateEnd, "yyyy-MM-dd");
 
-  // 1. Fetch professional schedules
-  const { data: schedules, error: schedErr } = await supabase
-    .from("professional_schedules")
-    .select("day_of_week, start_time, end_time, slot_duration_minutes, is_active")
-    .eq("clinic_id", clinicId)
-    .eq("professional_id", professionalId)
-    .eq("is_active", true);
+  // 1. Fetch effective schedule via RPC (handles RLS + professional/clinic fallback)
+  const { data: effectiveRows, error: effErr } = await supabase.rpc(
+    "get_public_effective_schedule",
+    { _clinic_id: clinicId, _professional_id: professionalId }
+  );
 
-  console.log("[PublicAvail] professional_schedules:", { clinicId, professionalId, count: schedules?.length, error: schedErr?.message });
+  const effective = Array.isArray(effectiveRows) ? effectiveRows[0] : effectiveRows;
+  console.log("[PublicAvail] effective_schedule:", {
+    clinicId,
+    professionalId,
+    source: (effective as any)?.source,
+    error: effErr?.message,
+    hasWorkingDays: !!(effective as any)?.working_days,
+  });
 
-  // 2. Fetch clinic schedule config (always needed as fallback)
-  const { data: clinicConfig, error: configErr } = await supabase
-    .from("clinic_schedule_config")
-    .select("start_time, end_time, working_days, default_duration_minutes")
-    .eq("clinic_id", clinicId)
-    .single();
-
-  console.log("[PublicAvail] clinic_schedule_config:", { found: !!clinicConfig, error: configErr?.message, config: clinicConfig });
-
-  const hasProSchedules = schedules && schedules.length > 0;
-  const hasClinicConfig = !!clinicConfig;
-
-  // If neither exists, can't calculate
-  if (!hasProSchedules && !hasClinicConfig) {
-    console.warn("[PublicAvail] No schedules and no clinic config found");
+  if (!effective || !(effective as any).working_days) {
     return { slots: [], emptyReason: "no_schedules" };
   }
 
-  // 3. Fetch schedule blocks
+  const workingDays = (effective as any).working_days as Record<string, any>;
+  const defaultDuration = (effective as any).default_duration_minutes || 30;
+
+  // 2. Fetch schedule blocks
   const { data: blocks } = await supabase
     .from("schedule_blocks")
     .select("start_date, end_date, start_time, end_time, all_day, professional_id")
@@ -113,9 +107,7 @@ export async function getPublicAvailabilityWithDetails(
     .lte("start_date", endStr)
     .gte("end_date", startStr);
 
-  console.log("[PublicAvail] schedule_blocks:", { count: blocks?.length });
-
-  // 4. Fetch booked slots via security definer function
+  // 3. Fetch booked slots via security definer function
   const { data: bookedSlots, error: bookedErr } = await supabase
     .rpc("get_booked_slots", {
       _clinic_id: clinicId,
@@ -126,32 +118,28 @@ export async function getPublicAvailabilityWithDetails(
 
   console.log("[PublicAvail] booked_slots:", { count: bookedSlots?.length, error: bookedErr?.message });
 
-  // Build schedule lookup
-  // If professional has schedules, use them. Otherwise, derive from clinic config.
+  // Build daily schedule from WeekSchedule (seg..dom)
+  const dayKeys = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"];
   const scheduleByDay = new Map<number, { startTime: string; endTime: string; slotDuration: number }[]>();
 
-  if (hasProSchedules) {
-    for (const s of (schedules as ProfessionalSchedule[])) {
-      const existing = scheduleByDay.get(s.day_of_week) || [];
-      existing.push({
-        startTime: s.start_time,
-        endTime: s.end_time,
-        slotDuration: s.slot_duration_minutes || clinicConfig?.default_duration_minutes || 30,
-      });
-      scheduleByDay.set(s.day_of_week, existing);
+  dayKeys.forEach((key, idx) => {
+    const day = workingDays?.[key];
+    if (!day || day.enabled === false) return;
+    const open = (day.open || "08:00").toString().substring(0, 5);
+    const close = (day.close || "18:00").toString().substring(0, 5);
+    const slotDuration = durationMinutes || defaultDuration;
+
+    if (day.hasLunch && day.lunchStart && day.lunchEnd) {
+      const ls = day.lunchStart.toString().substring(0, 5);
+      const le = day.lunchEnd.toString().substring(0, 5);
+      scheduleByDay.set(idx, [
+        { startTime: open, endTime: ls, slotDuration },
+        { startTime: le, endTime: close, slotDuration },
+      ]);
+    } else {
+      scheduleByDay.set(idx, [{ startTime: open, endTime: close, slotDuration }]);
     }
-  } else if (hasClinicConfig) {
-    // Fallback: use clinic config working days
-    const workingDays = parseWorkingDays(clinicConfig.working_days);
-    console.log("[PublicAvail] Using clinic config fallback, working days:", workingDays);
-    for (const dayIndex of workingDays) {
-      scheduleByDay.set(dayIndex, [{
-        startTime: clinicConfig.start_time,
-        endTime: clinicConfig.end_time,
-        slotDuration: durationMinutes || clinicConfig.default_duration_minutes || 30,
-      }]);
-    }
-  }
+  });
 
   console.log("[PublicAvail] scheduleByDay keys:", Array.from(scheduleByDay.keys()));
 
@@ -208,9 +196,7 @@ export async function getPublicAvailabilityWithDetails(
 
   console.log("[PublicAvail] Total slots generated:", slots.length);
 
-  const emptyReason = slots.length === 0
-    ? (!hasProSchedules && !hasClinicConfig ? "no_schedules" : "all_blocked")
-    : null;
+  const emptyReason = slots.length === 0 ? "all_blocked" : null;
 
   return { slots, emptyReason };
 }
