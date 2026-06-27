@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import QRCode from "qrcode";
-import { Building, Upload, Loader2, Trash2, Link2, Copy, ExternalLink, RefreshCw, Check, X, QrCode, Share2, Download } from "lucide-react";
+import { Building, Upload, Loader2, Trash2, Link2, Copy, ExternalLink, RefreshCw, Check, X, QrCode, Share2, Download, Globe } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -9,9 +9,12 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { maskPhone } from "@/lib/validators";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const PUBLIC_BOOKING_DOMAIN = "https://yesclin.com.br";
 
@@ -55,16 +58,48 @@ export function ClinicDataCard({
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { isOwner, isAdmin } = usePermissions();
+  const canManageBooking = isOwner || isAdmin;
 
   // Booking link state
   const [slug, setSlug] = useState("");
   const [slugDraft, setSlugDraft] = useState("");
   const [bookingEnabled, setBookingEnabled] = useState(false);
+  const [togglingEnabled, setTogglingEnabled] = useState(false);
   const [editingSlug, setEditingSlug] = useState(false);
   const [savingSlug, setSavingSlug] = useState(false);
   const [loadingBooking, setLoadingBooking] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState("");
+
+  type BookingSettings = {
+    allow_new_patients?: boolean;
+    only_existing_patients?: boolean;
+    require_whatsapp_confirmation?: boolean;
+    require_email_confirmation?: boolean;
+    allow_choose_professional?: boolean;
+    allow_choose_specialty?: boolean;
+    allow_choose_procedure?: boolean;
+    show_prices?: boolean;
+    allow_teleconsultation?: boolean;
+    allow_in_person?: boolean;
+    schedule_source?: "clinic" | "professional";
+  };
+
+  const DEFAULT_SETTINGS: BookingSettings = {
+    allow_new_patients: true,
+    only_existing_patients: false,
+    require_whatsapp_confirmation: false,
+    require_email_confirmation: false,
+    allow_choose_professional: true,
+    allow_choose_specialty: true,
+    allow_choose_procedure: true,
+    show_prices: false,
+    allow_teleconsultation: true,
+    allow_in_person: true,
+    schedule_source: "clinic",
+  };
+  const [settings, setSettings] = useState<BookingSettings>(DEFAULT_SETTINGS);
 
   useEffect(() => {
     if (!clinicId) return;
@@ -72,7 +107,7 @@ export function ClinicDataCard({
     setLoadingBooking(true);
     supabase
       .from("clinics")
-      .select("slug, public_booking_enabled")
+      .select("slug, public_booking_enabled, public_booking_settings")
       .eq("id", clinicId)
       .maybeSingle()
       .then(({ data }) => {
@@ -80,6 +115,9 @@ export function ClinicDataCard({
         setSlug(data.slug || "");
         setSlugDraft(data.slug || "");
         setBookingEnabled(!!data.public_booking_enabled);
+        if (data.public_booking_settings && typeof data.public_booking_settings === "object") {
+          setSettings({ ...DEFAULT_SETTINGS, ...(data.public_booking_settings as BookingSettings) });
+        }
       })
       .then(() => active && setLoadingBooking(false));
     return () => {
@@ -156,6 +194,40 @@ export function ClinicDataCard({
     toast({ title: "Link atualizado!" });
   };
 
+  const handleToggleEnabled = async (next: boolean) => {
+    if (!clinicId || !canManageBooking) return;
+    const previous = bookingEnabled;
+    setBookingEnabled(next);
+    setTogglingEnabled(true);
+    const { error } = await supabase
+      .from("clinics")
+      .update({ public_booking_enabled: next })
+      .eq("id", clinicId);
+    setTogglingEnabled(false);
+    if (error) {
+      setBookingEnabled(previous);
+      toast({ title: "Erro ao atualizar status", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: next ? "Agendamento online ativado" : "Agendamento online desativado" });
+  };
+
+  const handleToggleSetting = async (key: keyof BookingSettings, value: boolean | string) => {
+    if (!clinicId || !canManageBooking) return;
+    const previous = settings;
+    const next: BookingSettings = { ...settings, [key]: value } as BookingSettings;
+    if (key === "only_existing_patients" && value === true) next.allow_new_patients = false;
+    if (key === "allow_new_patients" && value === true) next.only_existing_patients = false;
+    setSettings(next);
+    const { error } = await supabase
+      .from("clinics")
+      .update({ public_booking_settings: next as any })
+      .eq("id", clinicId);
+    if (error) {
+      setSettings(previous);
+      toast({ title: "Erro ao salvar configuração", description: error.message, variant: "destructive" });
+    }
+  };
 
   const handlePhoneChange = (value: string, setter: (v: string) => void) => {
     const masked = maskPhone(value);
@@ -392,15 +464,11 @@ export function ClinicDataCard({
 
         <Separator />
 
+        {/* Link de agendamento */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Link2 className="h-4 w-4 text-primary" />
-              <Label className="text-sm font-medium">Link de agendamento online</Label>
-            </div>
-            <Badge variant={bookingEnabled ? "default" : "secondary"}>
-              {bookingEnabled ? "Seu link de agendamento está ativo" : "Agendamento online desativado"}
-            </Badge>
+          <div className="flex items-center gap-2">
+            <Link2 className="h-4 w-4 text-primary" />
+            <Label className="text-sm font-medium">Link de agendamento online</Label>
           </div>
 
           {editingSlug ? (
@@ -418,10 +486,7 @@ export function ClinicDataCard({
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => {
-                  setSlugDraft(slug);
-                  setEditingSlug(false);
-                }}
+                onClick={() => { setSlugDraft(slug); setEditingSlug(false); }}
                 disabled={savingSlug}
               >
                 <X className="h-4 w-4" />
@@ -434,28 +499,131 @@ export function ClinicDataCard({
                 readOnly
                 className="flex-1 min-w-[240px] font-mono text-sm"
               />
-              <Button size="sm" variant="outline" onClick={handleCopyLink} disabled={!bookingUrl}>
-                <Copy className="h-4 w-4 mr-1" /> Copiar link
+              <Button size="sm" variant="outline" onClick={handleCopyLink} disabled={!bookingUrl || !bookingEnabled}>
+                <Copy className="h-4 w-4 mr-1" /> Copiar Link
               </Button>
               <Button size="sm" variant="outline" onClick={handleOpenLink} disabled={!bookingUrl}>
                 <ExternalLink className="h-4 w-4 mr-1" /> Abrir
               </Button>
-              <Button size="sm" variant="outline" onClick={handleShowQr} disabled={!bookingUrl}>
-                <QrCode className="h-4 w-4 mr-1" /> QR Code
-              </Button>
-              <Button size="sm" variant="outline" onClick={handleShare} disabled={!bookingUrl}>
+              <Button size="sm" variant="outline" onClick={handleShare} disabled={!bookingUrl || !bookingEnabled}>
                 <Share2 className="h-4 w-4 mr-1" /> Compartilhar
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => setEditingSlug(true)} disabled={!clinicId}>
-                <RefreshCw className="h-4 w-4 mr-1" /> {slug ? "Editar slug" : "Definir slug"}
+              <Button size="sm" variant="outline" onClick={handleShowQr} disabled={!bookingUrl || !bookingEnabled}>
+                <QrCode className="h-4 w-4 mr-1" /> Gerar QR Code
               </Button>
+              {canManageBooking && (
+                <Button size="sm" variant="ghost" onClick={() => setEditingSlug(true)} disabled={!clinicId}>
+                  <RefreshCw className="h-4 w-4 mr-1" /> {slug ? "Editar slug" : "Definir slug"}
+                </Button>
+              )}
             </div>
           )}
-
           <p className="text-xs text-muted-foreground">
-            Envie este link aos pacientes para agendarem direto pelo site. Ative o agendamento online em Configurações → Agenda.
+            Este link é permanente. Apenas o status (ativo/desativado) muda — o endereço continua o mesmo.
           </p>
         </div>
+
+        <Separator />
+
+        {/* Card Agendamento Online */}
+        <div className="rounded-lg border bg-card p-4 space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Globe className="h-5 w-5 text-primary" />
+              <div>
+                <p className="font-medium text-foreground">Agendamento Online</p>
+                <p className="text-xs text-muted-foreground">
+                  Ative ou desative o agendamento público da clínica.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {bookingEnabled ? (
+                <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white">
+                  🟢 Agendamento Online Ativo
+                </Badge>
+              ) : (
+                <Badge className="bg-red-600 hover:bg-red-600 text-white">
+                  🔴 Agendamento Online Desativado
+                </Badge>
+              )}
+              <Switch
+                checked={bookingEnabled}
+                onCheckedChange={handleToggleEnabled}
+                disabled={!clinicId || !canManageBooking || togglingEnabled || loadingBooking}
+                aria-label="Ativar agendamento online"
+              />
+            </div>
+          </div>
+
+          {!canManageBooking && (
+            <p className="text-xs text-muted-foreground">
+              Apenas Proprietário e Administrador podem alterar estas configurações.
+            </p>
+          )}
+
+          <Separator />
+
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-foreground">Configurações avançadas</p>
+            <div className="grid sm:grid-cols-2 gap-x-6 gap-y-3">
+              {([
+                ["allow_new_patients", "Permitir novos pacientes"],
+                ["only_existing_patients", "Permitir apenas pacientes cadastrados"],
+                ["require_whatsapp_confirmation", "Exigir confirmação por WhatsApp"],
+                ["require_email_confirmation", "Exigir confirmação por e-mail"],
+                ["allow_choose_professional", "Permitir escolher profissional"],
+                ["allow_choose_specialty", "Permitir escolher especialidade"],
+                ["allow_choose_procedure", "Permitir escolher procedimento"],
+                ["show_prices", "Mostrar preços dos procedimentos"],
+                ["allow_teleconsultation", "Permitir teleconsulta"],
+                ["allow_in_person", "Permitir consulta presencial"],
+              ] as [keyof BookingSettings, string][]).map(([key, label]) => (
+                <label key={key} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <Checkbox
+                    checked={!!settings[key]}
+                    disabled={!canManageBooking}
+                    onCheckedChange={(v) => handleToggleSetting(key, v === true)}
+                  />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-foreground">Horários</p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {([
+                ["clinic", "Usar agenda da clínica"],
+                ["professional", "Usar agenda individual dos profissionais"],
+              ] as ["clinic" | "professional", string][]).map(([value, label]) => (
+                <label
+                  key={value}
+                  className={`flex items-center gap-2 rounded-md border p-3 text-sm cursor-pointer ${
+                    settings.schedule_source === value ? "border-primary bg-primary/5" : "hover:bg-muted/40"
+                  } ${!canManageBooking ? "opacity-60 cursor-not-allowed" : ""}`}
+                >
+                  <input
+                    type="radio"
+                    name="schedule_source"
+                    checked={settings.schedule_source === value}
+                    disabled={!canManageBooking}
+                    onChange={() => handleToggleSetting("schedule_source", value)}
+                  />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Bloqueios, férias, horários e encaixes são sempre respeitados.
+            </p>
+          </div>
+        </div>
+
+
 
       </CardContent>
 
