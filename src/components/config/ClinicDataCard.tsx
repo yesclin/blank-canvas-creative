@@ -1,14 +1,27 @@
-import { useState, useRef } from "react";
-import { Building, Upload, Loader2, Trash2 } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Building, Upload, Loader2, Trash2, Link2, Copy, ExternalLink, RefreshCw, Check, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { maskPhone } from "@/lib/validators";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+
+const PUBLIC_BOOKING_DOMAIN = "https://yesclin.com.br";
+
+function sanitizeSlug(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
 
 interface ClinicDataCardProps {
   name: string;
