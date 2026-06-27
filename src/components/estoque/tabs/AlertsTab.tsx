@@ -343,7 +343,7 @@ export function AlertsTab() {
         </Card>
       )}
 
-      <EntryFormDialog open={entryOpen} onOpenChange={setEntryOpen} />
+      <EntryFormDialog open={entryOpen} onOpenChange={setEntryOpen} items={items} />
     </div>
   );
 }
