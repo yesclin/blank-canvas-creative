@@ -257,7 +257,7 @@ export default function Estoque() {
         <TabsContent value="expiry"><ExpiryTab /></TabsContent>
 
         <TabsContent value="prediction">
-          <StockPredictionAlerts compact={false} maxItems={50} showHeader={true} />
+          <PredictionTab />
         </TabsContent>
 
         <TabsContent value="history">
