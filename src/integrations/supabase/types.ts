@@ -15265,6 +15265,22 @@ export type Database = {
         }
         Returns: string
       }
+      get_appointment_medical_record_context: {
+        Args: { _appointment_id: string }
+        Returns: {
+          appointment_id: string
+          can_professional_access: boolean
+          is_specialty_enabled: boolean
+          patient_id: string
+          procedure_id: string
+          procedure_name: string
+          professional_id: string
+          professional_name: string
+          specialty_id: string
+          specialty_key: string
+          specialty_name: string
+        }[]
+      }
       get_booked_slots: {
         Args: {
           _clinic_id: string
