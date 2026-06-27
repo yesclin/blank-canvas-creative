@@ -440,6 +440,12 @@ export function ClinicDataCard({
               <Button size="sm" variant="outline" onClick={handleOpenLink} disabled={!bookingUrl}>
                 <ExternalLink className="h-4 w-4 mr-1" /> Abrir
               </Button>
+              <Button size="sm" variant="outline" onClick={handleShowQr} disabled={!bookingUrl}>
+                <QrCode className="h-4 w-4 mr-1" /> QR Code
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleShare} disabled={!bookingUrl}>
+                <Share2 className="h-4 w-4 mr-1" /> Compartilhar
+              </Button>
               <Button size="sm" variant="ghost" onClick={() => setEditingSlug(true)} disabled={!clinicId}>
                 <RefreshCw className="h-4 w-4 mr-1" /> {slug ? "Editar slug" : "Definir slug"}
               </Button>
