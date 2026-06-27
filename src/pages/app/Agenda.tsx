@@ -390,7 +390,7 @@ export default function Agenda() {
   }, [createSessionMutation, fetchStartedAppointmentSnapshot, openProntuarioFromAppointment, queryClient, refreshGlobalActive, seedActiveAppointmentCache, setGlobalSelectedAppointment, updateStatusMutation]);
 
   // Handle status change with stock validation and material consumption
-  // Resolve specialty for an appointment: appointment.specialty_id → procedure.specialty_id → professional's specialty
+  // Resolve specialty for an appointment: appointment.specialty_id → procedure.specialty_id → professional's primary/linked specialty
   const resolveSpecialtyId = useCallback(async (apt: Appointment): Promise<string | null> => {
     // 1. Direct specialty on appointment
     if (apt.specialty_id) return apt.specialty_id;
@@ -405,13 +405,23 @@ export default function Agenda() {
       if (data?.specialty_id) return data.specialty_id;
     }
 
-    // 3. From professional
+    // 3. From professional primary specialty
     const { data: prof } = await supabase
       .from('professionals')
       .select('specialty_id')
       .eq('id', apt.professional_id)
       .single();
     if (prof?.specialty_id) return prof.specialty_id;
+
+    // 4. From professional_specialties relation (new multi-specialty model)
+    const { data: linkedSpecialty } = await supabase
+      .from('professional_specialties')
+      .select('specialty_id')
+      .eq('professional_id', apt.professional_id)
+      .order('is_primary', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (linkedSpecialty?.specialty_id) return linkedSpecialty.specialty_id;
 
     return null;
   }, []);
