@@ -247,6 +247,7 @@ export function AnamneseBlock({
 }: AnamneseBlockProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { clinic } = useClinicData();
   const { generateAnamnesisPdf, generating } = useInstitutionalPdf();
 
 
