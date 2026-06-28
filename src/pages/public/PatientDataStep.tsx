@@ -59,7 +59,11 @@ export default function PatientDataStep() {
 
       if (!available) {
         toast.error("Este horário acabou de ser ocupado. Por favor, escolha outro.");
-        navigate(`/agendar/${clinic.slug}/horarios?professional=${professionalId}&specialty=${specialtyId}`);
+        const params = new URLSearchParams();
+        params.set("professional", professionalId);
+        if (specialtyId) params.set("specialty", specialtyId);
+        if (procedureId) params.set("procedure", procedureId);
+        navigate(`/agendar/${clinic.slug}/horarios?${params.toString()}`);
         return;
       }
 

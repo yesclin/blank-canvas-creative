@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { addDays, format, startOfDay } from "date-fns";
+import { addDays, format } from "date-fns";
 
 const PUBLIC_BOOKING_TIMEZONE = "America/Sao_Paulo";
 
