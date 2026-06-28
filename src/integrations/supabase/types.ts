@@ -15349,9 +15349,12 @@ export type Database = {
         Row: {
           clinic_id: string | null
           created_at: string
+          entity_id: string | null
+          entity_type: string | null
           id: string
           link: string | null
           message: string
+          module: string | null
           read_at: string | null
           title: string
           type: string
@@ -15360,9 +15363,12 @@ export type Database = {
         Insert: {
           clinic_id?: string | null
           created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
           id?: string
           link?: string | null
           message: string
+          module?: string | null
           read_at?: string | null
           title: string
           type?: string
@@ -15371,9 +15377,12 @@ export type Database = {
         Update: {
           clinic_id?: string | null
           created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
           id?: string
           link?: string | null
           message?: string
+          module?: string | null
           read_at?: string | null
           title?: string
           type?: string
@@ -15797,6 +15806,21 @@ export type Database = {
           p_teleconsultation_session_id: string
         }
         Returns: string
+      }
+      notify_clinic_users: {
+        Args: {
+          _clinic_id: string
+          _entity_id: string
+          _entity_type: string
+          _extra_user_ids?: string[]
+          _link: string
+          _message: string
+          _module: string
+          _roles: Database["public"]["Enums"]["app_role"][]
+          _title: string
+          _type: string
+        }
+        Returns: undefined
       }
       provision_estetica_anamnesis_templates: {
         Args: { _clinic_id: string; _specialty_id: string }

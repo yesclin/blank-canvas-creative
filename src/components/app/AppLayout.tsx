@@ -27,6 +27,7 @@ import { ActiveAppointmentDrawer } from "./ActiveAppointmentDrawer";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { SubscriptionGate } from "./SubscriptionGate";
 import { FloatingSupportButton } from "./FloatingSupportButton";
+import { NotificationBell } from "./NotificationBell";
 
 function getModuleScope(pathname: string): string {
   if (pathname.startsWith("/app/prontuario")) return "Prontuário";
@@ -150,6 +151,11 @@ export function AppLayout() {
               )}
             </div>
             <ActiveSpecialtiesBadge />
+            <div className="ml-auto flex items-center gap-1">
+              <ErrorBoundary scope="NotificationBell" compact fallback={() => null as any}>
+                <NotificationBell />
+              </ErrorBoundary>
+            </div>
           </header>
           <div className="flex-1 overflow-auto">
             <SubscriptionGate>
