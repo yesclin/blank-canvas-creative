@@ -95,33 +95,44 @@ export async function getPublicAvailabilityWithDetails(
     minAdvanceHours = 2,
   } = params;
 
-  const startStr = format(dateStart, "yyyy-MM-dd");
-  const endStr = format(dateEnd, "yyyy-MM-dd");
+  const startStr = formatSaoPauloDate(dateStart);
+  const endStr = formatSaoPauloDate(dateEnd);
 
   const { data: clinicStatus } = await supabase
-    .from("clinics")
+    .from("public_clinic_booking" as any)
     .select("id, public_booking_enabled")
     .eq("id", clinicId)
     .maybeSingle();
 
   const { data: publicProfessionals, error: publicProfessionalsErr } = await supabase.rpc("get_public_professionals", {
     _clinic_id: clinicId,
-    _specialty_id: specialtyId ?? null,
+    _specialty_id: null,
   });
   const professionalIsPublicAndActive = (publicProfessionals || []).some((professional: any) => professional.id === professionalId);
 
   let procedure: PublicProcedureRow | null = null;
+  let procedureLookupFailed = false;
   if (procedureId) {
-    const { data: procedureData, error: procedureErr } = await supabase
-      .from("procedures")
-      .select("id, clinic_id, specialty_id, is_active, duration_minutes")
-      .eq("id", procedureId)
-      .maybeSingle();
+    const { data: procedureRows, error: procedureErr } = await (supabase as any).rpc("get_public_procedures", {
+      _clinic_id: clinicId,
+      _specialty_id: specialtyId || null,
+      _professional_id: professionalId || null,
+    });
 
     if (procedureErr) {
       console.error("[PublicAvail] procedure lookup error:", procedureErr);
+      procedureLookupFailed = true;
     }
-    procedure = (procedureData || null) as PublicProcedureRow | null;
+    const procedureData = (procedureRows || []).find((item: any) => item.id === procedureId);
+    procedure = procedureData
+      ? {
+          id: procedureData.id,
+          clinic_id: clinicId,
+          specialty_id: procedureData.specialty_id,
+          is_active: true,
+          duration_minutes: procedureData.duration_minutes,
+        }
+      : null;
   }
 
   // 1. Fetch effective schedule via RPC (handles RLS + professional/clinic fallback)
@@ -177,10 +188,10 @@ export async function getPublicAvailabilityWithDetails(
   }
 
   if (procedureId) {
-    const procedureValid = !!procedure
+    const procedureValid = procedureLookupFailed || (!!procedure
       && procedure.clinic_id === clinicId
       && procedure.is_active === true
-      && (!specialtyId || procedure.specialty_id === specialtyId);
+      && (!specialtyId || !procedure.specialty_id || procedure.specialty_id === specialtyId));
 
     if (!procedureValid) {
       console.log("PUBLIC BOOKING FINAL DEBUG", {
@@ -266,7 +277,7 @@ export async function getPublicAvailabilityWithDetails(
     bookedByDate.set(dateKey, existing);
   }
 
-  const minTime = new Date(Date.now() + (minAdvanceHours || 0) * 60 * 1000);
+  const minTime = new Date(Date.now() + (minAdvanceHours || 0) * 60 * 60 * 1000);
 
   const slots: PublicSlot[] = [];
   let currentDateStr = startStr;
@@ -513,6 +524,17 @@ function getSaoPauloWeekday(dateStr: string): number {
 
 function saoPauloSlotToDate(dateStr: string, time: string): Date {
   return new Date(`${dateStr}T${time}:00-03:00`);
+}
+
+function formatSaoPauloDate(date: Date): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: PUBLIC_BOOKING_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((part) => part.type === type)?.value || "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
 function addDaysToDateString(dateStr: string, amount: number): string {

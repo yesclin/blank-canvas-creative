@@ -15706,6 +15706,23 @@ export type Database = {
           working_days: Json
         }[]
       }
+      get_public_procedures: {
+        Args: {
+          _clinic_id: string
+          _professional_id?: string
+          _specialty_id?: string
+        }
+        Returns: {
+          clinic_id: string
+          description: string
+          duration_minutes: number
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+          specialty_id: string
+        }[]
+      }
       get_public_professionals: {
         Args: { _clinic_id: string; _specialty_id?: string }
         Returns: {

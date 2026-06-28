@@ -57,7 +57,7 @@ export default function ProfessionalSelectionStep() {
               const params = new URLSearchParams();
               params.set("professional", prof.id);
               if (specialtyId) params.set("specialty", specialtyId);
-              navigate(`/agendar/${clinic.slug}/horarios?${params.toString()}`);
+              navigate(`/agendar/${clinic.slug}/procedimento?${params.toString()}`);
             }}
             className="rounded-xl border bg-card hover:border-primary/50 hover:shadow-md transition-all p-4 text-left group"
           >
