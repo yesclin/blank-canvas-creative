@@ -521,7 +521,7 @@ export function AnamneseBlock({
   }, [activeTemplate, v2Templates]);
 
   // ─── Create default template (IDEMPOTENT) ─────────────────────
-  const { clinic } = useClinicData();
+  
 
   const handleCreateDefaultTemplate = useCallback(async () => {
     if (!specialtyId || !clinic?.id || creatingDefault) return;
