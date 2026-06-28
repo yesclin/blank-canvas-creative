@@ -247,6 +247,7 @@ export function AnamneseBlock({
 }: AnamneseBlockProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { clinic } = useClinicData();
   const { generateAnamnesisPdf, generating } = useInstitutionalPdf();
 
 
@@ -292,9 +293,86 @@ export function AnamneseBlock({
     });
   }, [specialtyId, specialtyName, patientIdForRecords, appointmentId]);
 
+  // ─── Local fallback template (loads in <2s if DB is slow) ─────────
+  const [useLocalFallback, setUseLocalFallback] = useState(false);
+  useEffect(() => {
+    if (v2Templates.length > 0) {
+      setUseLocalFallback(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      if (v2Templates.length === 0) {
+        console.warn('[YesClin][AnamneseBlock] fallback ativado (timeout 2s)', {
+          clinicId: clinic?.id,
+          specialtyId,
+          specialtyName,
+        });
+        setUseLocalFallback(true);
+      }
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [v2Templates.length, clinic?.id, specialtyId, specialtyName]);
+
+  const LOCAL_FALLBACK_TEMPLATE: UnifiedTemplate = useMemo(() => ({
+    id: '__local_fallback__',
+    nome: 'Modelo padrão (Atendimento Geral)',
+    descricao: 'Modelo padrão exibido enquanto o modelo da clínica é carregado.',
+    icon: 'Stethoscope',
+    is_system: true,
+    template_type: 'anamnese',
+    secoes: [
+      {
+        id: 'anamnese_geral',
+        titulo: 'Anamnese Geral',
+        icon: 'Stethoscope',
+        campos: [
+          { id: 'queixa_principal', label: 'Queixa principal', type: 'textarea' as any, section: 'Anamnese Geral' },
+          { id: 'historia_doenca_atual', label: 'História da doença atual', type: 'textarea' as any, section: 'Anamnese Geral' },
+          { id: 'antecedentes_pessoais', label: 'Antecedentes pessoais', type: 'textarea' as any, section: 'Anamnese Geral' },
+          { id: 'medicamentos_uso_continuo', label: 'Medicamentos em uso', type: 'textarea' as any, section: 'Anamnese Geral' },
+          { id: 'alergias', label: 'Alergias', type: 'textarea' as any, section: 'Anamnese Geral' },
+        ],
+      },
+      {
+        id: 'evolucao_clinica',
+        titulo: 'Evolução Clínica',
+        icon: 'Stethoscope',
+        campos: [
+          { id: 'evolucao', label: 'Evolução', type: 'textarea' as any, section: 'Evolução Clínica' },
+        ],
+      },
+      {
+        id: 'plano_conduta',
+        titulo: 'Plano / Conduta',
+        icon: 'Stethoscope',
+        campos: [
+          { id: 'plano_conduta', label: 'Plano e conduta', type: 'textarea' as any, section: 'Plano / Conduta' },
+        ],
+      },
+      {
+        id: 'procedimentos_realizados',
+        titulo: 'Procedimentos Realizados',
+        icon: 'Stethoscope',
+        campos: [
+          { id: 'procedimentos', label: 'Procedimentos', type: 'textarea' as any, section: 'Procedimentos Realizados' },
+        ],
+      },
+      {
+        id: 'documentos',
+        titulo: 'Documentos',
+        icon: 'Stethoscope',
+        campos: [
+          { id: 'documentos_observacoes', label: 'Observações sobre documentos', type: 'textarea' as any, section: 'Documentos' },
+        ],
+      },
+    ],
+  }), []);
+
   const allTemplates: UnifiedTemplate[] = useMemo(() => {
-    return v2Templates.map(v2TemplateToUnified);
-  }, [v2Templates]);
+    if (v2Templates.length > 0) return v2Templates.map(v2TemplateToUnified);
+    if (useLocalFallback) return [LOCAL_FALLBACK_TEMPLATE];
+    return [];
+  }, [v2Templates, useLocalFallback, LOCAL_FALLBACK_TEMPLATE]);
 
   useEffect(() => {
     if (!import.meta.env.DEV) return;
@@ -444,7 +522,7 @@ export function AnamneseBlock({
   }, [activeTemplate, v2Templates]);
 
   // ─── Create default template (IDEMPOTENT) ─────────────────────
-  const { clinic } = useClinicData();
+  
 
   const handleCreateDefaultTemplate = useCallback(async () => {
     if (!specialtyId || !clinic?.id || creatingDefault) return;
@@ -842,7 +920,7 @@ export function AnamneseBlock({
   }, [selectedRecord, allTemplates, activeTemplate]);
 
   // ─── Loading ────────────────────────────────────────────────────
-  if (loading || loadingTemplates) {
+  if ((loading || loadingTemplates) && allTemplates.length === 0 && !useLocalFallback) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-48" />
