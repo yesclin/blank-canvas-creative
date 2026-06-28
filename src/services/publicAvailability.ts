@@ -1,5 +1,17 @@
 import { supabase } from "@/integrations/supabase/client";
-import { addDays, format, parse, isBefore, addMinutes, startOfDay } from "date-fns";
+import { addDays, format } from "date-fns";
+
+const PUBLIC_BOOKING_TIMEZONE = "America/Sao_Paulo";
+
+const DEFAULT_PUBLIC_WEEK_SCHEDULE: Record<string, any> = {
+  seg: { enabled: true, open: "08:00", close: "18:00", hasLunch: true, lunchStart: "12:00", lunchEnd: "13:00" },
+  ter: { enabled: true, open: "08:00", close: "18:00", hasLunch: true, lunchStart: "12:00", lunchEnd: "13:00" },
+  qua: { enabled: true, open: "08:00", close: "18:00", hasLunch: true, lunchStart: "12:00", lunchEnd: "13:00" },
+  qui: { enabled: true, open: "08:00", close: "18:00", hasLunch: true, lunchStart: "12:00", lunchEnd: "13:00" },
+  sex: { enabled: true, open: "08:00", close: "18:00", hasLunch: true, lunchStart: "12:00", lunchEnd: "13:00" },
+  sab: { enabled: false, open: "08:00", close: "18:00", hasLunch: true, lunchStart: "12:00", lunchEnd: "13:00" },
+  dom: { enabled: false, open: "08:00", close: "18:00", hasLunch: true, lunchStart: "12:00", lunchEnd: "13:00" },
+};
 
 export interface PublicSlot {
   date: string; // YYYY-MM-DD
@@ -10,6 +22,8 @@ export interface PublicSlot {
 export interface PublicAvailabilityParams {
   clinicId: string;
   professionalId: string;
+  specialtyId?: string;
+  procedureId?: string;
   dateStart: Date;
   dateEnd: Date;
   durationMinutes?: number;
@@ -43,6 +57,19 @@ interface EffectiveScheduleRow {
   source: string;
 }
 
+interface PublicProcedureRow {
+  id: string;
+  clinic_id: string;
+  specialty_id: string | null;
+  is_active: boolean;
+  duration_minutes: number | null;
+}
+
+type SlotRemovalReason = {
+  slot: PublicSlot;
+  reason: string;
+};
+
 /**
  * Calculate available public slots for a professional in a date range.
  * Falls back to clinic_schedule_config when professional_schedules is empty.
@@ -57,10 +84,56 @@ export async function getPublicProfessionalAvailability(
 export async function getPublicAvailabilityWithDetails(
   params: PublicAvailabilityParams
 ): Promise<PublicAvailabilityResult> {
-  const { clinicId, professionalId, dateStart, dateEnd, durationMinutes, minAdvanceHours = 2 } = params;
+  const {
+    clinicId,
+    professionalId,
+    specialtyId,
+    procedureId,
+    dateStart,
+    dateEnd,
+    durationMinutes,
+    minAdvanceHours = 2,
+  } = params;
 
-  const startStr = format(dateStart, "yyyy-MM-dd");
-  const endStr = format(dateEnd, "yyyy-MM-dd");
+  const startStr = formatSaoPauloDate(dateStart);
+  const endStr = formatSaoPauloDate(dateEnd);
+
+  const { data: clinicStatus } = await supabase
+    .from("public_clinic_booking" as any)
+    .select("id, public_booking_enabled")
+    .eq("id", clinicId)
+    .maybeSingle();
+
+  const { data: publicProfessionals, error: publicProfessionalsErr } = await supabase.rpc("get_public_professionals", {
+    _clinic_id: clinicId,
+    _specialty_id: null,
+  });
+  const professionalIsPublicAndActive = (publicProfessionals || []).some((professional: any) => professional.id === professionalId);
+
+  let procedure: PublicProcedureRow | null = null;
+  let procedureLookupFailed = false;
+  if (procedureId) {
+    const { data: procedureRows, error: procedureErr } = await (supabase as any).rpc("get_public_procedures", {
+      _clinic_id: clinicId,
+      _specialty_id: specialtyId || null,
+      _professional_id: professionalId || null,
+    });
+
+    if (procedureErr) {
+      console.error("[PublicAvail] procedure lookup error:", procedureErr);
+      procedureLookupFailed = true;
+    }
+    const procedureData = (procedureRows || []).find((item: any) => item.id === procedureId);
+    procedure = procedureData
+      ? {
+          id: procedureData.id,
+          clinic_id: clinicId,
+          specialty_id: procedureData.specialty_id,
+          is_active: true,
+          duration_minutes: procedureData.duration_minutes,
+        }
+      : null;
+  }
 
   // 1. Fetch effective schedule via RPC (handles RLS + professional/clinic fallback)
   const { data: effectiveRows, error: effErr } = await supabase.rpc(
@@ -72,26 +145,97 @@ export async function getPublicAvailabilityWithDetails(
   console.log("[PublicAvail] effective_schedule:", {
     clinicId,
     professionalId,
+    specialtyId,
+    procedureId,
     source: effective?.source,
     error: effErr?.message,
     hasWorkingDays: !!effective?.working_days,
+    publicBookingEnabled: clinicStatus?.public_booking_enabled,
+    professionalIsPublicAndActive,
+    publicProfessionalsError: publicProfessionalsErr?.message,
+    procedure,
   });
 
   if (effErr) {
     console.error("[PublicAvail] effective_schedule error:", effErr);
-    return { slots: [], emptyReason: "config_error" };
   }
 
-  if (!effective?.working_days) {
-    return { slots: [], emptyReason: "no_schedules" };
+  if (!clinicStatus?.public_booking_enabled || !professionalIsPublicAndActive) {
+    console.log("PUBLIC BOOKING FINAL DEBUG", {
+      clinicId,
+      professionalId,
+      specialtyId,
+      procedureId,
+      selectedDate: startStr,
+      weekday: getSaoPauloWeekday(startStr),
+      professionalSchedule: null,
+      clinicSchedule: null,
+      fallbackScheduleUsed: false,
+      generatedSlots: [],
+      appointments: [],
+      blocks: [],
+      publicBookingEnabled: !!clinicStatus?.public_booking_enabled,
+      timezone: PUBLIC_BOOKING_TIMEZONE,
+      finalAvailableSlots: [],
+      validation: {
+        clinicExists: !!clinicStatus,
+        publicBookingEnabled: !!clinicStatus?.public_booking_enabled,
+        professionalIsPublicAndActive,
+        publicProfessionalsError: publicProfessionalsErr?.message,
+      },
+    });
+    return { slots: [], emptyReason: "all_blocked" };
   }
 
-  const workingDays = normalizeWeekSchedule(effective.working_days);
-  const defaultDuration = effective.default_duration_minutes || 30;
-  const fallbackUsed = effective.source?.startsWith("clinic") ?? false;
+  if (procedureId) {
+    const procedureValid = procedureLookupFailed || (!!procedure
+      && procedure.clinic_id === clinicId
+      && procedure.is_active === true
+      && (!specialtyId || !procedure.specialty_id || procedure.specialty_id === specialtyId));
+
+    if (!procedureValid) {
+      console.log("PUBLIC BOOKING FINAL DEBUG", {
+        clinicId,
+        professionalId,
+        specialtyId,
+        procedureId,
+        selectedDate: startStr,
+        weekday: getSaoPauloWeekday(startStr),
+        professionalSchedule: null,
+        clinicSchedule: null,
+        fallbackScheduleUsed: false,
+        generatedSlots: [],
+        appointments: [],
+        blocks: [],
+        publicBookingEnabled: !!clinicStatus?.public_booking_enabled,
+        timezone: PUBLIC_BOOKING_TIMEZONE,
+        finalAvailableSlots: [],
+        validation: {
+          procedureExists: !!procedure,
+          procedureClinicMatches: procedure?.clinic_id === clinicId,
+          procedureSpecialtyMatches: !specialtyId || procedure?.specialty_id === specialtyId,
+          procedureActive: !!procedure?.is_active,
+        },
+      });
+      return { slots: [], emptyReason: "all_blocked" };
+    }
+  }
+
+  const effectiveSchedule = effective?.working_days
+    ? effective
+    : ({
+        working_days: DEFAULT_PUBLIC_WEEK_SCHEDULE,
+        default_duration_minutes: 30,
+        source: "client_default_week",
+      } satisfies EffectiveScheduleRow);
+
+  const workingDays = normalizeWeekSchedule(effectiveSchedule.working_days);
+  const scheduleHasAnyPeriods = hasAnyEnabledPeriod(workingDays);
+  const defaultDuration = durationMinutes || procedure?.duration_minutes || effectiveSchedule.default_duration_minutes || 30;
+  const fallbackUsed = !effectiveSchedule.source?.startsWith("professional");
 
   // 2. Fetch schedule blocks
-  const { data: blocks } = await supabase
+  const { data: blocks, error: blocksErr } = await supabase
     .from("schedule_blocks")
     .select("start_date, end_date, start_time, end_time, all_day, professional_id")
     .eq("clinic_id", clinicId)
@@ -108,6 +252,7 @@ export async function getPublicAvailabilityWithDetails(
       _date_end: endStr,
     });
 
+  if (blocksErr) console.error("[PublicAvail] schedule_blocks error:", blocksErr);
   console.log("[PublicAvail] booked_slots:", { count: bookedSlots?.length, error: bookedErr?.message });
 
   // Build daily schedule from WeekSchedule (seg..dom)
@@ -115,7 +260,7 @@ export async function getPublicAvailabilityWithDetails(
   const scheduleByDay = new Map<number, { startTime: string; endTime: string; slotDuration: number }[]>();
 
   dayKeys.forEach((key, idx) => {
-    const dayPeriods = normalizeDayPeriods(workingDays?.[key], durationMinutes || defaultDuration);
+    const dayPeriods = normalizeDayPeriods(workingDays?.[key], defaultDuration);
     if (dayPeriods.length > 0) {
       scheduleByDay.set(idx, dayPeriods);
     }
@@ -132,61 +277,102 @@ export async function getPublicAvailabilityWithDetails(
     bookedByDate.set(dateKey, existing);
   }
 
-  const now = new Date();
-  const minTime = addMinutes(now, (minAdvanceHours || 0) * 60);
+  const minTime = new Date(Date.now() + (minAdvanceHours || 0) * 60 * 60 * 1000);
 
   const slots: PublicSlot[] = [];
-  let current = startOfDay(dateStart);
-  const end = startOfDay(dateEnd);
+  let currentDateStr = startStr;
 
-  while (current <= end) {
-    const dateStr = format(current, "yyyy-MM-dd");
-    const dayOfWeek = current.getDay();
+  while (currentDateStr <= endStr) {
+    const dateStr = currentDateStr;
+    const dayOfWeek = getSaoPauloWeekday(dateStr);
 
     const daySchedules = scheduleByDay.get(dayOfWeek);
     const availableSlotsForDebug: PublicSlot[] = [];
+    const generatedSlotsForDebug: PublicSlot[] = [];
+    const removalReasonsForDebug: SlotRemovalReason[] = [];
     if (daySchedules) {
       for (const sched of daySchedules) {
-        const slotDuration = durationMinutes || sched.slotDuration;
+        const slotDuration = sched.slotDuration;
         const daySlots = generateSlotsForPeriod(
           dateStr,
           sched.startTime,
           sched.endTime,
           slotDuration
         );
+        generatedSlotsForDebug.push(...daySlots);
 
         for (const slot of daySlots) {
           // Check minimum advance
-          const slotDateTime = parse(`${dateStr} ${slot.startTime}`, "yyyy-MM-dd HH:mm", new Date());
-          if (isBefore(slotDateTime, minTime)) continue;
+          const slotDateTime = saoPauloSlotToDate(slot.date, slot.startTime);
+          if (slotDateTime < minTime) {
+            removalReasonsForDebug.push({ slot, reason: "antecedência mínima" });
+            continue;
+          }
 
           // Check blocks
-          if (isBlockedSlot(dateStr, slot.startTime, slot.endTime, blocks as ScheduleBlock[] || [])) continue;
+          const blockReason = getBlockedSlotReason(dateStr, slot.startTime, slot.endTime, blocks as ScheduleBlock[] || []);
+          if (blockReason) {
+            removalReasonsForDebug.push({ slot, reason: blockReason });
+            continue;
+          }
 
           // Check conflicts with booked
           const dayBooked = bookedByDate.get(dateStr) || [];
-          if (hasConflict(slot.startTime, slot.endTime, dayBooked)) continue;
+          if (hasConflict(slot.startTime, slot.endTime, dayBooked)) {
+            removalReasonsForDebug.push({ slot, reason: "agendamento existente" });
+            continue;
+          }
 
           slots.push(slot);
           availableSlotsForDebug.push(slot);
+          removalReasonsForDebug.push({ slot, reason: "disponível" });
         }
       }
+    } else if (scheduleHasAnyPeriods) {
+      removalReasonsForDebug.push({
+        slot: { date: dateStr, startTime: "--:--", endTime: "--:--" },
+        reason: "fora do expediente / dia sem atendimento",
+      });
+    } else {
+      removalReasonsForDebug.push({
+        slot: { date: dateStr, startTime: "--:--", endTime: "--:--" },
+        reason: "sem configuração válida de expediente; fallback padrão não aplicado pelo banco",
+      });
     }
 
-    console.log("PUBLIC BOOKING AVAILABILITY DEBUG", {
+    const finalDebugPayload = {
       clinicId,
       professionalId,
-      date: dateStr,
+      specialtyId,
+      procedureId,
+      selectedDate: dateStr,
       weekday: dayOfWeek,
-      professionalSchedule: effective.source?.startsWith("professional") ? workingDays : null,
+      professionalSchedule: effectiveSchedule.source?.startsWith("professional") ? workingDays : null,
       clinicSchedule: fallbackUsed ? workingDays : null,
-      fallbackUsed,
-      blocks: blocks || [],
+      fallbackScheduleUsed: fallbackUsed,
+      generatedSlots: generatedSlotsForDebug,
       appointments: bookedByDate.get(dateStr) || [],
-      availableSlots: availableSlotsForDebug,
-    });
+      blocks: blocks || [],
+      publicBookingEnabled: !!clinicStatus?.public_booking_enabled,
+      timezone: PUBLIC_BOOKING_TIMEZONE,
+      finalAvailableSlots: availableSlotsForDebug,
+    };
 
-    current = addDays(current, 1);
+    console.log("PUBLIC BOOKING FINAL DEBUG", finalDebugPayload);
+
+    if (availableSlotsForDebug.length === 0) {
+      removalReasonsForDebug.forEach(({ slot, reason }) => {
+        const label = slot.startTime === "--:--" ? dateStr : `slot ${slot.startTime}`;
+        console.log(`${label} removido por ${reason}`);
+      });
+    } else {
+      removalReasonsForDebug
+        .filter(({ reason }) => reason !== "disponível")
+        .forEach(({ slot, reason }) => console.log(`slot ${slot.startTime} removido por ${reason}`));
+      availableSlotsForDebug.forEach((slot) => console.log(`slot ${slot.startTime} disponível`));
+    }
+
+    currentDateStr = addDaysToDateString(currentDateStr, 1);
   }
 
   console.log("[PublicAvail] Total slots generated:", slots.length);
@@ -229,7 +415,7 @@ function normalizeDayPeriods(
 }
 
 function normalizeWeekSchedule(rawWorkingDays: Record<string, any>): Record<string, any> {
-  if (!rawWorkingDays) return {};
+  if (!rawWorkingDays) return DEFAULT_PUBLIC_WEEK_SCHEDULE;
 
   if (rawWorkingDays.schedule && typeof rawWorkingDays.schedule === "object") {
     return rawWorkingDays.schedule;
@@ -255,7 +441,15 @@ function normalizeWeekSchedule(rawWorkingDays: Record<string, any>): Record<stri
     }, {});
   }
 
+  if (Object.keys(rawWorkingDays).length === 0) return DEFAULT_PUBLIC_WEEK_SCHEDULE;
+
   return rawWorkingDays;
+}
+
+function hasAnyEnabledPeriod(workingDays: Record<string, any>): boolean {
+  return ["dom", "seg", "ter", "qua", "qui", "sex", "sab"].some((dayKey) =>
+    normalizeDayPeriods(workingDays?.[dayKey], 30).length > 0
+  );
 }
 
 function generateSlotsForPeriod(
@@ -292,22 +486,22 @@ function minutesToTime(minutes: number): string {
   return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
 }
 
-function isBlockedSlot(
+function getBlockedSlotReason(
   date: string,
   startTime: string,
   endTime: string,
   blocks: ScheduleBlock[]
-): boolean {
+): string | null {
   for (const block of blocks) {
     if (date < block.start_date || date > block.end_date) continue;
-    if (block.all_day) return true;
+    if (block.all_day) return "bloqueio de agenda";
     if (block.start_time && block.end_time) {
       if (startTime < block.end_time && endTime > block.start_time) {
-        return true;
+        return "bloqueio de agenda";
       }
     }
   }
-  return false;
+  return null;
 }
 
 function hasConflict(startTime: string, endTime: string, booked: BookedSlot[]): boolean {
@@ -317,4 +511,33 @@ function hasConflict(startTime: string, endTime: string, booked: BookedSlot[]): 
     if (startTime < bEnd && endTime > bStart) return true;
   }
   return false;
+}
+
+function getSaoPauloWeekday(dateStr: string): number {
+  const weekday = new Intl.DateTimeFormat("en-US", {
+    timeZone: PUBLIC_BOOKING_TIMEZONE,
+    weekday: "short",
+  }).format(new Date(`${dateStr}T12:00:00-03:00`));
+
+  return ({ Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 } as Record<string, number>)[weekday] ?? 0;
+}
+
+function saoPauloSlotToDate(dateStr: string, time: string): Date {
+  return new Date(`${dateStr}T${time}:00-03:00`);
+}
+
+function formatSaoPauloDate(date: Date): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: PUBLIC_BOOKING_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((part) => part.type === type)?.value || "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+function addDaysToDateString(dateStr: string, amount: number): string {
+  const next = addDays(new Date(`${dateStr}T12:00:00-03:00`), amount);
+  return format(next, "yyyy-MM-dd");
 }

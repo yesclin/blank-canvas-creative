@@ -15,7 +15,7 @@ export default function PublicClinicBookingPage() {
   const handleStart = () => {
     const basePath = `/agendar/${clinic.slug}`;
     if (professionalId) {
-      navigate(`${basePath}/horarios?professional=${professionalId}`);
+      navigate(`${basePath}/procedimento?professional=${professionalId}`);
     } else {
       navigate(`${basePath}/especialidade`);
     }

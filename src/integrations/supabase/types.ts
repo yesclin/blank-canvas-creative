@@ -15605,8 +15605,13 @@ export type Database = {
         Args: { _clinic_id: string; _specialty_slug: string }
         Returns: Json
       }
+      default_public_booking_week_schedule: { Args: never; Returns: Json }
       enforce_plan_limit: {
         Args: { _clinic_id: string; _resource: string }
+        Returns: undefined
+      }
+      ensure_public_booking_default_schedule: {
+        Args: { _clinic_id: string }
         Returns: undefined
       }
       ensure_system_templates_integrity: { Args: never; Returns: Json }
@@ -15699,6 +15704,23 @@ export type Database = {
           default_duration_minutes: number
           source: string
           working_days: Json
+        }[]
+      }
+      get_public_procedures: {
+        Args: {
+          _clinic_id: string
+          _professional_id?: string
+          _specialty_id?: string
+        }
+        Returns: {
+          clinic_id: string
+          description: string
+          duration_minutes: number
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+          specialty_id: string
         }[]
       }
       get_public_professionals: {

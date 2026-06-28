@@ -17,6 +17,7 @@ export default function PatientDataStep() {
 
   const professionalId = searchParams.get("professional") || "";
   const specialtyId = searchParams.get("specialty") || "";
+  const procedureId = searchParams.get("procedure") || "";
   const dateStr = searchParams.get("date") || "";
   const startTime = searchParams.get("start") || "";
   const endTime = searchParams.get("end") || "";
@@ -58,7 +59,11 @@ export default function PatientDataStep() {
 
       if (!available) {
         toast.error("Este horário acabou de ser ocupado. Por favor, escolha outro.");
-        navigate(`/agendar/${clinic.slug}/horarios?professional=${professionalId}&specialty=${specialtyId}`);
+        const params = new URLSearchParams();
+        params.set("professional", professionalId);
+        if (specialtyId) params.set("specialty", specialtyId);
+        if (procedureId) params.set("procedure", procedureId);
+        navigate(`/agendar/${clinic.slug}/horarios?${params.toString()}`);
         return;
       }
 
@@ -95,6 +100,7 @@ export default function PatientDataStep() {
           patient_id: patientId,
           professional_id: professionalId,
           specialty_id: specialtyId || null,
+          procedure_id: procedureId || null,
           scheduled_date: dateStr,
           start_time: startTime,
           end_time: endTime,
@@ -102,7 +108,7 @@ export default function PatientDataStep() {
           status: initialStatus,
           created_source: "public_patient",
           booking_reference: bookingRef,
-          appointment_type: "consulta",
+          appointment_type: procedureId ? "procedimento" : "consulta",
           care_mode: "presencial",
           notes: "Agendamento realizado pelo link público da clínica.",
         });

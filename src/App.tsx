@@ -46,6 +46,7 @@ const PublicBookingLayout = lazyWithTimeout(() => import("./pages/public/PublicB
 const PublicClinicBookingPage = lazyWithTimeout(() => import("./pages/public/PublicClinicBookingPage"), "PublicClinicBookingPage");
 const SpecialtySelectionStep = lazyWithTimeout(() => import("./pages/public/SpecialtySelectionStep"), "SpecialtySelectionStep");
 const ProfessionalSelectionStep = lazyWithTimeout(() => import("./pages/public/ProfessionalSelectionStep"), "ProfessionalSelectionStep");
+const ProcedureSelectionStep = lazyWithTimeout(() => import("./pages/public/ProcedureSelectionStep"), "ProcedureSelectionStep");
 const TimeSelectionStep = lazyWithTimeout(() => import("./pages/public/TimeSelectionStep"), "TimeSelectionStep");
 const PatientDataStep = lazyWithTimeout(() => import("./pages/public/PatientDataStep"), "PatientDataStep");
 const BookingConfirmationStep = lazyWithTimeout(() => import("./pages/public/BookingConfirmationStep"), "BookingConfirmationStep");
@@ -389,6 +390,7 @@ function AppRouter() {
                       <Route index element={moduleRoute(<PublicClinicBookingPage />, "Agendamento público")} />
                       <Route path="especialidade" element={moduleRoute(<SpecialtySelectionStep />, "Seleção de especialidade")} />
                       <Route path="profissional" element={moduleRoute(<ProfessionalSelectionStep />, "Seleção de profissional")} />
+                      <Route path="procedimento" element={moduleRoute(<ProcedureSelectionStep />, "Seleção de procedimento")} />
                       <Route path="horarios" element={moduleRoute(<TimeSelectionStep />, "Seleção de horários")} />
                       <Route path="dados" element={moduleRoute(<PatientDataStep />, "Dados do paciente")} />
                       <Route path="confirmacao" element={moduleRoute(<BookingConfirmationStep />, "Confirmação de agendamento")} />

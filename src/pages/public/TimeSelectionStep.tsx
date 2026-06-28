@@ -15,6 +15,7 @@ export default function TimeSelectionStep() {
   const [searchParams] = useSearchParams();
   const professionalId = searchParams.get("professional") || "";
   const specialtyId = searchParams.get("specialty") || "";
+  const procedureId = searchParams.get("procedure") || "";
   const navigate = useNavigate();
 
   const settings = clinic.public_booking_settings || {};
@@ -32,6 +33,8 @@ export default function TimeSelectionStep() {
       ? {
           clinicId: clinic.id,
           professionalId,
+          specialtyId: specialtyId || undefined,
+          procedureId: procedureId || undefined,
           dateStart,
           dateEnd,
           minAdvanceHours,
@@ -66,6 +69,7 @@ export default function TimeSelectionStep() {
     const params = new URLSearchParams();
     params.set("professional", professionalId);
     if (specialtyId) params.set("specialty", specialtyId);
+    if (procedureId) params.set("procedure", procedureId);
     params.set("date", selectedSlot.date);
     params.set("start", selectedSlot.startTime);
     params.set("end", selectedSlot.endTime);
