@@ -920,7 +920,7 @@ export function AnamneseBlock({
   }, [selectedRecord, allTemplates, activeTemplate]);
 
   // ─── Loading ────────────────────────────────────────────────────
-  if (loading || loadingTemplates) {
+  if ((loading || loadingTemplates) && allTemplates.length === 0 && !useLocalFallback) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-48" />
