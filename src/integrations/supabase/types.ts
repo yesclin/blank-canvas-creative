@@ -15775,6 +15775,10 @@ export type Database = {
       }
       is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
       is_platform_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_public_booking_enabled: {
+        Args: { _clinic_id: string }
+        Returns: boolean
+      }
       is_recepcionista: { Args: { _user_id?: string }; Returns: boolean }
       log_teleconsulta_event_by_token: {
         Args: { p_event_type: string; p_payload?: Json; p_token: string }
