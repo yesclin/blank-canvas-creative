@@ -15605,8 +15605,13 @@ export type Database = {
         Args: { _clinic_id: string; _specialty_slug: string }
         Returns: Json
       }
+      default_public_booking_week_schedule: { Args: never; Returns: Json }
       enforce_plan_limit: {
         Args: { _clinic_id: string; _resource: string }
+        Returns: undefined
+      }
+      ensure_public_booking_default_schedule: {
+        Args: { _clinic_id: string }
         Returns: undefined
       }
       ensure_system_templates_integrity: { Args: never; Returns: Json }

@@ -5,7 +5,15 @@ export function usePublicProfessionalAvailability(
   params: PublicAvailabilityParams | null
 ) {
   return useQuery<PublicAvailabilityResult>({
-    queryKey: ["public-availability", params?.clinicId, params?.professionalId, params?.dateStart?.toISOString(), params?.dateEnd?.toISOString()],
+    queryKey: [
+      "public-availability",
+      params?.clinicId,
+      params?.professionalId,
+      params?.specialtyId,
+      params?.procedureId,
+      params?.dateStart?.toISOString(),
+      params?.dateEnd?.toISOString(),
+    ],
     queryFn: () => getPublicAvailabilityWithDetails(params!),
     enabled: !!params?.clinicId && !!params?.professionalId && !!params?.dateStart && !!params?.dateEnd,
     staleTime: 30_000,
