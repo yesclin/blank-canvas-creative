@@ -296,15 +296,27 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
   const renderSection = (def: typeof SECTIONS[number]) => {
     const sectionItems = items.filter((i) => def.types.includes(i.resource_type));
     const filtered = applyFilters(sectionItems);
+    const selectedInSection = filtered.filter((i) => selected[i.resource_key]).length;
+    const hasSelection = selectedInSection > 0;
     return (
       <AccordionContent className="px-4 pb-4 pt-2">
         <p className="text-xs text-muted-foreground mb-3">{def.hint}</p>
         <div className="flex flex-wrap items-center gap-2 mb-3">
-          <Button size="sm" variant="outline" onClick={() => bulkSection(def.key, true, 'filtered')}>Liberar todos</Button>
-          <Button size="sm" variant="outline" onClick={() => bulkSection(def.key, false, 'filtered')}>Bloquear todos</Button>
-          <Button size="sm" variant="outline" onClick={() => bulkSection(def.key, true, 'selected')}>Liberar selecionados</Button>
-          <Button size="sm" variant="outline" onClick={() => bulkSection(def.key, false, 'selected')}>Bloquear selecionados</Button>
-          <Button size="sm" variant="ghost" onClick={() => resetSection(def.key)}>Restaurar padrão</Button>
+          <Badge variant="secondary" className="text-[10px]">
+            {selectedInSection} selecionado(s) de {filtered.length} visível(is)
+          </Badge>
+          <Button size="sm" variant="outline" onClick={() => bulkSection(def.key, true, 'filtered')} disabled={filtered.length === 0}>Liberar todos visíveis</Button>
+          <Button size="sm" variant="outline" onClick={() => bulkSection(def.key, false, 'filtered')} disabled={filtered.length === 0}>Bloquear todos visíveis</Button>
+          <Button size="sm" variant="outline" onClick={() => bulkSection(def.key, true, 'selected')} disabled={!hasSelection}>Liberar selecionados</Button>
+          <Button size="sm" variant="outline" onClick={() => bulkSection(def.key, false, 'selected')} disabled={!hasSelection}>Bloquear selecionados</Button>
+          <Button size="sm" variant="ghost" onClick={() => resetSection(def.key)} disabled={filtered.length === 0}>Restaurar padrão</Button>
+          {hasSelection && (
+            <Button size="sm" variant="ghost" onClick={() => {
+              const next = { ...selected };
+              filtered.forEach((i) => { delete next[i.resource_key]; });
+              setSelected(next);
+            }}>Limpar seleção</Button>
+          )}
         </div>
         {filtered.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">
