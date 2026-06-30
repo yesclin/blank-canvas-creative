@@ -2370,6 +2370,70 @@ export type Database = {
           },
         ]
       }
+      clinic_template_overrides: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          enabled: boolean
+          expires_at: string | null
+          id: string
+          reason: string | null
+          specialty_id: string | null
+          template_id: string
+          template_kind: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          expires_at?: string | null
+          id?: string
+          reason?: string | null
+          specialty_id?: string | null
+          template_id: string
+          template_kind: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          expires_at?: string | null
+          id?: string
+          reason?: string | null
+          specialty_id?: string | null
+          template_id?: string
+          template_kind?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_template_overrides_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_effective_features"
+            referencedColumns: ["clinic_id"]
+          },
+          {
+            foreignKeyName: "clinic_template_overrides_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinic_template_overrides_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "public_clinic_booking"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinical_addendums: {
         Row: {
           clinic_id: string
@@ -15750,6 +15814,18 @@ export type Database = {
           id: string
           name: string
           slug: string
+        }[]
+      }
+      get_super_admin_template_catalog: {
+        Args: { p_clinic_id: string }
+        Returns: {
+          is_active: boolean
+          specialty_id: string
+          specialty_name: string
+          specialty_slug: string
+          template_id: string
+          template_kind: string
+          title: string
         }[]
       }
       get_teleconsulta_by_token: { Args: { p_token: string }; Returns: Json }

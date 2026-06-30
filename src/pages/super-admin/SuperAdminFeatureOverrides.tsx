@@ -23,6 +23,7 @@ import { Loader2, Trash2, Save, ShieldCheck, ShieldOff, Clock } from 'lucide-rea
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { logPlatformAction } from '@/lib/superAdminAudit';
+import { TemplateOverridesSection } from '@/components/super-admin/TemplateOverridesSection';
 
 const OVERRIDE_FEATURES: Array<{ key: string; label: string; planFlag: string }> = [
   { key: 'whatsapp',         label: 'WhatsApp',             planFlag: 'feature_whatsapp' },
@@ -429,6 +430,8 @@ export default function SuperAdminFeatureOverrides() {
               )}
             </CardContent>
           </Card>
+
+          <TemplateOverridesSection clinicId={clinicId} />
         </>
       )}
     </div>
