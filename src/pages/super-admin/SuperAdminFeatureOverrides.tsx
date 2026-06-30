@@ -430,6 +430,8 @@ export default function SuperAdminFeatureOverrides() {
               )}
             </CardContent>
           </Card>
+
+          <TemplateOverridesSection clinicId={clinicId} />
         </>
       )}
     </div>
