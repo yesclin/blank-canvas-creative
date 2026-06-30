@@ -2381,7 +2381,7 @@ export type Database = {
           reason: string | null
           resource_key: string | null
           specialty_id: string | null
-          template_id: string
+          template_id: string | null
           template_kind: string
           updated_at: string
         }
@@ -2395,7 +2395,7 @@ export type Database = {
           reason?: string | null
           resource_key?: string | null
           specialty_id?: string | null
-          template_id: string
+          template_id?: string | null
           template_kind: string
           updated_at?: string
         }
@@ -2409,7 +2409,7 @@ export type Database = {
           reason?: string | null
           resource_key?: string | null
           specialty_id?: string | null
-          template_id?: string
+          template_id?: string | null
           template_kind?: string
           updated_at?: string
         }
