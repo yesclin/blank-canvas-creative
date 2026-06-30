@@ -2379,6 +2379,7 @@ export type Database = {
           expires_at: string | null
           id: string
           reason: string | null
+          resource_key: string | null
           specialty_id: string | null
           template_id: string
           template_kind: string
@@ -2392,6 +2393,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           reason?: string | null
+          resource_key?: string | null
           specialty_id?: string | null
           template_id: string
           template_kind: string
@@ -2405,6 +2407,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           reason?: string | null
+          resource_key?: string | null
           specialty_id?: string | null
           template_id?: string
           template_kind?: string
@@ -12376,6 +12379,51 @@ export type Database = {
           },
         ]
       }
+      prontuario_resource_catalog: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          preview_payload: Json | null
+          resource_key: string
+          resource_type: string
+          source_id: string | null
+          source_table: string | null
+          specialty_slug: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          preview_payload?: Json | null
+          resource_key: string
+          resource_type: string
+          source_id?: string | null
+          source_table?: string | null
+          specialty_slug?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          preview_payload?: Json | null
+          resource_key?: string
+          resource_type?: string
+          source_id?: string | null
+          source_table?: string | null
+          specialty_slug?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       psychology_diagnostic_hypotheses: {
         Row: {
           appointment_id: string | null
@@ -15771,6 +15819,22 @@ export type Database = {
         Returns: number
       }
       get_pre_registration_by_token: { Args: { _token: string }; Returns: Json }
+      get_prontuario_resource_catalog: {
+        Args: { p_clinic_id: string }
+        Returns: {
+          description: string
+          enabled: boolean
+          has_override: boolean
+          override_reason: string
+          preview_payload: Json
+          resource_key: string
+          resource_type: string
+          source_id: string
+          source_table: string
+          specialty_slug: string
+          title: string
+        }[]
+      }
       get_public_effective_schedule: {
         Args: { _clinic_id: string; _professional_id: string }
         Returns: {
