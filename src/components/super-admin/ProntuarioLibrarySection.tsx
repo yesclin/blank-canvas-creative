@@ -170,23 +170,69 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
     const list = scope === 'selected'
       ? sectionFiltered.filter((i) => selected[i.resource_key])
       : sectionFiltered;
+
+    console.log('[BulkAction] section:', sectionKey, 'enabled:', enabled, 'scope:', scope);
+    console.log('[BulkAction] selectedMap:', selected);
+    console.log('[BulkAction] elegíveis:', list.map((i) => i.resource_key));
+
+    if (scope === 'selected' && list.length === 0) {
+      toast.error('Selecione ao menos um recurso desta categoria.');
+      return;
+    }
     if (list.length === 0) { toast.error('Nenhum recurso elegível.'); return; }
-    const keys = list.map((i) => i.resource_key);
-    await supabase.from('clinic_template_overrides').delete()
-      .eq('clinic_id', clinicId).in('resource_key', keys);
+
+    const keys = list
+      .map((i) => i.resource_key)
+      .filter((k): k is string => typeof k === 'string' && k.length > 0);
+    if (keys.length === 0) { toast.error('IDs inválidos na seleção.'); return; }
+
+    const { error: delError } = await supabase
+      .from('clinic_template_overrides')
+      .delete()
+      .eq('clinic_id', clinicId)
+      .in('resource_key', keys);
+    if (delError) {
+      console.error('[BulkAction] delete error:', delError);
+      toast.error(`Erro ao limpar overrides: ${delError.message}`);
+      return;
+    }
+
     const rows = list.map((r) => ({
-      clinic_id: clinicId, resource_key: r.resource_key,
-      template_id: r.source_id, template_kind: r.resource_type,
-      enabled, reason: reason.trim(),
+      clinic_id: clinicId,
+      resource_key: r.resource_key,
+      template_id: r.source_id, // pode ser null para abas/funções
+      template_kind: r.resource_type,
+      enabled,
+      reason: reason.trim(),
     }));
+    console.log('[BulkAction] payload:', rows);
+
     const { error } = await supabase.from('clinic_template_overrides').insert(rows);
-    if (error) { console.error(error); toast.error('Erro ao salvar em massa.'); return; }
+    if (error) {
+      console.error('[BulkAction] insert error:', {
+        message: error.message, details: error.details, code: error.code, hint: error.hint,
+      });
+      toast.error(`Erro ao salvar: ${error.message}${error.hint ? ` (${error.hint})` : ''}`);
+      return;
+    }
+
     await logPlatformAction({
       action: enabled ? 'resource_override.bulk_enable' : 'resource_override.bulk_disable',
       target_type: 'prontuario_resource', clinic_id: clinicId,
       metadata: { count: rows.length, section: sectionKey, scope, reason: reason.trim() },
     });
-    toast.success(`${rows.length} recursos atualizados.`);
+    toast.success(
+      enabled
+        ? `${rows.length} modelo(s) liberado(s) com sucesso.`
+        : `${rows.length} modelo(s) bloqueado(s) com sucesso.`,
+    );
+    if (scope === 'selected') {
+      setSelected((prev) => {
+        const next = { ...prev };
+        keys.forEach((k) => { delete next[k]; });
+        return next;
+      });
+    }
     load();
   };
 
