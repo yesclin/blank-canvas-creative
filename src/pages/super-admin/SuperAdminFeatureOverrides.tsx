@@ -228,35 +228,40 @@ export default function SuperAdminFeatureOverrides() {
       </Card>
 
       {clinicId && (
-        <>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                Plano atual
+        <ProntuarioLibrarySection
+          clinicId={clinicId}
+          modulesSummary={{
+            total: OVERRIDE_FEATURES.length,
+            enabled: OVERRIDE_FEATURES.reduce((acc, f) => {
+              const ov = overrideByKey[f.key];
+              const eff = ov ? ov.enabled : (plan?.flags[f.planFlag] ?? false);
+              return acc + (eff ? 1 : 0);
+            }, 0),
+          }}
+          modulesContent={
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Plano atual:</span>
                 {plan?.plan_name ? (
                   <Badge variant="secondary">{plan.plan_name}</Badge>
                 ) : (
                   <Badge variant="outline">Sem assinatura</Badge>
                 )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+              </div>
+
               {loadingDetails ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" /> Carregando...
                 </div>
               ) : (
-                <div className="grid gap-2 md:grid-cols-2">
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   {OVERRIDE_FEATURES.map((f) => {
                     const planValue = plan?.flags[f.planFlag] ?? false;
                     const ov = overrideByKey[f.key];
                     const effective = ov ? ov.enabled : planValue;
                     const expSoon = ov ? isExpiringSoon(ov.expires_at) : false;
                     return (
-                      <div
-                        key={f.key}
-                        className="flex flex-col gap-2 rounded border bg-card p-3 text-sm"
-                      >
+                      <div key={f.key} className="flex flex-col gap-2 rounded-lg border bg-card p-3 text-sm">
                         <div className="flex items-center justify-between gap-2">
                           <span className="font-medium">{f.label}</span>
                           <Badge
@@ -273,11 +278,11 @@ export default function SuperAdminFeatureOverrides() {
                           <div className="flex flex-wrap gap-1.5">
                             {ov.enabled ? (
                               <Badge className="bg-violet-600 hover:bg-violet-600 text-white gap-1">
-                                <ShieldCheck className="h-3 w-3" /> Liberação manual ativa
+                                <ShieldCheck className="h-3 w-3" /> Liberação manual
                               </Badge>
                             ) : (
                               <Badge className="bg-rose-600 hover:bg-rose-600 text-white gap-1">
-                                <ShieldOff className="h-3 w-3" /> Bloqueio manual ativo
+                                <ShieldOff className="h-3 w-3" /> Bloqueio manual
                               </Badge>
                             )}
                             {expSoon && (
@@ -296,143 +301,109 @@ export default function SuperAdminFeatureOverrides() {
                   })}
                 </div>
               )}
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Criar / atualizar liberação manual</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1">
-                  <Label>Recurso</Label>
-                  <Select value={draftKey} onValueChange={setDraftKey}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {OVERRIDE_FEATURES.map((f) => (
-                        <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <div className="rounded-lg border p-3 space-y-3 bg-muted/20">
+                <div className="text-sm font-semibold">Criar / atualizar liberação manual</div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Recurso</Label>
+                    <Select value={draftKey} onValueChange={setDraftKey}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {OVERRIDE_FEATURES.map((f) => (
+                          <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Expira em (opcional)</Label>
+                    <Input
+                      type="datetime-local"
+                      value={draftExpires}
+                      onChange={(e) => setDraftExpires(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between rounded border p-3 bg-background">
+                  <div>
+                    <p className="text-sm font-medium">
+                      {draftEnabled ? 'Liberar recurso manualmente' : 'Bloquear recurso manualmente'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      A liberação manual prevalece sobre o plano até expirar.
+                    </p>
+                  </div>
+                  <Switch checked={draftEnabled} onCheckedChange={setDraftEnabled} />
                 </div>
                 <div className="space-y-1">
-                  <Label>Expira em (opcional)</Label>
-                  <Input
-                    type="datetime-local"
-                    value={draftExpires}
-                    onChange={(e) => setDraftExpires(e.target.value)}
+                  <Label className="text-xs">Motivo da auditoria</Label>
+                  <Textarea
+                    rows={2}
+                    value={draftReason}
+                    onChange={(e) => setDraftReason(e.target.value)}
+                    placeholder="Ex.: cortesia comercial, teste de recurso..."
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Quando expirar, a clínica volta a respeitar o plano automaticamente.
-                  </p>
+                </div>
+                <div className="flex justify-end">
+                  <Button onClick={saveOverride} disabled={saving} size="sm">
+                    {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                    Salvar liberação manual
+                  </Button>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between rounded border p-3">
-                <div>
-                  <p className="text-sm font-medium">
-                    {draftEnabled ? 'Liberar recurso manualmente' : 'Bloquear recurso manualmente'}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    A liberação manual prevalece sobre o plano até expirar ou ser removida.
-                  </p>
+              {activeOverrides.length > 0 && (
+                <div className="rounded-lg border">
+                  <div className="px-3 py-2 text-sm font-semibold border-b">Liberações manuais ativas</div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Recurso</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Motivo</TableHead>
+                        <TableHead>Expira em</TableHead>
+                        <TableHead className="w-12" />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {activeOverrides.map((o) => {
+                        const meta = OVERRIDE_FEATURES.find((f) => f.key === o.feature_key);
+                        return (
+                          <TableRow key={o.id}>
+                            <TableCell className="font-medium">{meta?.label ?? o.feature_key}</TableCell>
+                            <TableCell>
+                              {o.enabled ? (
+                                <Badge className="bg-violet-600 hover:bg-violet-600 text-white">Liberado</Badge>
+                              ) : (
+                                <Badge className="bg-rose-600 hover:bg-rose-600 text-white">Bloqueado</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{o.reason ?? '—'}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {o.expires_at ? new Date(o.expires_at).toLocaleString('pt-BR') : 'Sem expiração'}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => removeOverride(o)}
+                                aria-label="Remover"
+                                title="Remover"
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
                 </div>
-                <Switch checked={draftEnabled} onCheckedChange={setDraftEnabled} />
-              </div>
-
-              <div className="space-y-1">
-                <Label>Motivo da auditoria</Label>
-                <Textarea
-                  rows={2}
-                  value={draftReason}
-                  onChange={(e) => setDraftReason(e.target.value)}
-                  placeholder="Ex.: cortesia comercial, teste de recurso, suporte premium..."
-                />
-              </div>
-
-              <div className="flex justify-end">
-                <Button onClick={saveOverride} disabled={saving}>
-                  {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-                  Salvar liberação manual
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Liberações manuais ativas</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {loadingDetails ? (
-                <div className="p-6 flex justify-center">
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                </div>
-              ) : activeOverrides.length === 0 ? (
-                <p className="p-6 text-sm text-muted-foreground text-center">
-                  Nenhuma liberação manual ativa. A clínica está seguindo apenas as regras do plano.
-                </p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Recurso</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Motivo</TableHead>
-                      <TableHead>Expira em</TableHead>
-                      <TableHead className="w-12" />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {activeOverrides.map((o) => {
-                      const meta = OVERRIDE_FEATURES.find((f) => f.key === o.feature_key);
-                      return (
-                        <TableRow key={o.id}>
-                          <TableCell className="font-medium">
-                            {meta?.label ?? o.feature_key}
-                          </TableCell>
-                          <TableCell>
-                            {o.enabled ? (
-                              <Badge className="bg-violet-600 hover:bg-violet-600 text-white">
-                                Liberado manualmente
-                              </Badge>
-                            ) : (
-                              <Badge className="bg-rose-600 hover:bg-rose-600 text-white">
-                                Bloqueado manualmente
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {o.reason ?? '—'}
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {o.expires_at
-                              ? new Date(o.expires_at).toLocaleString('pt-BR')
-                              : 'Sem expiração'}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => removeOverride(o)}
-                              aria-label={o.enabled ? 'Remover liberação manual' : 'Remover bloqueio manual'}
-                              title={o.enabled ? 'Remover liberação manual' : 'Remover bloqueio manual'}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
               )}
-            </CardContent>
-          </Card>
-
-          <ProntuarioLibrarySection clinicId={clinicId} />
-        </>
+            </div>
+          }
+        />
       )}
     </div>
   );
