@@ -1,77 +1,33 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useClinicData } from "@/hooks/useClinicData";
-import { useAnamnesisEditability } from "@/hooks/prontuario/useAnamnesisEditability";
-import { RecordEditLockBanner } from "@/components/prontuario/RecordEditLockBanner";
-import { AddendumSection } from "@/components/prontuario/AddendumSection";
-import { AnamnesisTemplateBuilderDialog } from "@/components/configuracoes/AnamnesisTemplateBuilderDialog";
-import { Card, CardContent } from "@/components/ui/card";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  FileText,
-  Edit3,
-  Save,
-  X,
-  ArrowLeft,
-  Clock,
-  History,
-  AlertTriangle,
   Stethoscope,
-  ChevronRight,
-  Lock,
-  Settings,
-  Check,
+  Activity,
+  Target,
+  HeartPulse,
+  ClipboardList,
+  Pill,
+  Eye,
+  Lightbulb,
+  Brain,
+  Flag,
+  Save,
+  Clock,
+  User as UserIcon,
   CheckCircle2,
-  Calculator,
-  Plus,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import {
-  calculateIMC,
-  mapStructuredToLegacy,
-  type SecaoAnamnese,
-} from "@/hooks/prontuario/clinica-geral/anamneseTemplates";
-import { useAnamnesisTemplatesV2, useAnamnesisRecords, type AnamnesisTemplateV2, type AnamnesisRecord } from "@/hooks/useAnamnesisTemplatesV2";
-import { useInstitutionalPdf } from "@/hooks/useInstitutionalPdf";
-import { FileDown, Printer, Download } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -117,111 +73,130 @@ interface AnamneseBlockProps {
   professionalRegistration?: string | null;
 }
 
-// ─── Multi-select badge component ────────────────────────────────────
+// ─── Structured form state ───────────────────────────────────────────
 
-function MultiSelectField({
-  options, value, onChange, readOnly
-}: { options: string[]; value: string[]; onChange: (v: string[]) => void; readOnly?: boolean }) {
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {options.map(opt => {
-        const selected = value.includes(opt);
-        return (
-          <Badge
-            key={opt}
-            variant={selected ? 'default' : 'outline'}
-            className={!readOnly ? 'cursor-pointer transition-colors' : ''}
-            onClick={() => {
-              if (readOnly) return;
-              onChange(selected ? value.filter(v => v !== opt) : [...value, opt]);
-            }}
-          >
-            {selected ? '✓ ' : ''}{opt}
-          </Badge>
-        );
-      })}
-    </div>
-  );
+interface PrimeiraEntrevistaData {
+  queixa_principal: string;
+  historia_queixa_atual: string;
+  objetivo_paciente: string;
+  habitos: {
+    fuma: boolean;
+    alcool: boolean;
+    atividade_fisica: boolean;
+    sedentario: boolean;
+    sono_adequado: boolean;
+    alimentacao_equilibrada: boolean;
+    observacoes: string;
+  };
+  antecedentes_relevantes: string;
+  medicacoes_uso_continuo: string;
+  observacoes_iniciais: string;
+  hipotese_inicial: string;
+  impressao_clinica: string;
+  objetivos_tratamento: string;
 }
 
-// ─── Unified template type ───────────────────────────────────────
-
-interface UnifiedTemplate {
-  id: string;
-  nome: string;
-  descricao: string;
-  icon: string;
-  is_system: boolean;
-  template_type: string | null;
-  secoes: SecaoAnamnese[];
-}
-
-// Fields that duplicate patient/appointment data and must be excluded
-const IDENTIFICATION_FIELD_IDS = new Set([
-  'f_nome', 'f_idade', 'f_data_atendimento', 'f_profissional', 'f_sexo',
-]);
-
-const IDENTIFICATION_SECTION_IDS = new Set([
-  'section_identificacao', 'identificacao', 'identificacao_complementar',
-]);
-
-const SPECIALTY_SLUG_BY_NAME: Record<string, string> = {
-  'clínica geral': 'geral',
-  'clinica geral': 'geral',
-  'psicologia': 'psicologia',
-  'nutrição': 'nutricao',
-  'nutricao': 'nutricao',
-  'fisioterapia': 'fisioterapia',
-  'pilates': 'pilates',
-  'estética / harmonização facial': 'estetica',
-  'estetica / harmonizacao facial': 'estetica',
-  'estética': 'estetica',
-  'estetica': 'estetica',
-  'odontologia': 'odontologia',
-  'dermatologia': 'dermatologia',
-  'pediatria': 'pediatria',
-  'outra especialidade / atendimento geral': 'other_specialty',
-  'outra especialidade': 'other_specialty',
-  'atendimento geral': 'other_specialty',
-  'other_specialty': 'other_specialty',
+const EMPTY_FORM: PrimeiraEntrevistaData = {
+  queixa_principal: "",
+  historia_queixa_atual: "",
+  objetivo_paciente: "",
+  habitos: {
+    fuma: false,
+    alcool: false,
+    atividade_fisica: false,
+    sedentario: false,
+    sono_adequado: false,
+    alimentacao_equilibrada: false,
+    observacoes: "",
+  },
+  antecedentes_relevantes: "",
+  medicacoes_uso_continuo: "",
+  observacoes_iniciais: "",
+  hipotese_inicial: "",
+  impressao_clinica: "",
+  objetivos_tratamento: "",
 };
 
-function resolveSpecialtySlug(name?: string | null, key?: string | null) {
-  if (key === 'other_specialty') return 'other_specialty';
-  if (key && SPECIALTY_SLUG_BY_NAME[key]) return SPECIALTY_SLUG_BY_NAME[key];
-  const normalized = name?.trim().toLowerCase();
-  return (normalized && SPECIALTY_SLUG_BY_NAME[normalized]) || 'geral';
+type HabitoBoolKey = Exclude<keyof PrimeiraEntrevistaData["habitos"], "observacoes">;
+const HABITOS_OPTIONS: Array<{ key: HabitoBoolKey; label: string }> = [
+  { key: "fuma", label: "Fuma" },
+  { key: "alcool", label: "Consome álcool" },
+  { key: "atividade_fisica", label: "Atividade física" },
+  { key: "sedentario", label: "Sedentário" },
+  { key: "sono_adequado", label: "Sono adequado" },
+  { key: "alimentacao_equilibrada", label: "Alimentação equilibrada" },
+];
+
+function loadFromRecord(record: AnamneseData | null): PrimeiraEntrevistaData {
+  if (!record) return { ...EMPTY_FORM, habitos: { ...EMPTY_FORM.habitos } };
+  const s = (record.structured_data || {}) as Partial<PrimeiraEntrevistaData> & Record<string, unknown>;
+  return {
+    queixa_principal: (s.queixa_principal as string) ?? record.queixa_principal ?? "",
+    historia_queixa_atual: (s.historia_queixa_atual as string) ?? record.historia_doenca_atual ?? "",
+    objetivo_paciente: (s.objetivo_paciente as string) ?? "",
+    habitos: {
+      ...EMPTY_FORM.habitos,
+      ...(s.habitos as PrimeiraEntrevistaData["habitos"] | undefined),
+    },
+    antecedentes_relevantes: (s.antecedentes_relevantes as string) ?? record.antecedentes_pessoais ?? "",
+    medicacoes_uso_continuo: (s.medicacoes_uso_continuo as string) ?? record.medicamentos_uso_continuo ?? "",
+    observacoes_iniciais: (s.observacoes_iniciais as string) ?? "",
+    hipotese_inicial: (s.hipotese_inicial as string) ?? "",
+    impressao_clinica: (s.impressao_clinica as string) ?? "",
+    objetivos_tratamento: (s.objetivos_tratamento as string) ?? "",
+  };
 }
 
-function v2TemplateToUnified(t: AnamnesisTemplateV2): UnifiedTemplate {
+function toLegacyPayload(form: PrimeiraEntrevistaData) {
+  const habitosText = HABITOS_OPTIONS
+    .filter((h) => form.habitos[h.key])
+    .map((h) => h.label)
+    .join(", ") + (form.habitos.observacoes ? ` — Obs: ${form.habitos.observacoes}` : "");
   return {
-    id: t.id,
-    nome: t.name,
-    descricao: t.description || '',
-    icon: t.icon || 'Stethoscope',
-    is_system: t.is_system,
-    template_type: t.template_type || null,
-    secoes: t.structure
-      .map(section => {
-        const filteredFields = (section.fields || []).filter(f => !IDENTIFICATION_FIELD_IDS.has(f.id));
-        return {
-          id: section.id,
-          titulo: section.title,
-          icon: 'Stethoscope',
-          campos: filteredFields.map(f => ({
-            id: f.id,
-            label: f.label,
-            type: f.type as any,
-            placeholder: f.placeholder,
-            options: f.options,
-            required: f.required,
-            section: section.title,
-          })),
-        };
-      })
-      .filter(s => s.campos.length > 0 || !IDENTIFICATION_SECTION_IDS.has(s.id))
-      .filter(s => s.campos.length > 0),
+    queixa_principal: form.queixa_principal,
+    historia_doenca_atual: form.historia_queixa_atual,
+    antecedentes_pessoais: form.antecedentes_relevantes,
+    antecedentes_familiares: "",
+    habitos_vida: habitosText.trim(),
+    medicamentos_uso_continuo: form.medicacoes_uso_continuo,
+    alergias: "",
+    comorbidades: "",
+    structured_data: form as unknown as Record<string, unknown>,
   };
+}
+
+// ─── Section card ────────────────────────────────────────────────────
+
+function SectionCard({
+  icon: Icon,
+  number,
+  title,
+  description,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  number: number;
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-3 text-base">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Icon className="h-4 w-4" />
+          </span>
+          <span className="text-muted-foreground text-xs font-medium">{number}.</span>
+          <span>{title}</span>
+        </CardTitle>
+        {description && (
+          <p className="text-xs text-muted-foreground ml-11">{description}</p>
+        )}
+      </CardHeader>
+      <CardContent className="ml-11 pl-0">{children}</CardContent>
+    </Card>
+  );
 }
 
 // ─── Main component ──────────────────────────────────────────────────
@@ -234,1314 +209,299 @@ export function AnamneseBlock({
   canEdit = false,
   onSave,
   onUpdate,
-  patientName,
-  patientCpf,
-  patientData,
-  specialtyId,
-  specialtyName,
-  specialtyKey,
-  appointmentId,
   appointmentDate,
   professionalName,
   professionalRegistration,
 }: AnamneseBlockProps) {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { clinic } = useClinicData();
-  const { generateAnamnesisPdf, generating } = useInstitutionalPdf();
-
-
-
-  const [isEditing, setIsEditing] = useState(false);
-  const [isEditingExisting, setIsEditingExisting] = useState(false);
-  const [isCreatingNew, setIsCreatingNew] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
-  const [selectedVersion, setSelectedVersion] = useState<AnamneseData | null>(null);
-  const [structuredData, setStructuredData] = useState<Record<string, unknown>>({});
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
-  const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
-  const [showSwitchConfirm, setShowSwitchConfirm] = useState(false);
-  const [showTemplateEditor, setShowTemplateEditor] = useState(false);
-  const [editingV2Template, setEditingV2Template] = useState<AnamnesisTemplateV2 | null>(null);
-  const [creatingDefault, setCreatingDefault] = useState(false);
-  const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
-  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
-  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
-
-  // Auto-save refs
+  const [form, setForm] = useState<PrimeiraEntrevistaData>(() => loadFromRecord(currentAnamnese));
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastSavedData = useRef<string>('');
-  const editingInitialData = useRef<string>('{}');
+  const lastSerialized = useRef<string>(JSON.stringify(loadFromRecord(currentAnamnese)));
+  const initializedFor = useRef<string | null>(currentAnamnese?.id ?? null);
 
-  // ─── Fetch clinic templates from DB (V2) ──────────────────────────
-  const { templates: v2Templates, isLoading: loadingTemplates, refetch: refetchTemplates } = useAnamnesisTemplatesV2({
-    specialtyId: specialtyId,
-    activeOnly: true
-  });
-
-  // ─── V2 Records: ALL records for this patient (no appointment filter) ──
-  const patientIdForRecords = patientData?.id || currentAnamnese?.patient_id || null;
-  const { records: v2Records, saveRecord: saveV2Record, isSaving: savingV2 } = useAnamnesisRecords(patientIdForRecords, null, specialtyId);
-
+  // Sync when record changes (e.g. after save creates a new version)
   useEffect(() => {
-    if (!import.meta.env.DEV) return;
-    console.log('[YesClin][AnamneseBlock] receivedSpecialty', {
-      specialtyId,
-      specialtyName,
-      patientIdForRecords,
-      appointmentId,
-    });
-  }, [specialtyId, specialtyName, patientIdForRecords, appointmentId]);
-
-  // ─── Local fallback template (loads in <2s if DB is slow) ─────────
-  const [useLocalFallback, setUseLocalFallback] = useState(false);
-  useEffect(() => {
-    if (v2Templates.length > 0) {
-      setUseLocalFallback(false);
-      return;
+    const recordId = currentAnamnese?.id ?? null;
+    if (recordId !== initializedFor.current) {
+      const next = loadFromRecord(currentAnamnese);
+      setForm(next);
+      lastSerialized.current = JSON.stringify(next);
+      setIsDirty(false);
+      initializedFor.current = recordId;
     }
-    const timer = setTimeout(() => {
-      if (v2Templates.length === 0) {
-        console.warn('[YesClin][AnamneseBlock] fallback ativado (timeout 2s)', {
-          clinicId: clinic?.id,
-          specialtyId,
-          specialtyName,
-        });
-        setUseLocalFallback(true);
+  }, [currentAnamnese]);
+
+  const update = useCallback(<K extends keyof PrimeiraEntrevistaData>(key: K, value: PrimeiraEntrevistaData[K]) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    setIsDirty(true);
+  }, []);
+
+  const updateHabito = useCallback(<K extends keyof PrimeiraEntrevistaData["habitos"]>(key: K, value: PrimeiraEntrevistaData["habitos"][K]) => {
+    setForm((prev) => ({ ...prev, habitos: { ...prev.habitos, [key]: value } }));
+    setIsDirty(true);
+  }, []);
+
+  const doSave = useCallback(async (silent: boolean) => {
+    if (!canEdit) return;
+    const payload = toLegacyPayload(form);
+    try {
+      if (currentAnamnese && onUpdate) {
+        await onUpdate(currentAnamnese.id, payload);
+      } else {
+        await onSave(payload);
       }
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, [v2Templates.length, clinic?.id, specialtyId, specialtyName]);
-
-  const LOCAL_FALLBACK_TEMPLATE: UnifiedTemplate = useMemo(() => ({
-    id: '__local_fallback__',
-    nome: 'Modelo padrão (Atendimento Geral)',
-    descricao: 'Modelo padrão exibido enquanto o modelo da clínica é carregado.',
-    icon: 'Stethoscope',
-    is_system: true,
-    template_type: 'anamnese',
-    secoes: [
-      {
-        id: 'anamnese_geral',
-        titulo: 'Anamnese Geral',
-        icon: 'Stethoscope',
-        campos: [
-          { id: 'queixa_principal', label: 'Queixa principal', type: 'textarea' as any, section: 'Anamnese Geral' },
-          { id: 'historia_doenca_atual', label: 'História da doença atual', type: 'textarea' as any, section: 'Anamnese Geral' },
-          { id: 'antecedentes_pessoais', label: 'Antecedentes pessoais', type: 'textarea' as any, section: 'Anamnese Geral' },
-          { id: 'medicamentos_uso_continuo', label: 'Medicamentos em uso', type: 'textarea' as any, section: 'Anamnese Geral' },
-          { id: 'alergias', label: 'Alergias', type: 'textarea' as any, section: 'Anamnese Geral' },
-        ],
-      },
-      {
-        id: 'evolucao_clinica',
-        titulo: 'Evolução Clínica',
-        icon: 'Stethoscope',
-        campos: [
-          { id: 'evolucao', label: 'Evolução', type: 'textarea' as any, section: 'Evolução Clínica' },
-        ],
-      },
-      {
-        id: 'plano_conduta',
-        titulo: 'Plano / Conduta',
-        icon: 'Stethoscope',
-        campos: [
-          { id: 'plano_conduta', label: 'Plano e conduta', type: 'textarea' as any, section: 'Plano / Conduta' },
-        ],
-      },
-      {
-        id: 'procedimentos_realizados',
-        titulo: 'Procedimentos Realizados',
-        icon: 'Stethoscope',
-        campos: [
-          { id: 'procedimentos', label: 'Procedimentos', type: 'textarea' as any, section: 'Procedimentos Realizados' },
-        ],
-      },
-      {
-        id: 'documentos',
-        titulo: 'Documentos',
-        icon: 'Stethoscope',
-        campos: [
-          { id: 'documentos_observacoes', label: 'Observações sobre documentos', type: 'textarea' as any, section: 'Documentos' },
-        ],
-      },
-    ],
-  }), []);
-
-  const allTemplates: UnifiedTemplate[] = useMemo(() => {
-    if (v2Templates.length > 0) return v2Templates.map(v2TemplateToUnified);
-    if (useLocalFallback) return [LOCAL_FALLBACK_TEMPLATE];
-    return [];
-  }, [v2Templates, useLocalFallback, LOCAL_FALLBACK_TEMPLATE]);
-
-  useEffect(() => {
-    if (!import.meta.env.DEV) return;
-    console.log('[YesClin][AnamneseBlock] resolvedTemplatesAndRecords', {
-      specialtyId,
-      specialtyName,
-      templateIds: v2Templates.map((template) => ({
-        id: template.id,
-        name: template.name,
-        specialty_id: template.specialty_id,
-      })),
-      recordIds: v2Records.map((record) => ({
-        id: record.id,
-        template_id: record.template_id,
-      })),
-    });
-  }, [specialtyId, specialtyName, v2Templates, v2Records]);
-
-  const activeTemplate = useMemo(() => {
-    if (!allTemplates.length) return null;
-    if (selectedTemplateId) {
-      const found = allTemplates.find(t => t.id === selectedTemplateId);
-      if (found) return found;
+      setLastSavedAt(new Date());
+      setIsDirty(false);
+      lastSerialized.current = JSON.stringify(form);
+      if (!silent) toast.success("Anamnese salva");
+    } catch (err) {
+      if (!silent) toast.error("Erro ao salvar anamnese");
+      console.error("[AnamneseBlock] save error", err);
     }
-    const defaultTpl = allTemplates.find(t => allTemplates.length === 1 || t.is_system);
-    return defaultTpl || allTemplates[0];
-  }, [allTemplates, selectedTemplateId]);
+  }, [canEdit, currentAnamnese, form, onSave, onUpdate]);
 
+  // Auto-save (debounce 3s after user stops typing)
   useEffect(() => {
-    if (activeTemplate && !selectedTemplateId) {
-      setSelectedTemplateId(activeTemplate.id);
-    }
-  }, [activeTemplate, selectedTemplateId]);
-
-
-
-
-  // ─── Selected record from records list ────────────────────────────
-  // IMPORTANT: never auto-fallback to v2Records[0]. Selection must be explicit.
-  const selectedRecord = useMemo(() => {
-    if (!v2Records.length || !selectedRecordId) return null;
-    return v2Records.find(r => r.id === selectedRecordId) || null;
-  }, [v2Records, selectedRecordId]);
-
-  // Backward compat alias
-  const existingV2Record = selectedRecord;
-
-  // ─── Editability check (edit lock policy) ──────────────────────────
-  const recordForEditability = useMemo(() => {
-    if (!selectedRecord) return null;
-    return {
-      id: selectedRecord.id,
-      created_at: selectedRecord.created_at,
-      signed_at: (selectedRecord as any).signed_at || null,
-      saved_at: (selectedRecord as any).saved_at || null,
-      edit_window_until: (selectedRecord as any).edit_window_until || null,
-      locked_at: (selectedRecord as any).locked_at || null,
-      status: (selectedRecord as any).status || null,
-    };
-  }, [selectedRecord]);
-  const anamnesisEditability = useAnamnesisEditability(recordForEditability);
-
-  // Override canEdit based on editability policy
-  const effectiveCanEdit = canEdit && (!selectedRecord || anamnesisEditability.editability.canEdit);
-
-  // NOTE: Removed auto-selection of v2Records[0]. The user must click a record to open it.
-
-  // Load selected record data into view (when not editing AND a record is explicitly selected)
-  useEffect(() => {
-    if (!isEditing && selectedRecord) {
-      const responses = selectedRecord.responses as Record<string, unknown>;
-      if (responses && Object.keys(responses).length > 0) {
-        setStructuredData(responses);
-      }
-      if (selectedRecord.template_id) {
-        setSelectedTemplateId(selectedRecord.template_id);
-      }
-    }
-  }, [selectedRecord, isEditing]);
-
-  // ─── Auto-save (10s debounce, silent) ───────────────────────────────
-  useEffect(() => {
-    if (!isEditing) return;
-    const currentDataStr = JSON.stringify(structuredData);
-    if (currentDataStr === lastSavedData.current || currentDataStr === '{}') return;
-
+    if (!canEdit) return;
+    const serialized = JSON.stringify(form);
+    if (serialized === lastSerialized.current) return;
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(() => {
-      lastSavedData.current = currentDataStr;
-      setLastAutoSave(new Date());
-    }, 10000);
-
+      void doSave(true);
+    }, 3000);
     return () => {
       if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     };
-  }, [structuredData, isEditing]);
+  }, [form, canEdit, doSave]);
 
-  // ─── IMC calculation ────────────────────────────────────────────
-  const imcResult = useMemo(() => {
-    const peso = structuredData.peso_kg as number | null;
-    const altura = structuredData.altura_cm as number | null;
-    return calculateIMC(peso ?? null, altura ?? null);
-  }, [structuredData.peso_kg, structuredData.altura_cm]);
-
-  // ─── Check if form has data ─────────────────────────────────────
-  const hasFilledData = useCallback(() => {
-    return Object.values(structuredData).some(v => {
-      if (Array.isArray(v)) return v.length > 0;
-      return v !== undefined && v !== null && v !== '';
-    });
-  }, [structuredData]);
-
-  const hasUnsavedChanges = useCallback(() => {
-    return JSON.stringify(structuredData) !== editingInitialData.current;
-  }, [structuredData]);
-
-  // ─── Template switch handler ────────────────────────────────────
-  const handleTemplateSwitch = useCallback((newTemplateId: string) => {
-    if (newTemplateId === selectedTemplateId) return;
-    if (hasFilledData()) {
-      setPendingTemplateId(newTemplateId);
-      setShowSwitchConfirm(true);
-    } else {
-      setSelectedTemplateId(newTemplateId);
-      setStructuredData({});
-    }
-  }, [selectedTemplateId, hasFilledData]);
-
-  const confirmTemplateSwitch = useCallback(() => {
-    if (pendingTemplateId) {
-      setSelectedTemplateId(pendingTemplateId);
-      setStructuredData({});
-      setPendingTemplateId(null);
-    }
-    setShowSwitchConfirm(false);
-  }, [pendingTemplateId]);
-
-  // ─── Open template editor ──────────────────────────────────────
-  const handleOpenTemplateEditor = useCallback(() => {
-    if (!activeTemplate || activeTemplate.is_system) {
-      setEditingV2Template(null);
-    } else {
-      const v2Tpl = v2Templates.find(t => t.id === activeTemplate.id);
-      setEditingV2Template(v2Tpl || null);
-    }
-    setShowTemplateEditor(true);
-  }, [activeTemplate, v2Templates]);
-
-  // ─── Create default template (IDEMPOTENT) ─────────────────────
-  
-
-  const handleCreateDefaultTemplate = useCallback(async () => {
-    if (!specialtyId || !clinic?.id || creatingDefault) return;
-    setCreatingDefault(true);
+  const createdAtLabel = useMemo(() => {
+    const iso = currentAnamnese?.created_at;
+    if (!iso) return null;
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error('Usuário não autenticado');
-
-      const { data: existing, error: fetchErr } = await supabase
-        .from('anamnesis_templates')
-        .select('id, current_version_id, is_active, is_default')
-        .eq('clinic_id', clinic.id)
-        .eq('specialty_id', specialtyId)
-        .eq('archived', false)
-        .limit(1)
-        .maybeSingle();
-
-      if (fetchErr) {
-        console.error('Erro ao verificar modelo existente:', fetchErr);
-        throw fetchErr;
-      }
-
-      if (existing) {
-        if (!existing.is_active || !existing.is_default) {
-          await supabase
-            .from('anamnesis_templates')
-            .update({ is_active: true, is_default: true } as any)
-            .eq('id', existing.id);
-        }
-
-        if (!existing.current_version_id) {
-          const { error: provisionError } = await supabase.rpc('provision_specialty', {
-            _clinic_id: clinic.id,
-            _specialty_slug: resolveSpecialtySlug(specialtyName, specialtyKey),
-          });
-
-          if (provisionError) throw provisionError;
-        }
-
-        await queryClient.invalidateQueries({ queryKey: ['anamnesis-templates-v2', clinic.id, specialtyId, true] });
-        await refetchTemplates?.();
-        return;
-      }
-      const { error: provisionError } = await supabase.rpc('provision_specialty', {
-        _clinic_id: clinic.id,
-        _specialty_slug: resolveSpecialtySlug(specialtyName, specialtyKey),
-      });
-
-      if (provisionError) throw provisionError;
-
-      await queryClient.invalidateQueries({ queryKey: ['anamnesis-templates-v2', clinic.id, specialtyId, true] });
-      await refetchTemplates?.();
-    } catch (err: any) {
-      console.error('Erro ao criar modelo padrão:', err);
-      toast.error(`Erro ao criar modelo: ${err?.message || 'Erro desconhecido'}`);
-    } finally {
-      setCreatingDefault(false);
+      return format(parseISO(iso), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR });
+    } catch {
+      return iso;
     }
-  }, [specialtyId, specialtyName, specialtyKey, clinic?.id, creatingDefault, queryClient, refetchTemplates]);
+  }, [currentAnamnese?.created_at]);
 
-  // ─── Auto-provision default template if none exist ──────────────
-  const autoProvisionTriggered = useRef(false);
-  useEffect(() => {
-    if (
-      !loadingTemplates &&
-      allTemplates.length === 0 &&
-      specialtyId &&
-      clinic?.id &&
-      !creatingDefault &&
-      !autoProvisionTriggered.current
-    ) {
-      autoProvisionTriggered.current = true;
-      handleCreateDefaultTemplate();
-    }
-  }, [loadingTemplates, allTemplates.length, specialtyId, clinic?.id, creatingDefault, handleCreateDefaultTemplate]);
+  const profLabel = currentAnamnese?.created_by_name || professionalName || "—";
+  const profSuffix = professionalRegistration ? ` (${professionalRegistration})` : "";
 
-  // ─── Handlers ───────────────────────────────────────────────────
-
-  const handleSelectRecord = useCallback((recordId: string) => {
-    setSelectedRecordId(recordId);
-    setIsEditing(false);
-    setIsEditingExisting(false);
-    setIsCreatingNew(false);
-  }, []);
-
-  const handleStartNewAnamnese = useCallback(() => {
-    const nextData: Record<string, unknown> = {};
-    if (appointmentDate) {
-      const dateToUse = new Date(appointmentDate);
-      nextData.data_hora_anamnese = format(dateToUse, "dd/MM/yyyy HH:mm");
-    }
-    editingInitialData.current = JSON.stringify(nextData);
-    setStructuredData(nextData);
-    setIsCreatingNew(true);
-    setIsEditingExisting(false);
-    setIsEditing(true);
-    setLastAutoSave(null);
-  }, [appointmentDate]);
-
-  const handleStartEdit = () => {
-    let nextData: Record<string, unknown> = {};
-
-    if (selectedRecord?.template_id) {
-      setSelectedTemplateId(selectedRecord.template_id);
-    }
-
-    // Priority: selected V2 record > legacy structured_data > legacy flat fields
-    if (selectedRecord && Object.keys(selectedRecord.responses).length > 0) {
-      nextData = { ...selectedRecord.responses as Record<string, unknown> };
-    } else if (currentAnamnese?.structured_data && Object.keys(currentAnamnese.structured_data).length > 0) {
-      nextData = { ...currentAnamnese.structured_data };
-    } else if (currentAnamnese) {
-      nextData = {
-        qp_descricao: currentAnamnese.queixa_principal || '',
-        hda_evolucao: currentAnamnese.historia_doenca_atual || '',
-        hpp_doencas_obs: currentAnamnese.antecedentes_pessoais || '',
-        hf_detalhes: currentAnamnese.antecedentes_familiares || '',
-        med_lista: currentAnamnese.medicamentos_uso_continuo || '',
-        alergias_medicamentosas: currentAnamnese.alergias || '',
-        hab_alimentacao: currentAnamnese.habitos_vida || '',
-      };
-    }
-
-    editingInitialData.current = JSON.stringify(nextData);
-    setStructuredData(nextData);
-    setLastAutoSave(null);
-    setIsEditingExisting(true);
-    setIsCreatingNew(false);
-    setIsEditing(true);
-  };
-
-  const handleStartNewVersion = () => {
-    let nextData: Record<string, unknown> = {};
-
-    // Copy data from selected record but create a new one
-    if (selectedRecord) {
-      if (selectedRecord.template_id) setSelectedTemplateId(selectedRecord.template_id);
-      if (Object.keys(selectedRecord.responses).length > 0) {
-        nextData = { ...selectedRecord.responses as Record<string, unknown> };
-      }
-    } else if (currentAnamnese?.structured_data && Object.keys(currentAnamnese.structured_data).length > 0) {
-      nextData = { ...currentAnamnese.structured_data };
-    } else if (currentAnamnese) {
-      nextData = {
-        qp_descricao: currentAnamnese.queixa_principal || '',
-        hda_evolucao: currentAnamnese.historia_doenca_atual || '',
-        hpp_doencas_obs: currentAnamnese.antecedentes_pessoais || '',
-        hf_detalhes: currentAnamnese.antecedentes_familiares || '',
-        med_lista: currentAnamnese.medicamentos_uso_continuo || '',
-        alergias_medicamentosas: currentAnamnese.alergias || '',
-        hab_alimentacao: currentAnamnese.habitos_vida || '',
-      };
-    }
-
-    editingInitialData.current = JSON.stringify(nextData);
-    setStructuredData(nextData);
-    setLastAutoSave(null);
-    setIsEditingExisting(false);
-    setIsCreatingNew(false);
-    setIsEditing(true);
-  };
-
-  const handleCancel = () => {
-    editingInitialData.current = '{}';
-    setIsEditing(false);
-    setIsEditingExisting(false);
-    setIsCreatingNew(false);
-    setStructuredData({});
-    setLastAutoSave(null);
-  };
-
-  const handleBackClick = () => {
-    if (hasUnsavedChanges()) {
-      setShowDiscardConfirm(true);
-    } else {
-      handleCancel();
-    }
-  };
-
-  const [isSavingLocal, setIsSavingLocal] = useState(false);
-
-  const handleSave = async () => {
-    if (isSavingLocal) return;
-    setIsSavingLocal(true);
-
-    try {
-      if (activeTemplate && patientIdForRecords) {
-        const v2Template = v2Templates.find(t => t.id === activeTemplate.id);
-        await saveV2Record({
-          // Only pass id when editing existing — new anamnese and new version create fresh records
-          id: isEditingExisting ? existingV2Record?.id : undefined,
-          patient_id: patientIdForRecords,
-          template_id: activeTemplate.id,
-          template_version_id: v2Template?.current_version_id || '',
-          responses: structuredData,
-          specialty_id: specialtyId,
-          appointment_id: appointmentId || undefined,
-        });
-      } else {
-        // Fallback to legacy save
-        const legacy = mapStructuredToLegacy(structuredData);
-        const saveData = {
-          queixa_principal: legacy.queixa_principal || '',
-          historia_doenca_atual: legacy.historia_doenca_atual || '',
-          antecedentes_pessoais: legacy.antecedentes_pessoais || '',
-          antecedentes_familiares: legacy.antecedentes_familiares || '',
-          habitos_vida: legacy.habitos_vida || '',
-          medicamentos_uso_continuo: legacy.medicamentos_uso_continuo || '',
-          alergias: legacy.alergias || '',
-          comorbidades: currentAnamnese?.comorbidades || '',
-          structured_data: structuredData,
-          template_id: activeTemplate?.id || '',
-        };
-
-        if (isEditingExisting && currentAnamnese && onUpdate) {
-          await onUpdate(currentAnamnese.id, saveData);
-        } else {
-          await onSave(saveData);
-        }
-      }
-
-      setIsEditing(false);
-      setIsEditingExisting(false);
-      setIsCreatingNew(false);
-      editingInitialData.current = '{}';
-      setStructuredData({});
-      setLastAutoSave(null);
-    } catch (err) {
-      console.error('handleSave error:', err);
-    } finally {
-      setIsSavingLocal(false);
-    }
-  };
-
-  const updateField = (fieldId: string, value: unknown) => {
-    setStructuredData(prev => ({ ...prev, [fieldId]: value }));
-  };
-
-  // ─── Field renderer ─────────────────────────────────────────────
-  const renderField = (campo: { id: string; label: string; type: string; placeholder?: string; options?: string[]; required?: boolean }) => {
-    const value = structuredData[campo.id];
-
-    switch (campo.type) {
-      case 'text':
-        return (
-          <Input
-            value={(value as string) || ''}
-            onChange={e => updateField(campo.id, e.target.value)}
-            placeholder={campo.placeholder}
-            className="bg-background"
-          />
-        );
-      case 'textarea':
-        return (
-          <Textarea
-            value={(value as string) || ''}
-            onChange={e => updateField(campo.id, e.target.value)}
-            placeholder={campo.placeholder}
-            rows={campo.required ? 5 : 3}
-            className="bg-background resize-none text-sm leading-relaxed"
-          />
-        );
-      case 'number':
-        return (
-          <Input
-            type="number"
-            value={(value as number) ?? ''}
-            onChange={e => updateField(campo.id, e.target.value ? parseFloat(e.target.value) : null)}
-            placeholder={campo.placeholder}
-            className="bg-background"
-          />
-        );
-      case 'date':
-        return (
-          <Input
-            type="date"
-            value={(value as string) || ''}
-            onChange={e => updateField(campo.id, e.target.value)}
-            className="bg-background"
-          />
-        );
-      case 'select':
-        return (
-          <Select value={(value as string) || ''} onValueChange={v => updateField(campo.id, v)}>
-            <SelectTrigger className="bg-background"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-            <SelectContent className="bg-background z-50">
-              {campo.options?.map(opt => (
-                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        );
-      case 'radio':
-        return (
-          <RadioGroup value={(value as string) || ''} onValueChange={v => updateField(campo.id, v)} className="flex flex-wrap gap-4">
-            {campo.options?.map(opt => (
-              <div key={opt} className="flex items-center space-x-2">
-                <RadioGroupItem value={opt} id={`${campo.id}-${opt}`} />
-                <Label htmlFor={`${campo.id}-${opt}`} className="text-sm font-normal">{opt}</Label>
-              </div>
-            ))}
-          </RadioGroup>
-        );
-      case 'multiselect':
-        return (
-          <MultiSelectField
-            options={campo.options || []}
-            value={(value as string[]) || []}
-            onChange={v => updateField(campo.id, v)}
-          />
-        );
-      default:
-        return (
-          <Input
-            value={(value as string) || ''}
-            onChange={e => updateField(campo.id, e.target.value)}
-            placeholder={campo.placeholder}
-            className="bg-background"
-          />
-        );
-    }
-  };
-
-  // ─── Render section in view mode ────────────────────────────────
-  const renderViewSection = (secao: SecaoAnamnese, data: Record<string, unknown>) => {
-    const filledFields = secao.campos.filter(c => {
-      const v = data[c.id];
-      if (Array.isArray(v)) return v.length > 0;
-      return v !== undefined && v !== null && v !== '';
-    });
-    if (filledFields.length === 0) return null;
-
-    return (
-      <div key={secao.id} className="space-y-3 p-5">
-        <h4 className="font-semibold text-sm text-foreground">{secao.titulo}</h4>
-        <div className="grid gap-3">
-          {filledFields.map(campo => {
-            const val = data[campo.id];
-            const display = Array.isArray(val) ? val.join(', ') : String(val);
-            return (
-              <div key={campo.id}>
-                <Label className="text-xs text-muted-foreground">{campo.label}</Label>
-                <p className="text-sm whitespace-pre-wrap mt-0.5">{display}</p>
-              </div>
-            );
-          })}
-          {secao.id === 'dados_antropometricos' && data.peso_kg && data.altura_cm && (() => {
-            const imc = calculateIMC(data.peso_kg as number, data.altura_cm as number);
-            if (!imc) return null;
-            return (
-              <div className="p-3 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <Calculator className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium">IMC: {imc.value} — {imc.classification}</span>
-                </div>
-              </div>
-            );
-          })()}
-        </div>
-      </div>
-    );
-  };
-
-  // ─── Legacy view ─────────────────────────────────────────────────
-  const renderLegacyView = (anamnese: AnamneseData) => {
-    const sections = [
-      { key: 'queixa_principal', label: 'Queixa Principal', value: anamnese.queixa_principal },
-      { key: 'historia_doenca_atual', label: 'HDA', value: anamnese.historia_doenca_atual },
-      { key: 'antecedentes_pessoais', label: 'Antecedentes Pessoais', value: anamnese.antecedentes_pessoais },
-      { key: 'antecedentes_familiares', label: 'Antecedentes Familiares', value: anamnese.antecedentes_familiares },
-      { key: 'habitos_vida', label: 'Hábitos de Vida', value: anamnese.habitos_vida },
-      { key: 'medicamentos', label: 'Medicamentos', value: anamnese.medicamentos_uso_continuo },
-      { key: 'alergias', label: 'Alergias', value: anamnese.alergias },
-      { key: 'comorbidades', label: 'Comorbidades', value: anamnese.comorbidades },
-    ].filter(s => s.value);
-
-    return (
-      <div className="divide-y">
-        {sections.map(s => (
-          <div key={s.key} className="p-5">
-            <h4 className="font-semibold text-sm mb-1.5">{s.label}</h4>
-            <p className="text-sm whitespace-pre-wrap text-muted-foreground">{s.value}</p>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  // Resolve the template for the selected record (must be before early returns)
-  const viewTemplate = useMemo(() => {
-    if (selectedRecord?.template_id) {
-      return allTemplates.find(t => t.id === selectedRecord.template_id) || activeTemplate;
-    }
-    return activeTemplate;
-  }, [selectedRecord, allTemplates, activeTemplate]);
-
-  // ─── Loading ────────────────────────────────────────────────────
-  if ((loading || loadingTemplates) && allTemplates.length === 0 && !useLocalFallback) {
+  if (loading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-64 w-full" />
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-40 w-full" />
+        ))}
       </div>
-    );
-  }
-
-  // ─── No templates exist ─────────────────────────────────────────
-  if (allTemplates.length === 0) {
-    return (
-      <Card className="border-dashed">
-        <CardContent className="p-10 text-center">
-          <Stethoscope className="h-10 w-10 mx-auto mb-4 text-primary animate-pulse" />
-          <h3 className="text-lg font-semibold mb-2">
-            {creatingDefault ? 'Criando modelo padrão...' : 'Preparando modelo de anamnese...'}
-          </h3>
-          <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            O modelo padrão será configurado automaticamente para esta especialidade.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-
-
-  // ─── Template exists but no structure ───────────────────────────
-  if (activeTemplate && activeTemplate.secoes.length === 0 && !currentAnamnese && v2Records.length === 0) {
-    return (
-      <Card className="border-dashed">
-        <CardContent className="p-10 text-center">
-          <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-40" />
-          <h3 className="text-lg font-semibold mb-2">
-            Este modelo não possui estrutura configurada.
-          </h3>
-          <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-            O modelo "{activeTemplate.nome}" não possui campos definidos.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Button onClick={() => specialtyId && navigate(`/app/config/prontuario?especialidade_id=${specialtyId}&tipo=anamnese`)}>
-              <Settings className="h-4 w-4 mr-2" />
-              Editar modelo
-            </Button>
-            <Button variant="outline" onClick={handleCreateDefaultTemplate} disabled={creatingDefault}>
-              <Stethoscope className="h-4 w-4 mr-2" />
-              {creatingDefault ? 'Criando...' : 'Criar modelo padrão'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // ─── Template selector (compact) ────────────────────────────────
-  const renderTemplateSelector = () => (
-    <div className="flex items-center gap-2">
-      <Select value={selectedTemplateId || ''} onValueChange={handleTemplateSwitch}>
-        <SelectTrigger className="bg-background h-8 text-xs w-64">
-          <div className="flex items-center gap-1.5 truncate">
-            <SelectValue placeholder="Selecionar modelo..." />
-          </div>
-        </SelectTrigger>
-        <SelectContent className="bg-background z-50">
-          {allTemplates.map(t => (
-            <SelectItem key={t.id} value={t.id}>
-              <div className="flex items-center gap-2">
-                <span className="truncate">{t.nome}</span>
-                {t.is_system && <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
-              </div>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Button variant="ghost" size="sm" onClick={handleOpenTemplateEditor} className="h-8 px-2">
-        <Settings className="h-3.5 w-3.5" />
-      </Button>
-    </div>
-  );
-
-  // ─── Switch confirmation dialog ─────────────────────────────────
-  const renderSwitchConfirmDialog = () => (
-    <AlertDialog open={showSwitchConfirm} onOpenChange={setShowSwitchConfirm}>
-      <AlertDialogContent className="bg-background">
-        <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-destructive" />
-            Trocar modelo de anamnese?
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            Trocar o modelo irá apagar os dados atuais preenchidos.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => setPendingTemplateId(null)}>Cancelar</AlertDialogCancel>
-          <AlertDialogAction onClick={confirmTemplateSwitch} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-            Trocar modelo
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-
-  // ─── Records list ─────────────────────────────────────────────────
-  const renderRecordsList = () => {
-    if (v2Records.length === 0) return null;
-    return (
-      <div className="space-y-2 mb-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-foreground">
-            Registros de Anamnese ({v2Records.length})
-          </h3>
-          {effectiveCanEdit && (
-            <Button variant="outline" size="sm" onClick={handleStartNewAnamnese}>
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
-              Nova Anamnese
-            </Button>
-          )}
-        </div>
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {v2Records.map((record) => (
-            <div
-              key={record.id}
-              onClick={() => handleSelectRecord(record.id)}
-              className={cn(
-                "flex-shrink-0 p-3 rounded-lg border cursor-pointer transition-all min-w-[200px] max-w-[280px]",
-                "hover:bg-muted/50 hover:shadow-sm",
-                record.id === selectedRecordId
-                  ? "border-primary bg-primary/5 shadow-sm"
-                  : "border-border"
-              )}
-            >
-              <div className="flex items-center gap-1.5 mb-1">
-                <FileText className="h-3.5 w-3.5 text-primary/70 flex-shrink-0" />
-                <span className="text-xs font-medium truncate">
-                  {record.template_name || 'Anamnese'}
-                </span>
-              </div>
-              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                <Clock className="h-2.5 w-2.5" />
-                {format(parseISO(record.created_at), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}
-              </div>
-              {record.version_number && (
-                <Badge variant="outline" className="text-[9px] mt-1 px-1 py-0">
-                  v{record.version_number}
-                </Badge>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  // ─── Empty state ────────────────────────────────────────────────
-  if (!currentAnamnese && !existingV2Record && v2Records.length === 0 && !isEditing) {
-    return (
-      <>
-        {renderSwitchConfirmDialog()}
-        <Card className="border-dashed">
-          <CardContent className="p-8 text-center">
-            <FileText className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-50" />
-            <h3 className="font-semibold mb-3">Nenhuma anamnese registrada</h3>
-            <div className="flex flex-col items-center gap-3 mb-4">
-              {renderTemplateSelector()}
-            </div>
-            {effectiveCanEdit && activeTemplate && (
-              <Button onClick={handleStartNewAnamnese}>
-                <Edit3 className="h-4 w-4 mr-2" />
-                Registrar Anamnese
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-        <AnamnesisTemplateBuilderDialog
-          open={showTemplateEditor}
-          onOpenChange={setShowTemplateEditor}
-          template={editingV2Template}
-        />
-      </>
-    );
-  }
-
-  // ─── EDITING MODE — Premium single-page layout ──────────────────
-  if (isEditing) {
-    const sections = activeTemplate?.secoes || [];
-    const blockIcons: Record<string, React.ReactNode> = {
-      'motivo_consulta': <Stethoscope className="h-4 w-4" />,
-      'section_queixa_principal': <Stethoscope className="h-4 w-4" />,
-      'queixa_principal': <Stethoscope className="h-4 w-4" />,
-      'section_hda': <Clock className="h-4 w-4" />,
-      'historia_atual': <Clock className="h-4 w-4" />,
-      'historia_doenca_atual': <Clock className="h-4 w-4" />,
-      'section_antecedentes_pessoais': <FileText className="h-4 w-4" />,
-      'section_medicamentos_alergias': <FileText className="h-4 w-4" />,
-      'section_historico_familiar': <FileText className="h-4 w-4" />,
-      'section_habitos': <FileText className="h-4 w-4" />,
-      'contexto_clinico': <FileText className="h-4 w-4" />,
-      'section_exame_fisico': <Stethoscope className="h-4 w-4" />,
-      'section_hipoteses': <CheckCircle2 className="h-4 w-4" />,
-      'section_conduta': <CheckCircle2 className="h-4 w-4" />,
-      'impressao_conduta': <CheckCircle2 className="h-4 w-4" />,
-      'plano_conduta': <CheckCircle2 className="h-4 w-4" />,
-    };
-
-    const isCompactSection = (secao: SecaoAnamnese) => {
-      const selectFields = secao.campos.filter(c => c.type === 'select' || c.type === 'radio');
-      return selectFields.length >= 3;
-    };
-
-    return (
-      <>
-        {renderSwitchConfirmDialog()}
-        <div className="space-y-6">
-          {/* Minimal header */}
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="flex min-w-0 items-center gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-9 w-9 shrink-0 px-0"
-                onClick={handleBackClick}
-                disabled={isSavingLocal || savingV2}
-                aria-label="Voltar para a lista de anamneses"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <div className="flex min-w-0 flex-wrap items-center gap-2 md:gap-3">
-                <h3 className="font-semibold text-base tracking-tight">
-                  {isCreatingNew ? 'Nova Anamnese' : isEditingExisting ? 'Editar Anamnese' : 'Nova Versão'}
-                </h3>
-                <Badge variant="outline" className="text-xs font-medium">
-                  Rascunho
-                </Badge>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-start gap-2 md:justify-end">
-              {lastAutoSave && (
-                <span className="text-xs text-muted-foreground flex items-center gap-1 whitespace-nowrap">
-                  <Check className="h-3 w-3" />
-                  {format(lastAutoSave, "HH:mm")}
-                </span>
-              )}
-              {(isCreatingNew || allTemplates.length > 1) && renderTemplateSelector()}
-            </div>
-          </div>
-
-          {/* Discard changes confirmation */}
-          <AlertDialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
-            <AlertDialogContent className="bg-background">
-              <AlertDialogHeader>
-                <AlertDialogTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-destructive" />
-                  Deseja sair sem salvar?
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  As alterações não salvas serão perdidas.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Continuar editando</AlertDialogCancel>
-                <AlertDialogAction onClick={handleCancel} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  Sair sem salvar
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-
-          {/* Premium blocks */}
-          <div className="space-y-8">
-            {sections.map((secao) => {
-              const compact = isCompactSection(secao);
-              const textareaFields = secao.campos.filter(c => c.type === 'textarea');
-              const otherFields = secao.campos.filter(c => c.type !== 'textarea');
-              const icon = blockIcons[secao.id] || <FileText className="h-4 w-4" />;
-
-              return (
-                <div key={secao.id} className="space-y-4">
-                  <div className="flex items-center gap-2.5 pb-2 border-b border-border/50">
-                    <span className="text-primary/70">{icon}</span>
-                    <h4 className="font-semibold text-sm tracking-tight text-foreground">
-                      {secao.titulo}
-                    </h4>
-                  </div>
-
-                  <div className="space-y-5 pl-0.5">
-                    {textareaFields.map(campo => (
-                      <div key={campo.id} className="space-y-1.5">
-                        <Label className={cn(
-                          "text-xs font-medium text-muted-foreground uppercase tracking-wider",
-                          campo.required && "after:content-['*'] after:text-destructive after:ml-0.5"
-                        )}>
-                          {campo.label}
-                        </Label>
-                        {renderField(campo)}
-                      </div>
-                    ))}
-
-                    {otherFields.length > 0 && (
-                      <div className={cn(
-                        compact ? "grid grid-cols-2 md:grid-cols-4 gap-4" : "grid grid-cols-1 md:grid-cols-2 gap-4"
-                      )}>
-                        {otherFields.map(campo => (
-                          <div key={campo.id} className="space-y-1.5">
-                            <Label className={cn(
-                              "text-xs font-medium text-muted-foreground uppercase tracking-wider",
-                              campo.required && "after:content-['*'] after:text-destructive after:ml-0.5"
-                            )}>
-                              {campo.label}
-                            </Label>
-                            {renderField(campo)}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Sticky action bar */}
-          <div className="sticky bottom-0 z-10 bg-background/95 backdrop-blur-sm border-t py-3 flex items-center justify-between">
-            <Button variant="ghost" size="sm" onClick={handleCancel} disabled={isSavingLocal || savingV2} className="text-muted-foreground">
-              <X className="h-4 w-4 mr-1.5" />
-              Cancelar
-            </Button>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleSave} disabled={isSavingLocal || savingV2}>
-                <Save className="h-4 w-4 mr-1.5" />
-                {isSavingLocal || savingV2 ? 'Salvando...' : 'Salvar Rascunho'}
-              </Button>
-              <Button size="sm" onClick={handleSave} disabled={isSavingLocal || savingV2}>
-                <CheckCircle2 className="h-4 w-4 mr-1.5" />
-                {isSavingLocal || savingV2 ? 'Salvando...' : 'Finalizar'}
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <AnamnesisTemplateBuilderDialog
-          open={showTemplateEditor}
-          onOpenChange={setShowTemplateEditor}
-          template={editingV2Template}
-        />
-      </>
-    );
-  }
-
-  // ─── VIEW MODE ──────────────────────────────────────────────────
-  const hasStructuredData = (selectedRecord && Object.keys(selectedRecord.responses).length > 0)
-    || (currentAnamnese?.structured_data && Object.keys(currentAnamnese.structured_data).length > 0);
-  const viewData = (selectedRecord && Object.keys(selectedRecord.responses).length > 0)
-    ? selectedRecord.responses as Record<string, unknown>
-    : currentAnamnese?.structured_data;
-
-  // viewTemplate is defined above early returns
-
-  // ─── LIST MODE: records exist but none selected → show ONLY the list ──
-  // Falls through to legacy view if there's a `currentAnamnese` (legacy single-record path) but no v2 records.
-  if (!selectedRecord && v2Records.length > 0) {
-    return (
-      <>
-        {renderSwitchConfirmDialog()}
-        <div className="space-y-3">
-          {renderRecordsList()}
-        </div>
-        <AnamnesisTemplateBuilderDialog
-          open={showTemplateEditor}
-          onOpenChange={setShowTemplateEditor}
-          template={editingV2Template}
-        />
-      </>
     );
   }
 
   return (
-    <div className="space-y-3">
-      {/* Back-to-list button (only when a v2 record is open and there are records to return to) */}
-      {selectedRecord && v2Records.length > 0 && (
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-9 w-9 shrink-0 px-0"
-            onClick={() => setSelectedRecordId(null)}
-            aria-label="Voltar para a lista de anamneses"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-xs text-muted-foreground">
-            Voltar para lista ({v2Records.length} {v2Records.length === 1 ? 'registro' : 'registros'})
-          </span>
-        </div>
-      )}
-
-      {/* Compact header + actions for selected record */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        {/* Left: title, version, status */}
-        <div className="flex items-center gap-2 min-w-0">
-          <h3 className="font-semibold text-sm truncate">
-            {viewTemplate?.nome || selectedRecord?.template_name || 'Anamnese'}
-          </h3>
-          {selectedRecord?.version_number && (
-            <Badge variant="outline" className="text-[10px] flex-shrink-0">
-              v{selectedRecord.version_number}
-            </Badge>
-          )}
-          {!selectedRecord && currentAnamnese && (
-            <Badge variant="outline" className="text-[10px] flex-shrink-0">
-              v{currentAnamnese.version || 1}
-            </Badge>
-          )}
-          <Badge variant="secondary" className="text-[10px] flex-shrink-0 bg-emerald-500/10 text-emerald-700 border-emerald-200">
-            <Check className="h-2.5 w-2.5 mr-0.5" />
-            Finalizado
-          </Badge>
-        </div>
-
-        {/* Right: date + actions — single horizontal group */}
-        <div className="flex items-center gap-2 flex-shrink-0 flex-nowrap">
-          {(selectedRecord || currentAnamnese) && (
-            <span className="flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap">
-              <Clock className="h-3 w-3 flex-shrink-0" />
-              {format(parseISO(selectedRecord?.created_at || currentAnamnese!.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+    <div className="space-y-6">
+      {/* Header / meta */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="pt-4 pb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <Stethoscope className="h-4 w-4 text-primary" />
+              Anamnese — Primeira Entrevista Clínica
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Informações iniciais da primeira consulta. Demais dados (evolução, plano, procedimentos,
+              documentos, anexos, alertas, histórico) ficam em suas próprias abas.
+            </p>
+          </div>
+          <div className="flex flex-col items-end gap-1 text-xs text-muted-foreground">
+            {createdAtLabel && (
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3" /> Criada em {createdAtLabel}
+              </span>
+            )}
+            <span className="flex items-center gap-1">
+              <UserIcon className="h-3 w-3" /> Responsável: {profLabel}{profSuffix}
             </span>
-          )}
-          {currentAnamnese && (
-            <Button variant="ghost" size="sm" disabled={generating} onClick={() => {
-              generateAnamnesisPdf(
-                {
-                  name: patientName || 'Paciente',
-                  cpf: patientCpf,
-                  id: patientData?.id,
-                  age: patientData?.age || patientData?.idade,
-                  sex: patientData?.sex || patientData?.sexo,
-                  phone: patientData?.phone || patientData?.telefone,
-                  insurance_name: patientData?.insurance_name || patientData?.convenio,
-                  birth_date: patientData?.birth_date || patientData?.data_nascimento,
-                },
-                currentAnamnese,
-                viewTemplate?.secoes || [],
-                {
-                  name: currentAnamnese.created_by_name,
-                  specialty: specialtyName || undefined,
-                },
-              );
-            }}>
-              <FileDown className="h-4 w-4 mr-1" />
-              {generating ? 'Gerando...' : 'PDF'}
-            </Button>
-          )}
-          {anamneseHistory.length > 1 && (
-            <Button variant="ghost" size="sm" onClick={() => setShowHistory(true)}>
-              <History className="h-4 w-4 mr-1" />
-              Histórico ({anamneseHistory.length})
-            </Button>
-          )}
-          {effectiveCanEdit && onUpdate && selectedRecord && (
-            <Button variant="outline" size="sm" onClick={handleStartEdit}>
-              <Edit3 className="h-4 w-4 mr-1.5" />
-              Editar
-            </Button>
-          )}
-          {effectiveCanEdit && selectedRecord && (
-            <Button size="sm" onClick={handleStartNewVersion}>
-              <Edit3 className="h-4 w-4 mr-1.5" />
-              Nova Versão
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Edit lock banner */}
-      {selectedRecord && !isEditing && (
-        <RecordEditLockBanner editability={anamnesisEditability.editability} />
-      )}
-
-      {/* Content */}
-      <Card>
-        <CardContent className="p-0 divide-y">
-          {hasStructuredData && viewData ? (
-            (viewTemplate?.secoes || []).map(secao =>
-              renderViewSection(secao, viewData)
-            )
-          ) : (
-            currentAnamnese && renderLegacyView(currentAnamnese)
-          )}
+            {currentAnamnese?.version != null && (
+              <Badge variant="outline" className="text-[10px]">Versão {currentAnamnese.version}</Badge>
+            )}
+          </div>
         </CardContent>
       </Card>
 
-      {/* Addendum section (when locked/signed) */}
-      {selectedRecord && anamnesisEditability.canAddAddendum && patientData?.id && (
-        <AddendumSection
-          recordType="anamnesis"
-          recordId={selectedRecord.id}
-          patientId={patientData.id}
-          professionalId={(selectedRecord as any).professional_id || ""}
-          specialtyId={specialtyId}
-          moduleOrigin="anamnese"
-          editability={anamnesisEditability.editability}
+      {/* 1. Queixa principal */}
+      <SectionCard icon={Stethoscope} number={1} title="Queixa Principal" description="O que trouxe o paciente até a clínica?">
+        <Textarea
+          rows={4}
+          value={form.queixa_principal}
+          onChange={(e) => update("queixa_principal", e.target.value)}
+          disabled={!canEdit}
+          placeholder="Descreva a queixa principal relatada pelo paciente..."
         />
-      )}
+      </SectionCard>
 
-      {/* History Dialog */}
-      <Dialog open={showHistory} onOpenChange={setShowHistory}>
-        <DialogContent className="max-w-2xl max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <History className="h-5 w-5" />
-              Histórico de Anamneses
-            </DialogTitle>
-            <DialogDescription>
-              Versões anteriores da anamnese
-            </DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="max-h-[400px]">
-            <div className="space-y-2">
-              {anamneseHistory.map((anamnese) => (
-                <div
-                  key={anamnese.id}
-                  className={cn(
-                    "p-3 rounded-lg border cursor-pointer transition-colors hover:bg-muted/50",
-                    anamnese.is_current && "border-primary bg-primary/5"
-                  )}
-                  onClick={() => setSelectedVersion(anamnese)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge variant={anamnese.is_current ? 'default' : 'outline'}>v{anamnese.version}</Badge>
-                      {anamnese.is_current && <Badge variant="secondary" className="text-xs">Atual</Badge>}
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {format(parseISO(anamnese.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                    {anamnese.created_by_name && ` • ${anamnese.created_by_name}`}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
+      {/* 2. História da queixa atual */}
+      <SectionCard
+        icon={Activity}
+        number={2}
+        title="História da Queixa Atual"
+        description="Quando começou, como evoluiu, fatores que melhoram/pioram e sintomas associados."
+      >
+        <Textarea
+          rows={6}
+          value={form.historia_queixa_atual}
+          onChange={(e) => update("historia_queixa_atual", e.target.value)}
+          disabled={!canEdit}
+          placeholder="Evolução temporal, gatilhos, alívio, sintomas associados..."
+        />
+      </SectionCard>
 
-      {/* Version Detail Dialog */}
-      <Dialog open={!!selectedVersion} onOpenChange={() => setSelectedVersion(null)}>
-        <DialogContent className="max-w-3xl max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle>Anamnese — Versão {selectedVersion?.version}</DialogTitle>
-            <DialogDescription>
-              {selectedVersion && format(parseISO(selectedVersion.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-              {selectedVersion?.created_by_name && ` • ${selectedVersion.created_by_name}`}
-            </DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="max-h-[500px]">
-            {selectedVersion && (
-              selectedVersion.structured_data && Object.keys(selectedVersion.structured_data).length > 0 ? (
-                <div className="space-y-4 pr-4">
-                  {(viewTemplate?.secoes || []).map(secao => {
-                    const filledFields = secao.campos.filter(c => {
-                      const v = selectedVersion.structured_data?.[c.id];
-                      if (Array.isArray(v)) return v.length > 0;
-                      return v !== undefined && v !== null && v !== '';
-                    });
-                    if (filledFields.length === 0) return null;
-                    return (
-                      <div key={secao.id}>
-                        <h4 className="text-sm font-semibold text-muted-foreground mb-2">{secao.titulo}</h4>
-                        {filledFields.map(campo => {
-                          const val = selectedVersion.structured_data?.[campo.id];
-                          const display = Array.isArray(val) ? val.join(', ') : String(val);
-                          return (
-                            <div key={campo.id} className="mb-2">
-                              <Label className="text-xs text-muted-foreground">{campo.label}</Label>
-                              <p className="text-sm whitespace-pre-wrap">{display}</p>
-                            </div>
-                          );
-                        })}
-                        <Separator className="my-3" />
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="space-y-4 pr-4">
-                  {[
-                    { label: 'Queixa Principal', value: selectedVersion.queixa_principal },
-                    { label: 'HDA', value: selectedVersion.historia_doenca_atual },
-                    { label: 'Antecedentes Pessoais', value: selectedVersion.antecedentes_pessoais },
-                    { label: 'Antecedentes Familiares', value: selectedVersion.antecedentes_familiares },
-                    { label: 'Hábitos de Vida', value: selectedVersion.habitos_vida },
-                    { label: 'Medicamentos', value: selectedVersion.medicamentos_uso_continuo },
-                    { label: 'Alergias', value: selectedVersion.alergias },
-                    { label: 'Comorbidades', value: selectedVersion.comorbidades },
-                  ].filter(s => s.value).map(s => (
-                    <div key={s.label}>
-                      <Label className="text-muted-foreground">{s.label}</Label>
-                      <p className="text-sm mt-1 whitespace-pre-wrap">{s.value}</p>
-                      <Separator className="mt-3" />
-                    </div>
-                  ))}
-                </div>
-              )
-            )}
-          </ScrollArea>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedVersion(null)}>Fechar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* 3. Objetivo do paciente */}
+      <SectionCard
+        icon={Target}
+        number={3}
+        title="Objetivo do Paciente"
+        description="Ex.: aliviar dor, estética, acompanhamento, prevenção, avaliação."
+      >
+        <Textarea
+          rows={4}
+          value={form.objetivo_paciente}
+          onChange={(e) => update("objetivo_paciente", e.target.value)}
+          disabled={!canEdit}
+          placeholder="O que o paciente busca com este atendimento..."
+        />
+      </SectionCard>
 
-      {/* Template Editor Dialog */}
-      <AnamnesisTemplateBuilderDialog
-        open={showTemplateEditor}
-        onOpenChange={setShowTemplateEditor}
-        template={editingV2Template}
-      />
+      {/* 4. Hábitos de vida */}
+      <SectionCard icon={HeartPulse} number={4} title="Hábitos de Vida">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {HABITOS_OPTIONS.map((h) => (
+            <label
+              key={h.key}
+              className={cn(
+                "flex items-center gap-2 rounded-md border p-3 cursor-pointer transition-colors",
+                form.habitos[h.key] ? "border-primary/40 bg-primary/5" : "border-border",
+                !canEdit && "opacity-70 cursor-not-allowed"
+              )}
+            >
+              <Checkbox
+                checked={form.habitos[h.key]}
+                onCheckedChange={(v) => updateHabito(h.key, Boolean(v))}
+                disabled={!canEdit}
+              />
+              <span className="text-sm">{h.label}</span>
+            </label>
+          ))}
+        </div>
+        <div className="mt-3 space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Observações</Label>
+          <Textarea
+            rows={2}
+            value={form.habitos.observacoes}
+            onChange={(e) => updateHabito("observacoes", e.target.value)}
+            disabled={!canEdit}
+            placeholder="Detalhes adicionais sobre hábitos..."
+          />
+        </div>
+      </SectionCard>
+
+      {/* 5. Antecedentes relevantes */}
+      <SectionCard
+        icon={ClipboardList}
+        number={5}
+        title="Antecedentes Relevantes"
+        description="Apenas o que for relevante para esta consulta. Não repita alergias, documentos ou alertas."
+      >
+        <Textarea
+          rows={4}
+          value={form.antecedentes_relevantes}
+          onChange={(e) => update("antecedentes_relevantes", e.target.value)}
+          disabled={!canEdit}
+          placeholder="Antecedentes pertinentes à queixa atual..."
+        />
+      </SectionCard>
+
+      {/* 6. Medicações de uso contínuo */}
+      <SectionCard icon={Pill} number={6} title="Medicações de Uso Contínuo">
+        <Input
+          value={form.medicacoes_uso_continuo}
+          onChange={(e) => update("medicacoes_uso_continuo", e.target.value)}
+          disabled={!canEdit}
+          placeholder="Liste as medicações em uso contínuo..."
+        />
+      </SectionCard>
+
+      {/* 7. Observações iniciais */}
+      <SectionCard
+        icon={Eye}
+        number={7}
+        title="Observações Iniciais"
+        description="Tudo que o profissional perceber na primeira consulta."
+      >
+        <Textarea
+          rows={4}
+          value={form.observacoes_iniciais}
+          onChange={(e) => update("observacoes_iniciais", e.target.value)}
+          disabled={!canEdit}
+          placeholder="Percepções, comportamento, postura, comunicação..."
+        />
+      </SectionCard>
+
+      {/* 8. Hipótese inicial */}
+      <SectionCard icon={Lightbulb} number={8} title="Hipótese Inicial">
+        <Textarea
+          rows={4}
+          value={form.hipotese_inicial}
+          onChange={(e) => update("hipotese_inicial", e.target.value)}
+          disabled={!canEdit}
+          placeholder="Hipótese diagnóstica inicial..."
+        />
+      </SectionCard>
+
+      {/* 9. Impressão clínica */}
+      <SectionCard icon={Brain} number={9} title="Impressão Clínica">
+        <Textarea
+          rows={4}
+          value={form.impressao_clinica}
+          onChange={(e) => update("impressao_clinica", e.target.value)}
+          disabled={!canEdit}
+          placeholder="Síntese clínica do profissional após a primeira entrevista..."
+        />
+      </SectionCard>
+
+      {/* 10. Objetivos do tratamento */}
+      <SectionCard icon={Flag} number={10} title="Objetivos do Tratamento">
+        <Textarea
+          rows={4}
+          value={form.objetivos_tratamento}
+          onChange={(e) => update("objetivos_tratamento", e.target.value)}
+          disabled={!canEdit}
+          placeholder="Metas terapêuticas pactuadas..."
+        />
+      </SectionCard>
+
+      <Separator />
+
+      {/* Footer actions */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
+        <div className="text-xs text-muted-foreground flex items-center gap-2">
+          {saving ? (
+            <span className="flex items-center gap-1"><Clock className="h-3 w-3 animate-pulse" /> Salvando...</span>
+          ) : lastSavedAt ? (
+            <span className="flex items-center gap-1 text-emerald-600">
+              <CheckCircle2 className="h-3 w-3" /> Salvo automaticamente às {format(lastSavedAt, "HH:mm:ss")}
+            </span>
+          ) : isDirty ? (
+            <span>Alterações não salvas — salvamento automático em alguns segundos</span>
+          ) : (
+            <span>Pronto</span>
+          )}
+        </div>
+        <Button onClick={() => doSave(false)} disabled={!canEdit || saving || !isDirty} size="sm">
+          <Save className="h-4 w-4 mr-2" />
+          Salvar agora
+        </Button>
+      </div>
     </div>
   );
 }
