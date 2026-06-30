@@ -431,7 +431,7 @@ export default function SuperAdminFeatureOverrides() {
             </CardContent>
           </Card>
 
-          <TemplateOverridesSection clinicId={clinicId} />
+          <ProntuarioLibrarySection clinicId={clinicId} />
         </>
       )}
     </div>
