@@ -117,7 +117,8 @@ const EMPTY_FORM: PrimeiraEntrevistaData = {
   objetivos_tratamento: "",
 };
 
-const HABITOS_OPTIONS: Array<{ key: keyof PrimeiraEntrevistaData["habitos"]; label: string }> = [
+type HabitoBoolKey = Exclude<keyof PrimeiraEntrevistaData["habitos"], "observacoes">;
+const HABITOS_OPTIONS: Array<{ key: HabitoBoolKey; label: string }> = [
   { key: "fuma", label: "Fuma" },
   { key: "alcool", label: "Consome álcool" },
   { key: "atividade_fisica", label: "Atividade física" },
