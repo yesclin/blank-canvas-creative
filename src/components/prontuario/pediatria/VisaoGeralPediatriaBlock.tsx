@@ -19,6 +19,7 @@ import { format, differenceInMonths, differenceInYears, parseISO } from 'date-fn
 import { ptBR } from 'date-fns/locale';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useMedicalRecordContext } from '@/contexts/MedicalRecordContext';
 
 // ===== TYPES =====
 export interface PediatricPatientInfo {
@@ -149,14 +150,20 @@ export function VisaoGeralPediatriaBlock({
   onNavigateToModule,
   className,
 }: VisaoGeralPediatriaBlockProps) {
+  const medicalRecordContext = useMedicalRecordContext();
+  const contextPatient = medicalRecordContext.patient as PediatricPatientInfo | null;
+  const resolvedPatientId = medicalRecordContext.patientId ?? patientId;
+  const resolvedClinicId = medicalRecordContext.clinicId ?? clinicId;
+
   // Fetch patient data
   const { data: patient, isLoading: patientLoading } = useQuery({
-    queryKey: ['patient-pediatria', patientId],
+    queryKey: ['patient-pediatria', resolvedPatientId],
     queryFn: async () => {
+      if (!resolvedPatientId) return null;
       const { data, error } = await supabase
         .from('patients')
         .select('id, full_name, birth_date, gender')
-        .eq('id', patientId)
+        .eq('id', resolvedPatientId)
         .single();
       
       if (error) throw error;
@@ -168,19 +175,19 @@ export function VisaoGeralPediatriaBlock({
         photo_url: undefined,
       } as PediatricPatientInfo;
     },
-    enabled: !!patientId,
+    enabled: !!resolvedPatientId && !contextPatient,
   });
 
   // Fetch active alerts
   const { data: alerts = [], isLoading: alertsLoading } = useQuery({
-    queryKey: ['pediatria-alerts', patientId, clinicId],
+    queryKey: ['pediatria-alerts', resolvedPatientId, resolvedClinicId],
     queryFn: async () => {
-      if (!clinicId) return [];
+      if (!resolvedPatientId || !resolvedClinicId) return [];
       const { data, error } = await supabase
         .from('clinical_alerts')
         .select('id, title, severity, is_active')
-        .eq('patient_id', patientId)
-        .eq('clinic_id', clinicId)
+        .eq('patient_id', resolvedPatientId)
+        .eq('clinic_id', resolvedClinicId)
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(10);
@@ -191,14 +198,14 @@ export function VisaoGeralPediatriaBlock({
         severity: a.severity as 'critical' | 'warning' | 'info',
       }));
     },
-    enabled: !!patientId && !!clinicId,
+    enabled: !!resolvedPatientId && !!resolvedClinicId,
   });
 
   // Fetch last appointment
   const { data: lastAppointment } = useQuery({
-    queryKey: ['last-appointment-pediatria', patientId, clinicId],
+    queryKey: ['last-appointment-pediatria', resolvedPatientId, resolvedClinicId],
     queryFn: async () => {
-      if (!clinicId) return null;
+      if (!resolvedPatientId || !resolvedClinicId) return null;
       const { data, error } = await supabase
         .from('appointments')
         .select(`
@@ -207,8 +214,8 @@ export function VisaoGeralPediatriaBlock({
           status,
           professionals:professional_id (full_name)
         `)
-        .eq('patient_id', patientId)
-        .eq('clinic_id', clinicId)
+        .eq('patient_id', resolvedPatientId)
+        .eq('clinic_id', resolvedClinicId)
         .eq('status', 'completed')
         .order('scheduled_date', { ascending: false })
         .limit(1)
@@ -222,36 +229,38 @@ export function VisaoGeralPediatriaBlock({
         professional_name: (data.professionals as any)?.full_name || 'Profissional',
       } as LastAppointmentInfo;
     },
-    enabled: !!patientId && !!clinicId,
+    enabled: !!resolvedPatientId && !!resolvedClinicId,
   });
 
   // Fetch evolutions count
   const { data: evolutionsCount = 0 } = useQuery({
-    queryKey: ['evolutions-count-pediatria', patientId, clinicId],
+    queryKey: ['evolutions-count-pediatria', resolvedPatientId, resolvedClinicId],
     queryFn: async () => {
-      if (!clinicId) return 0;
+      if (!resolvedPatientId || !resolvedClinicId) return 0;
       const { count, error } = await supabase
         .from('clinical_evolutions')
         .select('id', { count: 'exact', head: true })
-        .eq('patient_id', patientId)
-        .eq('clinic_id', clinicId);
+        .eq('patient_id', resolvedPatientId)
+        .eq('clinic_id', resolvedClinicId);
       
       if (error) return 0;
       return count || 0;
     },
-    enabled: !!patientId && !!clinicId,
+    enabled: !!resolvedPatientId && !!resolvedClinicId,
   });
 
+  const overviewPatient = patient ?? contextPatient;
+
   const age = useMemo(() => {
-    if (!patient?.birth_date) return { text: '-', months: 0 };
-    return formatAge(patient.birth_date);
-  }, [patient?.birth_date]);
+    if (!overviewPatient?.birth_date) return { text: '-', months: 0 };
+    return formatAge(overviewPatient.birth_date);
+  }, [overviewPatient?.birth_date]);
   
   const activeAlerts = useMemo(() => alerts.filter(a => a.is_active), [alerts]);
   const criticalAlerts = activeAlerts.filter(a => a.severity === 'critical');
   const warningAlerts = activeAlerts.filter(a => a.severity === 'warning');
 
-  const isLoading = patientLoading || alertsLoading;
+  const isLoading = (patientLoading && !overviewPatient) || alertsLoading || (medicalRecordContext.isLoading && !!resolvedPatientId && !overviewPatient);
 
   if (isLoading) {
     return (
@@ -278,7 +287,7 @@ export function VisaoGeralPediatriaBlock({
     );
   }
 
-  if (!patient) {
+  if (!overviewPatient) {
     return (
       <Card className={className}>
         <CardContent className="py-12 text-center">
