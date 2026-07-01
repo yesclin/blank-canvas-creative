@@ -146,33 +146,47 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
     };
   }, [items]);
 
+  const assertClinic = (): boolean => {
+    if (!clinicId) {
+      toast.error('Selecione uma clínica antes de alterar recursos.');
+      return false;
+    }
+    return true;
+  };
+
+  const buildRow = (r: Resource, enabled: boolean) => ({
+    clinic_id: clinicId,
+    resource_type: r.resource_type,
+    resource_key: r.resource_key,
+    resource_id: r.source_id,
+    specialty_slug: r.specialty_slug,
+    enabled,
+    reason: reason.trim() || null,
+  });
+
   const writeOne = async (r: Resource, enabled: boolean) => {
+    if (!assertClinic()) return;
     if (!reason.trim()) { toast.error('Informe o motivo antes de alterar.'); return; }
-    const payload = {
-      clinic_id: clinicId, resource_key: r.resource_key,
-      template_id: r.source_id, template_kind: r.resource_type,
-      enabled, reason: reason.trim(),
-    };
-    console.log('[Recursos] Clínica:', clinicId);
-    console.log('[Recursos] Ação:', enabled ? 'liberar' : 'bloquear', 'individual');
-    console.log('[Recursos] Payload:', payload);
-    await supabase.from('clinic_template_overrides').delete()
-      .eq('clinic_id', clinicId).eq('resource_key', r.resource_key);
-    const { error } = await supabase.from('clinic_template_overrides').insert(payload);
+    const row = buildRow(r, enabled);
+    console.log('[Recursos] upsert clinic_resources:', row);
+    const { error } = await supabase
+      .from('clinic_resources')
+      .upsert(row, { onConflict: 'clinic_id,resource_type,resource_key' });
     if (error) {
-      console.error('[Recursos] Erro Supabase:', { message: error.message, details: error.details, code: error.code, hint: error.hint });
+      console.error('[Recursos] erro:', error);
       toast.error(`Erro ao salvar: ${error.message}`); return;
     }
     await logPlatformAction({
-      action: enabled ? 'resource_override.enable' : 'resource_override.disable',
-      target_type: 'prontuario_resource', clinic_id: clinicId,
-      metadata: { resource_key: r.resource_key, reason: reason.trim() },
+      action: enabled ? 'clinic_resource.enable' : 'clinic_resource.disable',
+      target_type: 'clinic_resource', clinic_id: clinicId,
+      metadata: { resource_key: r.resource_key, resource_type: r.resource_type, reason: reason.trim() },
     });
-    toast.success(enabled ? 'Recurso liberado.' : 'Recurso bloqueado.');
+    toast.success(enabled ? 'Recurso liberado para esta clínica.' : 'Recurso bloqueado para esta clínica.');
     load();
   };
 
   const bulkSection = async (sectionKey: SectionKey, enabled: boolean, scope: 'filtered' | 'selected') => {
+    if (!assertClinic()) return;
     if (!reason.trim()) { toast.error('Informe o motivo antes de alterar em massa.'); return; }
     const def = SECTIONS.find((s) => s.key === sectionKey)!;
     const sectionFiltered = applyFilters(items.filter((i) => def.types.includes(i.resource_type)));
@@ -180,67 +194,37 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
       ? sectionFiltered.filter((i) => selected[i.resource_key])
       : sectionFiltered;
 
-    console.log('[Recursos] Clínica:', clinicId);
-    console.log('[Recursos] Filtro atual:', { globalSearch, specialty, categoryFilter, quickFilter, sectionKey });
-    console.log('[Recursos] Itens visíveis:', sectionFiltered.map((i) => i.resource_key));
-    console.log('[Recursos] Itens selecionados:', Object.keys(selected).filter((k) => selected[k]));
-    console.log('[Recursos] Ação:', enabled ? 'liberar' : 'bloquear', scope);
-
     if (scope === 'selected' && list.length === 0) {
-      toast.error('Selecione ao menos um recurso desta categoria.');
-      return;
+      toast.error('Selecione ao menos um recurso desta categoria.'); return;
     }
     if (list.length === 0) { toast.error('Nenhum recurso elegível.'); return; }
 
-    const keys = list
-      .map((i) => i.resource_key)
-      .filter((k): k is string => typeof k === 'string' && k.length > 0);
-    if (keys.length === 0) { toast.error('IDs inválidos na seleção.'); return; }
+    const rows = list.map((r) => buildRow(r, enabled));
+    console.log('[Recursos] bulk upsert clinic_resources:', { clinicId, count: rows.length, scope, sectionKey });
 
-    const { error: delError } = await supabase
-      .from('clinic_template_overrides')
-      .delete()
-      .eq('clinic_id', clinicId)
-      .in('resource_key', keys);
-    if (delError) {
-      console.error('[BulkAction] delete error:', delError);
-      toast.error(`Erro ao limpar overrides: ${delError.message}`);
-      return;
-    }
-
-    const rows = list.map((r) => ({
-      clinic_id: clinicId,
-      resource_key: r.resource_key,
-      template_id: r.source_id, // pode ser null para abas/funções
-      template_kind: r.resource_type,
-      enabled,
-      reason: reason.trim(),
-    }));
-    console.log('[BulkAction] payload:', rows);
-
-    const { error } = await supabase.from('clinic_template_overrides').insert(rows);
+    const { error } = await supabase
+      .from('clinic_resources')
+      .upsert(rows, { onConflict: 'clinic_id,resource_type,resource_key' });
     if (error) {
-      console.error('[BulkAction] insert error:', {
-        message: error.message, details: error.details, code: error.code, hint: error.hint,
-      });
+      console.error('[Recursos] bulk erro:', error);
       toast.error(`Erro ao salvar: ${error.message}${error.hint ? ` (${error.hint})` : ''}`);
       return;
     }
 
     await logPlatformAction({
-      action: enabled ? 'resource_override.bulk_enable' : 'resource_override.bulk_disable',
-      target_type: 'prontuario_resource', clinic_id: clinicId,
+      action: enabled ? 'clinic_resource.bulk_enable' : 'clinic_resource.bulk_disable',
+      target_type: 'clinic_resource', clinic_id: clinicId,
       metadata: { count: rows.length, section: sectionKey, scope, reason: reason.trim() },
     });
     toast.success(
       enabled
-        ? `${rows.length} modelo(s) liberado(s) com sucesso.`
-        : `${rows.length} modelo(s) bloqueado(s) com sucesso.`,
+        ? `${rows.length} recurso(s) liberado(s) para esta clínica.`
+        : `${rows.length} recurso(s) bloqueado(s) para esta clínica.`,
     );
     if (scope === 'selected') {
       setSelected((prev) => {
         const next = { ...prev };
-        keys.forEach((k) => { delete next[k]; });
+        rows.forEach((r) => { delete next[r.resource_key]; });
         return next;
       });
     }
@@ -248,20 +232,23 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
   };
 
   const resetSection = async (sectionKey: SectionKey) => {
+    if (!assertClinic()) return;
     const def = SECTIONS.find((s) => s.key === sectionKey)!;
     const sectionFiltered = applyFilters(items.filter((i) => def.types.includes(i.resource_type)));
     const list = sectionFiltered.filter((i) => selected[i.resource_key]);
     const keys = (list.length > 0 ? list : sectionFiltered).map((i) => i.resource_key);
     if (keys.length === 0) { toast.error('Nenhum recurso para restaurar.'); return; }
-    await supabase.from('clinic_template_overrides').delete()
+    const { error } = await supabase.from('clinic_resources').delete()
       .eq('clinic_id', clinicId).in('resource_key', keys);
+    if (error) { toast.error(`Erro ao restaurar: ${error.message}`); return; }
     await logPlatformAction({
-      action: 'resource_override.reset', target_type: 'prontuario_resource',
+      action: 'clinic_resource.reset', target_type: 'clinic_resource',
       clinic_id: clinicId, metadata: { count: keys.length, section: sectionKey },
     });
-    toast.success('Recursos restaurados ao padrão.');
+    toast.success('Recursos restaurados ao padrão (removidos desta clínica).');
     load();
   };
+
 
   const ResourceCard = ({ r }: { r: Resource }) => {
     const isPadrao = !r.has_override;

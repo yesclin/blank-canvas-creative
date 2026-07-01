@@ -110,9 +110,26 @@ export function useResolvedAnamnesisTemplate(
 
       if (!templates || templates.length === 0) return null;
 
+      // Filtra apenas modelos LIBERADOS para esta clínica em `clinic_resources`.
+      // Convenção do catálogo: resource_key = 'tpl:anamnesis:<template_id>'.
+      const templateIds = templates.map((t) => t.id);
+      const keys = templateIds.map((id) => `tpl:anamnesis:${id}`);
+      const { data: enabledRows } = await supabase
+        .from("clinic_resources")
+        .select("resource_key")
+        .eq("clinic_id", clinic.id)
+        .eq("enabled", true)
+        .in("resource_key", keys);
+      const enabledSet = new Set((enabledRows ?? []).map((r) => r.resource_key));
+      const allowed = templates.filter((t) => enabledSet.has(`tpl:anamnesis:${t.id}`));
+      console.log("[useResolvedAnamnesisTemplate] liberados para a clínica:", allowed.length, "de", templates.length);
+
+      if (allowed.length === 0) return null;
+
+
 
       // Build options list
-      const allTemplates: TemplateOption[] = templates.map((t) => ({
+      const allTemplates: TemplateOption[] = allowed.map((t) => ({
         id: t.id,
         name: t.name,
         description: t.description,
@@ -125,17 +142,17 @@ export function useResolvedAnamnesisTemplate(
 
       // Resolve priority
       let resolved = procedureId
-        ? templates.find((t) => t.procedure_id === procedureId)
+        ? allowed.find((t) => t.procedure_id === procedureId)
         : undefined;
       let resolution: ResolvedTemplate["resolution"] = "procedure";
 
       if (!resolved) {
-        resolved = templates.find((t) => t.is_default);
+        resolved = allowed.find((t) => t.is_default);
         resolution = "default";
       }
 
       if (!resolved) {
-        resolved = templates[0];
+        resolved = allowed[0];
         resolution = "fallback";
       }
 
