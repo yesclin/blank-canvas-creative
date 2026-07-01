@@ -2139,7 +2139,7 @@ export default function Prontuario() {
   // Enquanto qualquer dependência ainda carrega, exibimos um loading suave
   // em vez de "Paciente não encontrado".
   if (patientId && !patient) {
-    if (!clinic?.id || patientLoading) {
+    if (!clinic?.id || clinicLoading || patientLoading || loading || appointmentLoading || specialtyLoading) {
       return (
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="space-y-4 text-center">
