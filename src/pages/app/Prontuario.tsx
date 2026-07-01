@@ -925,9 +925,17 @@ export default function Prontuario() {
     console.log("appointmentId:", medicalRecordContext.appointmentId);
     console.log("clinicId:", medicalRecordContext.clinicId);
     console.log("specialty:", medicalRecordContext.specialtySlug);
+    const overviewPatientForLog = activeSpecialtyKey === 'psicologia'
+      ? psicologiaPatient
+      : activeSpecialtyKey === 'nutricao'
+        ? nutricaoPatient
+        : activeSpecialtyKey === 'fisioterapia'
+          ? fisioVisaoGeral.patient
+          : patient;
+    console.log("overview patient:", overviewPatientForLog);
     console.log("context:", medicalRecordContext);
     console.log("selectedPatient:", medicalRecordContext.patient);
-  }, [medicalRecordContext]);
+  }, [activeSpecialtyKey, fisioVisaoGeral.patient, medicalRecordContext, nutricaoPatient, patient, psicologiaPatient]);
 
   // Handle search result click — focus on the specific record + navigate to its tab
   const handleSearchResultClick = useCallback((result: SearchResult) => {
