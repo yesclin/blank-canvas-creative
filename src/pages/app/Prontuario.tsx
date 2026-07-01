@@ -2210,6 +2210,7 @@ export default function Prontuario() {
 
   return (
     <ClinicalAccessGuard>
+    <MedicalRecordProvider value={medicalRecordContext}>
     <SearchFocusContext.Provider value={searchFocusContextValue}>
     <div className="flex flex-col h-full min-h-0 relative">
       {/* LGPD Blocking Overlay - shown when consent is required but not granted */}
@@ -2394,6 +2395,7 @@ export default function Prontuario() {
       {/* Active session bar removed — global floating widget handles timer */}
     </div>
     </SearchFocusContext.Provider>
+    </MedicalRecordProvider>
     </ClinicalAccessGuard>
   );
 }
