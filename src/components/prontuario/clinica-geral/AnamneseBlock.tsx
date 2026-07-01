@@ -353,7 +353,9 @@ export function AnamneseBlock({
     );
   }
 
+  return (
     <div className="space-y-6">
+
       {/* Header / meta */}
       <Card className="border-primary/20 bg-primary/5">
         <CardContent className="pt-4 pb-4 flex flex-wrap items-center justify-between gap-3">
