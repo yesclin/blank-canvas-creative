@@ -459,6 +459,9 @@ export default function Prontuario() {
   const shouldLoadTab = useCallback((...tabKeys: string[]) => {
     return tabKeys.some((tabKey) => loadedTabs.has(tabKey));
   }, [loadedTabs]);
+  const getContextPatientIdForTab = useCallback((...tabKeys: string[]) => {
+    return coreProntuarioContextReady && shouldLoadTab(...tabKeys) ? patientId : null;
+  }, [coreProntuarioContextReady, patientId, shouldLoadTab]);
 
   useEffect(() => {
     setLoadedTabs((prev) => {
