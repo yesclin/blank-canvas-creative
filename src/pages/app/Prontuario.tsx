@@ -646,7 +646,7 @@ export default function Prontuario() {
     saving: patientConsentsSaving,
     grantConsent: grantPatientConsent,
     revokeConsent: revokePatientConsent,
-  } = usePatientConsents(patientId || undefined, shouldLoadConsentData);
+  } = usePatientConsents(coreProntuarioContextReady ? patientId || undefined : undefined, shouldLoadConsentData && coreProntuarioContextReady);
 
   // Alertas Psicologia Data - specific for Psicologia specialty
   const {
@@ -733,7 +733,7 @@ export default function Prontuario() {
 
   // ===== FISIOTERAPIA HOOKS =====
   // Obter clinic_id do hook useClinicData
-  const clinicIdForFisio = patient ? config?.tabs?.[0]?.clinic_id : null;
+  const clinicIdForFisio = coreProntuarioContextReady ? clinic?.id ?? null : null;
   
   // Visão Geral Fisioterapia Data
   const fisioVisaoGeral = useVisaoGeralFisioterapiaData({ 
@@ -759,7 +759,7 @@ export default function Prontuario() {
     cancelDocumento: cancelDocumentoClinico,
     saveModeloPessoal: saveModeloPessoalClinico,
     deleteModeloPessoal: deleteModeloPessoalClinico,
-  } = useDocumentosClinicosData(shouldLoadTab('documentos_clinicos') ? patientId : null);
+  } = useDocumentosClinicosData(getContextPatientIdForTab('documentos_clinicos'));
 
 
   // Wrap permission checks to respect the enable_tab_permissions setting
