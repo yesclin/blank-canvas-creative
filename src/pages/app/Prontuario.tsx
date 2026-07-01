@@ -440,6 +440,14 @@ export default function Prontuario() {
     noSpecialtyConfigured,
   } = useActiveSpecialty(patientId, preferredAppointmentId);
 
+  const coreProntuarioContextReady = Boolean(patientId && clinic?.id && patient) &&
+    !clinicLoading &&
+    !patientLoading &&
+    !loading &&
+    !appointmentLoading &&
+    !specialtyLoading &&
+    isSpecialtyResolved;
+
   const [activeTab, setActiveTab] = useState("resumo");
   const [loadedTabs, setLoadedTabs] = useState<Set<string>>(() => new Set(['resumo']));
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
