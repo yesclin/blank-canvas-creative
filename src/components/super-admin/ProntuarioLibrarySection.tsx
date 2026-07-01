@@ -115,6 +115,7 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
       if (q && !i.title.toLowerCase().includes(q) &&
           !(i.description ?? '').toLowerCase().includes(q)) return false;
       if (specialty !== 'all' && (i.specialty_slug ?? 'global') !== specialty) return false;
+      if (categoryFilter !== 'all' && i.resource_type !== categoryFilter) return false;
       if (quickFilter === 'enabled' && !i.enabled) return false;
       if (quickFilter === 'disabled' && i.enabled) return false;
       if (quickFilter === 'padrao' && i.has_override) return false;
