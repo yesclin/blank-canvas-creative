@@ -35,6 +35,7 @@ import {
   type EsteticaAlert 
 } from '@/hooks/aesthetics/useVisaoGeralEsteticaData';
 import { getAlertTypeLabel } from '@/utils/clinicalAlertLabels';
+import { useMedicalRecordContext } from '@/contexts/MedicalRecordContext';
 
 interface VisaoGeralEsteticaBlockProps {
   patientId: string | null;
@@ -132,8 +133,11 @@ export function VisaoGeralEsteticaBlock({
     patientId, 
     clinicId 
   });
+  const medicalRecordContext = useMedicalRecordContext();
+  const overviewPatient = patient ?? (medicalRecordContext.patient as EsteticaPatientData | null);
+  const shouldShowLoading = loading || (medicalRecordContext.isLoading && !!medicalRecordContext.patientId);
 
-  if (loading) {
+  if (shouldShowLoading && !overviewPatient) {
     return (
       <div className="space-y-4">
         <Card>
@@ -152,7 +156,7 @@ export function VisaoGeralEsteticaBlock({
     );
   }
 
-  if (!patient) {
+  if (!overviewPatient) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
@@ -163,8 +167,8 @@ export function VisaoGeralEsteticaBlock({
     );
   }
 
-  const idade = patient.birth_date 
-    ? calculateAgeFromDateOnly(patient.birth_date)
+  const idade = overviewPatient.birth_date 
+    ? calculateAgeFromDateOnly(overviewPatient.birth_date)
     : null;
 
   const diasDesdeUltimoProc = summary.ultimo_procedimento

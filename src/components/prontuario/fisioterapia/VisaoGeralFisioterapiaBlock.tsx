@@ -36,6 +36,7 @@ import {
   type FisioterapiaSummaryData, 
   type FisioterapiaAlert 
 } from '@/hooks/prontuario/fisioterapia';
+import { useMedicalRecordContext } from '@/contexts/MedicalRecordContext';
 
 interface VisaoGeralFisioterapiaBlockProps {
   patient: FisioterapiaPatientData | null;
@@ -143,7 +144,11 @@ export function VisaoGeralFisioterapiaBlock({
   canEdit = false,
   onNavigateToModule,
 }: VisaoGeralFisioterapiaBlockProps) {
-  if (loading) {
+  const medicalRecordContext = useMedicalRecordContext();
+  const overviewPatient = patient ?? (medicalRecordContext.patient as FisioterapiaPatientData | null);
+  const shouldShowLoading = loading || (medicalRecordContext.isLoading && !!medicalRecordContext.patientId);
+
+  if (shouldShowLoading && !overviewPatient) {
     return (
       <div className="space-y-4">
         <Card>
@@ -162,7 +167,7 @@ export function VisaoGeralFisioterapiaBlock({
     );
   }
 
-  if (!patient) {
+  if (!overviewPatient) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
@@ -173,8 +178,8 @@ export function VisaoGeralFisioterapiaBlock({
     );
   }
 
-  const idade = patient.birth_date 
-    ? calculateAgeFromDateOnly(patient.birth_date)
+  const idade = overviewPatient.birth_date 
+    ? calculateAgeFromDateOnly(overviewPatient.birth_date)
     : null;
 
   const diasDesdeUltimaSessao = summary.ultima_sessao

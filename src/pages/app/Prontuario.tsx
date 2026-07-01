@@ -108,6 +108,7 @@ import { PatientHeader } from "@/components/prontuario/PatientHeader";
 import { ProntuarioHeader } from "@/components/prontuario/ProntuarioHeader";
 import { ProntuarioSearchBar, type SearchResult } from "@/components/prontuario/ProntuarioSearchBar";
 import { SearchFocusContext, type SearchFocusTarget } from "@/contexts/SearchFocusContext";
+import { MedicalRecordProvider, type MedicalRecordContextValue } from "@/contexts/MedicalRecordContext";
 import { SearchFocusBanner } from "@/components/prontuario/SearchFocusBanner";
 import { LgpdBlockingOverlay } from "@/components/prontuario/LgpdBlockingOverlay";
 import { TeleconsultaContextBar } from "@/components/prontuario/TeleconsultaContextBar";
@@ -284,7 +285,7 @@ export default function Prontuario() {
   // Print & Export
   const { handlePrint, handleExport, printing, exporting } = useProntuarioPrint();
   const { generateConsolidatedPdf, exporting: exportingFiller } = useConsolidatedFillerPdf();
-  const { clinic, getFormattedAddress } = useClinicData();
+  const { clinic, getFormattedAddress, isLoading: clinicLoading } = useClinicData();
 
   // LGPD Enforcement and Feature Flags
   const {
@@ -439,6 +440,16 @@ export default function Prontuario() {
     noSpecialtyConfigured,
   } = useActiveSpecialty(patientId, preferredAppointmentId);
 
+  const coreProntuarioContextReady = Boolean(patientId && clinic?.id && patient) &&
+    !clinicLoading &&
+    !patientLoading &&
+    !loading &&
+    !appointmentLoading &&
+    !permLoading &&
+    !lgpdLoading &&
+    !specialtyLoading &&
+    isSpecialtyResolved;
+
   const [activeTab, setActiveTab] = useState("resumo");
   const [loadedTabs, setLoadedTabs] = useState<Set<string>>(() => new Set(['resumo']));
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
@@ -450,6 +461,9 @@ export default function Prontuario() {
   const shouldLoadTab = useCallback((...tabKeys: string[]) => {
     return tabKeys.some((tabKey) => loadedTabs.has(tabKey));
   }, [loadedTabs]);
+  const getContextPatientIdForTab = useCallback((...tabKeys: string[]) => {
+    return coreProntuarioContextReady && shouldLoadTab(...tabKeys) ? patientId : null;
+  }, [coreProntuarioContextReady, patientId, shouldLoadTab]);
 
   useEffect(() => {
     setLoadedTabs((prev) => {
@@ -475,14 +489,14 @@ export default function Prontuario() {
     alerts: visaoGeralAlerts,
     lastAppointment: visaoGeralLastAppointment,
     loading: visaoGeralLoading,
-  } = useVisaoGeralData(shouldLoadTab('resumo') ? patientId : null);
+  } = useVisaoGeralData(getContextPatientIdForTab('resumo'));
 
   // Visão Geral Data - specific for Psicologia specialty
   const {
     patient: psicologiaPatient,
     summary: psicologiaSummary,
     loading: psicologiaVisaoGeralLoading,
-  } = useVisaoGeralPsicologiaData(shouldLoadTab('resumo') ? patientId : null);
+  } = useVisaoGeralPsicologiaData(getContextPatientIdForTab('resumo'));
 
   // Anamnese Data - specific for Clínica Geral specialty
   const {
@@ -492,7 +506,7 @@ export default function Prontuario() {
     saving: anamneseSaving,
     saveAnamnese,
     updateAnamnese,
-  } = useAnamneseData(shouldLoadTab('anamnese') ? patientId : null);
+  } = useAnamneseData(getContextPatientIdForTab('anamnese'));
 
   // Anamnese Psicológica Data - specific for Psicologia specialty
   const {
@@ -502,7 +516,7 @@ export default function Prontuario() {
     saving: anamnesePsicoSaving,
     saveAnamnese: saveAnamnesePsico,
     updateAnamnese: updateAnamnesePsico,
-  } = useAnamnesePsicologiaData(shouldLoadTab('anamnese', 'historico', 'timeline') ? patientId : null);
+  } = useAnamnesePsicologiaData(getContextPatientIdForTab('anamnese', 'historico', 'timeline'));
 
   // Evoluções Data - specific for Clínica Geral specialty
   const {
@@ -513,7 +527,7 @@ export default function Prontuario() {
     currentProfessionalName,
     saveEvolucao,
     signEvolucao,
-  } = useEvolucoesData(shouldLoadTab('evolucao', 'exame_fisico', 'conduta') ? patientId : null);
+  } = useEvolucoesData(getContextPatientIdForTab('evolucao', 'exame_fisico', 'conduta'));
 
   // Sessões Psicológicas Data - specific for Psicologia specialty
   const {
@@ -522,7 +536,7 @@ export default function Prontuario() {
     saving: sessoesPsicoSaving,
     saveSessao: saveSessaoPsico,
     signSessao: signSessaoPsico,
-  } = useSessoesPsicologiaData(shouldLoadTab('evolucao', 'historico', 'timeline') ? patientId : null, currentProfessionalId || undefined);
+  } = useSessoesPsicologiaData(getContextPatientIdForTab('evolucao', 'historico', 'timeline'), currentProfessionalId || undefined);
 
   // Evoluções Nutricionais Data - specific for Nutrição specialty
   const {
@@ -531,7 +545,7 @@ export default function Prontuario() {
     saving: evolucoesNutricaoSaving,
     saveEvolucao: saveEvolucaoNutricao,
     signEvolucao: signEvolucaoNutricao,
-  } = useEvolucoesNutricaoData(shouldLoadTab('evolucao') ? patientId : null, currentProfessionalId || undefined);
+  } = useEvolucoesNutricaoData(getContextPatientIdForTab('evolucao'), currentProfessionalId || undefined);
 
   // Avaliação Antropométrica Data - specific for Nutrição specialty
   const {
@@ -540,7 +554,7 @@ export default function Prontuario() {
     loading: avaliacoesNutricaoLoading,
     saving: avaliacoesNutricaoSaving,
     saveAvaliacao: saveAvaliacaoNutricao,
-  } = useAvaliacaoNutricionalData(shouldLoadTab('avaliacao_clinica') ? patientId : null, currentProfessionalId || undefined);
+  } = useAvaliacaoNutricionalData(getContextPatientIdForTab('avaliacao_clinica'), currentProfessionalId || undefined);
 
   // Plano Alimentar Data - specific for Nutrição specialty
   const {
@@ -550,7 +564,7 @@ export default function Prontuario() {
     saving: planosAlimentaresSaving,
     savePlano: savePlanoAlimentar,
     deactivatePlano: deactivatePlanoAlimentar,
-  } = usePlanoAlimentarData(shouldLoadTab('plano_alimentar') ? patientId : null, currentProfessionalId || undefined);
+  } = usePlanoAlimentarData(getContextPatientIdForTab('plano_alimentar'), currentProfessionalId || undefined);
 
   // Visão Geral Nutricional Data - specific for Nutrição specialty
   const {
@@ -558,7 +572,7 @@ export default function Prontuario() {
     summary: nutricaoSummary,
     alerts: nutricaoAlerts,
     loading: nutricaoVisaoGeralLoading,
-  } = useVisaoGeralNutricaoData(shouldLoadTab('resumo') ? patientId : null);
+  } = useVisaoGeralNutricaoData(getContextPatientIdForTab('resumo'));
 
   // Anamnese Nutricional Data - specific for Nutrição specialty
   const {
@@ -567,7 +581,7 @@ export default function Prontuario() {
     loading: anamneseNutricaoLoading,
     saving: anamneseNutricaoSaving,
     saveAnamnese: saveAnamneseNutricao,
-  } = useAnamneseNutricionalData(shouldLoadTab('anamnese') ? patientId : null);
+  } = useAnamneseNutricionalData(getContextPatientIdForTab('anamnese'));
 
   // Alertas Nutrição Data - specific for Nutrição specialty
   const {
@@ -578,13 +592,13 @@ export default function Prontuario() {
     saveAlerta: saveAlertaNutricao,
     deactivateAlerta: deactivateAlertaNutricao,
     reactivateAlerta: reactivateAlertaNutricao,
-  } = useAlertasNutricaoData(shouldLoadTab('alertas') ? patientId : null);
+  } = useAlertasNutricaoData(getContextPatientIdForTab('alertas'));
 
   // Linha do Tempo Nutricional Data - specific for Nutrição specialty
   const {
     eventos: timelineEventosNutricao,
     loading: timelineNutricaoLoading,
-  } = useLinhaTempoNutricaoData(shouldLoadTab('historico', 'timeline') ? patientId : null);
+  } = useLinhaTempoNutricaoData(getContextPatientIdForTab('historico', 'timeline'));
 
   // Plano Terapêutico Data - specific for Psicologia specialty
   const {
@@ -593,7 +607,7 @@ export default function Prontuario() {
     loading: planoTerapeuticoLoading,
     saving: planoTerapeuticoSaving,
     savePlano: savePlanoTerapeutico,
-  } = usePlanoTerapeuticoData(shouldLoadTab('conduta', 'historico', 'timeline') ? patientId : null);
+  } = usePlanoTerapeuticoData(getContextPatientIdForTab('conduta', 'historico', 'timeline'));
 
   // Metas Terapêuticas Data - goal-based tracking for Psicologia
   const {
@@ -605,7 +619,7 @@ export default function Prontuario() {
     updateStatus: updateMetaStatus,
     updateScaleScore: updateMetaScaleScore,
     fetchGoalUpdates: fetchMetaUpdates,
-  } = useMetasTerapeuticasData(shouldLoadTab('conduta') ? patientId : null);
+  } = useMetasTerapeuticasData(getContextPatientIdForTab('conduta'));
 
   // Compute latest PHQ-9 and GAD-7 scores from sessions
   const latestPHQ9Score = sessoesPsico.find(s => s.phq9_total != null)?.phq9_total ?? null;
@@ -618,7 +632,7 @@ export default function Prontuario() {
     saving: instrumentosPsicoSaving,
     saveInstrumento: saveInstrumentoPsico,
     deleteInstrumento: deleteInstrumentoPsico,
-  } = useInstrumentosPsicologicosData(shouldLoadTab('instrumentos', 'historico', 'timeline') ? patientId : null, currentProfessionalId || undefined);
+  } = useInstrumentosPsicologicosData(getContextPatientIdForTab('instrumentos', 'historico', 'timeline'), currentProfessionalId || undefined);
 
   // Consent Terms Data - for Psicologia specialty
   const shouldLoadConsentData = shouldLoadTab('termos_consentimentos', 'historico', 'timeline');
@@ -634,7 +648,7 @@ export default function Prontuario() {
     saving: patientConsentsSaving,
     grantConsent: grantPatientConsent,
     revokeConsent: revokePatientConsent,
-  } = usePatientConsents(patientId || undefined, shouldLoadConsentData);
+  } = usePatientConsents(coreProntuarioContextReady ? patientId || undefined : undefined, shouldLoadConsentData && coreProntuarioContextReady);
 
   // Alertas Psicologia Data - specific for Psicologia specialty
   const {
@@ -647,7 +661,7 @@ export default function Prontuario() {
     saveAlerta: saveAlertaPsico,
     deactivateAlerta: deactivateAlertaPsico,
     reactivateAlerta: reactivateAlertaPsico,
-  } = useAlertasPsicologiaData(shouldLoadTab('alertas') ? patientId : null);
+  } = useAlertasPsicologiaData(getContextPatientIdForTab('alertas'));
 
   // Exame Físico Data - specific for Clínica Geral specialty
   const {
@@ -657,7 +671,7 @@ export default function Prontuario() {
     currentProfessionalId: exameProfId,
     currentProfessionalName: exameProfName,
     saveExame: saveExameFisico,
-  } = useExameFisicoData(shouldLoadTab('exame_fisico') ? patientId : null);
+  } = useExameFisicoData(getContextPatientIdForTab('exame_fisico'));
 
   // Conduta Data - specific for Clínica Geral specialty
   const {
@@ -667,7 +681,7 @@ export default function Prontuario() {
     currentProfessionalId: condutaProfId,
     currentProfessionalName: condutaProfName,
     saveConduta,
-  } = useCondutaData(shouldLoadTab('conduta') ? patientId : null);
+  } = useCondutaData(getContextPatientIdForTab('conduta'));
 
   // Documentos Data - specific for Clínica Geral specialty
   const {
@@ -679,7 +693,7 @@ export default function Prontuario() {
     uploadDocumento,
     deleteDocumento,
     downloadDocumento,
-  } = useDocumentosData(shouldLoadTab('exames', 'fotos_intraorais') ? patientId : null);
+  } = useDocumentosData(getContextPatientIdForTab('exames', 'fotos_intraorais'));
 
   // Alertas Data - specific for Clínica Geral specialty
   const {
@@ -692,13 +706,13 @@ export default function Prontuario() {
     saveAlerta,
     deactivateAlerta,
     reactivateAlerta,
-  } = useAlertasData(shouldLoadTab('alertas') ? patientId : null);
+  } = useAlertasData(getContextPatientIdForTab('alertas'));
 
   // Linha do Tempo Data - specific for Clínica Geral specialty
   const {
     eventos: timelineEventos,
     loading: timelineLoading,
-  } = useLinhaTempoData(shouldLoadTab('historico', 'timeline') ? patientId : null);
+  } = useLinhaTempoData(getContextPatientIdForTab('historico', 'timeline'));
 
   // Diagnósticos Data - specific for Clínica Geral specialty
   const {
@@ -708,7 +722,7 @@ export default function Prontuario() {
     currentProfessionalId: diagProfId,
     saveDiagnostico,
     updateDiagnostico,
-  } = useDiagnosticosData(shouldLoadTab('diagnostico') ? patientId : null);
+  } = useDiagnosticosData(getContextPatientIdForTab('diagnostico'));
 
   // Prescrições Data - specific for Clínica Geral specialty
   const {
@@ -717,15 +731,15 @@ export default function Prontuario() {
     saving: prescricoesSaving,
     savePrescricao,
     signPrescricao,
-  } = usePrescricoesData(shouldLoadTab('prescricoes') ? patientId : null);
+  } = usePrescricoesData(getContextPatientIdForTab('prescricoes'));
 
   // ===== FISIOTERAPIA HOOKS =====
   // Obter clinic_id do hook useClinicData
-  const clinicIdForFisio = patient ? config?.tabs?.[0]?.clinic_id : null;
+  const clinicIdForFisio = coreProntuarioContextReady ? clinic?.id ?? null : null;
   
   // Visão Geral Fisioterapia Data
   const fisioVisaoGeral = useVisaoGeralFisioterapiaData({ 
-    patientId, 
+    patientId: getContextPatientIdForTab('resumo'), 
     clinicId: clinicIdForFisio || null 
   });
 
@@ -747,7 +761,7 @@ export default function Prontuario() {
     cancelDocumento: cancelDocumentoClinico,
     saveModeloPessoal: saveModeloPessoalClinico,
     deleteModeloPessoal: deleteModeloPessoalClinico,
-  } = useDocumentosClinicosData(shouldLoadTab('documentos_clinicos') ? patientId : null);
+  } = useDocumentosClinicosData(getContextPatientIdForTab('documentos_clinicos'));
 
 
   // Wrap permission checks to respect the enable_tab_permissions setting
@@ -859,13 +873,69 @@ export default function Prontuario() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlTab, navItems]);
 
-  const shouldHoldProntuarioRendering = specialtyLoading || !isSpecialtyResolved;
+  const shouldHoldProntuarioRendering = Boolean(patientId) && !coreProntuarioContextReady;
   const specialtyDisplayName = useSpecialtyDisplayName(clinic?.id, {
     slug: activeSpecialtySlug ?? activeSpecialty?.slug ?? activeSpecialtyKey,
     name: activeSpecialty?.name ?? activeSpecialtyName,
   });
   const resolvedSpecialtyName = specialtyDisplayName || activeSpecialty?.name || activeSpecialtyName || undefined;
   const resolvedSpecialtyId = activeSpecialty?.id ?? activeSpecialtyId;
+
+  const medicalRecordContext = useMemo<MedicalRecordContextValue>(() => {
+    const contextPatient = patient ? {
+      id: patient.id,
+      full_name: patient.full_name,
+      birth_date: patient.birth_date,
+      gender: patient.gender,
+      phone: patient.phone,
+      email: patient.email,
+      cpf: patient.cpf,
+    } : null;
+
+    return {
+      clinicId: clinic?.id ?? null,
+      patientId: patientId ?? null,
+      appointmentId: preferredAppointmentId ?? activeAppointment?.id ?? null,
+      specialtyId: resolvedSpecialtyId ?? null,
+      specialtySlug: activeSpecialtySlug ?? activeSpecialty?.slug ?? activeSpecialtyKey ?? null,
+      specialtyKey: activeSpecialtyKey ?? null,
+      specialtyName: resolvedSpecialtyName ?? null,
+      medicalRecordId: null,
+      patient: contextPatient,
+      isLoading: Boolean(patientId) && !coreProntuarioContextReady,
+      isReady: coreProntuarioContextReady,
+    };
+  }, [
+    activeAppointment?.id,
+    activeSpecialty?.slug,
+    activeSpecialtyKey,
+    activeSpecialtySlug,
+    clinic?.id,
+    coreProntuarioContextReady,
+    patient,
+    patientId,
+    preferredAppointmentId,
+    resolvedSpecialtyId,
+    resolvedSpecialtyName,
+  ]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    console.log("patientId:", medicalRecordContext.patientId);
+    console.log("appointmentId:", medicalRecordContext.appointmentId);
+    console.log("clinicId:", medicalRecordContext.clinicId);
+    console.log("specialty:", medicalRecordContext.specialtySlug);
+    const overviewPatientForLog = activeSpecialtyKey === 'psicologia'
+      ? psicologiaPatient
+      : activeSpecialtyKey === 'nutricao'
+        ? nutricaoPatient
+        : activeSpecialtyKey === 'fisioterapia'
+          ? fisioVisaoGeral.patient
+          : patient;
+    console.log("overview patient:", overviewPatientForLog);
+    console.log("context:", medicalRecordContext);
+    console.log("selectedPatient:", medicalRecordContext.patient);
+  }, [activeSpecialtyKey, fisioVisaoGeral.patient, medicalRecordContext, nutricaoPatient, patient, psicologiaPatient]);
 
   // Handle search result click — focus on the specific record + navigate to its tab
   const handleSearchResultClick = useCallback((result: SearchResult) => {
@@ -2077,7 +2147,7 @@ export default function Prontuario() {
   // Enquanto qualquer dependência ainda carrega, exibimos um loading suave
   // em vez de "Paciente não encontrado".
   if (patientId && !patient) {
-    if (!clinic?.id || patientLoading) {
+    if (!clinic?.id || clinicLoading || patientLoading || loading || appointmentLoading || specialtyLoading) {
       return (
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="space-y-4 text-center">
@@ -2150,6 +2220,7 @@ export default function Prontuario() {
 
   return (
     <ClinicalAccessGuard>
+    <MedicalRecordProvider value={medicalRecordContext}>
     <SearchFocusContext.Provider value={searchFocusContextValue}>
     <div className="flex flex-col h-full min-h-0 relative">
       {/* LGPD Blocking Overlay - shown when consent is required but not granted */}
@@ -2334,6 +2405,7 @@ export default function Prontuario() {
       {/* Active session bar removed — global floating widget handles timer */}
     </div>
     </SearchFocusContext.Provider>
+    </MedicalRecordProvider>
     </ClinicalAccessGuard>
   );
 }

@@ -19,6 +19,7 @@ import {
 import { format, parseISO, differenceInYears } from "date-fns";
 import { calculateAgeFromDateOnly } from "@/utils/dateUtils";
 import { ptBR } from "date-fns/locale";
+import { useMedicalRecordContext } from "@/contexts/MedicalRecordContext";
 
 /**
  * Dados básicos do paciente para Odontologia
@@ -210,14 +211,17 @@ export function OdontologiaVisaoGeralBlock({
   loading = false,
   onNavigateToModule,
 }: OdontologiaVisaoGeralBlockProps) {
+  const medicalRecordContext = useMedicalRecordContext();
+  const overviewPatient = patient ?? (medicalRecordContext.patient as OdontologyPatientData | null);
+  const shouldShowLoading = loading || (medicalRecordContext.isLoading && !!medicalRecordContext.patientId);
   
   const activeAlerts = alerts.filter(a => a.is_active);
   const criticalAlerts = activeAlerts.filter(a => a.severity === 'critical');
   
-  const age = calculateAge(patient?.birth_date ?? null);
+  const age = calculateAge(overviewPatient?.birth_date ?? null);
   const treatmentStatus = formatTreatmentPlanStatus(clinicalData.treatment_plan_status);
 
-  if (loading) {
+  if (shouldShowLoading && !overviewPatient) {
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -232,7 +236,7 @@ export function OdontologiaVisaoGeralBlock({
     );
   }
 
-  if (!patient) {
+  if (!overviewPatient) {
     return (
       <Card className="border-dashed">
         <CardContent className="p-8 text-center text-muted-foreground">

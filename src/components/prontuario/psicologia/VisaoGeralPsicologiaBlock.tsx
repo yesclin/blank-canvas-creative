@@ -24,6 +24,7 @@ import type {
   PsicologiaSummaryData,
   StatusAcompanhamento 
 } from "@/hooks/prontuario/psicologia/useVisaoGeralPsicologiaData";
+import { useMedicalRecordContext } from "@/contexts/MedicalRecordContext";
 
 interface VisaoGeralPsicologiaBlockProps {
   patient: PsicologiaPatientData | null;
@@ -48,6 +49,9 @@ export function VisaoGeralPsicologiaBlock({
   summary,
   loading = false
 }: VisaoGeralPsicologiaBlockProps) {
+  const medicalRecordContext = useMedicalRecordContext();
+  const overviewPatient = patient ?? (medicalRecordContext.patient as PsicologiaPatientData | null);
+  const shouldShowLoading = loading || (medicalRecordContext.isLoading && !!medicalRecordContext.patientId);
   
   const { alerts, totalSessions, lastSessionDate, lastSessionProfessional, sessionFrequency, statusAcompanhamento } = summary;
 
@@ -134,7 +138,7 @@ export function VisaoGeralPsicologiaBlock({
   const statusConfig = getStatusConfig(statusAcompanhamento);
   const StatusIcon = statusConfig.icon;
 
-  if (loading) {
+  if (shouldShowLoading && !overviewPatient) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-32 w-full" />
@@ -146,7 +150,7 @@ export function VisaoGeralPsicologiaBlock({
     );
   }
 
-  if (!patient) {
+  if (!overviewPatient) {
     return (
       <Card className="border-dashed">
         <CardContent className="p-8 text-center text-muted-foreground">
@@ -206,11 +210,11 @@ export function VisaoGeralPsicologiaBlock({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Idade</p>
-                <p className="font-medium">{calculateAge(patient.birth_date)}</p>
+                <p className="font-medium">{calculateAge(overviewPatient.birth_date)}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Sexo</p>
-                <p className="font-medium">{formatGender(patient.gender)}</p>
+                <p className="font-medium">{formatGender(overviewPatient.gender)}</p>
               </div>
             </div>
 

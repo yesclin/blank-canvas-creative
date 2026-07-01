@@ -22,6 +22,7 @@ import {
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { SpecialtyKey } from "@/hooks/prontuario/useActiveSpecialty";
+import { useMedicalRecordContext } from "@/contexts/MedicalRecordContext";
 
 /**
  * Dados do paciente para exibição na Visão Geral
@@ -163,6 +164,10 @@ export function VisaoGeralBlock({
   activeSpecialtyKey = 'geral',
   activeSpecialtyName,
 }: VisaoGeralBlockProps) {
+  const medicalRecordContext = useMedicalRecordContext();
+  const contextPatient = medicalRecordContext.patient as PatientBasicData | null;
+  const overviewPatient = patient ?? contextPatient;
+  const shouldShowLoading = loading || (medicalRecordContext.isLoading && !!medicalRecordContext.patientId);
   
   const activeAlerts = alerts.filter(a => a.is_active);
   const criticalAlerts = activeAlerts.filter(a => a.severity === 'critical');
@@ -170,7 +175,7 @@ export function VisaoGeralBlock({
   // Resolve display name for specialty
   const specialtyDisplayName = activeSpecialtyName?.trim() || '';
 
-  if (loading) {
+  if (shouldShowLoading && !overviewPatient) {
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -185,7 +190,7 @@ export function VisaoGeralBlock({
     );
   }
 
-  if (!patient) {
+  if (!overviewPatient) {
     return (
       <Card className="border-dashed">
         <CardContent className="p-8 text-center text-muted-foreground">
