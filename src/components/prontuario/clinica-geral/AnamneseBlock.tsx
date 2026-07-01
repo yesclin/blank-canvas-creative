@@ -28,6 +28,9 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useResolvedAnamnesisTemplate } from "@/hooks/prontuario/useResolvedAnamnesisTemplate";
+import { AnamneseModelSelector } from "@/components/prontuario/AnamneseModelSelector";
+import { useNavigate } from "react-router-dom";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -212,13 +215,24 @@ export function AnamneseBlock({
   appointmentDate,
   professionalName,
   professionalRegistration,
+  specialtyId,
+  specialtyName,
 }: AnamneseBlockProps) {
+  const navigate = useNavigate();
   const [form, setForm] = useState<PrimeiraEntrevistaData>(() => loadFromRecord(currentAnamnese));
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+  const [started, setStarted] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSerialized = useRef<string>(JSON.stringify(loadFromRecord(currentAnamnese)));
   const initializedFor = useRef<string | null>(currentAnamnese?.id ?? null);
+
+  const {
+    data: resolvedTemplate,
+    allTemplates,
+    isLoading: templatesLoading,
+  } = useResolvedAnamnesisTemplate(specialtyId ?? null, null);
 
   // Sync when record changes (e.g. after save creates a new version)
   useEffect(() => {
@@ -298,8 +312,50 @@ export function AnamneseBlock({
     );
   }
 
+  // Template selection gate: don't auto-open a form until the user picks a template
+  // (or if there's only one, allow auto-open). Existing records bypass the gate.
+  const shouldShowSelector =
+    !currentAnamnese &&
+    !started &&
+    !templatesLoading &&
+    (allTemplates.length === 0 || allTemplates.length > 1);
+
+  if (templatesLoading && !currentAnamnese) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-40 w-full" />
+      </div>
+    );
+  }
+
+  if (shouldShowSelector) {
+    return (
+      <AnamneseModelSelector
+        icon={<Stethoscope className="h-10 w-10 text-primary opacity-70" />}
+        emptyTitle="Escolha um modelo de anamnese"
+        emptyDescription={
+          allTemplates.length === 0
+            ? `Nenhum modelo de anamnese está liberado para esta especialidade${specialtyName ? ` (${specialtyName})` : ""}.`
+            : "Selecione um modelo liberado para esta clínica e especialidade para iniciar."
+        }
+        registerLabel="Iniciar Anamnese"
+        resolvedTemplate={resolvedTemplate}
+        allTemplates={allTemplates}
+        isLoading={templatesLoading}
+        selectedTemplateId={selectedTemplateId}
+        onTemplateChange={setSelectedTemplateId}
+        canEdit={canEdit}
+        canManageTemplates={canEdit}
+        onRegister={() => setStarted(true)}
+        onConfigureTemplate={() => navigate("/app/config/prontuario")}
+        specialtyLabel={specialtyName ?? undefined}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
+
       {/* Header / meta */}
       <Card className="border-primary/20 bg-primary/5">
         <CardContent className="pt-4 pb-4 flex flex-wrap items-center justify-between gap-3">
