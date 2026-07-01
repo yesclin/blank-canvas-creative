@@ -68,15 +68,21 @@ export function useResolvedAnamnesisTemplate(
         .eq("id", specialtyId)
         .maybeSingle();
 
-      const isCustomSpecialty = currentSpecialty?.slug === "other_specialty";
+      const isCustomSpecialty =
+        currentSpecialty?.slug === "other_specialty" ||
+        currentSpecialty?.slug === "outras_especialidades" ||
+        currentSpecialty?.slug === "atendimento_geral" ||
+        currentSpecialty?.slug === "custom";
       if (isCustomSpecialty) {
-        const { data: geral } = await supabase
+        const { data: fallbacks } = await supabase
           .from("specialties")
-          .select("id")
-          .eq("slug", "geral")
-          .maybeSingle();
-        if (geral?.id && !specialtyIds.includes(geral.id)) specialtyIds.push(geral.id);
+          .select("id, slug")
+          .in("slug", ["geral", "other_specialty", "outras_especialidades", "atendimento_geral", "custom"]);
+        (fallbacks ?? []).forEach((s) => {
+          if (s.id && !specialtyIds.includes(s.id)) specialtyIds.push(s.id);
+        });
       }
+
 
       console.log("[useResolvedAnamnesisTemplate] clinicId:", clinic.id);
       console.log("[useResolvedAnamnesisTemplate] specialty atual:", currentSpecialty);
