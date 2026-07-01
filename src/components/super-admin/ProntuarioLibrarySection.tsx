@@ -148,14 +148,21 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
 
   const writeOne = async (r: Resource, enabled: boolean) => {
     if (!reason.trim()) { toast.error('Informe o motivo antes de alterar.'); return; }
-    await supabase.from('clinic_template_overrides').delete()
-      .eq('clinic_id', clinicId).eq('resource_key', r.resource_key);
-    const { error } = await supabase.from('clinic_template_overrides').insert({
+    const payload = {
       clinic_id: clinicId, resource_key: r.resource_key,
       template_id: r.source_id, template_kind: r.resource_type,
       enabled, reason: reason.trim(),
-    });
-    if (error) { console.error(error); toast.error('Erro ao salvar.'); return; }
+    };
+    console.log('[Recursos] Clínica:', clinicId);
+    console.log('[Recursos] Ação:', enabled ? 'liberar' : 'bloquear', 'individual');
+    console.log('[Recursos] Payload:', payload);
+    await supabase.from('clinic_template_overrides').delete()
+      .eq('clinic_id', clinicId).eq('resource_key', r.resource_key);
+    const { error } = await supabase.from('clinic_template_overrides').insert(payload);
+    if (error) {
+      console.error('[Recursos] Erro Supabase:', { message: error.message, details: error.details, code: error.code, hint: error.hint });
+      toast.error(`Erro ao salvar: ${error.message}`); return;
+    }
     await logPlatformAction({
       action: enabled ? 'resource_override.enable' : 'resource_override.disable',
       target_type: 'prontuario_resource', clinic_id: clinicId,
