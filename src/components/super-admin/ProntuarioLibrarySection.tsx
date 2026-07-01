@@ -373,7 +373,7 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
         </div>
 
         {/* Busca global + filtros rápidos */}
-        <div className="grid gap-2 md:grid-cols-[1fr_220px]">
+        <div className="grid gap-2 md:grid-cols-[1fr_200px_200px]">
           <div className="relative">
             <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
             <Input
@@ -389,6 +389,15 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
               <SelectItem value="all">Todas especialidades</SelectItem>
               {allSpecialties.map((sp) => (
                 <SelectItem key={sp} value={sp}>{labelSpecialty(sp === 'global' ? null : sp)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="h-10"><SelectValue placeholder="Categoria" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas categorias</SelectItem>
+              {Array.from(new Set(items.map((i) => i.resource_type))).sort().map((t) => (
+                <SelectItem key={t} value={t}>{labelType(t)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
