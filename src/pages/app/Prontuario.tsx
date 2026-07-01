@@ -871,13 +871,61 @@ export default function Prontuario() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlTab, navItems]);
 
-  const shouldHoldProntuarioRendering = specialtyLoading || !isSpecialtyResolved;
+  const shouldHoldProntuarioRendering = Boolean(patientId) && !coreProntuarioContextReady;
   const specialtyDisplayName = useSpecialtyDisplayName(clinic?.id, {
     slug: activeSpecialtySlug ?? activeSpecialty?.slug ?? activeSpecialtyKey,
     name: activeSpecialty?.name ?? activeSpecialtyName,
   });
   const resolvedSpecialtyName = specialtyDisplayName || activeSpecialty?.name || activeSpecialtyName || undefined;
   const resolvedSpecialtyId = activeSpecialty?.id ?? activeSpecialtyId;
+
+  const medicalRecordContext = useMemo<MedicalRecordContextValue>(() => {
+    const contextPatient = patient ? {
+      id: patient.id,
+      full_name: patient.full_name,
+      birth_date: patient.birth_date,
+      gender: patient.gender,
+      phone: patient.phone,
+      email: patient.email,
+      cpf: patient.cpf,
+    } : null;
+
+    return {
+      clinicId: clinic?.id ?? null,
+      patientId: patientId ?? null,
+      appointmentId: preferredAppointmentId ?? activeAppointment?.id ?? null,
+      specialtyId: resolvedSpecialtyId ?? null,
+      specialtySlug: activeSpecialtySlug ?? activeSpecialty?.slug ?? activeSpecialtyKey ?? null,
+      specialtyKey: activeSpecialtyKey ?? null,
+      specialtyName: resolvedSpecialtyName ?? null,
+      medicalRecordId: null,
+      patient: contextPatient,
+      isLoading: Boolean(patientId) && !coreProntuarioContextReady,
+      isReady: coreProntuarioContextReady,
+    };
+  }, [
+    activeAppointment?.id,
+    activeSpecialty?.slug,
+    activeSpecialtyKey,
+    activeSpecialtySlug,
+    clinic?.id,
+    coreProntuarioContextReady,
+    patient,
+    patientId,
+    preferredAppointmentId,
+    resolvedSpecialtyId,
+    resolvedSpecialtyName,
+  ]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    console.log("patientId:", medicalRecordContext.patientId);
+    console.log("appointmentId:", medicalRecordContext.appointmentId);
+    console.log("clinicId:", medicalRecordContext.clinicId);
+    console.log("specialty:", medicalRecordContext.specialtySlug);
+    console.log("context:", medicalRecordContext);
+    console.log("selectedPatient:", medicalRecordContext.patient);
+  }, [medicalRecordContext]);
 
   // Handle search result click — focus on the specific record + navigate to its tab
   const handleSearchResultClick = useCallback((result: SearchResult) => {
