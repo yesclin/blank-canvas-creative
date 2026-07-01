@@ -50,6 +50,7 @@ import {
   type NutricaoSummaryData, 
   type NutricaoAlert 
 } from '@/hooks/prontuario/nutricao';
+import { useMedicalRecordContext } from '@/contexts/MedicalRecordContext';
 
 interface VisaoGeralNutricaoBlockProps {
   patient: NutricaoPatientData | null;
@@ -195,7 +196,11 @@ export function VisaoGeralNutricaoBlock({
   canEdit = false,
   onNavigateToModule,
 }: VisaoGeralNutricaoBlockProps) {
-  if (loading) {
+  const medicalRecordContext = useMedicalRecordContext();
+  const overviewPatient = patient ?? (medicalRecordContext.patient as NutricaoPatientData | null);
+  const shouldShowLoading = loading || (medicalRecordContext.isLoading && !!medicalRecordContext.patientId);
+
+  if (shouldShowLoading && !overviewPatient) {
     return (
       <div className="space-y-4">
         <Card>
@@ -214,7 +219,7 @@ export function VisaoGeralNutricaoBlock({
     );
   }
 
-  if (!patient) {
+  if (!overviewPatient) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
@@ -225,8 +230,8 @@ export function VisaoGeralNutricaoBlock({
     );
   }
 
-  const idade = patient.birth_date 
-    ? calculateAgeFromDateOnly(patient.birth_date)
+  const idade = overviewPatient.birth_date 
+    ? calculateAgeFromDateOnly(overviewPatient.birth_date)
     : null;
 
   const diasDesdeUltimaConsulta = summary.ultima_consulta
