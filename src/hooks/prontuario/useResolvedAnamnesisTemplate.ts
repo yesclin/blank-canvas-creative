@@ -58,10 +58,36 @@ export function useResolvedAnamnesisTemplate(
     queryFn: async (): Promise<ResolvedResult | null> => {
       if (!clinic?.id || !specialtyId) return null;
 
+      // Resolve fallback: if active specialty is "other_specialty" (Atendimento Geral /
+      // Outras Especialidades — used to host custom specialties like Quiropraxia),
+      // also include templates from "geral" (Clínica Geral) as fallback.
+      const specialtyIds: string[] = [specialtyId];
+      const { data: currentSpecialty } = await supabase
+        .from("specialties")
+        .select("id, slug, name")
+        .eq("id", specialtyId)
+        .maybeSingle();
+
+      const isCustomSpecialty = currentSpecialty?.slug === "other_specialty";
+      if (isCustomSpecialty) {
+        const { data: geral } = await supabase
+          .from("specialties")
+          .select("id")
+          .eq("slug", "geral")
+          .maybeSingle();
+        if (geral?.id && !specialtyIds.includes(geral.id)) specialtyIds.push(geral.id);
+      }
+
+      console.log("[useResolvedAnamnesisTemplate] clinicId:", clinic.id);
+      console.log("[useResolvedAnamnesisTemplate] specialty atual:", currentSpecialty);
+      console.log("[useResolvedAnamnesisTemplate] specialty slug:", currentSpecialty?.slug);
+      console.log("[useResolvedAnamnesisTemplate] isCustomSpecialty:", isCustomSpecialty);
+      console.log("[useResolvedAnamnesisTemplate] specialtyIds a consultar:", specialtyIds);
+
       const { data: templates, error } = await supabase
         .from("anamnesis_templates")
         .select("id, name, description, specialty_id, procedure_id, is_default, is_system, system_locked, current_version_id, campos")
-        .eq("specialty_id", specialtyId)
+        .in("specialty_id", specialtyIds)
         .eq("is_active", true)
         .eq("archived", false)
         .or(`clinic_id.eq.${clinic.id},clinic_id.is.null`)
@@ -74,7 +100,10 @@ export function useResolvedAnamnesisTemplate(
         return null;
       }
 
+      console.log("[useResolvedAnamnesisTemplate] modelos encontrados:", templates?.length ?? 0, templates);
+
       if (!templates || templates.length === 0) return null;
+
 
       // Build options list
       const allTemplates: TemplateOption[] = templates.map((t) => ({
