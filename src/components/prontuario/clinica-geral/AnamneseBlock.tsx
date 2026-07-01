@@ -215,6 +215,8 @@ export function AnamneseBlock({
   appointmentDate,
   professionalName,
   professionalRegistration,
+  specialtyId,
+  specialtyName,
 }: AnamneseBlockProps) {
   const navigate = useNavigate();
   const [form, setForm] = useState<PrimeiraEntrevistaData>(() => loadFromRecord(currentAnamnese));
