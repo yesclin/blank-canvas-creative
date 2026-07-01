@@ -84,6 +84,7 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
   const [globalSearch, setGlobalSearch] = useState('');
   const [quickFilter, setQuickFilter] = useState<'all' | 'enabled' | 'disabled' | 'padrao' | 'override'>('all');
   const [specialty, setSpecialty] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [reason, setReason] = useState('');
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [preview, setPreview] = useState<Resource | null>(null);
