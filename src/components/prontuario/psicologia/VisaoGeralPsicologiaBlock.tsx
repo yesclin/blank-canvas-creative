@@ -214,7 +214,7 @@ export function VisaoGeralPsicologiaBlock({
               </div>
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Sexo</p>
-                <p className="font-medium">{formatGender(patient.gender)}</p>
+                <p className="font-medium">{formatGender(overviewPatient.gender)}</p>
               </div>
             </div>
 
