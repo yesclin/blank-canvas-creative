@@ -1088,20 +1088,37 @@ export default function Prontuario() {
           );
         }
         // Default: Clínica Geral - Visão Geral
-        return (
-          <VisaoGeralBlock
-            patient={visaoGeralPatient}
-            clinicalData={visaoGeralClinicalData}
-            alerts={visaoGeralAlerts}
-            lastAppointment={visaoGeralLastAppointment}
-            loading={visaoGeralLoading}
-            activeSpecialtyKey={activeSpecialtyKey}
-            activeSpecialtyName={resolvedSpecialtyName}
-            onNavigateToModule={(moduleKey) => {
-              setActiveTab(moduleKey);
-            }}
-          />
-        );
+        {
+          // Fallback: se useVisaoGeralData ainda não retornou paciente (RLS/timing),
+          // use o paciente já carregado por useProntuarioData para evitar o estado
+          // "Selecione um paciente" quando o paciente está aberto no cabeçalho.
+          const fallbackPatient = visaoGeralPatient ?? (patient ? {
+            id: patient.id,
+            full_name: patient.full_name,
+            birth_date: patient.birth_date,
+            gender: patient.gender,
+            phone: (patient as any).phone ?? null,
+            email: (patient as any).email ?? null,
+            cpf: (patient as any).cpf ?? null,
+          } : null);
+          if (import.meta.env.DEV) {
+            console.log("[Prontuario] visao geral -> patientId:", patientId, "visaoGeralPatient:", visaoGeralPatient?.id, "fallbackPatient:", fallbackPatient?.id);
+          }
+          return (
+            <VisaoGeralBlock
+              patient={fallbackPatient}
+              clinicalData={visaoGeralClinicalData}
+              alerts={visaoGeralAlerts}
+              lastAppointment={visaoGeralLastAppointment}
+              loading={visaoGeralLoading && !fallbackPatient}
+              activeSpecialtyKey={activeSpecialtyKey}
+              activeSpecialtyName={resolvedSpecialtyName}
+              onNavigateToModule={(moduleKey) => {
+                setActiveTab(moduleKey);
+              }}
+            />
+          );
+        }
 
       case 'anamnese':
         // Estética has its own dedicated anamnese module — fully decoupled
