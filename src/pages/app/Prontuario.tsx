@@ -108,6 +108,7 @@ import { PatientHeader } from "@/components/prontuario/PatientHeader";
 import { ProntuarioHeader } from "@/components/prontuario/ProntuarioHeader";
 import { ProntuarioSearchBar, type SearchResult } from "@/components/prontuario/ProntuarioSearchBar";
 import { SearchFocusContext, type SearchFocusTarget } from "@/contexts/SearchFocusContext";
+import { MedicalRecordProvider, type MedicalRecordContextValue } from "@/contexts/MedicalRecordContext";
 import { SearchFocusBanner } from "@/components/prontuario/SearchFocusBanner";
 import { LgpdBlockingOverlay } from "@/components/prontuario/LgpdBlockingOverlay";
 import { TeleconsultaContextBar } from "@/components/prontuario/TeleconsultaContextBar";
@@ -284,7 +285,7 @@ export default function Prontuario() {
   // Print & Export
   const { handlePrint, handleExport, printing, exporting } = useProntuarioPrint();
   const { generateConsolidatedPdf, exporting: exportingFiller } = useConsolidatedFillerPdf();
-  const { clinic, getFormattedAddress } = useClinicData();
+  const { clinic, getFormattedAddress, isLoading: clinicLoading } = useClinicData();
 
   // LGPD Enforcement and Feature Flags
   const {
