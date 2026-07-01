@@ -445,6 +445,8 @@ export default function Prontuario() {
     !patientLoading &&
     !loading &&
     !appointmentLoading &&
+    !permLoading &&
+    !lgpdLoading &&
     !specialtyLoading &&
     isSpecialtyResolved;
 
@@ -737,7 +739,7 @@ export default function Prontuario() {
   
   // Visão Geral Fisioterapia Data
   const fisioVisaoGeral = useVisaoGeralFisioterapiaData({ 
-    patientId, 
+    patientId: getContextPatientIdForTab('resumo'), 
     clinicId: clinicIdForFisio || null 
   });
 
