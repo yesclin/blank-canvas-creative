@@ -84,6 +84,7 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
   const [globalSearch, setGlobalSearch] = useState('');
   const [quickFilter, setQuickFilter] = useState<'all' | 'enabled' | 'disabled' | 'padrao' | 'override'>('all');
   const [specialty, setSpecialty] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [reason, setReason] = useState('');
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [preview, setPreview] = useState<Resource | null>(null);
@@ -114,6 +115,7 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
       if (q && !i.title.toLowerCase().includes(q) &&
           !(i.description ?? '').toLowerCase().includes(q)) return false;
       if (specialty !== 'all' && (i.specialty_slug ?? 'global') !== specialty) return false;
+      if (categoryFilter !== 'all' && i.resource_type !== categoryFilter) return false;
       if (quickFilter === 'enabled' && !i.enabled) return false;
       if (quickFilter === 'disabled' && i.enabled) return false;
       if (quickFilter === 'padrao' && i.has_override) return false;
@@ -146,14 +148,21 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
 
   const writeOne = async (r: Resource, enabled: boolean) => {
     if (!reason.trim()) { toast.error('Informe o motivo antes de alterar.'); return; }
-    await supabase.from('clinic_template_overrides').delete()
-      .eq('clinic_id', clinicId).eq('resource_key', r.resource_key);
-    const { error } = await supabase.from('clinic_template_overrides').insert({
+    const payload = {
       clinic_id: clinicId, resource_key: r.resource_key,
       template_id: r.source_id, template_kind: r.resource_type,
       enabled, reason: reason.trim(),
-    });
-    if (error) { console.error(error); toast.error('Erro ao salvar.'); return; }
+    };
+    console.log('[Recursos] Clínica:', clinicId);
+    console.log('[Recursos] Ação:', enabled ? 'liberar' : 'bloquear', 'individual');
+    console.log('[Recursos] Payload:', payload);
+    await supabase.from('clinic_template_overrides').delete()
+      .eq('clinic_id', clinicId).eq('resource_key', r.resource_key);
+    const { error } = await supabase.from('clinic_template_overrides').insert(payload);
+    if (error) {
+      console.error('[Recursos] Erro Supabase:', { message: error.message, details: error.details, code: error.code, hint: error.hint });
+      toast.error(`Erro ao salvar: ${error.message}`); return;
+    }
     await logPlatformAction({
       action: enabled ? 'resource_override.enable' : 'resource_override.disable',
       target_type: 'prontuario_resource', clinic_id: clinicId,
@@ -171,9 +180,11 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
       ? sectionFiltered.filter((i) => selected[i.resource_key])
       : sectionFiltered;
 
-    console.log('[BulkAction] section:', sectionKey, 'enabled:', enabled, 'scope:', scope);
-    console.log('[BulkAction] selectedMap:', selected);
-    console.log('[BulkAction] elegíveis:', list.map((i) => i.resource_key));
+    console.log('[Recursos] Clínica:', clinicId);
+    console.log('[Recursos] Filtro atual:', { globalSearch, specialty, categoryFilter, quickFilter, sectionKey });
+    console.log('[Recursos] Itens visíveis:', sectionFiltered.map((i) => i.resource_key));
+    console.log('[Recursos] Itens selecionados:', Object.keys(selected).filter((k) => selected[k]));
+    console.log('[Recursos] Ação:', enabled ? 'liberar' : 'bloquear', scope);
 
     if (scope === 'selected' && list.length === 0) {
       toast.error('Selecione ao menos um recurso desta categoria.');
@@ -371,7 +382,7 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
         </div>
 
         {/* Busca global + filtros rápidos */}
-        <div className="grid gap-2 md:grid-cols-[1fr_220px]">
+        <div className="grid gap-2 md:grid-cols-[1fr_200px_200px]">
           <div className="relative">
             <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
             <Input
@@ -387,6 +398,15 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
               <SelectItem value="all">Todas especialidades</SelectItem>
               {allSpecialties.map((sp) => (
                 <SelectItem key={sp} value={sp}>{labelSpecialty(sp === 'global' ? null : sp)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="h-10"><SelectValue placeholder="Categoria" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas categorias</SelectItem>
+              {Array.from(new Set(items.map((i) => i.resource_type))).sort().map((t) => (
+                <SelectItem key={t} value={t}>{labelType(t)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
