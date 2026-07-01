@@ -216,12 +216,21 @@ export function AnamneseBlock({
   professionalName,
   professionalRegistration,
 }: AnamneseBlockProps) {
+  const navigate = useNavigate();
   const [form, setForm] = useState<PrimeiraEntrevistaData>(() => loadFromRecord(currentAnamnese));
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+  const [started, setStarted] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSerialized = useRef<string>(JSON.stringify(loadFromRecord(currentAnamnese)));
   const initializedFor = useRef<string | null>(currentAnamnese?.id ?? null);
+
+  const {
+    data: resolvedTemplate,
+    allTemplates,
+    isLoading: templatesLoading,
+  } = useResolvedAnamnesisTemplate(specialtyId ?? null, null);
 
   // Sync when record changes (e.g. after save creates a new version)
   useEffect(() => {
