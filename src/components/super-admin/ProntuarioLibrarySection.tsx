@@ -180,9 +180,11 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
       ? sectionFiltered.filter((i) => selected[i.resource_key])
       : sectionFiltered;
 
-    console.log('[BulkAction] section:', sectionKey, 'enabled:', enabled, 'scope:', scope);
-    console.log('[BulkAction] selectedMap:', selected);
-    console.log('[BulkAction] elegíveis:', list.map((i) => i.resource_key));
+    console.log('[Recursos] Clínica:', clinicId);
+    console.log('[Recursos] Filtro atual:', { globalSearch, specialty, categoryFilter, quickFilter, sectionKey });
+    console.log('[Recursos] Itens visíveis:', sectionFiltered.map((i) => i.resource_key));
+    console.log('[Recursos] Itens selecionados:', Object.keys(selected).filter((k) => selected[k]));
+    console.log('[Recursos] Ação:', enabled ? 'liberar' : 'bloquear', scope);
 
     if (scope === 'selected' && list.length === 0) {
       toast.error('Selecione ao menos um recurso desta categoria.');
