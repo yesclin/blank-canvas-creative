@@ -440,7 +440,7 @@ export default function Prontuario() {
   } = useActiveSpecialty(patientId, preferredAppointmentId);
 
   const [activeTab, setActiveTab] = useState("resumo");
-  const [loadedTabs, setLoadedTabs] = useState<Set<string>>(() => new Set());
+  const [loadedTabs, setLoadedTabs] = useState<Set<string>>(() => new Set(['resumo']));
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const [searchFocus, setSearchFocus] = useState<SearchFocusTarget | null>(null);
   const [consentDialogOpen, setConsentDialogOpen] = useState(false);
@@ -452,7 +452,6 @@ export default function Prontuario() {
   }, [loadedTabs]);
 
   useEffect(() => {
-    if (activeTab === 'resumo') return;
     setLoadedTabs((prev) => {
       if (prev.has(activeTab)) return prev;
       const next = new Set(prev);
@@ -460,6 +459,14 @@ export default function Prontuario() {
       return next;
     });
   }, [activeTab]);
+
+  // Debug: patient identification
+  useEffect(() => {
+    console.log("[Prontuario] patientId route:", patientId);
+    console.log("[Prontuario] clinicId:", clinic?.id);
+    console.log("[Prontuario] appointmentId:", activeAppointment?.id);
+  }, [patientId, clinic?.id, activeAppointment?.id]);
+
 
   // Visão Geral Data - specific for Clínica Geral specialty
   const {
