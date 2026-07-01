@@ -312,7 +312,47 @@ export function AnamneseBlock({
     );
   }
 
-  return (
+  // Template selection gate: don't auto-open a form until the user picks a template
+  // (or if there's only one, allow auto-open). Existing records bypass the gate.
+  const shouldShowSelector =
+    !currentAnamnese &&
+    !started &&
+    !templatesLoading &&
+    (allTemplates.length === 0 || allTemplates.length > 1);
+
+  if (templatesLoading && !currentAnamnese) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-40 w-full" />
+      </div>
+    );
+  }
+
+  if (shouldShowSelector) {
+    return (
+      <AnamneseModelSelector
+        icon={<Stethoscope className="h-10 w-10 text-primary opacity-70" />}
+        emptyTitle="Escolha um modelo de anamnese"
+        emptyDescription={
+          allTemplates.length === 0
+            ? `Nenhum modelo de anamnese está liberado para esta especialidade${specialtyName ? ` (${specialtyName})` : ""}.`
+            : "Selecione um modelo liberado para esta clínica e especialidade para iniciar."
+        }
+        registerLabel="Iniciar Anamnese"
+        resolvedTemplate={resolvedTemplate}
+        allTemplates={allTemplates}
+        isLoading={templatesLoading}
+        selectedTemplateId={selectedTemplateId}
+        onTemplateChange={setSelectedTemplateId}
+        canEdit={canEdit}
+        canManageTemplates={canEdit}
+        onRegister={() => setStarted(true)}
+        onConfigureTemplate={() => navigate("/app/config/prontuario")}
+        specialtyLabel={specialtyName ?? undefined}
+      />
+    );
+  }
+
     <div className="space-y-6">
       {/* Header / meta */}
       <Card className="border-primary/20 bg-primary/5">
