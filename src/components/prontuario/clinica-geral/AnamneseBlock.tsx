@@ -28,6 +28,9 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useResolvedAnamnesisTemplate } from "@/hooks/prontuario/useResolvedAnamnesisTemplate";
+import { AnamneseModelSelector } from "@/components/prontuario/AnamneseModelSelector";
+import { useNavigate } from "react-router-dom";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
