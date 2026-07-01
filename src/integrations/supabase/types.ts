@@ -1975,6 +1975,76 @@ export type Database = {
           },
         ]
       }
+      clinic_resources: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          enabled: boolean
+          id: string
+          parent_specialty_slug: string | null
+          reason: string | null
+          resource_id: string | null
+          resource_key: string
+          resource_type: string
+          specialty_id: string | null
+          specialty_slug: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          parent_specialty_slug?: string | null
+          reason?: string | null
+          resource_id?: string | null
+          resource_key: string
+          resource_type: string
+          specialty_id?: string | null
+          specialty_slug?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          parent_specialty_slug?: string | null
+          reason?: string | null
+          resource_id?: string | null
+          resource_key?: string
+          resource_type?: string
+          specialty_id?: string | null
+          specialty_slug?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_resources_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_effective_features"
+            referencedColumns: ["clinic_id"]
+          },
+          {
+            foreignKeyName: "clinic_resources_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinic_resources_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "public_clinic_booking"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinic_schedule_config: {
         Row: {
           clinic_id: string
@@ -15811,6 +15881,21 @@ export type Database = {
           provider: string
           settings_json: Json
           webhook_url: string
+        }[]
+      }
+      get_clinic_resources: {
+        Args: { _clinic_id: string }
+        Returns: {
+          clinic_id: string
+          enabled: boolean
+          id: string
+          parent_specialty_slug: string
+          resource_id: string
+          resource_key: string
+          resource_type: string
+          specialty_id: string
+          specialty_slug: string
+          updated_at: string
         }[]
       }
       get_my_clinic_id: { Args: never; Returns: string }
