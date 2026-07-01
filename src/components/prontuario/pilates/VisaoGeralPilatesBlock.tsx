@@ -33,6 +33,7 @@ import {
   type PilatesSummaryData, 
   type PilatesAlert 
 } from '@/hooks/prontuario/pilates/useVisaoGeralPilatesData';
+import { useMedicalRecordContext } from '@/contexts/MedicalRecordContext';
 
 interface VisaoGeralPilatesBlockProps {
   patientId: string | null;
@@ -130,8 +131,11 @@ export function VisaoGeralPilatesBlock({
     patientId, 
     clinicId 
   });
+  const medicalRecordContext = useMedicalRecordContext();
+  const overviewPatient = patient ?? (medicalRecordContext.patient as PilatesPatientData | null);
+  const shouldShowLoading = loading || (medicalRecordContext.isLoading && !!medicalRecordContext.patientId);
 
-  if (loading) {
+  if (shouldShowLoading && !overviewPatient) {
     return (
       <div className="space-y-4">
         <Card>
@@ -150,7 +154,7 @@ export function VisaoGeralPilatesBlock({
     );
   }
 
-  if (!patient) {
+  if (!overviewPatient) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
@@ -161,8 +165,8 @@ export function VisaoGeralPilatesBlock({
     );
   }
 
-  const idade = patient.birth_date 
-    ? calculateAgeFromDateOnly(patient.birth_date)
+  const idade = overviewPatient.birth_date 
+    ? calculateAgeFromDateOnly(overviewPatient.birth_date)
     : null;
 
   const diasDesdeUltimaSessao = summary.ultima_sessao
