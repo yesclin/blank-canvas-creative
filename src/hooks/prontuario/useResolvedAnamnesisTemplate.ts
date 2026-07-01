@@ -129,7 +129,7 @@ export function useResolvedAnamnesisTemplate(
 
 
       // Build options list
-      const allTemplates: TemplateOption[] = templates.map((t) => ({
+      const allTemplates: TemplateOption[] = allowed.map((t) => ({
         id: t.id,
         name: t.name,
         description: t.description,
@@ -142,17 +142,17 @@ export function useResolvedAnamnesisTemplate(
 
       // Resolve priority
       let resolved = procedureId
-        ? templates.find((t) => t.procedure_id === procedureId)
+        ? allowed.find((t) => t.procedure_id === procedureId)
         : undefined;
       let resolution: ResolvedTemplate["resolution"] = "procedure";
 
       if (!resolved) {
-        resolved = templates.find((t) => t.is_default);
+        resolved = allowed.find((t) => t.is_default);
         resolution = "default";
       }
 
       if (!resolved) {
-        resolved = templates[0];
+        resolved = allowed[0];
         resolution = "fallback";
       }
 
