@@ -36,6 +36,25 @@ interface ResolvedResult {
   allTemplates: TemplateOption[];
 }
 
+interface EnabledAnamnesisResource {
+  resource_id: string | null;
+  resource_key: string;
+  specialty_id: string | null;
+}
+
+interface AnamnesisTemplateRow {
+  id: string;
+  name: string;
+  description: string | null;
+  specialty_id: string | null;
+  procedure_id: string | null;
+  is_default: boolean;
+  is_system: boolean;
+  system_locked: boolean;
+  current_version_id: string | null;
+  campos: Json;
+}
+
 const ANAMNESIS_RESOURCE_TYPES = ["anamnesis_model", "anamnese"];
 const GENERIC_SPECIALTY_SLUGS = new Set([
   "geral",
@@ -114,7 +133,7 @@ export function useResolvedAnamnesisTemplate(
       }
 
       const enabledTemplateIds = new Set<string>();
-      (enabledRows ?? []).forEach((r: any) => {
+      ((enabledRows ?? []) as EnabledAnamnesisResource[]).forEach((r) => {
         if (r.resource_id) enabledTemplateIds.add(r.resource_id);
         // Fallback: extrai UUID do sufixo do resource_key (tpl:*:<uuid>)
         if (typeof r.resource_key === "string") {
@@ -126,7 +145,7 @@ export function useResolvedAnamnesisTemplate(
       // 2) Se o Superadmin liberou algum modelo para esta clínica,
       //    esses são a fonte. Não usar fallback fixo quando há liberação
       //    manual para a especialidade ativa.
-      let allowed: any[] = [];
+      let allowed: AnamnesisTemplateRow[] = [];
       const hasManualLiberation = (enabledRows?.length ?? 0) > 0;
       if (hasManualLiberation) {
         if (enabledTemplateIds.size === 0) return null;
@@ -140,7 +159,7 @@ export function useResolvedAnamnesisTemplate(
           .order("is_default", { ascending: false })
           .order("name", { ascending: true });
         if (eTplErr) console.error("Error fetching enabled templates:", eTplErr);
-        allowed = enabledTemplates ?? [];
+        allowed = (enabledTemplates ?? []) as AnamnesisTemplateRow[];
       } else {
         // 3) Compatibilidade: nenhuma liberação manual foi feita para esta
         //    clínica/especialidade. Só então permite o fallback legado.
@@ -160,7 +179,7 @@ export function useResolvedAnamnesisTemplate(
           console.error("Error fetching templates for resolution:", error);
           return null;
         }
-        allowed = templates ?? [];
+        allowed = (templates ?? []) as AnamnesisTemplateRow[];
       }
 
       if (allowed.length === 0) return null;
@@ -176,7 +195,7 @@ export function useResolvedAnamnesisTemplate(
         procedure_id: t.procedure_id,
         is_default: t.is_default,
         is_system: t.is_system,
-        system_locked: !!(t as any).system_locked,
+        system_locked: !!t.system_locked,
         current_version_id: t.current_version_id,
       }));
 
@@ -205,7 +224,8 @@ export function useResolvedAnamnesisTemplate(
           .from("anamnesis_template_versions")
           .select("structure, version_number")
           .eq("id", resolved.current_version_id)
-          .single();
+          .limit(1)
+          .maybeSingle();
 
         if (ver) {
           structure = ver.structure;
@@ -263,7 +283,8 @@ export function useResolvedAnamnesisTemplate(
           .from("anamnesis_template_versions")
           .select("structure, version_number")
           .eq("id", full.current_version_id)
-          .single();
+          .limit(1)
+          .maybeSingle();
 
         if (ver) {
           structure = ver.structure;

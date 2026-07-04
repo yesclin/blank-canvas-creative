@@ -25,6 +25,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { logPlatformAction } from '@/lib/superAdminAudit';
 import { cn } from '@/lib/utils';
+import type { Json } from '@/integrations/supabase/types';
 
 interface Resource {
   resource_key: string;
@@ -34,10 +35,14 @@ interface Resource {
   description: string | null;
   source_table: string | null;
   source_id: string | null;
-  preview_payload: any;
+  preview_payload: Json | null;
   enabled: boolean;
   has_override: boolean;
   override_reason: string | null;
+}
+
+interface ClinicResourceAuditRow extends AuditMeta {
+  resource_key: string;
 }
 
 interface AuditMeta {
@@ -199,7 +204,7 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
     if (catalog.error) { console.error(catalog.error); toast.error('Erro ao carregar a biblioteca.'); }
     setItems((catalog.data ?? []) as Resource[]);
     const map: Record<string, AuditMeta> = {};
-    (overrides.data ?? []).forEach((row: any) => {
+    ((overrides.data ?? []) as ClinicResourceAuditRow[]).forEach((row) => {
       map[row.resource_key] = {
         reason: row.reason, updated_at: row.updated_at, updated_by: row.updated_by,
         expires_at: row.expires_at, effective_at: row.effective_at,
