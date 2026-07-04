@@ -71,6 +71,8 @@ export function ProcedureFormDialog({
   const { formData, updateField, resetForm, loadProcedure, isValid } = useProcedureForm();
   const createMutation = useCreateProcedure();
   const updateMutation = useUpdateProcedure();
+  const { isEnabled: isFeatureEnabled } = useClinicEnabledResources(clinic?.id ?? null);
+  const treatmentSessionsEnabled = isFeatureEnabled("medical_records.treatment_sessions");
 
   // Fetch specialties from database
   const { data: specialties = [], isLoading: specialtiesLoading } = useQuery({
