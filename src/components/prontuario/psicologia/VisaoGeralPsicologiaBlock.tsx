@@ -151,6 +151,18 @@ export function VisaoGeralPsicologiaBlock({
   }
 
   if (!overviewPatient) {
+    if (medicalRecordContext.patientId) {
+      // Patient is selected in context but detail data still loading — never show empty state.
+      return (
+        <div className="space-y-4">
+          <Skeleton className="h-32 w-full" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-48 w-full" />
+          </div>
+        </div>
+      );
+    }
     return (
       <Card className="border-dashed">
         <CardContent className="p-8 text-center text-muted-foreground">
