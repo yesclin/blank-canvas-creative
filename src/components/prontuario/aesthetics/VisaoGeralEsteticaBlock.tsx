@@ -157,6 +157,14 @@ export function VisaoGeralEsteticaBlock({
   }
 
   if (!overviewPatient) {
+    if (medicalRecordContext.patientId) {
+      return (
+        <div className="space-y-4">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-48 w-full" />
+        </div>
+      );
+    }
     return (
       <Card>
         <CardContent className="py-12 text-center">

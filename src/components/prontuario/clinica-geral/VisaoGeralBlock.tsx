@@ -167,11 +167,16 @@ export function VisaoGeralBlock({
   const medicalRecordContext = useMedicalRecordContext();
   const contextPatient = medicalRecordContext.patient as PatientBasicData | null;
   const overviewPatient = patient ?? contextPatient;
-  const shouldShowLoading = loading || (medicalRecordContext.isLoading && !!medicalRecordContext.patientId);
-  
+  // A patient is considered "selected" whenever the shared MedicalRecordContext has a patientId.
+  // Only show the empty state when there is truly NO patient in context.
+  const hasSelectedPatient = Boolean(medicalRecordContext.patientId) || Boolean(overviewPatient);
+  const shouldShowLoading = hasSelectedPatient && !overviewPatient
+    ? true
+    : loading || (medicalRecordContext.isLoading && !!medicalRecordContext.patientId);
+
   const activeAlerts = alerts.filter(a => a.is_active);
   const criticalAlerts = activeAlerts.filter(a => a.severity === 'critical');
-  
+
   // Resolve display name for specialty
   const specialtyDisplayName = activeSpecialtyName?.trim() || '';
 
@@ -190,7 +195,7 @@ export function VisaoGeralBlock({
     );
   }
 
-  if (!overviewPatient) {
+  if (!overviewPatient && !hasSelectedPatient) {
     return (
       <Card className="border-dashed">
         <CardContent className="p-8 text-center text-muted-foreground">
@@ -198,6 +203,22 @@ export function VisaoGeralBlock({
           <p>Selecione um paciente para visualizar o resumo clínico</p>
         </CardContent>
       </Card>
+    );
+  }
+
+  if (!overviewPatient) {
+    // Patient exists in context but detailed data still loading — never show empty state.
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Skeleton className="h-28 w-full" />
+          <Skeleton className="h-28 w-full" />
+          <Skeleton className="h-28 w-full" />
+          <Skeleton className="h-28 w-full" />
+          <Skeleton className="h-28 w-full" />
+          <Skeleton className="h-28 w-full" />
+        </div>
+      </div>
     );
   }
 
