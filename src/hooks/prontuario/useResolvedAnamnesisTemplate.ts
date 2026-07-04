@@ -89,10 +89,19 @@ export function useResolvedAnamnesisTemplate(
 
       if (import.meta.env.DEV) {
         const rows = (data ?? []) as EnabledAnamnesisTemplateRow[];
+        const { data: baseSpecialty } = await supabase
+          .from("specialties")
+          .select("id")
+          .eq("clinic_id", clinic.id)
+          .in("slug", ["other_specialty", "outras_especialidades", "atendimento_geral", "custom", "geral"])
+          .order("is_active", { ascending: false })
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
         console.log("[Anamnese][Recursos] consulta de modelos liberados", {
           clinic_id: clinic.id,
           specialty_id_atual: specialtyId,
-          base_specialty_id: "resolvido no RPC get_enabled_anamnesis_templates_for_prontuario",
+          base_specialty_id: baseSpecialty?.id ?? null,
           resource_type_consultado: "anamnesis_model",
           ids_modelos_liberados_encontrados: rows.map((t) => t.id),
           quantidade_modelos_carregados: rows.length,
