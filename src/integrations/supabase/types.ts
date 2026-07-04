@@ -11642,49 +11642,79 @@ export type Database = {
       }
       procedures: {
         Row: {
+          allow_single_sale: boolean
           allows_return: boolean
           clinic_id: string
           created_at: string
+          default_sessions_count: number | null
           description: string | null
           duration_minutes: number
           id: string
           is_active: boolean
           name: string
+          open_package: boolean
+          package_price: number | null
+          package_validity_days: number | null
           price: number | null
+          price_per_session: number | null
+          protocol_notes: string | null
           return_days: number | null
+          session_duration_minutes: number | null
+          session_interval_days: number | null
           specialty: string | null
           specialty_id: string | null
           updated_at: string
+          uses_sessions: boolean
         }
         Insert: {
+          allow_single_sale?: boolean
           allows_return?: boolean
           clinic_id: string
           created_at?: string
+          default_sessions_count?: number | null
           description?: string | null
           duration_minutes?: number
           id?: string
           is_active?: boolean
           name: string
+          open_package?: boolean
+          package_price?: number | null
+          package_validity_days?: number | null
           price?: number | null
+          price_per_session?: number | null
+          protocol_notes?: string | null
           return_days?: number | null
+          session_duration_minutes?: number | null
+          session_interval_days?: number | null
           specialty?: string | null
           specialty_id?: string | null
           updated_at?: string
+          uses_sessions?: boolean
         }
         Update: {
+          allow_single_sale?: boolean
           allows_return?: boolean
           clinic_id?: string
           created_at?: string
+          default_sessions_count?: number | null
           description?: string | null
           duration_minutes?: number
           id?: string
           is_active?: boolean
           name?: string
+          open_package?: boolean
+          package_price?: number | null
+          package_validity_days?: number | null
           price?: number | null
+          price_per_session?: number | null
+          protocol_notes?: string | null
           return_days?: number | null
+          session_duration_minutes?: number | null
+          session_interval_days?: number | null
           specialty?: string | null
           specialty_id?: string | null
           updated_at?: string
+          uses_sessions?: boolean
         }
         Relationships: [
           {
@@ -12609,33 +12639,54 @@ export type Database = {
       recurring_session_entries: {
         Row: {
           appointment_id: string | null
+          clinic_id: string | null
           completed_at: string | null
           created_at: string
+          duration_minutes: number | null
           id: string
           notes: string | null
-          plan_id: string
+          patient_id: string | null
+          plan_id: string | null
+          scheduled_at: string | null
+          session_date: string | null
           session_number: number
           status: string
+          treatment_package_id: string | null
+          updated_at: string
         }
         Insert: {
           appointment_id?: string | null
+          clinic_id?: string | null
           completed_at?: string | null
           created_at?: string
+          duration_minutes?: number | null
           id?: string
           notes?: string | null
-          plan_id: string
+          patient_id?: string | null
+          plan_id?: string | null
+          scheduled_at?: string | null
+          session_date?: string | null
           session_number: number
           status?: string
+          treatment_package_id?: string | null
+          updated_at?: string
         }
         Update: {
           appointment_id?: string | null
+          clinic_id?: string | null
           completed_at?: string | null
           created_at?: string
+          duration_minutes?: number | null
           id?: string
           notes?: string | null
-          plan_id?: string
+          patient_id?: string | null
+          plan_id?: string | null
+          scheduled_at?: string | null
+          session_date?: string | null
           session_number?: number
           status?: string
+          treatment_package_id?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -12646,10 +12697,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "recurring_session_entries_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_effective_features"
+            referencedColumns: ["clinic_id"]
+          },
+          {
+            foreignKeyName: "recurring_session_entries_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_session_entries_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "public_clinic_booking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_session_entries_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "recurring_session_entries_plan_id_fkey"
             columns: ["plan_id"]
             isOneToOne: false
             referencedRelation: "recurring_session_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_session_entries_treatment_package_id_fkey"
+            columns: ["treatment_package_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_packages"
             referencedColumns: ["id"]
           },
         ]
@@ -15289,11 +15375,16 @@ export type Database = {
           id: string
           name: string
           notes: string | null
+          origin: string
           paid_amount: number
           patient_id: string
           payment_method: string | null
           procedure_id: string | null
           professional_id: string | null
+          sale_id: string | null
+          session_interval_days: number | null
+          session_price: number | null
+          specialty_id: string | null
           status: string
           total_amount: number
           total_sessions: number
@@ -15308,11 +15399,16 @@ export type Database = {
           id?: string
           name: string
           notes?: string | null
+          origin?: string
           paid_amount?: number
           patient_id: string
           payment_method?: string | null
           procedure_id?: string | null
           professional_id?: string | null
+          sale_id?: string | null
+          session_interval_days?: number | null
+          session_price?: number | null
+          specialty_id?: string | null
           status?: string
           total_amount: number
           total_sessions?: number
@@ -15327,11 +15423,16 @@ export type Database = {
           id?: string
           name?: string
           notes?: string | null
+          origin?: string
           paid_amount?: number
           patient_id?: string
           payment_method?: string | null
           procedure_id?: string | null
           professional_id?: string | null
+          sale_id?: string | null
+          session_interval_days?: number | null
+          session_price?: number | null
+          specialty_id?: string | null
           status?: string
           total_amount?: number
           total_sessions?: number
@@ -15380,6 +15481,20 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treatment_packages_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treatment_packages_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
             referencedColumns: ["id"]
           },
         ]
