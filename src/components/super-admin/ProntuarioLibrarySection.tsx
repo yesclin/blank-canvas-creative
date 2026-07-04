@@ -1,28 +1,18 @@
 /**
  * Super Admin > Recursos da Clínica > Biblioteca
- * Painel moderno em Accordion (categorias colapsadas), grid de cards,
- * busca global, filtros, ações em massa e Drawer lateral de preview.
+ * Layout unificado: TODOS os departamentos usam o mesmo card
+ * ("Módulos do Sistema" pattern) com Nome + Descrição + Toggle Ativo/Inativo.
+ * Nada de checkbox, seleção múltipla, bulk, override tags ou "Visualizar".
  */
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
-import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
-} from '@/components/ui/sheet';
 import {
   Accordion, AccordionItem, AccordionTrigger, AccordionContent,
 } from '@/components/ui/accordion';
-import {
-  Search, Loader2, Library, Eye, Boxes, Lock, Sparkles, CheckCircle2, XCircle,
-} from 'lucide-react';
+import { Search, Loader2, Library } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { logPlatformAction } from '@/lib/superAdminAudit';
@@ -43,15 +33,22 @@ interface Resource {
 }
 
 type SectionKey =
-  | 'funcionalidades' | 'anamnese' | 'evolucao' | 'plano' | 'documentos' | 'escalas';
+  | 'funcionalidades' | 'anamnese' | 'evolucao' | 'plano' | 'documentos'
+  | 'escalas' | 'procedimentos' | 'especialidades' | 'alertas'
+  | 'anexos' | 'historico';
 
-const SECTIONS: { key: SectionKey; label: string; types: string[]; hint: string }[] = [
-  { key: 'funcionalidades', label: 'Funcionalidades do Prontuário', types: ['aba', 'funcao'], hint: 'Abas e funções nativas (Fotos, Mapa Facial, Antes/Depois, Escalas, etc.).' },
-  { key: 'anamnese',        label: 'Modelos de Anamnese',           types: ['anamnese'],       hint: 'Apenas modelos de anamnese.' },
-  { key: 'evolucao',        label: 'Modelos de Evolução',           types: ['evolution', 'evolucao'], hint: 'Modelos de evolução clínica.' },
-  { key: 'plano',           label: 'Modelos de Plano / Conduta',    types: ['custom_form', 'plano', 'conduta'], hint: 'Modelos de plano terapêutico e conduta.' },
-  { key: 'documentos',      label: 'Modelos de Documentos',         types: ['documento', 'termo', 'receita', 'atestado'], hint: 'Receitas, atestados, termos, declarações.' },
-  { key: 'escalas',         label: 'Escalas Clínicas',              types: ['escala', 'scale'], hint: 'PHQ-9, GAD-7, EVA, Mini Mental, etc.' },
+const SECTIONS: { key: SectionKey; label: string; types: string[] }[] = [
+  { key: 'funcionalidades', label: 'Funcionalidades do Prontuário', types: ['aba', 'funcao'] },
+  { key: 'anamnese',        label: 'Modelos de Anamnese',           types: ['anamnese'] },
+  { key: 'evolucao',        label: 'Modelos de Evolução',           types: ['evolution', 'evolucao'] },
+  { key: 'plano',           label: 'Modelos de Plano / Conduta',    types: ['custom_form', 'plano', 'conduta'] },
+  { key: 'documentos',      label: 'Modelos de Documentos',         types: ['documento', 'termo', 'receita', 'atestado'] },
+  { key: 'escalas',         label: 'Escalas Clínicas',              types: ['escala', 'scale'] },
+  { key: 'procedimentos',   label: 'Procedimentos',                 types: ['procedimento', 'procedure'] },
+  { key: 'especialidades',  label: 'Especialidades',                types: ['especialidade', 'specialty'] },
+  { key: 'alertas',         label: 'Alertas',                       types: ['alerta', 'alert'] },
+  { key: 'anexos',          label: 'Anexos',                        types: ['anexo', 'attachment'] },
+  { key: 'historico',       label: 'Histórico',                     types: ['historico', 'history'] },
 ];
 
 const SPECIALTY_LABEL: Record<string, string> = {
@@ -60,15 +57,7 @@ const SPECIALTY_LABEL: Record<string, string> = {
   pediatrics: 'Pediatria', dermatology: 'Dermatologia', chiropractic: 'Quiropraxia',
   medical_general: 'Clínica Médica', pilates: 'Pilates',
 };
-const TYPE_LABEL: Record<string, string> = {
-  anamnese: 'Anamnese', evolucao: 'Evolução', evolution: 'Evolução',
-  documento: 'Documento', aba: 'Aba', funcao: 'Função',
-  termo: 'Termo', escala: 'Escala', scale: 'Escala',
-  custom_form: 'Plano/Conduta', plano: 'Plano', conduta: 'Conduta',
-  receita: 'Receita', atestado: 'Atestado',
-};
 const labelSpecialty = (s: string | null) => (s ? SPECIALTY_LABEL[s] ?? s : 'Global');
-const labelType = (t: string) => TYPE_LABEL[t] ?? t;
 
 interface Props {
   clinicId: string;
@@ -78,16 +67,46 @@ interface Props {
   modulesSummary?: { total: number; enabled: number };
 }
 
+/**
+ * Card padrão único de recurso — mesmo layout dos "Módulos do Sistema".
+ * Toggle direto no card, sem checkbox / preview / bulk.
+ */
+function ResourceCard({
+  r,
+  onToggle,
+}: {
+  r: Resource;
+  onToggle: (enabled: boolean) => void;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3 rounded-lg border bg-card p-4 shadow-sm transition hover:shadow-md">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <div className="font-semibold text-sm leading-tight truncate">{r.title}</div>
+          <Badge
+            className={cn(
+              'text-[10px] shrink-0',
+              r.enabled
+                ? 'bg-emerald-600 hover:bg-emerald-600 text-white'
+                : 'bg-muted text-muted-foreground hover:bg-muted',
+            )}
+          >
+            {r.enabled ? 'Ativo' : 'Inativo'}
+          </Badge>
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
+          {r.description || labelSpecialty(r.specialty_slug)}
+        </p>
+      </div>
+      <Switch checked={r.enabled} onCheckedChange={onToggle} />
+    </div>
+  );
+}
+
 export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSummary }: Props) {
   const [items, setItems] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(false);
   const [globalSearch, setGlobalSearch] = useState('');
-  const [quickFilter, setQuickFilter] = useState<'all' | 'enabled' | 'disabled' | 'padrao' | 'override'>('all');
-  const [specialty, setSpecialty] = useState<string>('all');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [reason, setReason] = useState('');
-  const [selected, setSelected] = useState<Record<string, boolean>>({});
-  const [preview, setPreview] = useState<Resource | null>(null);
   const [openSections, setOpenSections] = useState<string[]>([]);
 
   const load = async () => {
@@ -98,327 +117,90 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
     });
     if (error) { console.error(error); toast.error('Erro ao carregar a biblioteca.'); }
     setItems((data ?? []) as Resource[]);
-    setSelected({});
     setLoading(false);
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [clinicId]);
 
-  const allSpecialties = useMemo(() => {
-    const s = new Set<string>();
-    items.forEach((i) => s.add(i.specialty_slug ?? 'global'));
-    return Array.from(s).sort();
-  }, [items]);
-
-  const applyFilters = (list: Resource[]) => {
+  const applyFilter = (list: Resource[]) => {
     const q = globalSearch.trim().toLowerCase();
-    return list.filter((i) => {
-      if (q && !i.title.toLowerCase().includes(q) &&
-          !(i.description ?? '').toLowerCase().includes(q)) return false;
-      if (specialty !== 'all' && (i.specialty_slug ?? 'global') !== specialty) return false;
-      if (categoryFilter !== 'all' && i.resource_type !== categoryFilter) return false;
-      if (quickFilter === 'enabled' && !i.enabled) return false;
-      if (quickFilter === 'disabled' && i.enabled) return false;
-      if (quickFilter === 'padrao' && i.has_override) return false;
-      if (quickFilter === 'override' && !i.has_override) return false;
-      return true;
-    });
+    if (!q) return list;
+    return list.filter((i) =>
+      i.title.toLowerCase().includes(q) ||
+      (i.description ?? '').toLowerCase().includes(q),
+    );
   };
 
-  // Auto-expande seções com resultado quando busca global está ativa.
   useEffect(() => {
     if (!globalSearch.trim()) return;
     const matches = SECTIONS
-      .filter((s) => applyFilters(items.filter((i) => s.types.includes(i.resource_type))).length > 0)
+      .filter((s) => applyFilter(items.filter((i) => s.types.includes(i.resource_type))).length > 0)
       .map((s) => s.key);
     setOpenSections((prev) => Array.from(new Set([...prev, ...matches])));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [globalSearch]);
 
-  // Header summary
-  const summary = useMemo(() => {
-    const functionalityTypes = SECTIONS.find((s) => s.key === 'funcionalidades')!.types;
-    return {
-      total: items.length,
-      enabled: items.filter((i) => i.enabled).length,
-      disabled: items.filter((i) => !i.enabled).length,
-      functionalities: items.filter((i) => functionalityTypes.includes(i.resource_type)).length,
-      templates: items.filter((i) => !functionalityTypes.includes(i.resource_type)).length,
-    };
-  }, [items]);
-
-  const assertClinic = (): boolean => {
+  const toggleResource = async (r: Resource, enabled: boolean) => {
     if (!clinicId) {
       toast.error('Selecione uma clínica antes de alterar recursos.');
-      return false;
+      return;
     }
-    return true;
-  };
-
-  const buildRow = (r: Resource, enabled: boolean) => ({
-    clinic_id: clinicId,
-    resource_type: r.resource_type,
-    resource_key: r.resource_key,
-    resource_id: r.source_id,
-    specialty_slug: r.specialty_slug,
-    enabled,
-    reason: reason.trim() || null,
-  });
-
-  const writeOne = async (r: Resource, enabled: boolean) => {
-    if (!assertClinic()) return;
-    if (!reason.trim()) { toast.error('Informe o motivo antes de alterar.'); return; }
-    const row = buildRow(r, enabled);
-    console.log('[Recursos] upsert clinic_resources:', row);
+    // Optimistic update
+    setItems((prev) => prev.map((it) =>
+      it.resource_key === r.resource_key ? { ...it, enabled, has_override: true } : it,
+    ));
     const { error } = await supabase
       .from('clinic_resources')
-      .upsert(row, { onConflict: 'clinic_id,resource_type,resource_key' });
+      .upsert({
+        clinic_id: clinicId,
+        resource_type: r.resource_type,
+        resource_key: r.resource_key,
+        resource_id: r.source_id,
+        specialty_slug: r.specialty_slug,
+        enabled,
+        reason: null,
+      }, { onConflict: 'clinic_id,resource_type,resource_key' });
     if (error) {
       console.error('[Recursos] erro:', error);
-      toast.error(`Erro ao salvar: ${error.message}`); return;
+      toast.error(`Erro ao salvar: ${error.message}`);
+      load();
+      return;
     }
     await logPlatformAction({
       action: enabled ? 'clinic_resource.enable' : 'clinic_resource.disable',
       target_type: 'clinic_resource', clinic_id: clinicId,
-      metadata: { resource_key: r.resource_key, resource_type: r.resource_type, reason: reason.trim() },
+      metadata: { resource_key: r.resource_key, resource_type: r.resource_type },
     });
-    toast.success(enabled ? 'Recurso liberado para esta clínica.' : 'Recurso bloqueado para esta clínica.');
-    load();
+    toast.success(enabled ? 'Recurso ativado.' : 'Recurso inativado.');
   };
 
-  const bulkSection = async (sectionKey: SectionKey, enabled: boolean, scope: 'filtered' | 'selected') => {
-    if (!assertClinic()) return;
-    if (!reason.trim()) { toast.error('Informe o motivo antes de alterar em massa.'); return; }
-    const def = SECTIONS.find((s) => s.key === sectionKey)!;
-    const sectionFiltered = applyFilters(items.filter((i) => def.types.includes(i.resource_type)));
-    const list = scope === 'selected'
-      ? sectionFiltered.filter((i) => selected[i.resource_key])
-      : sectionFiltered;
-
-    if (scope === 'selected' && list.length === 0) {
-      toast.error('Selecione ao menos um recurso desta categoria.'); return;
-    }
-    if (list.length === 0) { toast.error('Nenhum recurso elegível.'); return; }
-
-    const rows = list.map((r) => buildRow(r, enabled));
-    console.log('[Recursos] bulk upsert clinic_resources:', { clinicId, count: rows.length, scope, sectionKey });
-
-    const { error } = await supabase
-      .from('clinic_resources')
-      .upsert(rows, { onConflict: 'clinic_id,resource_type,resource_key' });
-    if (error) {
-      console.error('[Recursos] bulk erro:', error);
-      toast.error(`Erro ao salvar: ${error.message}${error.hint ? ` (${error.hint})` : ''}`);
-      return;
-    }
-
-    await logPlatformAction({
-      action: enabled ? 'clinic_resource.bulk_enable' : 'clinic_resource.bulk_disable',
-      target_type: 'clinic_resource', clinic_id: clinicId,
-      metadata: { count: rows.length, section: sectionKey, scope, reason: reason.trim() },
+  const sectionCounts = useMemo(() => {
+    const map: Record<string, { total: number; enabled: number }> = {};
+    SECTIONS.forEach((s) => {
+      const list = items.filter((i) => s.types.includes(i.resource_type));
+      map[s.key] = { total: list.length, enabled: list.filter((i) => i.enabled).length };
     });
-    toast.success(
-      enabled
-        ? `${rows.length} recurso(s) liberado(s) para esta clínica.`
-        : `${rows.length} recurso(s) bloqueado(s) para esta clínica.`,
-    );
-    if (scope === 'selected') {
-      setSelected((prev) => {
-        const next = { ...prev };
-        rows.forEach((r) => { delete next[r.resource_key]; });
-        return next;
-      });
-    }
-    load();
-  };
-
-  const resetSection = async (sectionKey: SectionKey) => {
-    if (!assertClinic()) return;
-    const def = SECTIONS.find((s) => s.key === sectionKey)!;
-    const sectionFiltered = applyFilters(items.filter((i) => def.types.includes(i.resource_type)));
-    const list = sectionFiltered.filter((i) => selected[i.resource_key]);
-    const keys = (list.length > 0 ? list : sectionFiltered).map((i) => i.resource_key);
-    if (keys.length === 0) { toast.error('Nenhum recurso para restaurar.'); return; }
-    const { error } = await supabase.from('clinic_resources').delete()
-      .eq('clinic_id', clinicId).in('resource_key', keys);
-    if (error) { toast.error(`Erro ao restaurar: ${error.message}`); return; }
-    await logPlatformAction({
-      action: 'clinic_resource.reset', target_type: 'clinic_resource',
-      clinic_id: clinicId, metadata: { count: keys.length, section: sectionKey },
-    });
-    toast.success('Recursos restaurados ao padrão (removidos desta clínica).');
-    load();
-  };
-
-
-  const ResourceCard = ({ r }: { r: Resource }) => {
-    const isPadrao = !r.has_override;
-    return (
-      <div className="group relative flex flex-col rounded-lg border bg-card p-4 text-sm shadow-sm transition hover:shadow-md hover:border-primary/40">
-        <div className="absolute top-3 right-3 flex items-center gap-2">
-          <Checkbox
-            checked={!!selected[r.resource_key]}
-            onCheckedChange={(v) => setSelected((s) => ({ ...s, [r.resource_key]: Boolean(v) }))}
-          />
-        </div>
-        <div className="pr-10">
-          <div className="font-semibold leading-tight line-clamp-2">{r.title}</div>
-          <div className="mt-2 flex flex-wrap gap-1">
-            <Badge variant="secondary" className="text-[10px]">{labelSpecialty(r.specialty_slug)}</Badge>
-            <Badge variant="outline" className="text-[10px]">{labelType(r.resource_type)}</Badge>
-            {isPadrao ? (
-              <Badge className="bg-slate-500 hover:bg-slate-500 text-white text-[10px]">Padrão</Badge>
-            ) : (
-              <Badge className="bg-violet-600 hover:bg-violet-600 text-white text-[10px]">Override</Badge>
-            )}
-          </div>
-          {r.description && (
-            <p className="mt-2 text-xs text-muted-foreground line-clamp-2">{r.description}</p>
-          )}
-        </div>
-        <div className="mt-3 flex items-center justify-between border-t pt-3">
-          <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setPreview(r)}>
-            <Eye className="h-3.5 w-3.5 mr-1" /> Visualizar
-          </Button>
-          <div className="flex items-center gap-2">
-            <span className={cn('text-[11px] font-medium',
-              r.enabled ? 'text-emerald-600' : 'text-muted-foreground')}>
-              {r.enabled ? 'Ativado' : 'Inativado'}
-            </span>
-            <Switch checked={r.enabled} onCheckedChange={(v) => writeOne(r, v)} />
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderSection = (def: typeof SECTIONS[number]) => {
-    const sectionItems = items.filter((i) => def.types.includes(i.resource_type));
-    const filtered = applyFilters(sectionItems);
-    const selectedInSection = filtered.filter((i) => selected[i.resource_key]).length;
-    const hasSelection = selectedInSection > 0;
-    return (
-      <AccordionContent className="px-4 pb-4 pt-2">
-        <p className="text-xs text-muted-foreground mb-3">{def.hint}</p>
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          <Badge variant="secondary" className="text-[10px]">
-            {selectedInSection} selecionado(s) de {filtered.length} visível(is)
-          </Badge>
-          <Button size="sm" variant="outline" onClick={() => bulkSection(def.key, true, 'filtered')} disabled={filtered.length === 0}>Liberar todos visíveis</Button>
-          <Button size="sm" variant="outline" onClick={() => bulkSection(def.key, false, 'filtered')} disabled={filtered.length === 0}>Bloquear todos visíveis</Button>
-          <Button size="sm" variant="outline" onClick={() => bulkSection(def.key, true, 'selected')} disabled={!hasSelection}>Liberar selecionados</Button>
-          <Button size="sm" variant="outline" onClick={() => bulkSection(def.key, false, 'selected')} disabled={!hasSelection}>Bloquear selecionados</Button>
-          <Button size="sm" variant="ghost" onClick={() => resetSection(def.key)} disabled={filtered.length === 0}>Restaurar padrão</Button>
-          {hasSelection && (
-            <Button size="sm" variant="ghost" onClick={() => {
-              const next = { ...selected };
-              filtered.forEach((i) => { delete next[i.resource_key]; });
-              setSelected(next);
-            }}>Limpar seleção</Button>
-          )}
-        </div>
-        {filtered.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">
-            Nenhum recurso encontrado com os filtros atuais.
-          </p>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filtered.map((r) => <ResourceCard key={r.resource_key} r={r} />)}
-          </div>
-        )}
-      </AccordionContent>
-    );
-  };
-
-  const SummaryCard = ({ icon: Icon, label, value, tone }: {
-    icon: typeof Boxes; label: string; value: number | string; tone?: string;
-  }) => (
-    <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
-      <div className={cn('flex h-9 w-9 items-center justify-center rounded-md', tone ?? 'bg-muted')}>
-        <Icon className="h-4 w-4" />
-      </div>
-      <div>
-        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
-        <div className="text-lg font-semibold leading-none">{value}</div>
-      </div>
-    </div>
-  );
-
-  const quickFilters: { key: typeof quickFilter; label: string }[] = [
-    { key: 'all', label: 'Todos' },
-    { key: 'enabled', label: 'Liberados' },
-    { key: 'disabled', label: 'Bloqueados' },
-    { key: 'padrao', label: 'Padrão' },
-    { key: 'override', label: 'Override' },
-  ];
+    return map;
+  }, [items]);
 
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
-          <Library className="h-4 w-4" /> Catálogo de Recursos da Clínica
+          <Library className="h-4 w-4" /> Recursos da Clínica
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Resumo */}
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-          <SummaryCard icon={Boxes} label="Disponíveis" value={summary.total + (modulesSummary?.total ?? 0)} />
-          <SummaryCard icon={CheckCircle2} label="Liberados" value={summary.enabled + (modulesSummary?.enabled ?? 0)} tone="bg-emerald-100 text-emerald-700" />
-          <SummaryCard icon={XCircle} label="Bloqueados" value={summary.disabled + ((modulesSummary?.total ?? 0) - (modulesSummary?.enabled ?? 0))} tone="bg-rose-100 text-rose-700" />
-          <SummaryCard icon={Sparkles} label="Modelos" value={summary.templates} tone="bg-violet-100 text-violet-700" />
-          <SummaryCard icon={Lock} label="Funcionalidades" value={summary.functionalities} tone="bg-sky-100 text-sky-700" />
+        {/* Busca global */}
+        <div className="relative">
+          <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
+          <Input
+            className="pl-9 h-10"
+            placeholder="Pesquisar em todos os departamentos..."
+            value={globalSearch}
+            onChange={(e) => setGlobalSearch(e.target.value)}
+          />
         </div>
 
-        {/* Busca global + filtros rápidos */}
-        <div className="grid gap-2 md:grid-cols-[1fr_200px_200px]">
-          <div className="relative">
-            <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
-            <Input
-              className="pl-9 h-10"
-              placeholder="Pesquisar em todas as categorias..."
-              value={globalSearch}
-              onChange={(e) => setGlobalSearch(e.target.value)}
-            />
-          </div>
-          <Select value={specialty} onValueChange={setSpecialty}>
-            <SelectTrigger className="h-10"><SelectValue placeholder="Especialidade" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas especialidades</SelectItem>
-              {allSpecialties.map((sp) => (
-                <SelectItem key={sp} value={sp}>{labelSpecialty(sp === 'global' ? null : sp)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="h-10"><SelectValue placeholder="Categoria" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas categorias</SelectItem>
-              {Array.from(new Set(items.map((i) => i.resource_type))).sort().map((t) => (
-                <SelectItem key={t} value={t}>{labelType(t)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {quickFilters.map((f) => (
-            <Button
-              key={f.key}
-              size="sm"
-              variant={quickFilter === f.key ? 'default' : 'outline'}
-              className="h-7 px-3 text-xs"
-              onClick={() => setQuickFilter(f.key)}
-            >{f.label}</Button>
-          ))}
-        </div>
-
-        {/* Motivo obrigatório */}
-        <Textarea
-          rows={1}
-          placeholder="Motivo (obrigatório para qualquer alteração)..."
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-        />
-
-        {/* Accordion único de categorias (colapsado por padrão) */}
         {loading ? (
           <div className="flex justify-center p-10"><Loader2 className="h-5 w-5 animate-spin" /></div>
         ) : (
@@ -439,69 +221,42 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
 
             {SECTIONS.map((def) => {
               const sectionItems = items.filter((i) => def.types.includes(i.resource_type));
-              const filtered = applyFilters(sectionItems);
+              const filtered = applyFilter(sectionItems);
+              const counts = sectionCounts[def.key];
               return (
                 <AccordionItem key={def.key} value={def.key} className="border rounded-lg bg-background">
                   <AccordionTrigger className="px-4 hover:no-underline">
                     <div className="flex flex-1 items-center justify-between pr-2">
                       <span className="font-semibold text-sm">{def.label}</span>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-[10px]">{filtered.length} de {sectionItems.length}</Badge>
-                      </div>
+                      <Badge variant="secondary" className="text-[10px]">
+                        {counts.enabled}/{counts.total} ativos
+                      </Badge>
                     </div>
                   </AccordionTrigger>
-                  {renderSection(def)}
+                  <AccordionContent className="px-4 pb-4 pt-2">
+                    {filtered.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-8">
+                        {sectionItems.length === 0
+                          ? 'Nenhum recurso disponível neste departamento.'
+                          : 'Nenhum resultado para a busca.'}
+                      </p>
+                    ) : (
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {filtered.map((r) => (
+                          <ResourceCard
+                            key={r.resource_key}
+                            r={r}
+                            onToggle={(v) => toggleResource(r, v)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </AccordionContent>
                 </AccordionItem>
               );
             })}
           </Accordion>
         )}
-
-        {/* Drawer lateral de preview */}
-        <Sheet open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
-          <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
-            <SheetHeader>
-              <SheetTitle>{preview?.title}</SheetTitle>
-              <SheetDescription>
-                {labelSpecialty(preview?.specialty_slug ?? null)} • {labelType(preview?.resource_type ?? '')}
-              </SheetDescription>
-            </SheetHeader>
-            <div className="space-y-4 mt-4 text-sm">
-              {preview?.description && (
-                <div>
-                  <div className="text-xs font-semibold text-muted-foreground mb-1">Descrição</div>
-                  <p>{preview.description}</p>
-                </div>
-              )}
-              <div>
-                <div className="text-xs font-semibold text-muted-foreground mb-1">Status</div>
-                <Badge className={preview?.enabled ? 'bg-emerald-600 hover:bg-emerald-600' : 'bg-rose-600 hover:bg-rose-600'}>
-                  {preview?.enabled ? 'Liberado' : 'Bloqueado'}
-                </Badge>
-              </div>
-              <div>
-                <div className="text-xs font-semibold text-muted-foreground mb-1">Prévia / Campos</div>
-                <pre className="rounded border bg-muted/30 p-3 whitespace-pre-wrap break-words text-xs max-h-80 overflow-auto">
-{JSON.stringify(preview?.preview_payload ?? { info: 'Sem prévia estruturada.' }, null, 2)}
-                </pre>
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Identificador: <code>{preview?.resource_key}</code>
-              </div>
-            </div>
-            {preview && (
-              <SheetFooter className="mt-6">
-                <Button
-                  variant="outline"
-                  onClick={() => { writeOne(preview, false); setPreview(null); }}
-                >Bloquear</Button>
-                <Button
-                  onClick={() => { writeOne(preview, true); setPreview(null); }}
-                >Liberar</Button>
-              </SheetFooter>
-            )}
-          </SheetContent>
-        </Sheet>
       </CardContent>
     </Card>
   );
