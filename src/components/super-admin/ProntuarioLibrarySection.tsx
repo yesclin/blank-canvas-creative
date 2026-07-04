@@ -329,6 +329,19 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
     const { data: userRes } = await supabase.auth.getUser();
     const userId = userRes.user?.id ?? null;
 
+    if (import.meta.env.DEV && normalizedResourceType === 'anamnesis_model') {
+      console.log('[Recursos][Anamnese] salvando liberação manual', {
+        clinic_id: clinicId,
+        specialty_id_atual: specialtyId,
+        base_specialty_id: specialtyId,
+        resource_type_consultado: normalizedResourceType,
+        ids_dos_modelos_liberados_encontrados: resourceId ? [resourceId] : [],
+        quantidade_de_modelos_carregados: resourceId ? 1 : 0,
+        resource_key: r.resource_key,
+        enabled: nextEnabled,
+      });
+    }
+
     const { error } = await supabase
       .from('clinic_resources')
       .upsert({
