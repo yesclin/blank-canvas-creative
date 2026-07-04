@@ -249,9 +249,8 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
 
     const { data, error } = await supabase
       .from('specialties')
-      .select('id, slug')
-      .eq('clinic_id', clinicId)
-      .eq('is_active', true);
+      .select('id, slug, is_active')
+      .eq('clinic_id', clinicId);
 
     if (error) {
       console.error('[Recursos] erro ao resolver especialidade:', error);
@@ -260,14 +259,41 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
 
     const specialties = data ?? [];
     const direct = specialties.find((s) => s.slug === r.specialty_slug);
-    if (direct?.id) return direct.id;
+    if (direct?.id) {
+      // Reativar se estiver inativa (Super Admin está criando o vínculo)
+      if (!direct.is_active) {
+        await supabase.from('specialties').update({ is_active: true }).eq('id', direct.id);
+      }
+      return direct.id;
+    }
 
     if (ANAMNESIS_RESOURCE_TYPES.has(r.resource_type) && GENERIC_SPECIALTY_SLUGS.has(r.specialty_slug)) {
       const generic = specialties.find((s) => GENERIC_SPECIALTY_SLUGS.has(s.slug ?? ''));
-      if (generic?.id) return generic.id;
+      if (generic?.id) {
+        if (!generic.is_active) {
+          await supabase.from('specialties').update({ is_active: true }).eq('id', generic.id);
+        }
+        return generic.id;
+      }
     }
 
-    return null;
+    // Auto-vincular: criar a especialidade nesta clínica
+    const { data: created, error: insertError } = await supabase
+      .from('specialties')
+      .insert({
+        clinic_id: clinicId,
+        name: labelSpecialty(r.specialty_slug) || r.specialty_slug,
+        slug: r.specialty_slug,
+        is_active: true,
+      })
+      .select('id')
+      .maybeSingle();
+
+    if (insertError) {
+      console.error('[Recursos] erro ao criar especialidade:', insertError);
+      return null;
+    }
+    return created?.id ?? null;
   };
 
   const confirmChange = async () => {
@@ -278,11 +304,8 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
     const previous = r.enabled;
     const normalizedResourceType = normalizeResourceType(r.resource_type);
     const specialtyId = await resolveClinicSpecialtyId(r);
-    if (normalizedResourceType === 'anamnesis_model' && !specialtyId) {
-      toast.error('Este modelo pertence a uma especialidade que não está ativa nesta clínica.');
-      setSaving(false);
-      return;
-    }
+    // Super Admin pode liberar mesmo sem especialidade vinculada; não bloquear.
+
     const { data: userRes } = await supabase.auth.getUser();
     const userId = userRes.user?.id ?? null;
 
