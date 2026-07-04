@@ -1979,7 +1979,9 @@ export type Database = {
         Row: {
           clinic_id: string
           created_at: string
+          effective_at: string
           enabled: boolean
+          expires_at: string | null
           id: string
           parent_specialty_slug: string | null
           reason: string | null
@@ -1994,7 +1996,9 @@ export type Database = {
         Insert: {
           clinic_id: string
           created_at?: string
+          effective_at?: string
           enabled?: boolean
+          expires_at?: string | null
           id?: string
           parent_specialty_slug?: string | null
           reason?: string | null
@@ -2009,7 +2013,9 @@ export type Database = {
         Update: {
           clinic_id?: string
           created_at?: string
+          effective_at?: string
           enabled?: boolean
+          expires_at?: string | null
           id?: string
           parent_specialty_slug?: string | null
           reason?: string | null
