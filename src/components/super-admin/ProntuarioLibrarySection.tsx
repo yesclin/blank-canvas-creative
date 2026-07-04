@@ -48,6 +48,19 @@ interface AuditMeta {
   effective_at: string | null;
 }
 
+const ANAMNESIS_RESOURCE_TYPES = new Set(['anamnese', 'anamnesis_model']);
+const GENERIC_SPECIALTY_SLUGS = new Set([
+  'geral',
+  'other_specialty',
+  'outras_especialidades',
+  'atendimento_geral',
+  'custom',
+]);
+
+const normalizeResourceType = (type: string) => (
+  ANAMNESIS_RESOURCE_TYPES.has(type) ? 'anamnesis_model' : type
+);
+
 type SectionKey =
   | 'funcionalidades' | 'anamnese' | 'evolucao' | 'plano' | 'documentos'
   | 'escalas' | 'procedimentos' | 'especialidades' | 'alertas'
@@ -55,7 +68,7 @@ type SectionKey =
 
 const SECTIONS: { key: SectionKey; label: string; types: string[] }[] = [
   { key: 'funcionalidades', label: 'Funcionalidades do Prontuário', types: ['aba', 'funcao'] },
-  { key: 'anamnese',        label: 'Modelos de Anamnese',           types: ['anamnese'] },
+  { key: 'anamnese',        label: 'Modelos de Anamnese',           types: ['anamnese', 'anamnesis_model'] },
   { key: 'evolucao',        label: 'Modelos de Evolução',           types: ['evolution', 'evolucao'] },
   { key: 'plano',           label: 'Modelos de Plano / Conduta',    types: ['custom_form', 'plano', 'conduta'] },
   { key: 'documentos',      label: 'Modelos de Documentos',         types: ['documento', 'termo', 'receita', 'atestado'] },
@@ -226,12 +239,40 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
     setExpiresAt('');
   };
 
+  const resolveClinicSpecialtyId = async (r: Resource): Promise<string | null> => {
+    if (!r.specialty_slug) return null;
+
+    const { data, error } = await supabase
+      .from('specialties')
+      .select('id, slug')
+      .eq('clinic_id', clinicId)
+      .eq('is_active', true);
+
+    if (error) {
+      console.error('[Recursos] erro ao resolver especialidade:', error);
+      return null;
+    }
+
+    const specialties = data ?? [];
+    const direct = specialties.find((s) => s.slug === r.specialty_slug);
+    if (direct?.id) return direct.id;
+
+    if (ANAMNESIS_RESOURCE_TYPES.has(r.resource_type) && GENERIC_SPECIALTY_SLUGS.has(r.specialty_slug)) {
+      const generic = specialties.find((s) => GENERIC_SPECIALTY_SLUGS.has(s.slug ?? ''));
+      if (generic?.id) return generic.id;
+    }
+
+    return null;
+  };
+
   const confirmChange = async () => {
     if (!pending) return;
     if (!reason.trim()) { toast.error('Informe o motivo da alteração.'); return; }
     setSaving(true);
     const { resource: r, nextEnabled } = pending;
     const previous = r.enabled;
+    const normalizedResourceType = normalizeResourceType(r.resource_type);
+    const specialtyId = await resolveClinicSpecialtyId(r);
     const { data: userRes } = await supabase.auth.getUser();
     const userId = userRes.user?.id ?? null;
 
@@ -239,9 +280,10 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
       .from('clinic_resources')
       .upsert({
         clinic_id: clinicId,
-        resource_type: r.resource_type,
+        resource_type: normalizedResourceType,
         resource_key: r.resource_key,
         resource_id: r.source_id,
+        specialty_id: specialtyId,
         specialty_slug: r.specialty_slug,
         enabled: nextEnabled,
         reason: reason.trim(),
@@ -263,8 +305,9 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
       clinic_id: clinicId,
       metadata: {
         resource_key: r.resource_key,
-        resource_type: r.resource_type,
+        resource_type: normalizedResourceType,
         resource_id: r.source_id,
+        specialty_id: specialtyId,
         specialty_slug: r.specialty_slug,
         previous_status: previous ? 'active' : 'inactive',
         new_status: nextEnabled ? 'active' : 'inactive',
