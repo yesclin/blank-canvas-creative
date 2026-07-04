@@ -19,6 +19,17 @@ export interface Procedure {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  // Sessions / package
+  uses_sessions?: boolean;
+  default_sessions_count?: number | null;
+  session_interval_days?: number | null;
+  session_duration_minutes?: number | null;
+  package_price?: number | null;
+  price_per_session?: number | null;
+  open_package?: boolean;
+  allow_single_sale?: boolean;
+  package_validity_days?: number | null;
+  protocol_notes?: string | null;
 }
 
 export interface ProcedureFormData {
@@ -30,6 +41,17 @@ export interface ProcedureFormData {
   price?: number;
   allows_return: boolean;
   return_days?: number;
+  // Sessions / package
+  uses_sessions?: boolean;
+  default_sessions_count?: number | null;
+  session_interval_days?: number | null;
+  session_duration_minutes?: number | null;
+  package_price?: number | null;
+  price_per_session?: number | null;
+  open_package?: boolean;
+  allow_single_sale?: boolean;
+  package_validity_days?: number | null;
+  protocol_notes?: string | null;
 }
 
 // Fetch all procedures (including inactive for admin view)
