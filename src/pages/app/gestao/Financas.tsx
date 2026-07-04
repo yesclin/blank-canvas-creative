@@ -62,6 +62,8 @@ import { getTypeLabel } from "@/utils/financeEnumMapper";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MarginAlertSettings } from "@/components/config/MarginAlertSettings";
+import { FinanceDashboard } from "@/components/financeiro/FinanceDashboard";
+
 import { ProductSaleSelector, type SelectedProduct } from "@/components/gestao/ProductSaleSelector";
 import { AppointmentSaleSelector } from "@/components/gestao/AppointmentSaleSelector";
 import { useCreateSale } from "@/hooks/useSales";
