@@ -16118,6 +16118,14 @@ export type Database = {
         Args: { p_clinic_id: string; p_user_id: string }
         Returns: undefined
       }
+      resolve_clinic_resource_specialty_id: {
+        Args: {
+          p_clinic_id: string
+          p_resource_specialty_slug: string
+          p_resource_type: string
+        }
+        Returns: string
+      }
       restore_system_anamnesis_templates: {
         Args: { p_clinic_id: string; p_specialty_id?: string }
         Returns: number
