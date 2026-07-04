@@ -444,13 +444,19 @@ export default function Financas() {
       </div>
 
       {/* Main Tabs */}
-      <Tabs defaultValue="transactions" className="space-y-4">
+      <Tabs defaultValue="dashboard" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="transactions">Movimentações</TabsTrigger>
           <TabsTrigger value="packages">Pacotes</TabsTrigger>
           <TabsTrigger value="categories">Categorias</TabsTrigger>
           <TabsTrigger value="settings">Configurações</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="dashboard" className="space-y-4">
+          <FinanceDashboard />
+        </TabsContent>
+
 
         {/* Transactions Tab */}
         <TabsContent value="transactions" className="space-y-4">
