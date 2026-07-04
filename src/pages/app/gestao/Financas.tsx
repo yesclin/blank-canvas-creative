@@ -62,6 +62,8 @@ import { getTypeLabel } from "@/utils/financeEnumMapper";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MarginAlertSettings } from "@/components/config/MarginAlertSettings";
+import { FinanceDashboard } from "@/components/financeiro/FinanceDashboard";
+
 import { ProductSaleSelector, type SelectedProduct } from "@/components/gestao/ProductSaleSelector";
 import { AppointmentSaleSelector } from "@/components/gestao/AppointmentSaleSelector";
 import { useCreateSale } from "@/hooks/useSales";
@@ -444,13 +446,19 @@ export default function Financas() {
       </div>
 
       {/* Main Tabs */}
-      <Tabs defaultValue="transactions" className="space-y-4">
+      <Tabs defaultValue="dashboard" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="transactions">Movimentações</TabsTrigger>
           <TabsTrigger value="packages">Pacotes</TabsTrigger>
           <TabsTrigger value="categories">Categorias</TabsTrigger>
           <TabsTrigger value="settings">Configurações</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="dashboard" className="space-y-4">
+          <FinanceDashboard />
+        </TabsContent>
+
 
         {/* Transactions Tab */}
         <TabsContent value="transactions" className="space-y-4">
