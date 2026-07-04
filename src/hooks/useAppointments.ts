@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { usePlanLimitGate } from "@/hooks/usePlanLimitGate";
 import { getCachedClinicContext } from "@/hooks/useClinicContext";
+import { ensureAppointmentCharge, cancelAppointmentCharges } from "@/services/finance/appointmentCharges";
 
 export type AppointmentStatus = 
   | "nao_confirmado"
@@ -203,6 +204,11 @@ export function useCreateAppointment() {
         .single();
       
       if (error) throw error;
+
+      // Fase 3 — gera cobrança pendente vinculada (dedup por appointment_id).
+      // Convênio/cortesia/isento e valor zero são automaticamente ignorados.
+      try { await ensureAppointmentCharge(appointment.id); } catch (e) { console.warn("ensureAppointmentCharge:", e); }
+
       return appointment;
     },
     onSuccess: () => {
@@ -280,6 +286,11 @@ export function useUpdateAppointmentStatus() {
         }
       }
 
+      // Fase 3 — ao finalizar, garante que existe cobrança (idempotente).
+      if (status === "finalizado") {
+        try { await ensureAppointmentCharge(id); } catch (e) { console.warn("ensureAppointmentCharge (finalizado):", e); }
+      }
+
       return { id, status };
     },
     onSuccess: (result) => {
@@ -332,6 +343,10 @@ export function useCancelAppointment() {
         .eq("id", id);
       
       if (error) throw error;
+
+      // Fase 3 — cancela cobranças pendentes vinculadas (não toca pagas/parciais).
+      try { await cancelAppointmentCharges(id, reason); } catch (e) { console.warn("cancelAppointmentCharges:", e); }
+
       return { id };
     },
     onSuccess: () => {
