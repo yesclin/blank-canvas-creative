@@ -103,7 +103,7 @@ export function useFinanceDashboard(filters: FinanceDashboardFilters) {
       let pendQ = supabase.from("finance_transactions")
         .select("type,amount,due_date,status")
         .eq("clinic_id", clinicId)
-        .in("status", ["pendente", "atrasado"]);
+        .in("status", ["pendente", "vencido"]);
       if (filters.professionalId) pendQ = pendQ.eq("professional_id", filters.professionalId);
       const { data: pendData } = await pendQ;
       const pend = pendData ?? [];
