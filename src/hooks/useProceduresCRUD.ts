@@ -362,6 +362,19 @@ export function useToggleProcedureStatus() {
   });
 }
 
+const emptySessionsPart = {
+  uses_sessions: false,
+  default_sessions_count: null,
+  session_interval_days: null,
+  session_duration_minutes: null,
+  package_price: null,
+  price_per_session: null,
+  open_package: false,
+  allow_single_sale: true,
+  package_validity_days: null,
+  protocol_notes: null,
+} satisfies Partial<ProcedureFormData>;
+
 // Hook to manage procedure form state
 export function useProcedureForm(initialData?: Procedure | null) {
   const [formData, setFormData] = useState<ProcedureFormData>({
@@ -373,6 +386,17 @@ export function useProcedureForm(initialData?: Procedure | null) {
     price: initialData?.price || undefined,
     allows_return: initialData?.allows_return || false,
     return_days: initialData?.return_days || 15,
+    ...emptySessionsPart,
+    uses_sessions: initialData?.uses_sessions ?? false,
+    default_sessions_count: initialData?.default_sessions_count ?? null,
+    session_interval_days: initialData?.session_interval_days ?? null,
+    session_duration_minutes: initialData?.session_duration_minutes ?? null,
+    package_price: initialData?.package_price ?? null,
+    price_per_session: initialData?.price_per_session ?? null,
+    open_package: initialData?.open_package ?? false,
+    allow_single_sale: initialData?.allow_single_sale ?? true,
+    package_validity_days: initialData?.package_validity_days ?? null,
+    protocol_notes: initialData?.protocol_notes ?? null,
   });
 
   const updateField = <K extends keyof ProcedureFormData>(
@@ -392,6 +416,7 @@ export function useProcedureForm(initialData?: Procedure | null) {
       price: undefined,
       allows_return: false,
       return_days: 15,
+      ...emptySessionsPart,
     });
   };
 
@@ -405,6 +430,16 @@ export function useProcedureForm(initialData?: Procedure | null) {
       price: procedure.price || undefined,
       allows_return: procedure.allows_return,
       return_days: procedure.return_days || 15,
+      uses_sessions: procedure.uses_sessions ?? false,
+      default_sessions_count: procedure.default_sessions_count ?? null,
+      session_interval_days: procedure.session_interval_days ?? null,
+      session_duration_minutes: procedure.session_duration_minutes ?? null,
+      package_price: procedure.package_price ?? null,
+      price_per_session: procedure.price_per_session ?? null,
+      open_package: procedure.open_package ?? false,
+      allow_single_sale: procedure.allow_single_sale ?? true,
+      package_validity_days: procedure.package_validity_days ?? null,
+      protocol_notes: procedure.protocol_notes ?? null,
     });
   };
 
