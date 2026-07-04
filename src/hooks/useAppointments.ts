@@ -204,6 +204,11 @@ export function useCreateAppointment() {
         .single();
       
       if (error) throw error;
+
+      // Fase 3 — gera cobrança pendente vinculada (dedup por appointment_id).
+      // Convênio/cortesia/isento e valor zero são automaticamente ignorados.
+      try { await ensureAppointmentCharge(appointment.id); } catch (e) { console.warn("ensureAppointmentCharge:", e); }
+
       return appointment;
     },
     onSuccess: () => {
