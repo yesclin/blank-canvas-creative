@@ -66,6 +66,12 @@ const normalizeResourceType = (type: string) => (
   ANAMNESIS_RESOURCE_TYPES.has(type) ? 'anamnesis_model' : type
 );
 
+const extractUuidFromResourceKey = (key: string | null | undefined) => {
+  if (!key) return null;
+  const match = key.match(/([0-9a-f-]{36})$/i);
+  return match?.[1] ?? null;
+};
+
 type SectionKey =
   | 'funcionalidades' | 'anamnese' | 'evolucao' | 'plano' | 'documentos'
   | 'escalas' | 'procedimentos' | 'especialidades' | 'alertas'
@@ -245,7 +251,20 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
   };
 
   const resolveClinicSpecialtyId = async (r: Resource): Promise<string | null> => {
-    if (!r.specialty_slug) return null;
+    const normalizedResourceType = normalizeResourceType(r.resource_type);
+    if (!r.specialty_slug && !ANAMNESIS_RESOURCE_TYPES.has(r.resource_type)) return null;
+
+    const { data: resolvedId, error: rpcError } = await supabase.rpc(
+      'resolve_clinic_resource_specialty_id',
+      {
+        p_clinic_id: clinicId,
+        p_resource_specialty_slug: r.specialty_slug,
+        p_resource_type: normalizedResourceType,
+      },
+    );
+
+    if (!rpcError && resolvedId) return resolvedId;
+    if (rpcError) console.error('[Recursos] erro ao resolver especialidade via RPC:', rpcError);
 
     const { data, error } = await supabase
       .from('specialties')
@@ -303,6 +322,7 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
     const { resource: r, nextEnabled } = pending;
     const previous = r.enabled;
     const normalizedResourceType = normalizeResourceType(r.resource_type);
+    const resourceId = r.source_id ?? extractUuidFromResourceKey(r.resource_key);
     const specialtyId = await resolveClinicSpecialtyId(r);
     // Super Admin pode liberar mesmo sem especialidade vinculada; não bloquear.
 
@@ -315,7 +335,7 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
         clinic_id: clinicId,
         resource_type: normalizedResourceType,
         resource_key: r.resource_key,
-        resource_id: r.source_id,
+        resource_id: resourceId,
         specialty_id: specialtyId,
         specialty_slug: r.specialty_slug,
         enabled: nextEnabled,
@@ -339,7 +359,7 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
       metadata: {
         resource_key: r.resource_key,
         resource_type: normalizedResourceType,
-        resource_id: r.source_id,
+        resource_id: resourceId,
         specialty_id: specialtyId,
         specialty_slug: r.specialty_slug,
         previous_status: previous ? 'active' : 'inactive',

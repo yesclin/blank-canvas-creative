@@ -15904,6 +15904,23 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_enabled_anamnesis_templates_for_prontuario: {
+        Args: { p_clinic_id: string; p_specialty_id: string }
+        Returns: {
+          campos: Json
+          current_version_id: string
+          description: string
+          id: string
+          is_default: boolean
+          is_system: boolean
+          name: string
+          procedure_id: string
+          specialty_id: string
+          structure: Json
+          system_locked: boolean
+          version_number: number
+        }[]
+      }
       get_my_clinic_id: { Args: never; Returns: string }
       get_next_document_number: {
         Args: { p_clinic_id: string }
@@ -16100,6 +16117,14 @@ export type Database = {
       reset_anamnesis_templates: {
         Args: { p_clinic_id: string; p_user_id: string }
         Returns: undefined
+      }
+      resolve_clinic_resource_specialty_id: {
+        Args: {
+          p_clinic_id: string
+          p_resource_specialty_slug: string
+          p_resource_type: string
+        }
+        Returns: string
       }
       restore_system_anamnesis_templates: {
         Args: { p_clinic_id: string; p_specialty_id?: string }
