@@ -87,6 +87,18 @@ export function useResolvedAnamnesisTemplate(
         return null;
       }
 
+      if (import.meta.env.DEV) {
+        const rows = (data ?? []) as EnabledAnamnesisTemplateRow[];
+        console.log("[Anamnese][Recursos] consulta de modelos liberados", {
+          clinic_id: clinic.id,
+          specialty_id_atual: specialtyId,
+          base_specialty_id: "resolvido no RPC get_enabled_anamnesis_templates_for_prontuario",
+          resource_type_consultado: "anamnesis_model",
+          ids_modelos_liberados_encontrados: rows.map((t) => t.id),
+          quantidade_modelos_carregados: rows.length,
+        });
+      }
+
       const allowed = ((data ?? []) as EnabledAnamnesisTemplateRow[])
         .filter((t, index, arr) => arr.findIndex((x) => x.id === t.id) === index)
         .sort((a, b) => {
@@ -153,6 +165,7 @@ export function useResolvedAnamnesisTemplate(
     },
     enabled: !!clinic?.id && !!specialtyId,
     staleTime: 60_000,
+    refetchOnMount: "always",
   });
 
   return {
