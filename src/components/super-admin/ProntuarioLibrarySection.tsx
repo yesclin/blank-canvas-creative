@@ -5,7 +5,7 @@
  * Toggle abre um modal de auditoria obrigatório (motivo + data efetiva +
  * expiração opcional). A alteração só é salva após a confirmação.
  */
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -191,7 +191,7 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
   const [expiresAt, setExpiresAt] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!clinicId) return;
     setLoading(true);
     const [catalog, overrides] = await Promise.all([
@@ -212,8 +212,8 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
     });
     setAuditByKey(map);
     setLoading(false);
-  };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [clinicId]);
+  }, [clinicId]);
+  useEffect(() => { void load(); }, [load]);
 
   const applyFilter = (list: Resource[]) => {
     const q = globalSearch.trim().toLowerCase();
