@@ -72,14 +72,28 @@ export function useResolvedAnamnesisTemplate(
   const query = useQuery({
     queryKey: ["resolved-anamnesis-template", clinic?.id, specialtyId, procedureId],
     queryFn: async (): Promise<ResolvedResult | null> => {
-      if (!clinic?.id || !specialtyId) return null;
+      if (!clinic?.id) return null;
+
+      const { data: baseSpecialty } = await supabase
+        .from("specialties")
+        .select("id")
+        .eq("clinic_id", clinic.id)
+        .in("slug", ["other_specialty", "outras_especialidades", "atendimento_geral", "custom", "geral"])
+        .order("is_active", { ascending: false })
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      const baseSpecialtyId = baseSpecialty?.id ?? null;
+      const effectiveSpecialtyId = specialtyId ?? baseSpecialtyId;
+      if (!effectiveSpecialtyId) return null;
 
       // Fonte única do seletor: Recursos da Clínica.
       // Não há fallback para modelo padrão/global/plataforma aqui: se o Super
       // Admin liberou 5 modelos em clinic_resources, apenas esses 5 aparecem.
       const { data, error } = await supabase.rpc(
         "get_enabled_anamnesis_templates_for_prontuario",
-        { p_clinic_id: clinic.id, p_specialty_id: specialtyId },
+        { p_clinic_id: clinic.id, p_specialty_id: effectiveSpecialtyId },
       );
 
       if (error) {
@@ -89,19 +103,11 @@ export function useResolvedAnamnesisTemplate(
 
       if (import.meta.env.DEV) {
         const rows = (data ?? []) as EnabledAnamnesisTemplateRow[];
-        const { data: baseSpecialty } = await supabase
-          .from("specialties")
-          .select("id")
-          .eq("clinic_id", clinic.id)
-          .in("slug", ["other_specialty", "outras_especialidades", "atendimento_geral", "custom", "geral"])
-          .order("is_active", { ascending: false })
-          .order("created_at", { ascending: true })
-          .limit(1)
-          .maybeSingle();
         console.log("[Anamnese][Recursos] consulta de modelos liberados", {
           clinic_id: clinic.id,
           specialty_id_atual: specialtyId,
-          base_specialty_id: baseSpecialty?.id ?? null,
+          specialty_id_consultado: effectiveSpecialtyId,
+          base_specialty_id: baseSpecialtyId,
           resource_type_consultado: "anamnesis_model",
           ids_modelos_liberados_encontrados: rows.map((t) => t.id),
           quantidade_modelos_carregados: rows.length,
@@ -172,7 +178,7 @@ export function useResolvedAnamnesisTemplate(
         )),
       };
     },
-    enabled: !!clinic?.id && !!specialtyId,
+    enabled: !!clinic?.id,
     staleTime: 60_000,
     refetchOnMount: "always",
   });
