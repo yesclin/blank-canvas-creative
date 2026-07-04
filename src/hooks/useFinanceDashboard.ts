@@ -143,13 +143,14 @@ export function useFinanceDashboard(filters: FinanceDashboardFilters) {
         (profs ?? []).forEach(p => profMap[p.id] = p.full_name);
       }
       const byProfessional = Object.entries(
-        paidRevenueRows.reduce<Record<string, number>>((acc, r) => {
+        paidRevenueRows.reduce((acc, r) => {
           const k = r.professional_id || "sem_profissional";
           acc[k] = (acc[k] || 0) + Number(r.amount || 0);
           return acc;
-        }, {})
-      ).map(([id, total]) => ({ id, name: profMap[id] || "Sem profissional", total }))
+        }, {} as Record<string, number>)
+      ).map(([id, total]) => ({ id, name: profMap[id] || "Sem profissional", total: total as number }))
         .sort((a, b) => b.total - a.total);
+
 
       // By procedure (via appointments -> procedure_id)
       const apptIds = Array.from(new Set(paidRevenueRows.map(r => r.appointment_id).filter(Boolean))) as string[];
