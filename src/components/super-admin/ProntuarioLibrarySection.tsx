@@ -273,6 +273,11 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
     const previous = r.enabled;
     const normalizedResourceType = normalizeResourceType(r.resource_type);
     const specialtyId = await resolveClinicSpecialtyId(r);
+    if (normalizedResourceType === 'anamnesis_model' && !specialtyId) {
+      toast.error('Este modelo pertence a uma especialidade que não está ativa nesta clínica.');
+      setSaving(false);
+      return;
+    }
     const { data: userRes } = await supabase.auth.getUser();
     const userId = userRes.user?.id ?? null;
 
