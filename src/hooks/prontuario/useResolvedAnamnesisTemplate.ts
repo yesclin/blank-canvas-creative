@@ -112,17 +112,39 @@ export function useResolvedAnamnesisTemplate(
 
       // Filtra apenas modelos LIBERADOS para esta clínica em `clinic_resources`.
       // Convenção do catálogo: resource_key = 'tpl:anamnesis:<template_id>'.
+      // Compatibilidade: se a clínica NUNCA teve nenhuma liberação/bloqueio do
+      // tipo 'anamnese' (nenhuma linha em clinic_resources), consideramos que
+      // ela ainda está no padrão do sistema e liberamos todos os modelos
+      // encontrados. Isso preserva clínicas antigas que nunca abriram
+      // "Recursos da Clínica" e mantém funcionando especialidades customizadas
+      // (ex.: Quiropraxia herdando de Atendimento Geral) sem exigir
+      // configuração manual prévia.
       const templateIds = templates.map((t) => t.id);
       const keys = templateIds.map((id) => `tpl:anamnesis:${id}`);
-      const { data: enabledRows } = await supabase
+      const { data: anyAnamnesisOverrides } = await supabase
         .from("clinic_resources")
         .select("resource_key")
         .eq("clinic_id", clinic.id)
-        .eq("enabled", true)
-        .in("resource_key", keys);
-      const enabledSet = new Set((enabledRows ?? []).map((r) => r.resource_key));
-      const allowed = templates.filter((t) => enabledSet.has(`tpl:anamnesis:${t.id}`));
-      console.log("[useResolvedAnamnesisTemplate] liberados para a clínica:", allowed.length, "de", templates.length);
+        .eq("resource_type", "anamnese")
+        .limit(1);
+      const hasAnyOverride = (anyAnamnesisOverrides ?? []).length > 0;
+
+      let allowed = templates;
+      if (hasAnyOverride) {
+        const { data: enabledRows } = await supabase
+          .from("clinic_resources")
+          .select("resource_key")
+          .eq("clinic_id", clinic.id)
+          .eq("resource_type", "anamnese")
+          .eq("enabled", true)
+          .in("resource_key", keys);
+        const enabledSet = new Set((enabledRows ?? []).map((r) => r.resource_key));
+        allowed = templates.filter((t) => enabledSet.has(`tpl:anamnesis:${t.id}`));
+      }
+      console.log(
+        "[useResolvedAnamnesisTemplate] hasAnyOverride:", hasAnyOverride,
+        "liberados:", allowed.length, "de", templates.length,
+      );
 
       if (allowed.length === 0) return null;
 
