@@ -286,6 +286,11 @@ export function useUpdateAppointmentStatus() {
         }
       }
 
+      // Fase 3 — ao finalizar, garante que existe cobrança (idempotente).
+      if (status === "finalizado") {
+        try { await ensureAppointmentCharge(id); } catch (e) { console.warn("ensureAppointmentCharge (finalizado):", e); }
+      }
+
       return { id, status };
     },
     onSuccess: (result) => {
