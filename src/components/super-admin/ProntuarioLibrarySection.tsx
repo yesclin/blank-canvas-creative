@@ -282,7 +282,7 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
           <div className="flex items-center gap-2">
             <span className={cn('text-[11px] font-medium',
               r.enabled ? 'text-emerald-600' : 'text-muted-foreground')}>
-              {r.enabled ? 'Liberado' : 'Bloqueado'}
+              {r.enabled ? 'Ativado' : 'Inativado'}
             </span>
             <Switch checked={r.enabled} onCheckedChange={(v) => writeOne(r, v)} />
           </div>
