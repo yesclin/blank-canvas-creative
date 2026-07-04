@@ -42,7 +42,13 @@ export function FinanceDashboard() {
   const [professionalId, setProfessionalId] = useState<string | null>(null);
   const [specialtyId, setSpecialtyId] = useState<string | null>(null);
 
-  const { data: professionals = [] } = useProfessionals();
+  const { data: professionals = [] } = useQuery({
+    queryKey: ["professionals-lookup"],
+    queryFn: async () => {
+      const { data } = await supabase.from("professionals").select("id,full_name").order("full_name");
+      return data ?? [];
+    },
+  });
   const { data: specialties = [] } = useQuery({
     queryKey: ["specialties-lookup"],
     queryFn: async () => {
@@ -50,6 +56,7 @@ export function FinanceDashboard() {
       return data ?? [];
     },
   });
+
 
   const { data, isLoading } = useFinanceDashboard({ period, professionalId, specialtyId });
 
