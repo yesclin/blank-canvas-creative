@@ -343,6 +343,10 @@ export function useCancelAppointment() {
         .eq("id", id);
       
       if (error) throw error;
+
+      // Fase 3 — cancela cobranças pendentes vinculadas (não toca pagas/parciais).
+      try { await cancelAppointmentCharges(id, reason); } catch (e) { console.warn("cancelAppointmentCharges:", e); }
+
       return { id };
     },
     onSuccess: () => {
