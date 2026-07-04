@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
  *
  * Regras:
  *  - Dedup por appointment_id: nunca cria uma segunda cobrança "pendente" se já existir uma
- *    ("pendente" ou "atrasado") ou uma cobrança "pago" que cubra o valor esperado.
+ *    ("pendente" ou "vencido") ou uma cobrança "pago" que cubra o valor esperado.
  *  - Convênio / cortesia / isento não gera cobrança automática particular.
  *  - Sempre carrega clinic_id, patient_id, professional_id, appointment_id, procedure_id.
  *  - Cancelamento marca as cobranças pendentes como "cancelado" (nunca deleta).
@@ -70,7 +70,7 @@ export async function ensureAppointmentCharge(appointmentId: string): Promise<st
     .from("finance_transactions")
     .select("id, status, amount")
     .eq("appointment_id", appointmentId)
-    .in("status", ["pendente", "atrasado", "pago", "parcial"])
+    .in("status", ["pendente", "vencido", "pago", "parcial"])
     .limit(1);
 
   if (existing && existing.length > 0) {
@@ -125,7 +125,7 @@ export async function cancelAppointmentCharges(appointmentId: string, reason?: s
       cancel_reason: reason ?? "Agendamento cancelado",
     })
     .eq("appointment_id", appointmentId)
-    .in("status", ["pendente", "atrasado"]);
+    .in("status", ["pendente", "vencido"]);
 
   if (error) console.error("cancelAppointmentCharges failed:", error);
 }
