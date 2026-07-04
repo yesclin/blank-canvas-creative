@@ -1626,6 +1626,176 @@ export type Database = {
           },
         ]
       }
+      cash_movements: {
+        Row: {
+          amount: number
+          cash_register_id: string
+          clinic_id: string
+          created_at: string
+          description: string | null
+          id: string
+          movement_type: string
+          payment_method_id: string | null
+          performed_at: string
+          performed_by: string
+          transaction_id: string | null
+        }
+        Insert: {
+          amount: number
+          cash_register_id: string
+          clinic_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          movement_type: string
+          payment_method_id?: string | null
+          performed_at?: string
+          performed_by: string
+          transaction_id?: string | null
+        }
+        Update: {
+          amount?: number
+          cash_register_id?: string
+          clinic_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          movement_type?: string
+          payment_method_id?: string | null
+          performed_at?: string
+          performed_by?: string
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_movements_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_effective_features"
+            referencedColumns: ["clinic_id"]
+          },
+          {
+            foreignKeyName: "cash_movements_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "public_clinic_booking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "finance_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_registers: {
+        Row: {
+          clinic_id: string
+          closed_at: string | null
+          closed_by: string | null
+          closing_amount: number | null
+          created_at: string
+          difference_amount: number | null
+          expected_amount: number | null
+          id: string
+          notes: string | null
+          opened_at: string
+          opened_by: string
+          opening_amount: number
+          reopen_reason: string | null
+          reopened_at: string | null
+          reopened_by: string | null
+          status: string
+          summary_by_method: Json | null
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_amount?: number | null
+          created_at?: string
+          difference_amount?: number | null
+          expected_amount?: number | null
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by: string
+          opening_amount?: number
+          reopen_reason?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
+          status?: string
+          summary_by_method?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_amount?: number | null
+          created_at?: string
+          difference_amount?: number | null
+          expected_amount?: number | null
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by?: string
+          opening_amount?: number
+          reopen_reason?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
+          status?: string
+          summary_by_method?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_registers_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_effective_features"
+            referencedColumns: ["clinic_id"]
+          },
+          {
+            foreignKeyName: "cash_registers_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_registers_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "public_clinic_booking"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinic_channel_integrations: {
         Row: {
           access_token: string | null
@@ -5530,10 +5700,98 @@ export type Database = {
           },
         ]
       }
+      finance_permissions: {
+        Row: {
+          cancel_tx: boolean
+          change_amounts: boolean
+          clinic_id: string
+          close_cash: boolean
+          create_tx: boolean
+          created_at: string
+          edit_tx: boolean
+          id: string
+          open_cash: boolean
+          refund_payment: boolean
+          reopen_cash: boolean
+          settle_payment: boolean
+          updated_at: string
+          user_id: string
+          view_all: boolean
+          view_commissions: boolean
+          view_own: boolean
+          view_reports: boolean
+        }
+        Insert: {
+          cancel_tx?: boolean
+          change_amounts?: boolean
+          clinic_id: string
+          close_cash?: boolean
+          create_tx?: boolean
+          created_at?: string
+          edit_tx?: boolean
+          id?: string
+          open_cash?: boolean
+          refund_payment?: boolean
+          reopen_cash?: boolean
+          settle_payment?: boolean
+          updated_at?: string
+          user_id: string
+          view_all?: boolean
+          view_commissions?: boolean
+          view_own?: boolean
+          view_reports?: boolean
+        }
+        Update: {
+          cancel_tx?: boolean
+          change_amounts?: boolean
+          clinic_id?: string
+          close_cash?: boolean
+          create_tx?: boolean
+          created_at?: string
+          edit_tx?: boolean
+          id?: string
+          open_cash?: boolean
+          refund_payment?: boolean
+          reopen_cash?: boolean
+          settle_payment?: boolean
+          updated_at?: string
+          user_id?: string
+          view_all?: boolean
+          view_commissions?: boolean
+          view_own?: boolean
+          view_reports?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_permissions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_effective_features"
+            referencedColumns: ["clinic_id"]
+          },
+          {
+            foreignKeyName: "finance_permissions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_permissions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "public_clinic_booking"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       finance_transactions: {
         Row: {
           amount: number
           appointment_id: string | null
+          cancel_reason: string | null
+          canceled_at: string | null
+          canceled_by: string | null
           category_id: string | null
           clinic_id: string
           created_at: string
@@ -5541,6 +5799,9 @@ export type Database = {
           description: string
           due_date: string | null
           id: string
+          installment_group_id: string | null
+          installment_number: number | null
+          installment_total: number | null
           insurance_id: string | null
           notes: string | null
           origin: string | null
@@ -5557,14 +5818,19 @@ export type Database = {
           reference_id: string | null
           reference_type: string | null
           reversal_reason: string | null
+          sale_id: string | null
           status: Database["public"]["Enums"]["transaction_status"]
           transaction_date: string
+          treatment_package_id: string | null
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at: string
         }
         Insert: {
           amount: number
           appointment_id?: string | null
+          cancel_reason?: string | null
+          canceled_at?: string | null
+          canceled_by?: string | null
           category_id?: string | null
           clinic_id: string
           created_at?: string
@@ -5572,6 +5838,9 @@ export type Database = {
           description: string
           due_date?: string | null
           id?: string
+          installment_group_id?: string | null
+          installment_number?: number | null
+          installment_total?: number | null
           insurance_id?: string | null
           notes?: string | null
           origin?: string | null
@@ -5588,14 +5857,19 @@ export type Database = {
           reference_id?: string | null
           reference_type?: string | null
           reversal_reason?: string | null
+          sale_id?: string | null
           status?: Database["public"]["Enums"]["transaction_status"]
           transaction_date?: string
+          treatment_package_id?: string | null
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
         }
         Update: {
           amount?: number
           appointment_id?: string | null
+          cancel_reason?: string | null
+          canceled_at?: string | null
+          canceled_by?: string | null
           category_id?: string | null
           clinic_id?: string
           created_at?: string
@@ -5603,6 +5877,9 @@ export type Database = {
           description?: string
           due_date?: string | null
           id?: string
+          installment_group_id?: string | null
+          installment_number?: number | null
+          installment_total?: number | null
           insurance_id?: string | null
           notes?: string | null
           origin?: string | null
@@ -5619,8 +5896,10 @@ export type Database = {
           reference_id?: string | null
           reference_type?: string | null
           reversal_reason?: string | null
+          sale_id?: string | null
           status?: Database["public"]["Enums"]["transaction_status"]
           transaction_date?: string
+          treatment_package_id?: string | null
           type?: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
         }
@@ -5707,6 +5986,20 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_transactions_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_transactions_treatment_package_id_fkey"
+            columns: ["treatment_package_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_packages"
             referencedColumns: ["id"]
           },
         ]
@@ -16134,6 +16427,10 @@ export type Database = {
             }[]
           }
       get_user_clinic_id_for_rls: { Args: never; Returns: string }
+      has_finance_permission: {
+        Args: { _clinic_id: string; _permission: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
