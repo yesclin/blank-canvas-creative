@@ -197,6 +197,16 @@ export function useCreateProcedure() {
           allows_return: formData.allows_return,
           return_days: formData.allows_return ? formData.return_days : null,
           is_active: true,
+          uses_sessions: formData.uses_sessions ?? false,
+          default_sessions_count: formData.uses_sessions ? (formData.default_sessions_count ?? null) : null,
+          session_interval_days: formData.uses_sessions ? (formData.session_interval_days ?? null) : null,
+          session_duration_minutes: formData.uses_sessions ? (formData.session_duration_minutes ?? null) : null,
+          package_price: formData.uses_sessions ? (formData.package_price ?? null) : null,
+          price_per_session: formData.uses_sessions ? (formData.price_per_session ?? null) : null,
+          open_package: formData.uses_sessions ? (formData.open_package ?? false) : false,
+          allow_single_sale: formData.uses_sessions ? (formData.allow_single_sale ?? true) : true,
+          package_validity_days: formData.uses_sessions ? (formData.package_validity_days ?? null) : null,
+          protocol_notes: formData.uses_sessions ? (formData.protocol_notes ?? null) : null,
         })
         .select()
         .single();
