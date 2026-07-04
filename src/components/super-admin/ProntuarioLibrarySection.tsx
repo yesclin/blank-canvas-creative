@@ -1,18 +1,26 @@
 /**
  * Super Admin > Recursos da Clínica > Biblioteca
  * Layout unificado: TODOS os departamentos usam o mesmo card
- * ("Módulos do Sistema" pattern) com Nome + Descrição + Toggle Ativo/Inativo.
- * Nada de checkbox, seleção múltipla, bulk, override tags ou "Visualizar".
+ * (padrão "Módulos do Sistema") com Nome + Descrição + Toggle Ativo/Inativo.
+ * Toggle abre um modal de auditoria obrigatório (motivo + data efetiva +
+ * expiração opcional). A alteração só é salva após a confirmação.
  */
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import {
   Accordion, AccordionItem, AccordionTrigger, AccordionContent,
 } from '@/components/ui/accordion';
-import { Search, Loader2, Library } from 'lucide-react';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Search, Loader2, Library, Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { logPlatformAction } from '@/lib/superAdminAudit';
@@ -30,6 +38,14 @@ interface Resource {
   enabled: boolean;
   has_override: boolean;
   override_reason: string | null;
+}
+
+interface AuditMeta {
+  reason: string | null;
+  updated_at: string | null;
+  updated_by: string | null;
+  expires_at: string | null;
+  effective_at: string | null;
 }
 
 type SectionKey =
@@ -59,29 +75,66 @@ const SPECIALTY_LABEL: Record<string, string> = {
 };
 const labelSpecialty = (s: string | null) => (s ? SPECIALTY_LABEL[s] ?? s : 'Global');
 
+const fmtDate = (iso: string | null) => {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleString('pt-BR'); } catch { return iso; }
+};
+const toLocalInput = (d: Date) => {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
 interface Props {
   clinicId: string;
-  /** Conteúdo do primeiro accordion: "Módulos do Sistema" (gerenciado fora). */
   modulesContent: ReactNode;
-  /** Resumo de Módulos para o cabeçalho. */
   modulesSummary?: { total: number; enabled: number };
 }
 
-/**
- * Card padrão único de recurso — mesmo layout dos "Módulos do Sistema".
- * Toggle direto no card, sem checkbox / preview / bulk.
- */
+interface PendingChange {
+  resource: Resource;
+  nextEnabled: boolean;
+}
+
+function DetailsPopover({ audit }: { audit: AuditMeta | undefined }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" title="Detalhes / Histórico">
+          <Info className="h-3.5 w-3.5" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 text-xs space-y-1.5" align="end">
+        <div className="font-semibold text-sm">Detalhes da liberação</div>
+        {audit ? (
+          <>
+            <div><span className="text-muted-foreground">Última alteração:</span> {fmtDate(audit.updated_at)}</div>
+            <div><span className="text-muted-foreground">Efetiva em:</span> {fmtDate(audit.effective_at)}</div>
+            <div><span className="text-muted-foreground">Expira em:</span> {audit.expires_at ? fmtDate(audit.expires_at) : 'Sem expiração'}</div>
+            <div><span className="text-muted-foreground">Responsável:</span> {audit.updated_by ? <code className="text-[10px]">{audit.updated_by.slice(0, 8)}…</code> : '—'}</div>
+            <div>
+              <div className="text-muted-foreground">Motivo:</div>
+              <div className="rounded border bg-muted/30 p-2 mt-1 whitespace-pre-wrap">{audit.reason || '—'}</div>
+            </div>
+          </>
+        ) : (
+          <div className="text-muted-foreground">Sem registro manual — usando padrão do sistema.</div>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function ResourceCard({
-  r,
-  onToggle,
+  r, audit, onRequestToggle,
 }: {
   r: Resource;
-  onToggle: (enabled: boolean) => void;
+  audit: AuditMeta | undefined;
+  onRequestToggle: (nextEnabled: boolean) => void;
 }) {
   return (
     <div className="flex items-start justify-between gap-3 rounded-lg border bg-card p-4 shadow-sm transition hover:shadow-md">
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="font-semibold text-sm leading-tight truncate">{r.title}</div>
           <Badge
             className={cn(
@@ -98,25 +151,48 @@ function ResourceCard({
           {r.description || labelSpecialty(r.specialty_slug)}
         </p>
       </div>
-      <Switch checked={r.enabled} onCheckedChange={onToggle} />
+      <div className="flex items-center gap-1 shrink-0">
+        <DetailsPopover audit={audit} />
+        <Switch checked={r.enabled} onCheckedChange={onRequestToggle} />
+      </div>
     </div>
   );
 }
 
 export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSummary }: Props) {
   const [items, setItems] = useState<Resource[]>([]);
+  const [auditByKey, setAuditByKey] = useState<Record<string, AuditMeta>>({});
   const [loading, setLoading] = useState(false);
   const [globalSearch, setGlobalSearch] = useState('');
   const [openSections, setOpenSections] = useState<string[]>([]);
 
+  // Audit modal state
+  const [pending, setPending] = useState<PendingChange | null>(null);
+  const [reason, setReason] = useState('');
+  const [effectiveAt, setEffectiveAt] = useState(() => toLocalInput(new Date()));
+  const [expiresAt, setExpiresAt] = useState('');
+  const [saving, setSaving] = useState(false);
+
   const load = async () => {
     if (!clinicId) return;
     setLoading(true);
-    const { data, error } = await supabase.rpc('get_prontuario_resource_catalog', {
-      p_clinic_id: clinicId,
+    const [catalog, overrides] = await Promise.all([
+      supabase.rpc('get_prontuario_resource_catalog', { p_clinic_id: clinicId }),
+      supabase
+        .from('clinic_resources')
+        .select('resource_key, reason, updated_at, updated_by, expires_at, effective_at')
+        .eq('clinic_id', clinicId),
+    ]);
+    if (catalog.error) { console.error(catalog.error); toast.error('Erro ao carregar a biblioteca.'); }
+    setItems((catalog.data ?? []) as Resource[]);
+    const map: Record<string, AuditMeta> = {};
+    (overrides.data ?? []).forEach((row: any) => {
+      map[row.resource_key] = {
+        reason: row.reason, updated_at: row.updated_at, updated_by: row.updated_by,
+        expires_at: row.expires_at, effective_at: row.effective_at,
+      };
     });
-    if (error) { console.error(error); toast.error('Erro ao carregar a biblioteca.'); }
-    setItems((data ?? []) as Resource[]);
+    setAuditByKey(map);
     setLoading(false);
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [clinicId]);
@@ -139,15 +215,26 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [globalSearch]);
 
-  const toggleResource = async (r: Resource, enabled: boolean) => {
+  const requestToggle = (r: Resource, nextEnabled: boolean) => {
     if (!clinicId) {
       toast.error('Selecione uma clínica antes de alterar recursos.');
       return;
     }
-    // Optimistic update
-    setItems((prev) => prev.map((it) =>
-      it.resource_key === r.resource_key ? { ...it, enabled, has_override: true } : it,
-    ));
+    setPending({ resource: r, nextEnabled });
+    setReason('');
+    setEffectiveAt(toLocalInput(new Date()));
+    setExpiresAt('');
+  };
+
+  const confirmChange = async () => {
+    if (!pending) return;
+    if (!reason.trim()) { toast.error('Informe o motivo da alteração.'); return; }
+    setSaving(true);
+    const { resource: r, nextEnabled } = pending;
+    const previous = r.enabled;
+    const { data: userRes } = await supabase.auth.getUser();
+    const userId = userRes.user?.id ?? null;
+
     const { error } = await supabase
       .from('clinic_resources')
       .upsert({
@@ -156,21 +243,41 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
         resource_key: r.resource_key,
         resource_id: r.source_id,
         specialty_slug: r.specialty_slug,
-        enabled,
-        reason: null,
+        enabled: nextEnabled,
+        reason: reason.trim(),
+        effective_at: new Date(effectiveAt).toISOString(),
+        expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+        updated_by: userId,
       }, { onConflict: 'clinic_id,resource_type,resource_key' });
+
     if (error) {
       console.error('[Recursos] erro:', error);
       toast.error(`Erro ao salvar: ${error.message}`);
-      load();
+      setSaving(false);
       return;
     }
+
     await logPlatformAction({
-      action: enabled ? 'clinic_resource.enable' : 'clinic_resource.disable',
-      target_type: 'clinic_resource', clinic_id: clinicId,
-      metadata: { resource_key: r.resource_key, resource_type: r.resource_type },
+      action: nextEnabled ? 'clinic_resource.enable' : 'clinic_resource.disable',
+      target_type: 'clinic_resource',
+      clinic_id: clinicId,
+      metadata: {
+        resource_key: r.resource_key,
+        resource_type: r.resource_type,
+        resource_id: r.source_id,
+        specialty_slug: r.specialty_slug,
+        previous_status: previous ? 'active' : 'inactive',
+        new_status: nextEnabled ? 'active' : 'inactive',
+        reason: reason.trim(),
+        effective_at: new Date(effectiveAt).toISOString(),
+        expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+      },
     });
-    toast.success(enabled ? 'Recurso ativado.' : 'Recurso inativado.');
+
+    toast.success(nextEnabled ? 'Recurso liberado.' : 'Recurso bloqueado.');
+    setSaving(false);
+    setPending(null);
+    load();
   };
 
   const sectionCounts = useMemo(() => {
@@ -182,6 +289,8 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
     return map;
   }, [items]);
 
+  const isEnabling = pending?.nextEnabled === true;
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -190,7 +299,6 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Busca global */}
         <div className="relative">
           <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
           <Input
@@ -246,7 +354,8 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
                           <ResourceCard
                             key={r.resource_key}
                             r={r}
-                            onToggle={(v) => toggleResource(r, v)}
+                            audit={auditByKey[r.resource_key]}
+                            onRequestToggle={(v) => requestToggle(r, v)}
                           />
                         ))}
                       </div>
@@ -257,6 +366,78 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
             })}
           </Accordion>
         )}
+
+        {/* Modal de auditoria obrigatório */}
+        <Dialog open={!!pending} onOpenChange={(o) => { if (!o && !saving) setPending(null); }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {isEnabling ? 'Liberar recurso manualmente' : 'Bloquear recurso'}
+              </DialogTitle>
+              <DialogDescription>
+                {pending?.resource.title} — {labelSpecialty(pending?.resource.specialty_slug ?? null)}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3 pt-1">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Data da alteração</Label>
+                  <Input
+                    type="datetime-local"
+                    value={effectiveAt}
+                    onChange={(e) => setEffectiveAt(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">
+                    Expira em {isEnabling ? '(opcional)' : ''}
+                  </Label>
+                  <Input
+                    type="datetime-local"
+                    value={expiresAt}
+                    onChange={(e) => setExpiresAt(e.target.value)}
+                    disabled={!isEnabling}
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs flex items-center justify-between">
+                <div>
+                  <div className="font-medium">
+                    {isEnabling ? 'Liberar recurso manualmente' : 'Bloquear recurso manualmente'}
+                  </div>
+                  <div className="text-muted-foreground">
+                    A liberação manual prevalece sobre o padrão até expirar.
+                  </div>
+                </div>
+                <Switch checked={isEnabling} disabled />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">
+                  Motivo <span className="text-destructive">*</span>
+                </Label>
+                <Textarea
+                  rows={3}
+                  placeholder="Ex.: cortesia comercial, teste de recurso..."
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setPending(null)} disabled={saving}>
+                Cancelar
+              </Button>
+              <Button onClick={confirmChange} disabled={saving || !reason.trim()}>
+                {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Salvar liberação manual
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
