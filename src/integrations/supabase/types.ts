@@ -5794,6 +5794,7 @@ export type Database = {
           canceled_by: string | null
           category_id: string | null
           clinic_id: string
+          cost_center: string | null
           created_at: string
           created_by: string | null
           description: string
@@ -5814,12 +5815,15 @@ export type Database = {
           payment_method_id: string | null
           procedure_id: string | null
           professional_id: string | null
+          receipt_url: string | null
           received_by: string | null
+          recurrence: string | null
           reference_id: string | null
           reference_type: string | null
           reversal_reason: string | null
           sale_id: string | null
           status: Database["public"]["Enums"]["transaction_status"]
+          supplier_name: string | null
           transaction_date: string
           treatment_package_id: string | null
           type: Database["public"]["Enums"]["transaction_type"]
@@ -5833,6 +5837,7 @@ export type Database = {
           canceled_by?: string | null
           category_id?: string | null
           clinic_id: string
+          cost_center?: string | null
           created_at?: string
           created_by?: string | null
           description: string
@@ -5853,12 +5858,15 @@ export type Database = {
           payment_method_id?: string | null
           procedure_id?: string | null
           professional_id?: string | null
+          receipt_url?: string | null
           received_by?: string | null
+          recurrence?: string | null
           reference_id?: string | null
           reference_type?: string | null
           reversal_reason?: string | null
           sale_id?: string | null
           status?: Database["public"]["Enums"]["transaction_status"]
+          supplier_name?: string | null
           transaction_date?: string
           treatment_package_id?: string | null
           type: Database["public"]["Enums"]["transaction_type"]
@@ -5872,6 +5880,7 @@ export type Database = {
           canceled_by?: string | null
           category_id?: string | null
           clinic_id?: string
+          cost_center?: string | null
           created_at?: string
           created_by?: string | null
           description?: string
@@ -5892,12 +5901,15 @@ export type Database = {
           payment_method_id?: string | null
           procedure_id?: string | null
           professional_id?: string | null
+          receipt_url?: string | null
           received_by?: string | null
+          recurrence?: string | null
           reference_id?: string | null
           reference_type?: string | null
           reversal_reason?: string | null
           sale_id?: string | null
           status?: Database["public"]["Enums"]["transaction_status"]
+          supplier_name?: string | null
           transaction_date?: string
           treatment_package_id?: string | null
           type?: Database["public"]["Enums"]["transaction_type"]
