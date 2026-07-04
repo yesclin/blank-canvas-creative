@@ -411,6 +411,194 @@ export function ProcedureFormDialog({
             </div>
           )}
 
+          {/* Sessions / Package Section (feature-gated) */}
+          {treatmentSessionsEnabled && (
+            <>
+              <Separator className="my-2" />
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-semibold text-sm">Sessões / Pacote</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Configure este procedimento como um pacote de sessões
+                    (ex.: depilação, fisioterapia, psicologia).
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Este procedimento usa sessões?</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Ao ativar, o sistema gera automaticamente as sessões ao vender.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={!!formData.uses_sessions}
+                    onCheckedChange={(checked) => updateField("uses_sessions", checked)}
+                    disabled={isLoading}
+                  />
+                </div>
+
+                {formData.uses_sessions && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="sessions_count">Qtd. padrão de sessões</Label>
+                        <Input
+                          id="sessions_count"
+                          type="number"
+                          min={1}
+                          value={formData.default_sessions_count ?? ""}
+                          onChange={(e) =>
+                            updateField(
+                              "default_sessions_count",
+                              e.target.value ? parseInt(e.target.value) : null,
+                            )
+                          }
+                          disabled={isLoading || !!formData.open_package}
+                          placeholder={formData.open_package ? "Pacote aberto" : "Ex: 10"}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="session_interval">Intervalo entre sessões (dias)</Label>
+                        <Input
+                          id="session_interval"
+                          type="number"
+                          min={0}
+                          value={formData.session_interval_days ?? ""}
+                          onChange={(e) =>
+                            updateField(
+                              "session_interval_days",
+                              e.target.value ? parseInt(e.target.value) : null,
+                            )
+                          }
+                          disabled={isLoading}
+                          placeholder="Ex: 30"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="session_duration">Duração por sessão (min)</Label>
+                        <Input
+                          id="session_duration"
+                          type="number"
+                          min={5}
+                          value={formData.session_duration_minutes ?? ""}
+                          onChange={(e) =>
+                            updateField(
+                              "session_duration_minutes",
+                              e.target.value ? parseInt(e.target.value) : null,
+                            )
+                          }
+                          disabled={isLoading}
+                          placeholder="Ex: 60"
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="package_validity">Validade do pacote (dias)</Label>
+                        <Input
+                          id="package_validity"
+                          type="number"
+                          min={0}
+                          value={formData.package_validity_days ?? ""}
+                          onChange={(e) =>
+                            updateField(
+                              "package_validity_days",
+                              e.target.value ? parseInt(e.target.value) : null,
+                            )
+                          }
+                          disabled={isLoading}
+                          placeholder="Ex: 180"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="package_price">Valor total do pacote (R$)</Label>
+                        <Input
+                          id="package_price"
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={formData.package_price ?? ""}
+                          onChange={(e) =>
+                            updateField(
+                              "package_price",
+                              e.target.value ? parseFloat(e.target.value) : null,
+                            )
+                          }
+                          disabled={isLoading}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="price_per_session">Valor por sessão (R$)</Label>
+                        <Input
+                          id="price_per_session"
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={formData.price_per_session ?? ""}
+                          onChange={(e) =>
+                            updateField(
+                              "price_per_session",
+                              e.target.value ? parseFloat(e.target.value) : null,
+                            )
+                          }
+                          disabled={isLoading}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label>Pacote aberto / sem quantidade definida</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Ex.: manutenção contínua sem número fixo de sessões.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={!!formData.open_package}
+                        onCheckedChange={(checked) => {
+                          updateField("open_package", checked);
+                          if (checked) updateField("default_sessions_count", null);
+                        }}
+                        disabled={isLoading}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label>Permitir venda avulsa (sem pacote)</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Se desativado, este procedimento só pode ser vendido como pacote.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={formData.allow_single_sale ?? true}
+                        onCheckedChange={(checked) => updateField("allow_single_sale", checked)}
+                        disabled={isLoading}
+                      />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="protocol_notes">Observações do protocolo</Label>
+                      <Textarea
+                        id="protocol_notes"
+                        rows={3}
+                        value={formData.protocol_notes ?? ""}
+                        onChange={(e) => updateField("protocol_notes", e.target.value)}
+                        disabled={isLoading}
+                        placeholder="Preparo, cuidados, contraindicações, materiais…"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+
           {/* Products/Materials Section */}
           <Separator className="my-2" />
           <ProcedureProductsSection
