@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp, TrendingDown, Wallet, Clock, AlertCircle, CalendarClock, Coins, Target } from "lucide-react";
 import { useFinanceDashboard, type DashboardPeriod } from "@/hooks/useFinanceDashboard";
-import { useProfessionals } from "@/hooks/useProfessionals";
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useFinancialAccessControl } from "@/hooks/useFinancialAccessControl";
