@@ -90,63 +90,75 @@ export function useResolvedAnamnesisTemplate(
       console.log("[useResolvedAnamnesisTemplate] isCustomSpecialty:", isCustomSpecialty);
       console.log("[useResolvedAnamnesisTemplate] specialtyIds a consultar:", specialtyIds);
 
-      const { data: templates, error } = await supabase
-        .from("anamnesis_templates")
-        .select("id, name, description, specialty_id, procedure_id, is_default, is_system, system_locked, current_version_id, campos")
-        .in("specialty_id", specialtyIds)
-        .eq("is_active", true)
-        .eq("archived", false)
-        .or(`clinic_id.eq.${clinic.id},clinic_id.is.null`)
-        .order("is_system", { ascending: false })
-        .order("is_default", { ascending: false })
-        .order("name", { ascending: true });
-
-      if (error) {
-        console.error("Error fetching templates for resolution:", error);
-        return null;
-      }
-
-      console.log("[useResolvedAnamnesisTemplate] modelos encontrados:", templates?.length ?? 0, templates);
-
-      if (!templates || templates.length === 0) return null;
-
-      // Filtra apenas modelos LIBERADOS para esta clínica em `clinic_resources`.
-      // Convenção do catálogo: resource_key = 'tpl:anamnesis:<template_id>'.
-      // Compatibilidade: se a clínica NUNCA teve nenhuma liberação/bloqueio do
-      // tipo 'anamnese' (nenhuma linha em clinic_resources), consideramos que
-      // ela ainda está no padrão do sistema e liberamos todos os modelos
-      // encontrados. Isso preserva clínicas antigas que nunca abriram
-      // "Recursos da Clínica" e mantém funcionando especialidades customizadas
-      // (ex.: Quiropraxia herdando de Atendimento Geral) sem exigir
-      // configuração manual prévia.
-      const templateIds = templates.map((t) => t.id);
-      const keys = templateIds.map((id) => `tpl:anamnesis:${id}`);
-      const { data: anyAnamnesisOverrides } = await supabase
+      // 1) Modelos liberados EXPLICITAMENTE em Recursos da Clínica
+      //    (fonte de verdade). O catálogo usa múltiplos formatos de
+      //    resource_key (tpl:anamnesis:<id>, tpl:medical:<id>, etc.),
+      //    então casamos pelo `resource_id` (UUID do template) que é
+      //    universal.
+      const { data: enabledRows } = await supabase
         .from("clinic_resources")
-        .select("resource_key")
+        .select("resource_id, resource_key")
         .eq("clinic_id", clinic.id)
         .eq("resource_type", "anamnese")
-        .limit(1);
-      const hasAnyOverride = (anyAnamnesisOverrides ?? []).length > 0;
+        .eq("enabled", true);
 
-      let allowed = templates;
-      if (hasAnyOverride) {
-        const { data: enabledRows } = await supabase
-          .from("clinic_resources")
-          .select("resource_key")
-          .eq("clinic_id", clinic.id)
-          .eq("resource_type", "anamnese")
-          .eq("enabled", true)
-          .in("resource_key", keys);
-        const enabledSet = new Set((enabledRows ?? []).map((r) => r.resource_key));
-        allowed = templates.filter((t) => enabledSet.has(`tpl:anamnesis:${t.id}`));
-      }
+      const enabledTemplateIds = new Set<string>();
+      (enabledRows ?? []).forEach((r: any) => {
+        if (r.resource_id) enabledTemplateIds.add(r.resource_id);
+        // Fallback: extrai UUID do sufixo do resource_key (tpl:*:<uuid>)
+        if (typeof r.resource_key === "string") {
+          const m = r.resource_key.match(/([0-9a-f-]{36})$/i);
+          if (m) enabledTemplateIds.add(m[1]);
+        }
+      });
+
       console.log(
-        "[useResolvedAnamnesisTemplate] hasAnyOverride:", hasAnyOverride,
-        "liberados:", allowed.length, "de", templates.length,
+        "[useResolvedAnamnesisTemplate] clinicId:", clinic.id,
+        "specialty:", currentSpecialty?.slug,
+        "enabledOverrides:", enabledTemplateIds.size,
       );
 
+      // 2) Se o Superadmin liberou algum modelo para esta clínica,
+      //    esses são a fonte — independente da especialidade base
+      //    (o nome "Quiropraxia" é apenas alias visual).
+      let allowed: any[] = [];
+      if (enabledTemplateIds.size > 0) {
+        const { data: enabledTemplates, error: eTplErr } = await supabase
+          .from("anamnesis_templates")
+          .select("id, name, description, specialty_id, procedure_id, is_default, is_system, system_locked, current_version_id, campos")
+          .in("id", Array.from(enabledTemplateIds))
+          .eq("is_active", true)
+          .eq("archived", false)
+          .or(`clinic_id.eq.${clinic.id},clinic_id.is.null`)
+          .order("is_system", { ascending: false })
+          .order("is_default", { ascending: false })
+          .order("name", { ascending: true });
+        if (eTplErr) console.error("Error fetching enabled templates:", eTplErr);
+        allowed = enabledTemplates ?? [];
+      } else {
+        // 3) Fallback compatibilidade: nenhuma liberação manual foi feita —
+        //    lista modelos do sistema para a specialty_id (e fallbacks
+        //    de Atendimento Geral). Não bloqueia clínicas antigas.
+        const { data: templates, error } = await supabase
+          .from("anamnesis_templates")
+          .select("id, name, description, specialty_id, procedure_id, is_default, is_system, system_locked, current_version_id, campos")
+          .in("specialty_id", specialtyIds)
+          .eq("is_active", true)
+          .eq("archived", false)
+          .or(`clinic_id.eq.${clinic.id},clinic_id.is.null`)
+          .order("is_system", { ascending: false })
+          .order("is_default", { ascending: false })
+          .order("name", { ascending: true });
+        if (error) {
+          console.error("Error fetching templates for resolution:", error);
+          return null;
+        }
+        allowed = templates ?? [];
+      }
+
+      console.log("[useResolvedAnamnesisTemplate] modelos liberados:", allowed.length);
       if (allowed.length === 0) return null;
+
 
 
 
