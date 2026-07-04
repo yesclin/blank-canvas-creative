@@ -312,13 +312,19 @@ export function AnamneseBlock({
     );
   }
 
-  // Template selection gate: don't auto-open a form until the user picks a template
-  // (or if there's only one, allow auto-open). Existing records bypass the gate.
+  // Template selection gate: never auto-open a form. Sempre mostrar o seletor
+  // até o usuário escolher um modelo — inclusive para "Outras Especialidades /
+  // Atendimento Geral", que nunca deve assumir um modelo padrão.
+  const isGenericSpecialty =
+    specialtyKey === "other_specialty" ||
+    specialtyKey === "outras_especialidades" ||
+    specialtyKey === "atendimento_geral" ||
+    specialtyKey === "custom";
   const shouldShowSelector =
     !currentAnamnese &&
     !started &&
     !templatesLoading &&
-    (allTemplates.length === 0 || allTemplates.length > 1);
+    (isGenericSpecialty || allTemplates.length === 0 || allTemplates.length > 1 || !selectedTemplateId);
 
   if (templatesLoading && !currentAnamnese) {
     return (
