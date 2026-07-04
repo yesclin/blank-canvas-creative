@@ -208,7 +208,7 @@ const SPECIALTY_BLOCK_LABEL_OVERRIDES: Partial<Record<SpecialtyKey, Partial<Reco
   },
   other_specialty: {
     resumo: 'Visão Geral',
-    anamnese: 'Anamnese Básica',
+    anamnese: 'Anamnese',
     evolucao: 'Evolução',
     conduta: 'Plano / Conduta',
     procedimentos_realizados: 'Procedimentos Realizados',
