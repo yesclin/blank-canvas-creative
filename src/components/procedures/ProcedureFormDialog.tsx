@@ -47,6 +47,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinicData } from "@/hooks/useClinicData";
+import { useClinicEnabledResources } from "@/hooks/prontuario/useClinicEnabledResources";
 
 interface SpecialtyOption {
   id: string;
