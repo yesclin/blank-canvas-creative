@@ -34,15 +34,10 @@ export interface ResolvedTemplate {
 interface ResolvedResult {
   resolved: ResolvedTemplate;
   allTemplates: TemplateOption[];
+  templates: ResolvedTemplate[];
 }
 
-interface EnabledAnamnesisResource {
-  resource_id: string | null;
-  resource_key: string;
-  specialty_id: string | null;
-}
-
-interface AnamnesisTemplateRow {
+interface EnabledAnamnesisTemplateRow {
   id: string;
   name: string;
   description: string | null;
@@ -53,16 +48,9 @@ interface AnamnesisTemplateRow {
   system_locked: boolean;
   current_version_id: string | null;
   campos: Json;
+  structure: Json;
+  version_number: number | null;
 }
-
-const ANAMNESIS_RESOURCE_TYPES = ["anamnesis_model", "anamnese"];
-const GENERIC_SPECIALTY_SLUGS = new Set([
-  "geral",
-  "other_specialty",
-  "outras_especialidades",
-  "atendimento_geral",
-  "custom",
-]);
 
 /**
  * Resolves the correct anamnesis template for an active appointment.
@@ -86,106 +74,28 @@ export function useResolvedAnamnesisTemplate(
     queryFn: async (): Promise<ResolvedResult | null> => {
       if (!clinic?.id || !specialtyId) return null;
 
-      // Resolve fallback only when there is no manual liberation for the active
-      // clinic/specialty. The displayed alias (ex.: "Quiropraxia") is ignored:
-      // the active specialty UUID is the source of truth.
-      const specialtyIds: string[] = [specialtyId];
-      const { data: currentSpecialty } = await supabase
-        .from("specialties")
-        .select("id, slug, name")
-        .eq("id", specialtyId)
-        .limit(1)
-        .maybeSingle();
+      // Fonte única do seletor: Recursos da Clínica.
+      // Não há fallback para modelo padrão/global/plataforma aqui: se o Super
+      // Admin liberou 5 modelos em clinic_resources, apenas esses 5 aparecem.
+      const { data, error } = await supabase.rpc(
+        "get_enabled_anamnesis_templates_for_prontuario",
+        { p_clinic_id: clinic.id, p_specialty_id: specialtyId },
+      );
 
-      const isCustomSpecialty =
-        currentSpecialty?.slug === "other_specialty" ||
-        currentSpecialty?.slug === "outras_especialidades" ||
-        currentSpecialty?.slug === "atendimento_geral" ||
-        currentSpecialty?.slug === "custom";
-      if (isCustomSpecialty) {
-        const { data: fallbacks } = await supabase
-          .from("specialties")
-          .select("id, slug")
-          .in("slug", ["geral", "other_specialty", "outras_especialidades", "atendimento_geral", "custom"]);
-        (fallbacks ?? []).forEach((s) => {
-          if (s.id && !specialtyIds.includes(s.id)) specialtyIds.push(s.id);
-        });
-      }
-
-
-      // 1) Modelos liberados EXPLICITAMENTE em Recursos da Clínica.
-      //    Filtro obrigatório: clínica atual + tipo de modelo de anamnese +
-      //    status ativo + specialty_id real do atendimento/clínica.
-      const nowIso = new Date().toISOString();
-      const { data: enabledRows, error: enabledError } = await supabase
-        .from("clinic_resources")
-        .select("resource_id, resource_key, specialty_id")
-        .eq("clinic_id", clinic.id)
-        .in("resource_type", ANAMNESIS_RESOURCE_TYPES)
-        .eq("enabled", true)
-        .eq("specialty_id", specialtyId)
-        .lte("effective_at", nowIso)
-        .or(`expires_at.is.null,expires_at.gt.${nowIso}`);
-
-      if (enabledError) {
-        console.error("Error fetching enabled anamnesis resources:", enabledError);
+      if (error) {
+        console.error("Error fetching enabled anamnesis templates:", error);
         return null;
       }
 
-      const enabledTemplateIds = new Set<string>();
-      ((enabledRows ?? []) as EnabledAnamnesisResource[]).forEach((r) => {
-        if (r.resource_id) enabledTemplateIds.add(r.resource_id);
-        // Fallback: extrai UUID do sufixo do resource_key (tpl:*:<uuid>)
-        if (typeof r.resource_key === "string") {
-          const m = r.resource_key.match(/([0-9a-f-]{36})$/i);
-          if (m) enabledTemplateIds.add(m[1]);
-        }
-      });
-
-      // 2) Se o Superadmin liberou algum modelo para esta clínica,
-      //    esses são a fonte. Não usar fallback fixo quando há liberação
-      //    manual para a especialidade ativa.
-      let allowed: AnamnesisTemplateRow[] = [];
-      const hasManualLiberation = (enabledRows?.length ?? 0) > 0;
-      if (hasManualLiberation) {
-        if (enabledTemplateIds.size === 0) return null;
-        const { data: enabledTemplates, error: eTplErr } = await supabase
-          .from("anamnesis_templates")
-          .select("id, name, description, specialty_id, procedure_id, is_default, is_system, system_locked, current_version_id, campos")
-          .in("id", Array.from(enabledTemplateIds))
-          .eq("is_active", true)
-          .eq("archived", false)
-          .order("is_system", { ascending: false })
-          .order("is_default", { ascending: false })
-          .order("name", { ascending: true });
-        if (eTplErr) console.error("Error fetching enabled templates:", eTplErr);
-        allowed = (enabledTemplates ?? []) as AnamnesisTemplateRow[];
-      } else {
-        // 3) Compatibilidade: nenhuma liberação manual foi feita para esta
-        //    clínica/especialidade. Só então permite o fallback legado.
-        const specialtyFilter = isCustomSpecialty
-          ? specialtyIds
-          : specialtyIds.filter((id) => !GENERIC_SPECIALTY_SLUGS.has(currentSpecialty?.slug ?? "") || id === specialtyId);
-        const { data: templates, error } = await supabase
-          .from("anamnesis_templates")
-          .select("id, name, description, specialty_id, procedure_id, is_default, is_system, system_locked, current_version_id, campos")
-          .in("specialty_id", specialtyFilter)
-          .eq("is_active", true)
-          .eq("archived", false)
-          .order("is_system", { ascending: false })
-          .order("is_default", { ascending: false })
-          .order("name", { ascending: true });
-        if (error) {
-          console.error("Error fetching templates for resolution:", error);
-          return null;
-        }
-        allowed = (templates ?? []) as AnamnesisTemplateRow[];
-      }
+      const allowed = ((data ?? []) as EnabledAnamnesisTemplateRow[])
+        .filter((t, index, arr) => arr.findIndex((x) => x.id === t.id) === index)
+        .sort((a, b) => {
+          if (a.is_system !== b.is_system) return a.is_system ? -1 : 1;
+          if (a.is_default !== b.is_default) return a.is_default ? -1 : 1;
+          return a.name.localeCompare(b.name, "pt-BR");
+        });
 
       if (allowed.length === 0) return null;
-
-
-
 
       // Build options list
       const allTemplates: TemplateOption[] = allowed.map((t) => ({
@@ -199,56 +109,46 @@ export function useResolvedAnamnesisTemplate(
         current_version_id: t.current_version_id,
       }));
 
+      const templates: ResolvedTemplate[] = allowed.map((t) => ({
+        id: t.id,
+        name: t.name,
+        description: t.description,
+        specialty_id: t.specialty_id,
+        procedure_id: t.procedure_id,
+        is_default: t.is_default,
+        is_system: t.is_system,
+        current_version_id: t.current_version_id,
+        campos: t.campos,
+        structure: t.structure || t.campos || [],
+        version_number: t.version_number,
+        resolution: "fallback",
+      }));
+
       // Resolve priority
       let resolved = procedureId
-        ? allowed.find((t) => t.procedure_id === procedureId)
+        ? templates.find((t) => t.procedure_id === procedureId)
         : undefined;
       let resolution: ResolvedTemplate["resolution"] = "procedure";
 
       if (!resolved) {
-        resolved = allowed.find((t) => t.is_default);
+        resolved = templates.find((t) => t.is_default);
         resolution = "default";
       }
 
       if (!resolved) {
-        resolved = allowed[0];
+        resolved = templates[0];
         resolution = "fallback";
-      }
-
-      // Load version structure
-      let structure: Json = resolved.campos || [];
-      let versionNumber: number | null = null;
-
-      if (resolved.current_version_id) {
-        const { data: ver } = await supabase
-          .from("anamnesis_template_versions")
-          .select("structure, version_number")
-          .eq("id", resolved.current_version_id)
-          .limit(1)
-          .maybeSingle();
-
-        if (ver) {
-          structure = ver.structure;
-          versionNumber = ver.version_number;
-        }
       }
 
       return {
         resolved: {
-          id: resolved.id,
-          name: resolved.name,
-          description: resolved.description,
-          specialty_id: resolved.specialty_id,
-          procedure_id: resolved.procedure_id,
-          is_default: resolved.is_default,
-          is_system: resolved.is_system,
-          current_version_id: resolved.current_version_id,
-          campos: resolved.campos,
-          structure,
-          version_number: versionNumber,
+          ...resolved,
           resolution,
         },
         allTemplates,
+        templates: templates.map((t) => (
+          t.id === resolved.id ? { ...t, resolution } : t
+        )),
       };
     },
     enabled: !!clinic?.id && !!specialtyId,
@@ -262,50 +162,7 @@ export function useResolvedAnamnesisTemplate(
     isLoading: query.isLoading,
     /** Load a specific template by ID (for manual selection) */
     loadTemplateById: async (templateId: string): Promise<ResolvedTemplate | null> => {
-      const template = query.data?.allTemplates.find((t) => t.id === templateId);
-      if (!template) return null;
-
-      // Fetch full data
-      const { data: full } = await supabase
-        .from("anamnesis_templates")
-        .select("*")
-        .eq("id", templateId)
-        .limit(1)
-        .maybeSingle();
-
-      if (!full) return null;
-
-      let structure: Json = full.campos || [];
-      let versionNumber: number | null = null;
-
-      if (full.current_version_id) {
-        const { data: ver } = await supabase
-          .from("anamnesis_template_versions")
-          .select("structure, version_number")
-          .eq("id", full.current_version_id)
-          .limit(1)
-          .maybeSingle();
-
-        if (ver) {
-          structure = ver.structure;
-          versionNumber = ver.version_number;
-        }
-      }
-
-      return {
-        id: full.id,
-        name: full.name,
-        description: full.description,
-        specialty_id: full.specialty_id,
-        procedure_id: full.procedure_id,
-        is_default: full.is_default,
-        is_system: full.is_system,
-        current_version_id: full.current_version_id,
-        campos: full.campos,
-        structure,
-        version_number: versionNumber,
-        resolution: "default",
-      };
+      return query.data?.templates.find((t) => t.id === templateId) ?? null;
     },
   };
 }
