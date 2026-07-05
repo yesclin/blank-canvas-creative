@@ -50,6 +50,8 @@ import { ConflictAlert } from "./ConflictAlert";
 import { ConflictConfirmDialog } from "./ConflictConfirmDialog";
 import { ProcedureProductsPreview } from "./ProcedureProductsPreview";
 import { PatientAutocomplete } from "./PatientAutocomplete";
+import { useActivePackagesByPatient } from "@/hooks/finance/useTreatmentPackageIntegration";
+import { Package as PackageIcon } from "lucide-react";
 import { WeekSchedule } from "@/components/config/EnhancedWorkingHoursCard";
 
 const requiredId = (message: string) => z.preprocess(
