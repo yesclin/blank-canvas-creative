@@ -97,6 +97,7 @@ export default function Agenda() {
   const [appointmentDialogMode, setAppointmentDialogMode] = useState<'create' | 'fitIn' | 'reschedule'>('create');
   const [defaultStartTime, setDefaultStartTime] = useState<string | undefined>();
   const [defaultDialogDate, setDefaultDialogDate] = useState<Date | undefined>();
+  const [defaultDialogPackageId, setDefaultDialogPackageId] = useState<string | undefined>();
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | undefined>();
   const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
