@@ -274,7 +274,8 @@ function RulesDialog({
   professionals: Array<{ id: string; full_name: string }>;
   procedures: Array<{ id: string; name: string }>;
 }) {
-  const { clinicId } = useActiveClinicScope();
+  const { scope } = useActiveClinicScope();
+  const clinicId = scope?.clinicId;
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Partial<CommissionRule> | null>(null);
   const { data: rules = [], isLoading } = useCommissionRules();
