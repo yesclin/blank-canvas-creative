@@ -638,6 +638,7 @@ export default function Agenda() {
     expected_value?: number;
     notes?: string;
     is_fit_in?: boolean;
+    treatment_package_id?: string;
   }) => {
     // If reschedule mode, use the reschedule mutation (only update date/time/duration/room)
     if (appointmentDialogMode === 'reschedule' && selectedAppointment) {
