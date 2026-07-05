@@ -16233,6 +16233,10 @@ export type Database = {
       }
       ensure_system_templates_integrity: { Args: never; Returns: Json }
       expire_overdue_trials: { Args: never; Returns: number }
+      finance_is_admin_or_owner: {
+        Args: { _clinic_id: string }
+        Returns: boolean
+      }
       find_or_create_public_patient: {
         Args: {
           _birth_date?: string
