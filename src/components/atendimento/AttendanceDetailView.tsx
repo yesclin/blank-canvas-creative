@@ -273,6 +273,12 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
         </CardContent>
       </Card>
 
+      {/* ── Package/Session Context (only if linked to a treatment package) ── */}
+      <PackageSessionBadge
+        appointmentId={detail.id}
+        showScheduleNext={detail.status === "finalizado"}
+      />
+
       {/* ── Appointment Context ── */}
       <Card>
         <CardContent className="py-4 px-6">
