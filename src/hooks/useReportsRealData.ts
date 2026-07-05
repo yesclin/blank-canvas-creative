@@ -211,29 +211,33 @@ export function useReportsRealData(filters: ReportFilters) {
 
   const isLoading = loadingAppointments || loadingFinance || loadingPatients || loadingStock;
 
-  // Dados financeiros por período
+  // Dados financeiros por período — faturamento pela data da transação, recebido por paid_at, pendente por due_date
   const financialData: FinancialReportData[] = (() => {
-    if (!financialTransactions.length) return [];
-    
     const days = eachDayOfInterval({ start: filters.startDate, end: filters.endDate });
     const byDay = new Map<string, { faturamento: number; recebido: number; pendente: number }>();
-    
     days.forEach(day => {
       byDay.set(format(day, 'yyyy-MM-dd'), { faturamento: 0, recebido: 0, pendente: 0 });
     });
 
     financialTransactions.forEach(tx => {
-      const dateKey = tx.transaction_date;
-      const entry = byDay.get(dateKey);
-      if (!entry) return;
-      
-      if (isRevenue(tx.type)) {
-        entry.faturamento += Number(tx.amount) || 0;
-        if (tx.status === 'pago') {
-          entry.recebido += Number(tx.amount) || 0;
-        } else {
-          entry.pendente += Number(tx.amount) || 0;
-        }
+      if (!isRevenue(tx.type)) return;
+      const amt = Number(tx.amount) || 0;
+      const paid = Number(tx.paid_amount) || 0;
+
+      const txDate = (tx.transaction_date || '').slice(0, 10);
+      const bucketTx = byDay.get(txDate);
+      if (bucketTx) bucketTx.faturamento += amt;
+
+      if (tx.paid_at) {
+        const pd = String(tx.paid_at).slice(0, 10);
+        const bucketPaid = byDay.get(pd);
+        if (bucketPaid) bucketPaid.recebido += paid || amt;
+      }
+
+      if (tx.status !== 'pago' && tx.due_date) {
+        const dd = String(tx.due_date).slice(0, 10);
+        const bucketDue = byDay.get(dd);
+        if (bucketDue) bucketDue.pendente += Math.max(amt - paid, 0);
       }
     });
 
