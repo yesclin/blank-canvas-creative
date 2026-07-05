@@ -154,13 +154,15 @@ const EXTRAS_FIELDS: (keyof ProcedureExtras)[] = [
 ];
 
 function pickExtras(formData: ProcedureFormData): Record<string, unknown> {
+  const src = formData as unknown as Record<string, unknown>;
   const out: Record<string, unknown> = {};
   for (const k of EXTRAS_FIELDS) {
-    const v = (formData as Record<string, unknown>)[k as string];
+    const v = src[k as string];
     if (v !== undefined) out[k as string] = v;
   }
   return out;
 }
+
 
 
 // Fetch all procedures (including inactive for admin view)
