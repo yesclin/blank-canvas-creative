@@ -431,6 +431,7 @@ function AppRouter() {
 
                       {/* Configurações */}
                       <Route path="config/procedimentos" element={moduleRoute(<ProtectedRoute module="configuracoes"><ConfigProcedimentos /></ProtectedRoute>, "Config Procedimentos")} />
+                      <Route path="config/procedimentos/:id" element={moduleRoute(<ProtectedRoute module="configuracoes"><ConfigProcedimentoEditor /></ProtectedRoute>, "Editor Procedimento")} />
                       <Route path="config/clinica" element={moduleRoute(<ProtectedRoute module="configuracoes"><ConfigClinica /></ProtectedRoute>, "Config Clínica")} />
                       <Route path="config/usuarios" element={moduleRoute(<ProtectedRoute module="configuracoes"><ConfigUsuarios /></ProtectedRoute>, "Config Usuários")} />
                       <Route path="config/materiais" element={moduleRoute(<ProtectedRoute module="configuracoes"><ConfigMateriais /></ProtectedRoute>, "Config Materiais")} />
