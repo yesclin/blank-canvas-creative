@@ -51,7 +51,9 @@ export type ClinicalBlockKey =
   | 'avaliacao_clinica_pediatrica' // Avaliação Clínica Pediátrica (sinais vitais, exame físico)
   | 'diagnostico_pediatrico'   // Diagnóstico Pediátrico (CID-10)
   | 'prescricoes_pediatricas'  // Prescrições Pediátricas (dose por peso)
-  | 'vacinacao';               // Registro de Vacinação (calendário PNI)
+  | 'vacinacao'                // Registro de Vacinação (calendário PNI)
+  // Feature-gated modules (visible only when clinic enables the resource)
+  | 'plano_terapeutico';       // Plano Terapêutico (feature 'therapeutic_plan')
 
 export interface YesclinSpecialty {
   key: SpecialtyKey;

@@ -95,6 +95,7 @@ import {
   type ActionKey,
 } from "@/hooks/prontuario";
 import { useActiveSpecialty } from "@/hooks/prontuario/useActiveSpecialty";
+import { useActiveMedicalRecordModules } from "@/hooks/prontuario/useActiveMedicalRecordModules";
 import { useAutoPatientRedirect } from "@/hooks/prontuario/useAutoPatientRedirect";
 import { getClinicalBlockLabel, YESCLIN_CLINICAL_BLOCKS, type ClinicalBlockKey } from "@/hooks/prontuario/specialtyTabsConfig";
 import { isBlockEnabled } from "@/hooks/prontuario/specialtyCapabilities";
@@ -819,10 +820,13 @@ export default function Prontuario() {
     return map;
   }, []);
 
+  // Clinic-level feature toggles (respects clinic_id + active specialty + RLS)
+  const { hasTherapeuticPlan } = useActiveMedicalRecordModules(patientId);
+
   const navItems = useMemo(() => {
     const enabledBlocks = getVisibleTabsForSpecialty(activeSpecialtyKey);
-    
-    return enabledBlocks
+
+    const items = enabledBlocks
       .filter(blockKey => {
         const standardKey = getStandardTabKey(blockKey);
         return canViewTab(standardKey);
@@ -832,7 +836,24 @@ export default function Prontuario() {
         label: getClinicalBlockLabel(blockKey, activeSpecialtyKey),
         icon: defaultNavLookup[blockKey]?.icon || FileText,
       }));
-  }, [activeSpecialtyKey, defaultNavLookup]);
+
+    // Feature-gated: Plano Terapêutico is a separate tab from Plano/Conduta.
+    // It appears only when the clinic enables the "therapeutic_plan" module for the active specialty.
+    if (hasTherapeuticPlan && !items.some(i => i.id === 'plano_terapeutico')) {
+      if (canViewTab(getStandardTabKey('plano_terapeutico'))) {
+        const condutaIdx = items.findIndex(i => i.id === 'conduta');
+        const insertAt = condutaIdx >= 0 ? condutaIdx + 1 : items.length;
+        items.splice(insertAt, 0, {
+          id: 'plano_terapeutico',
+          label: 'Plano Terapêutico',
+          icon: defaultNavLookup['plano_terapeutico']?.icon || FileText,
+        });
+      }
+    }
+
+    return items;
+  }, [activeSpecialtyKey, defaultNavLookup, hasTherapeuticPlan, canViewTab]);
+
 
   // CRITICAL: Reset state completely when specialty changes
   // This ensures no visual artifacts from previous specialty remain
@@ -1542,6 +1563,43 @@ export default function Prontuario() {
             onUpdate={updateDiagnostico}
           />
         );
+      case 'plano_terapeutico': {
+        // Feature-gated separate tab. Rendered only when clinic enables 'therapeutic_plan'.
+        if (activeSpecialtyKey === 'psicologia') {
+          return (
+            <PlanoTerapeuticoBlock
+              currentPlano={currentPlanoTerapeutico}
+              planoHistory={planoTerapeuticoHistory}
+              loading={planoTerapeuticoLoading}
+              saving={planoTerapeuticoSaving}
+              canEdit={canEditCurrentTab}
+              onSave={savePlanoTerapeutico}
+            />
+          );
+        }
+        if (activeSpecialtyKey === 'fisioterapia' || activeSpecialtyKey === 'pilates') {
+          return (
+            <PlanoTerapeuticoFisioBlock
+              patientId={patientId}
+              clinicId={clinicIdForFisio || null}
+              professionalId={currentProfessionalId || null}
+              canEdit={canEditCurrentTab}
+            />
+          );
+        }
+        // Fallback for other specialties (nutrição, fonoaudiologia, etc.) — uses psychology block
+        // as generic therapeutic plan editor (objetivos, metas, plano, revisão).
+        return (
+          <PlanoTerapeuticoBlock
+            currentPlano={currentPlanoTerapeutico}
+            planoHistory={planoTerapeuticoHistory}
+            loading={planoTerapeuticoLoading}
+            saving={planoTerapeuticoSaving}
+            canEdit={canEditCurrentTab}
+            onSave={savePlanoTerapeutico}
+          />
+        );
+      }
       case 'conduta':
         // Render specialty-specific Conduta/Plano
         if (activeSpecialtyKey === 'psicologia') {
@@ -1560,16 +1618,21 @@ export default function Prontuario() {
                 latestPHQ9={latestPHQ9Score}
                 latestGAD7={latestGAD7Score}
               />
+              {!hasTherapeuticPlan && (
+                <>
+                  <Separator />
+                  <PlanoTerapeuticoBlock
+                    currentPlano={currentPlanoTerapeutico}
+                    planoHistory={planoTerapeuticoHistory}
+                    loading={planoTerapeuticoLoading}
+                    saving={planoTerapeuticoSaving}
+                    canEdit={canEditCurrentTab}
+                    onSave={savePlanoTerapeutico}
+                  />
+                </>
+              )}
               <Separator />
-              <PlanoTerapeuticoBlock
-                currentPlano={currentPlanoTerapeutico}
-                planoHistory={planoTerapeuticoHistory}
-                loading={planoTerapeuticoLoading}
-                saving={planoTerapeuticoSaving}
-                canEdit={canEditCurrentTab}
-                onSave={savePlanoTerapeutico}
-              />
-              <Separator />
+
               <RelatorioPsicologicoBlock
                 patientId={patientId}
                 patientName={patient?.full_name}
@@ -1596,7 +1659,7 @@ export default function Prontuario() {
             </div>
           );
         }
-        if (activeSpecialtyKey === 'fisioterapia') {
+        if (activeSpecialtyKey === 'fisioterapia' && !hasTherapeuticPlan) {
           return (
             <PlanoTerapeuticoFisioBlock
               patientId={patientId}
@@ -1606,6 +1669,7 @@ export default function Prontuario() {
             />
           );
         }
+
         if (activeSpecialtyKey === 'pilates') {
           return (
             <PlanoExerciciosPilatesBlock

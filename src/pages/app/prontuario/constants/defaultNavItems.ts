@@ -73,6 +73,7 @@ export const DEFAULT_NAV_ITEMS = [
   { id: 'session_record', label: 'Registro de Sessão', icon: NotebookPen },
   { id: 'therapeutic_goals', label: 'Objetivos Terapêuticos', icon: Goal },
   { id: 'therapeutic_plan', label: 'Plano Terapêutico', icon: Route },
+  { id: 'plano_terapeutico', label: 'Plano Terapêutico', icon: Route },
   // Psychiatry tabs
   { id: 'diagnosis_dsm', label: 'Diagnóstico (CID/DSM)', icon: BrainCircuit },
   { id: 'psychiatric_prescription', label: 'Prescrição Medicamentosa', icon: PillIcon },

@@ -28,6 +28,7 @@ export const TAB_KEY_MAP: Record<string, TabKey> = {
   session_record: 'evolucao',
   therapeutic_goals: 'evolucao',
   therapeutic_plan: 'evolucao',
+  plano_terapeutico: 'evolucao',
   // Psychiatry tabs - map to appropriate permissions
   diagnosis_dsm: 'diagnostico',
   psychiatric_prescription: 'prescricoes',
