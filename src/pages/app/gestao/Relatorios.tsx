@@ -50,9 +50,9 @@ const reportTabs = [
 export default function Relatorios() {
   const today = new Date();
   
-  // Filtros gerais para outros relatórios
+  // Filtros gerais para outros relatórios — default: últimos 3 meses
   const [filters, setFilters] = useState<ReportFilters>({
-    startDate: startOfMonth(today),
+    startDate: startOfMonth(subMonths(today, 2)),
     endDate: endOfMonth(today),
   });
 
