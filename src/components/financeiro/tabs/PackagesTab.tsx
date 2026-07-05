@@ -333,12 +333,13 @@ export function PackagesTab() {
             <Table>
               <TableHeader><TableRow>
                 <TableHead>Paciente</TableHead><TableHead>Pacote</TableHead><TableHead>Sessões</TableHead>
-                <TableHead>Total</TableHead><TableHead>Pago</TableHead><TableHead>Saldo</TableHead><TableHead>Status</TableHead>
+                <TableHead>Total</TableHead><TableHead>Pago</TableHead><TableHead>Saldo</TableHead><TableHead>Status</TableHead><TableHead className="w-[60px]"></TableHead>
               </TableRow></TableHeader>
               <TableBody>
                 {data.map(p => {
                   const pct = p.total_sessions > 0 ? (p.used_sessions / p.total_sessions) * 100 : 0;
                   const balance = Number(p.total_amount) - Number(p.paid_amount);
+                  const canSchedule = p.status === "ativo" && p.used_sessions < p.total_sessions;
                   return (
                     <TableRow key={p.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelected(p)}>
                       <TableCell>{p.patients?.full_name ?? "-"}</TableCell>
@@ -351,6 +352,13 @@ export function PackagesTab() {
                       <TableCell className="text-emerald-600">{fmt(Number(p.paid_amount))}</TableCell>
                       <TableCell className="text-amber-600">{fmt(balance)}</TableCell>
                       <TableCell><Badge className={statusColor[p.status]}>{statusLabel[p.status]}</Badge></TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        {canSchedule && (
+                          <Button size="sm" variant="outline" onClick={() => goSchedule(p)} title="Agendar próxima sessão">
+                            <CalendarPlus className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
                   );
                 })}
