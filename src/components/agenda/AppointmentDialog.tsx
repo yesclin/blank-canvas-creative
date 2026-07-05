@@ -116,6 +116,8 @@ interface AppointmentDialogProps {
   lockedPatientName?: string;
   /** Schedule blocks for conflict detection */
   scheduleBlocks?: import('@/types/agenda').ScheduleBlock[];
+  /** Optional preselected treatment package id (deep-link from prontuário/financeiro) */
+  defaultPackageId?: string;
 }
 
 export function AppointmentDialog({
