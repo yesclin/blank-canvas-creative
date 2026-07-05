@@ -78,6 +78,7 @@ const Auditoria = lazyWithTimeout(() => import("./pages/app/gestao/Auditoria"), 
 
 // Configurações
 const ConfigProcedimentos = lazyWithTimeout(() => import("./pages/app/config/Procedimentos"), "ConfigProcedimentos");
+const ConfigProcedimentoEditor = lazyWithTimeout(() => import("./pages/app/config/ProcedimentoEditor"), "ConfigProcedimentoEditor");
 const ConfigClinica = lazyWithTimeout(() => import("./pages/app/config/Clinica"), "ConfigClinica");
 const ConfigUsuarios = lazyWithTimeout(() => import("./pages/app/config/Usuarios"), "ConfigUsuarios");
 const ConfigMateriais = lazyWithTimeout(() => import("./pages/app/config/Materiais"), "ConfigMateriais");
