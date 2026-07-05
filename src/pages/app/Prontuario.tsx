@@ -1622,7 +1622,7 @@ export default function Prontuario() {
             </div>
           );
         }
-        if (activeSpecialtyKey === 'fisioterapia') {
+        if (activeSpecialtyKey === 'fisioterapia' && !hasTherapeuticPlan) {
           return (
             <PlanoTerapeuticoFisioBlock
               patientId={patientId}
@@ -1632,6 +1632,7 @@ export default function Prontuario() {
             />
           );
         }
+
         if (activeSpecialtyKey === 'pilates') {
           return (
             <PlanoExerciciosPilatesBlock
