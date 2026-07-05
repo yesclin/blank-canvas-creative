@@ -164,7 +164,7 @@ export function ActiveAppointmentDrawer() {
     }
 
     setFinalizingAppointment(null);
-  }, [finalizingAppointment, updateStatusMutation, syncAfterFinalize, setPendingAppointment, invalidateAll]);
+  }, [finalizingAppointment, updateStatusMutation, syncAfterFinalize, setPendingAppointment, invalidateAll, procedureRequirements]);
 
   const handleMaterialsCancel = useCallback(() => {
     setMaterialsDialogOpen(false);
