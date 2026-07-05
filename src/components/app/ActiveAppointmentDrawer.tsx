@@ -343,6 +343,14 @@ export function ActiveAppointmentDrawer() {
                 </div>
               )}
 
+              {/* Package / session context */}
+              <PackageSessionBadge appointmentId={appointment.id} />
+
+              {/* Procedure details + requirements checklist */}
+              {canAccessClinicalContent && (
+                <ProcedureRequirementsPanel data={procedureRequirements} isLoading={procReqLoading} />
+              )}
+
               {/* Section: Atendimento */}
               <Section title="Atendimento" icon={Stethoscope}>
                 <InfoRow label="Horário" value={`${start_time.slice(0, 5)} – ${end_time.slice(0, 5)}`} />
