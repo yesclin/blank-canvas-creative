@@ -184,6 +184,7 @@ export function AppointmentDialog({
       is_fit_in: mode === 'fitIn',
       care_mode: appointment?.care_mode || "presencial",
       meeting_provider: appointment?.meeting_provider || "",
+      treatment_package_id: (appointment as any)?.treatment_package_id || defaultPackageId || "",
     },
   });
   const wasOpenRef = useRef(false);
