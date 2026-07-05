@@ -102,9 +102,17 @@ export function ActiveAppointmentDrawer() {
     closeDrawer();
   }, [appointments, closeDrawer, queryClient, setSelectedAppointment]);
 
-  // Step 1: Click "Finalizar" → finalize session summary → open materials dialog
+  // Step 1: Click "Finalizar" → validate procedure requirements → finalize session → open materials
   const handleFinalize = useCallback(async () => {
     if (!appointment) return;
+    if (procedureRequirements?.hasBlockingPending) {
+      const pending = procedureRequirements.requirements.filter((r) => !r.satisfied).map((r) => r.label);
+      toast.error(
+        `Não é possível finalizar. Pendente: ${pending.join(", ")}`,
+        { description: "Complete os requisitos exigidos pelo procedimento." },
+      );
+      return;
+    }
     try {
       await finalizeSession.mutateAsync({ appointmentId: appointment.id });
     } catch (e) {
@@ -112,7 +120,7 @@ export function ActiveAppointmentDrawer() {
     }
     setFinalizingAppointment(appointment);
     setMaterialsDialogOpen(true);
-  }, [appointment, finalizeSession]);
+  }, [appointment, finalizeSession, procedureRequirements]);
 
   // Step 2: Materials confirmed → update status → check TISS
   const handleMaterialsConfirm = useCallback(async () => {
