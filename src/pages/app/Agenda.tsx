@@ -77,6 +77,23 @@ export default function Agenda() {
   const locationState = location.state as { patientId?: string; patientName?: string } | null;
   const [lockedPatientId, setLockedPatientId] = useState<string | undefined>(locationState?.patientId);
   const [lockedPatientName, setLockedPatientName] = useState<string | undefined>(locationState?.patientName);
+
+  // Deep-link from prontuário/financeiro: ?patient_id=&package_id=&procedure_id=&professional_id=
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const pkgId = params.get("package_id");
+    const patId = params.get("patient_id");
+    if (pkgId || patId) {
+      if (patId) setLockedPatientId(patId);
+      if (pkgId) setDefaultDialogPackageId(pkgId);
+      setAppointmentDialogMode('create');
+      setAppointmentDialogOpen(true);
+      // Clear the query so refreshes don't re-open the dialog
+      navigate(location.pathname, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('daily');
