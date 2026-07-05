@@ -15,6 +15,7 @@ import { ReportFiltersBar } from '@/components/relatorios/ReportFiltersBar';
 import { SalesReportFilters } from '@/components/relatorios/SalesReportFilters';
 import { ProductMarginFilters } from '@/components/relatorios/ProductMarginFilters';
 import { FinancialReports } from '@/components/relatorios/FinancialReports';
+import { ReportsTab as FinanceFullReports } from '@/components/financeiro/tabs/ReportsTab';
 import { AppointmentReports } from '@/components/relatorios/AppointmentReports';
 import { PatientReports } from '@/components/relatorios/PatientReports';
 import { InsuranceReports } from '@/components/relatorios/InsuranceReports';
