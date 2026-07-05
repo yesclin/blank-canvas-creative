@@ -37,10 +37,8 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useProcedureProductCosts } from "@/hooks/useProcedureProductCosts";
 
 export default function ConfigProcedimentos() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
-  const [selectedProcedure, setSelectedProcedure] = useState<Procedure | null>(null);
   const [confirmToggle, setConfirmToggle] = useState<Procedure | null>(null);
   const [toggleUsageInfo, setToggleUsageInfo] = useState<{ isUsed: boolean; count: number } | null>(null);
   const [productsDialogOpen, setProductsDialogOpen] = useState(false);
@@ -51,22 +49,12 @@ export default function ConfigProcedimentos() {
   const toggleStatusMutation = useToggleProcedureStatus();
   const { can, isOwner, isAdmin } = usePermissions();
 
-  // Helper para formatar custo
-  const formatCurrency = (value: number) => 
+  const formatCurrency = (value: number) =>
     value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-  // Obter custo do procedimento
-  const getProcedureCost = (procedureId: string) => {
-    const cost = productCosts?.[procedureId];
-    return cost?.total_cost || 0;
-  };
+  const getProcedureCost = (procedureId: string) => productCosts?.[procedureId]?.total_cost || 0;
+  const getProductCount = (procedureId: string) => productCosts?.[procedureId]?.product_count || 0;
 
-  const getProductCount = (procedureId: string) => {
-    const cost = productCosts?.[procedureId];
-    return cost?.product_count || 0;
-  };
-
-  // Check if user can manage procedures (owner and admin have total bypass)
   const canManage = isOwner || isAdmin || can("configuracoes", "edit");
 
   const filteredProcedures = (procedures || []).filter((proc) =>
@@ -74,17 +62,9 @@ export default function ConfigProcedimentos() {
     (proc.specialty?.toLowerCase().includes(search.toLowerCase()) ?? false)
   );
 
-  const handleCreate = () => {
-    setSelectedProcedure(null);
-    setDialogMode("create");
-    setIsDialogOpen(true);
-  };
+  const handleCreate = () => navigate("/app/config/procedimentos/novo");
+  const handleEdit = (procedure: Procedure) => navigate(`/app/config/procedimentos/${procedure.id}`);
 
-  const handleEdit = (procedure: Procedure) => {
-    setSelectedProcedure(procedure);
-    setDialogMode("edit");
-    setIsDialogOpen(true);
-  };
 
   const handleToggleStatus = async (procedure: Procedure) => {
     // Check usage before showing dialog
