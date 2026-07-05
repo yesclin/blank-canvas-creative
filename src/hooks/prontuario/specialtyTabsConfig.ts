@@ -52,6 +52,9 @@ export const YESCLIN_CLINICAL_BLOCKS: Record<ClinicalBlockKey, string> = {
   diagnostico_pediatrico: 'Diagnóstico Pediátrico',
   prescricoes_pediatricas: 'Prescrições Pediátricas',
   vacinacao: 'Vacinação',
+  // Feature-gated
+  plano_terapeutico: 'Plano Terapêutico',
+
 };
 
 // All available clinical block keys
