@@ -654,6 +654,41 @@ export function AppointmentDialog({
       return;
     }
 
+    // Fase 2 — regras do procedimento selecionado
+    if (selectedProcedure) {
+      // Sala obrigatória
+      if (selectedProcedure.requires_room && !normalizedData.room_id) {
+        form.setError("room_id", {
+          type: "required",
+          message: "Este procedimento exige seleção de sala.",
+        });
+        toast.error("Este procedimento exige seleção de sala.");
+        return;
+      }
+
+      // Prazo mínimo/máximo para agendamento
+      try {
+        const [hh, mm] = (normalizedData.start_time || "00:00").split(":").map(Number);
+        const scheduled = new Date(normalizedData.scheduled_date);
+        scheduled.setHours(hh || 0, mm || 0, 0, 0);
+        const now = new Date();
+        const diffHours = (scheduled.getTime() - now.getTime()) / 36e5;
+
+        const minH = Number(selectedProcedure.min_booking_notice_hours ?? 0);
+        if (minH > 0 && diffHours < minH) {
+          toast.error(`Agendamento requer antecedência mínima de ${minH}h.`);
+          return;
+        }
+        const maxD = Number(selectedProcedure.max_booking_notice_days ?? 0);
+        if (maxD > 0 && diffHours / 24 > maxD) {
+          toast.error(`Agendamento não pode ser feito com mais de ${maxD} dias de antecedência.`);
+          return;
+        }
+      } catch (e) {
+        console.warn("booking notice validation error:", e);
+      }
+    }
+
     // Check for critical conflicts - block save
     if (conflictResult.hasCriticalConflict) {
       toast.error("Não é possível salvar com conflitos críticos. Corrija os itens indicados.");
