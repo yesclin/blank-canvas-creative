@@ -536,6 +536,12 @@ export function useProcedureForm(initialData?: Procedure | null) {
   };
 
   const loadProcedure = (procedure: Procedure) => {
+    const extras: ProcedureExtras = {};
+    const src = procedure as unknown as Record<string, unknown>;
+    for (const k of EXTRAS_FIELDS) {
+      const v = src[k as string];
+      if (v !== undefined) (extras as Record<string, unknown>)[k as string] = v;
+    }
     setFormData({
       name: procedure.name,
       specialty: procedure.specialty || "",
@@ -555,8 +561,10 @@ export function useProcedureForm(initialData?: Procedure | null) {
       allow_single_sale: procedure.allow_single_sale ?? true,
       package_validity_days: procedure.package_validity_days ?? null,
       protocol_notes: procedure.protocol_notes ?? null,
+      ...extras,
     });
   };
+
 
   // Validation: name required, duration > 0, and specialty_id required
   const isValid = formData.name.trim().length > 0 && formData.duration_minutes > 0;
