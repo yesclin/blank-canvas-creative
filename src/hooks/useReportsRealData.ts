@@ -86,7 +86,8 @@ export function useReportsRealData(filters: ReportFilters) {
   // DADOS DE AGENDAMENTOS/ATENDIMENTOS
   // =============================================
   const { data: appointmentsData, isLoading: loadingAppointments } = useQuery({
-    queryKey: ['report-appointments', startDateStr, endDateStr, filters.professionalId, filters.insuranceId],
+    queryKey: ['report-appointments', clinicId, startDateStr, endDateStr, filters.professionalId, filters.insuranceId],
+    enabled: !!clinicId,
     queryFn: async () => {
       let query = supabase
         .from('appointments')
@@ -104,18 +105,21 @@ export function useReportsRealData(filters: ReportFilters) {
           procedures:procedure_id (id, name),
           insurances:insurance_id (id, name)
         `)
+        .eq('clinic_id', clinicId)
         .gte('scheduled_date', startDateStr)
         .lte('scheduled_date', endDateStr);
 
-      if (filters.professionalId) {
-        query = query.eq('professional_id', filters.professionalId);
-      }
-      if (filters.insuranceId) {
-        query = query.eq('insurance_id', filters.insuranceId);
-      }
+      if (filters.professionalId) query = query.eq('professional_id', filters.professionalId);
+      if (filters.insuranceId) query = query.eq('insurance_id', filters.insuranceId);
 
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error('[Relatorios] appointments error:', error);
+        throw error;
+      }
+      if (import.meta.env.DEV) {
+        console.log('[Relatorios] appointments', { clinicId, startDateStr, endDateStr, count: data?.length ?? 0 });
+      }
       return data || [];
     },
   });
