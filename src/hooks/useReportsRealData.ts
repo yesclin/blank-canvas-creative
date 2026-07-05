@@ -338,7 +338,8 @@ export function useReportsRealData(filters: ReportFilters) {
 
   // Pacotes de tratamento (real data from treatment_packages)
   const { data: treatmentPackagesData = [] } = useQuery({
-    queryKey: ['report-treatment-packages', startDateStr, endDateStr],
+    queryKey: ['report-treatment-packages', clinicId],
+    enabled: !!clinicId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('treatment_packages')
@@ -347,13 +348,18 @@ export function useReportsRealData(filters: ReportFilters) {
           name,
           total_sessions,
           used_sessions,
-          total_value,
-          paid_value,
+          total_amount,
+          paid_amount,
           status,
           patient_id,
           patients:patient_id (full_name)
-        `);
-      if (error) throw error;
+        `)
+        .eq('clinic_id', clinicId);
+      if (error) {
+        console.error('[Relatorios] treatment_packages error:', error);
+        throw error;
+      }
+      if (import.meta.env.DEV) console.log('[Relatorios] treatment_packages', { count: data?.length ?? 0 });
       return data || [];
     },
   });
@@ -364,8 +370,8 @@ export function useReportsRealData(filters: ReportFilters) {
     packageName: pkg.name || 'Pacote',
     totalSessions: pkg.total_sessions || 0,
     usedSessions: pkg.used_sessions || 0,
-    totalValue: Number(pkg.total_value) || 0,
-    paidValue: Number(pkg.paid_value) || 0,
+    totalValue: Number(pkg.total_amount) || 0,
+    paidValue: Number(pkg.paid_amount) || 0,
     status: pkg.status || 'ativo',
   }));
 
