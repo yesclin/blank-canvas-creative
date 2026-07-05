@@ -76,12 +76,15 @@ export async function ensureAppointmentCharge(
   const expected = resolveExpected(appointment);
   if (expected <= 0) return null;
 
-  // Regra do procedimento (fase 2 - integração com agenda):
+  // Regra do procedimento (fase 3 - integração com atendimento):
   //  - charge_on_schedule === false  => não gera cobrança ao agendar (aguarda finalização)
-  //  - Fase "finish" ignora esse bloqueio (idempotente na finalização)
-  //  - Legado / sem procedimento / flags nulas => mantém comportamento antigo (cobra ao agendar)
+  //  - charge_on_finish  === false   => não gera cobrança ao finalizar
+  //  - Legado / flags nulas          => mantém comportamento antigo (cobra normalmente)
   const proc = appointment.procedures;
   if (phase === "schedule" && proc && proc.charge_on_schedule === false) {
+    return null;
+  }
+  if (phase === "finish" && proc && proc.charge_on_finish === false) {
     return null;
   }
 
