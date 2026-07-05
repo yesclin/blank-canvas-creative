@@ -298,13 +298,8 @@ export default function ConfigProcedimentos() {
         </CardContent>
       </Card>
 
-      {/* Create/Edit Dialog */}
-      <ProcedureFormDialog
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        procedure={selectedProcedure}
-        mode={dialogMode}
-      />
+      {/* Editor is a dedicated route now: /app/config/procedimentos/:id */}
+
 
       {/* Products Configuration Dialog */}
       <ProcedureProductsDialog
