@@ -72,6 +72,7 @@ export interface AppointmentFormData {
   care_mode?: string;
   meeting_provider?: string;
   expected_value?: number;
+  treatment_package_id?: string;
 }
 
 // `getClinicId` deprecado: cada chamada disparava `supabase.auth.getUser()`
