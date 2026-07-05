@@ -3,6 +3,7 @@ import type { TabKey } from "@/hooks/prontuario";
 // Tab key mapping to standard keys
 export const TAB_KEY_MAP: Record<string, TabKey> = {
   resumo: 'resumo',
+  tratamentos: 'resumo',
   anamnese: 'anamnese',
   sinais_vitais: 'anamnese', // Map vital signs to anamnese for permissions
   odontograma: 'anamnese', // Map odontogram to anamnese for permissions

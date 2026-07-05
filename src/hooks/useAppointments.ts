@@ -72,6 +72,7 @@ export interface AppointmentFormData {
   care_mode?: string;
   meeting_provider?: string;
   expected_value?: number;
+  treatment_package_id?: string;
 }
 
 // `getClinicId` deprecado: cada chamada disparava `supabase.auth.getUser()`
@@ -199,6 +200,7 @@ export function useCreateAppointment() {
           meeting_provider: data.meeting_provider || null,
           expected_value: expectedValue || null,
           amount_expected: expectedValue || 0,
+          treatment_package_id: data.treatment_package_id || null,
         })
         .select()
         .single();

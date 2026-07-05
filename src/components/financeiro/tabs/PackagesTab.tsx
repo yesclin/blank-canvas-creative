@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Package as PackageIcon, X, CheckCircle } from "lucide-react";
+import { Plus, Search, Package as PackageIcon, X, CheckCircle, CalendarPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useActiveClinicScope } from "@/hooks/useActiveClinicScope";
@@ -269,9 +270,19 @@ function PackageDetailSheet({ pkg, onClose }: { pkg: TreatmentPackageRow | null;
 }
 
 export function PackagesTab() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<PackageStatusExt | "all">("all");
   const [selected, setSelected] = useState<TreatmentPackageRow | null>(null);
+
+  const goSchedule = (p: TreatmentPackageRow) => {
+    const params = new URLSearchParams();
+    params.set("patient_id", p.patient_id);
+    params.set("package_id", p.id);
+    if (p.procedure_id) params.set("procedure_id", p.procedure_id);
+    if (p.professional_id) params.set("professional_id", p.professional_id);
+    navigate(`/app/agenda?${params.toString()}`);
+  };
   const { data = [], isLoading, refetch } = useTreatmentPackages({
     status: status === "all" ? undefined : status,
     search: search || undefined,
@@ -322,12 +333,13 @@ export function PackagesTab() {
             <Table>
               <TableHeader><TableRow>
                 <TableHead>Paciente</TableHead><TableHead>Pacote</TableHead><TableHead>Sessões</TableHead>
-                <TableHead>Total</TableHead><TableHead>Pago</TableHead><TableHead>Saldo</TableHead><TableHead>Status</TableHead>
+                <TableHead>Total</TableHead><TableHead>Pago</TableHead><TableHead>Saldo</TableHead><TableHead>Status</TableHead><TableHead className="w-[60px]"></TableHead>
               </TableRow></TableHeader>
               <TableBody>
                 {data.map(p => {
                   const pct = p.total_sessions > 0 ? (p.used_sessions / p.total_sessions) * 100 : 0;
                   const balance = Number(p.total_amount) - Number(p.paid_amount);
+                  const canSchedule = p.status === "ativo" && p.used_sessions < p.total_sessions;
                   return (
                     <TableRow key={p.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelected(p)}>
                       <TableCell>{p.patients?.full_name ?? "-"}</TableCell>
@@ -340,6 +352,13 @@ export function PackagesTab() {
                       <TableCell className="text-emerald-600">{fmt(Number(p.paid_amount))}</TableCell>
                       <TableCell className="text-amber-600">{fmt(balance)}</TableCell>
                       <TableCell><Badge className={statusColor[p.status]}>{statusLabel[p.status]}</Badge></TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        {canSchedule && (
+                          <Button size="sm" variant="outline" onClick={() => goSchedule(p)} title="Agendar próxima sessão">
+                            <CalendarPlus className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
                   );
                 })}

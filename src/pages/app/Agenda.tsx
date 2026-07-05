@@ -77,6 +77,23 @@ export default function Agenda() {
   const locationState = location.state as { patientId?: string; patientName?: string } | null;
   const [lockedPatientId, setLockedPatientId] = useState<string | undefined>(locationState?.patientId);
   const [lockedPatientName, setLockedPatientName] = useState<string | undefined>(locationState?.patientName);
+
+  // Deep-link from prontuário/financeiro: ?patient_id=&package_id=&procedure_id=&professional_id=
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const pkgId = params.get("package_id");
+    const patId = params.get("patient_id");
+    if (pkgId || patId) {
+      if (patId) setLockedPatientId(patId);
+      if (pkgId) setDefaultDialogPackageId(pkgId);
+      setAppointmentDialogMode('create');
+      setAppointmentDialogOpen(true);
+      // Clear the query so refreshes don't re-open the dialog
+      navigate(location.pathname, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('daily');
@@ -97,6 +114,7 @@ export default function Agenda() {
   const [appointmentDialogMode, setAppointmentDialogMode] = useState<'create' | 'fitIn' | 'reschedule'>('create');
   const [defaultStartTime, setDefaultStartTime] = useState<string | undefined>();
   const [defaultDialogDate, setDefaultDialogDate] = useState<Date | undefined>();
+  const [defaultDialogPackageId, setDefaultDialogPackageId] = useState<string | undefined>();
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | undefined>();
   const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
@@ -638,6 +656,7 @@ export default function Agenda() {
     expected_value?: number;
     notes?: string;
     is_fit_in?: boolean;
+    treatment_package_id?: string;
   }) => {
     // If reschedule mode, use the reschedule mutation (only update date/time/duration/room)
     if (appointmentDialogMode === 'reschedule' && selectedAppointment) {
@@ -672,6 +691,7 @@ export default function Agenda() {
       is_fit_in: data.is_fit_in,
       care_mode: (data as any).care_mode || 'presencial',
       meeting_provider: (data as any).meeting_provider || undefined,
+      treatment_package_id: data.treatment_package_id || undefined,
     };
     
     createAppointmentMutation.mutate(formData, {
@@ -931,10 +951,12 @@ export default function Agenda() {
           if (!open) {
             setLockedPatientId(undefined);
             setLockedPatientName(undefined);
+            setDefaultDialogPackageId(undefined);
           }
         }}
         lockedPatientId={lockedPatientId}
         lockedPatientName={lockedPatientName}
+        defaultPackageId={defaultDialogPackageId}
         mode={appointmentDialogMode}
         professionals={professionals}
         patients={patients}

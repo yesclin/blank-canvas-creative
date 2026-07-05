@@ -248,6 +248,7 @@ import { removeGlobalActiveAppointment } from "@/lib/globalActiveAppointments";
 import { ICON_MAP } from "./prontuario/constants/iconMap";
 import { TAB_KEY_MAP } from "./prontuario/constants/tabKeyMap";
 import { DEFAULT_NAV_ITEMS } from "./prontuario/constants/defaultNavItems";
+import { TratamentosSessoesTab } from "@/components/prontuario/tabs/TratamentosSessoesTab";
 
 // Re-export to preserve any external imports relying on prior module shape (none currently).
 export { ICON_MAP };
@@ -1056,6 +1057,8 @@ export default function Prontuario() {
     }
 
     switch (activeTab) {
+      case 'tratamentos':
+        return <TratamentosSessoesTab patientId={patientId!} canEdit={canEditCurrentTab} />;
       case 'resumo':
         // Render specialty-specific Visão Geral
         if (activeSpecialtyKey === 'psicologia') {

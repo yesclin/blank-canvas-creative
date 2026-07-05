@@ -50,6 +50,8 @@ import { ConflictAlert } from "./ConflictAlert";
 import { ConflictConfirmDialog } from "./ConflictConfirmDialog";
 import { ProcedureProductsPreview } from "./ProcedureProductsPreview";
 import { PatientAutocomplete } from "./PatientAutocomplete";
+import { useActivePackagesByPatient } from "@/hooks/finance/useTreatmentPackageIntegration";
+import { Package as PackageIcon } from "lucide-react";
 import { WeekSchedule } from "@/components/config/EnhancedWorkingHoursCard";
 
 const requiredId = (message: string) => z.preprocess(
@@ -81,6 +83,7 @@ const appointmentSchema = z.object({
   is_fit_in: z.boolean().optional(),
   care_mode: z.string().optional(),
   meeting_provider: z.string().optional(),
+  treatment_package_id: z.string().optional(),
 });
 
 type AppointmentFormData = z.infer<typeof appointmentSchema>;
@@ -115,6 +118,63 @@ interface AppointmentDialogProps {
   lockedPatientName?: string;
   /** Schedule blocks for conflict detection */
   scheduleBlocks?: import('@/types/agenda').ScheduleBlock[];
+  /** Optional preselected treatment package id (deep-link from prontuário/financeiro) */
+  defaultPackageId?: string;
+}
+
+function PackageLinkField({ form }: { form: any }) {
+  const patientId = form.watch("patient_id");
+  const { data: pkgs = [] } = useActivePackagesByPatient(patientId);
+  const value = form.watch("treatment_package_id") || "";
+  if (!patientId || pkgs.length === 0) return null;
+  const selected = pkgs.find(p => p.id === value);
+  const nextIdx = selected ? Math.min(selected.used_sessions + 1, selected.total_sessions) : null;
+  return (
+    <FormField
+      control={form.control}
+      name="treatment_package_id"
+      render={({ field }) => (
+        <FormItem className="md:col-span-2">
+          <FormLabel className="flex items-center gap-1.5">
+            <PackageIcon className="h-3.5 w-3.5" /> Vincular a pacote ativo (opcional)
+          </FormLabel>
+          <Select
+            value={field.value || "__none__"}
+            onValueChange={(v) => {
+              const val = v === "__none__" ? "" : v;
+              field.onChange(val);
+              const pkg = pkgs.find(p => p.id === val);
+              if (pkg) {
+                if (pkg.procedure_id) form.setValue("procedure_id", pkg.procedure_id, { shouldDirty: true });
+                if (pkg.professional_id) form.setValue("professional_id", pkg.professional_id, { shouldDirty: true });
+              }
+            }}
+          >
+            <FormControl>
+              <SelectTrigger>
+                <SelectValue placeholder="Nenhum pacote vinculado" />
+              </SelectTrigger>
+            </FormControl>
+            <SelectContent>
+              <SelectItem value="__none__">Nenhum</SelectItem>
+              {pkgs.map(p => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name} · {p.used_sessions}/{p.total_sessions} sessões
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {selected && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Sessões pendentes: <strong>{selected.remaining_sessions}</strong>
+              {nextIdx ? ` · Próxima recomendada: sessão ${nextIdx} de ${selected.total_sessions}` : ""}
+            </p>
+          )}
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
 }
 
 export function AppointmentDialog({
@@ -139,6 +199,7 @@ export function AppointmentDialog({
   lockedPatientId,
   lockedPatientName,
   scheduleBlocks = [],
+  defaultPackageId,
 }: AppointmentDialogProps) {
   const { enabledSpecialties, selectedSpecialtyId } = useGlobalSpecialty();
   const resolvedClinicSpecialty = useMemo(
@@ -183,6 +244,7 @@ export function AppointmentDialog({
       is_fit_in: mode === 'fitIn',
       care_mode: appointment?.care_mode || "presencial",
       meeting_provider: appointment?.meeting_provider || "",
+      treatment_package_id: (appointment as any)?.treatment_package_id || defaultPackageId || "",
     },
   });
   const wasOpenRef = useRef(false);
@@ -212,9 +274,10 @@ export function AppointmentDialog({
       is_fit_in: mode === "fitIn",
       care_mode: "presencial",
       meeting_provider: "",
+      treatment_package_id: defaultPackageId || "",
     });
     form.clearErrors();
-  }, [appointment, defaultDate, defaultProfessionalId, defaultStartTime, form, globalSpecialtyId, lockedPatientId, lockedProfessionalId, mode, open]);
+  }, [appointment, defaultDate, defaultPackageId, defaultProfessionalId, defaultStartTime, form, globalSpecialtyId, lockedPatientId, lockedProfessionalId, mode, open]);
 
   const resolveProfessionalId = useCallback(() => {
     const candidates = appointment
@@ -669,6 +732,11 @@ export function AppointmentDialog({
                   </FormItem>
                 )}
               />
+
+              {/* Treatment package link */}
+              <PackageLinkField form={form} />
+
+
 
               {/* Professional */}
               <FormField

@@ -12,6 +12,7 @@ import { logDocumentAction } from "@/hooks/useDocumentGovernance";
 import { AddNoteDialog, NotesHistoryPanel } from "@/components/atendimento/DocumentGovernanceDialogs";
 import { UnifiedSignatureWizard } from "@/components/signature/UnifiedSignatureWizard";
 import { SignatureAuditTrailDrawer } from "@/components/signature/SignatureAuditTrailDrawer";
+import { PackageSessionBadge } from "@/components/atendimento/PackageSessionBadge";
 import { logSignatureEvent, assertSignatureContextReady, getMissingSignatureContextFields, type SignableDocumentContext } from "@/hooks/useUnifiedDocumentSigning";
 import {
   ArrowLeft, FolderOpen, StickyNote, Printer, Download, PenTool,
@@ -272,6 +273,12 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
           </div>
         </CardContent>
       </Card>
+
+      {/* ── Package/Session Context (only if linked to a treatment package) ── */}
+      <PackageSessionBadge
+        appointmentId={detail.id}
+        showScheduleNext={detail.status === "finalizado"}
+      />
 
       {/* ── Appointment Context ── */}
       <Card>
