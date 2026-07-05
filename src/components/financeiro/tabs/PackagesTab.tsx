@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Package as PackageIcon, X, CheckCircle } from "lucide-react";
+import { Plus, Search, Package as PackageIcon, X, CheckCircle, CalendarPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useActiveClinicScope } from "@/hooks/useActiveClinicScope";
