@@ -81,6 +81,7 @@ const appointmentSchema = z.object({
   is_fit_in: z.boolean().optional(),
   care_mode: z.string().optional(),
   meeting_provider: z.string().optional(),
+  treatment_package_id: z.string().optional(),
 });
 
 type AppointmentFormData = z.infer<typeof appointmentSchema>;
