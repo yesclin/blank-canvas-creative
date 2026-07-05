@@ -155,6 +155,15 @@ export function EsteticaProntuarioLayout({
         />
       );
 
+    case 'produtos_utilizados':
+      return (
+        <ProdutosUtilizadosBlock
+          patientId={patientId}
+          appointmentId={appointmentId}
+          canEdit={canEdit}
+        />
+      );
+
     default:
       return (
         <Card>

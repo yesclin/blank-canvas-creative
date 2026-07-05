@@ -6,6 +6,7 @@
  * expiração opcional). A alteração só é salva após a confirmação.
  */
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -98,6 +99,23 @@ const SPECIALTY_LABEL: Record<string, string> = {
   medical_general: 'Clínica Médica', pilates: 'Pilates',
 };
 const labelSpecialty = (s: string | null) => (s ? SPECIALTY_LABEL[s] ?? s : 'Global');
+const SPECIALTY_SLUG_ALIASES: Record<string, string> = {
+  aesthetics: 'estetica', aesthetic: 'estetica', estetica: 'estetica',
+  psychology: 'psicologia', psicologia: 'psicologia',
+  dentistry: 'odontologia', dental: 'odontologia', odontologia: 'odontologia',
+  nutrition: 'nutricao', nutricao: 'nutricao',
+  physiotherapy: 'fisioterapia', fisioterapia: 'fisioterapia',
+  pediatrics: 'pediatria', pediatria: 'pediatria',
+  dermatology: 'dermatologia', dermatologia: 'dermatologia',
+  medical_general: 'geral', general: 'geral', geral: 'geral',
+  other_specialty: 'other_specialty', outras_especialidades: 'other_specialty', atendimento_geral: 'other_specialty', custom: 'other_specialty',
+  pilates: 'pilates',
+};
+const normalizeSpecialtySlug = (slug: string | null) => {
+  if (!slug) return null;
+  const normalized = slug.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return SPECIALTY_SLUG_ALIASES[normalized] ?? normalized;
+};
 
 const fmtDate = (iso: string | null) => {
   if (!iso) return '—';
@@ -184,6 +202,7 @@ function ResourceCard({
 }
 
 export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSummary }: Props) {
+  const queryClient = useQueryClient();
   const [items, setItems] = useState<Resource[]>([]);
   const [auditByKey, setAuditByKey] = useState<Record<string, AuditMeta>>({});
   const [loading, setLoading] = useState(false);
@@ -253,12 +272,13 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
   const resolveClinicSpecialtyId = async (r: Resource): Promise<string | null> => {
     const normalizedResourceType = normalizeResourceType(r.resource_type);
     if (!r.specialty_slug && !ANAMNESIS_RESOURCE_TYPES.has(r.resource_type)) return null;
+    const canonicalSpecialtySlug = normalizeSpecialtySlug(r.specialty_slug);
 
     const { data: resolvedId, error: rpcError } = await supabase.rpc(
       'resolve_clinic_resource_specialty_id',
       {
         p_clinic_id: clinicId,
-        p_resource_specialty_slug: r.specialty_slug,
+        p_resource_specialty_slug: canonicalSpecialtySlug,
         p_resource_type: normalizedResourceType,
       },
     );
@@ -277,7 +297,7 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
     }
 
     const specialties = data ?? [];
-    const direct = specialties.find((s) => s.slug === r.specialty_slug);
+    const direct = specialties.find((s) => normalizeSpecialtySlug(s.slug) === canonicalSpecialtySlug);
     if (direct?.id) {
       // Reativar se estiver inativa (Super Admin está criando o vínculo)
       if (!direct.is_active) {
@@ -286,7 +306,7 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
       return direct.id;
     }
 
-    if (ANAMNESIS_RESOURCE_TYPES.has(r.resource_type) && GENERIC_SPECIALTY_SLUGS.has(r.specialty_slug)) {
+    if (ANAMNESIS_RESOURCE_TYPES.has(r.resource_type) && GENERIC_SPECIALTY_SLUGS.has(canonicalSpecialtySlug)) {
       const generic = specialties.find((s) => GENERIC_SPECIALTY_SLUGS.has(s.slug ?? ''));
       if (generic?.id) {
         if (!generic.is_active) {
@@ -301,8 +321,8 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
       .from('specialties')
       .insert({
         clinic_id: clinicId,
-        name: labelSpecialty(r.specialty_slug) || r.specialty_slug,
-        slug: r.specialty_slug,
+        name: labelSpecialty(r.specialty_slug) || canonicalSpecialtySlug,
+        slug: canonicalSpecialtySlug,
         is_active: true,
       })
       .select('id')
@@ -350,7 +370,7 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
         resource_key: r.resource_key,
         resource_id: resourceId,
         specialty_id: specialtyId,
-        specialty_slug: r.specialty_slug,
+        specialty_slug: normalizeSpecialtySlug(r.specialty_slug),
         enabled: nextEnabled,
         reason: reason.trim(),
         effective_at: new Date(effectiveAt).toISOString(),
@@ -384,6 +404,8 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
     });
 
     toast.success(nextEnabled ? 'Recurso liberado.' : 'Recurso bloqueado.');
+    queryClient.invalidateQueries({ queryKey: ['clinic-prontuario-resources', clinicId] });
+    queryClient.invalidateQueries({ queryKey: ['clinic-enabled-resources', clinicId] });
     setSaving(false);
     setPending(null);
     load();

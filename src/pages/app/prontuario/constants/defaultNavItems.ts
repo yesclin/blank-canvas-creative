@@ -74,6 +74,7 @@ export const DEFAULT_NAV_ITEMS = [
   { id: 'therapeutic_goals', label: 'Objetivos Terapêuticos', icon: Goal },
   { id: 'therapeutic_plan', label: 'Plano Terapêutico', icon: Route },
   { id: 'plano_terapeutico', label: 'Plano Terapêutico', icon: Route },
+  { id: 'plano_acao_crise', label: 'Plano de Ação em Crise', icon: ShieldCheck },
   // Psychiatry tabs
   { id: 'diagnosis_dsm', label: 'Diagnóstico (CID/DSM)', icon: BrainCircuit },
   { id: 'psychiatric_prescription', label: 'Prescrição Medicamentosa', icon: PillIcon },
@@ -87,6 +88,7 @@ export const DEFAULT_NAV_ITEMS = [
   // Aesthetics tabs (using correct system IDs from yesclinSpecialties)
   { id: 'exame_fisico', label: 'Avaliação Estética', icon: Sparkles },
   { id: 'procedimentos_realizados', label: 'Procedimentos Realizados', icon: Syringe },
+  { id: 'produtos_utilizados', label: 'Produtos Utilizados', icon: Package },
 
   { id: 'before_after_photos', label: 'Fotos Antes/Depois', icon: ImageIcon },
   { id: 'termos_consentimentos', label: 'Termos de Consentimento', icon: FileCheck },

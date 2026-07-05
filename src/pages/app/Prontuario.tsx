@@ -250,6 +250,7 @@ import { ICON_MAP } from "./prontuario/constants/iconMap";
 import { TAB_KEY_MAP } from "./prontuario/constants/tabKeyMap";
 import { DEFAULT_NAV_ITEMS } from "./prontuario/constants/defaultNavItems";
 import { TratamentosSessoesTab } from "@/components/prontuario/tabs/TratamentosSessoesTab";
+import { getEnabledProntuarioTabs } from "@/hooks/prontuario/prontuarioFeatureTabs";
 
 // Re-export to preserve any external imports relying on prior module shape (none currently).
 export { ICON_MAP };
@@ -821,38 +822,22 @@ export default function Prontuario() {
   }, []);
 
   // Clinic-level feature toggles (respects clinic_id + active specialty + RLS)
-  const { hasTherapeuticPlan } = useActiveMedicalRecordModules(patientId);
+  const { hasTherapeuticPlan, clinicResources, clinicSpecialtyKeys } = useActiveMedicalRecordModules(patientId);
 
   const navItems = useMemo(() => {
-    const enabledBlocks = getVisibleTabsForSpecialty(activeSpecialtyKey);
-
-    const items = enabledBlocks
-      .filter(blockKey => {
-        const standardKey = getStandardTabKey(blockKey);
-        return canViewTab(standardKey);
-      })
-      .map(blockKey => ({
-        id: blockKey,
-        label: getClinicalBlockLabel(blockKey, activeSpecialtyKey),
-        icon: defaultNavLookup[blockKey]?.icon || FileText,
-      }));
-
-    // Feature-gated: Plano Terapêutico is a separate tab from Plano/Conduta.
-    // It appears only when the clinic enables the "therapeutic_plan" module for the active specialty.
-    if (hasTherapeuticPlan && !items.some(i => i.id === 'plano_terapeutico')) {
-      if (canViewTab(getStandardTabKey('plano_terapeutico'))) {
-        const condutaIdx = items.findIndex(i => i.id === 'conduta');
-        const insertAt = condutaIdx >= 0 ? condutaIdx + 1 : items.length;
-        items.splice(insertAt, 0, {
-          id: 'plano_terapeutico',
-          label: 'Plano Terapêutico',
-          icon: defaultNavLookup['plano_terapeutico']?.icon || FileText,
-        });
-      }
-    }
-
-    return items;
-  }, [activeSpecialtyKey, defaultNavLookup, hasTherapeuticPlan, canViewTab]);
+    return getEnabledProntuarioTabs({
+      clinicId: clinic?.id,
+      specialtyId: activeSpecialtyId,
+      specialtyKey: activeSpecialtyKey,
+      baseTabs: getVisibleTabsForSpecialty(activeSpecialtyKey),
+      resources: clinicResources,
+      clinicSpecialtyKeys,
+      canViewTab,
+      getStandardTabKey,
+      getLabel: (tabId) => getClinicalBlockLabel(tabId as ClinicalBlockKey, activeSpecialtyKey),
+      getIcon: (tabId) => defaultNavLookup[tabId]?.icon || FileText,
+    });
+  }, [activeSpecialtyKey, activeSpecialtyId, clinic?.id, clinicResources, clinicSpecialtyKeys, defaultNavLookup, canViewTab]);
 
 
   // CRITICAL: Reset state completely when specialty changes
@@ -1832,6 +1817,27 @@ export default function Prontuario() {
           />
         );
 
+      case 'plano_acao_crise':
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-muted-foreground" />
+                Plano de Ação em Crise
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="py-12 text-center space-y-3">
+              <p className="text-muted-foreground">Plano de Ação em Crise ainda sem registros.</p>
+              {canEditCurrentTab && (
+                <Button size="sm" variant="outline">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Plano de Ação em Crise
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        );
+
       case 'termos_consentimentos':
         // Estética - Termos de Consentimento Estético
         // (estética handled by EsteticaProntuarioLayout above)
@@ -2111,6 +2117,15 @@ export default function Prontuario() {
           />
         );
 
+      case 'produtos_utilizados':
+        return (
+          <ProdutosUtilizadosBlock
+            patientId={patientId!}
+            appointmentId={activeAppointment?.id}
+            canEdit={canEditCurrentTab}
+          />
+        );
+
       case 'aesthetic_consent':
         return (
           <ConsentModule
@@ -2121,8 +2136,25 @@ export default function Prontuario() {
         );
 
       case 'procedimentos_realizados':
-        // Procedimentos Realizados - delegated to Estética layout when active
-        return null;
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Syringe className="h-5 w-5 text-muted-foreground" />
+                Procedimentos
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="py-12 text-center space-y-3">
+              <p className="text-muted-foreground">Procedimentos ainda sem registros.</p>
+              {canEditCurrentTab && (
+                <Button size="sm" variant="outline">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Procedimento
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        );
 
       default:
         return (

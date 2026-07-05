@@ -29,6 +29,7 @@ export const TAB_KEY_MAP: Record<string, TabKey> = {
   therapeutic_goals: 'evolucao',
   therapeutic_plan: 'evolucao',
   plano_terapeutico: 'evolucao',
+  plano_acao_crise: 'evolucao',
   // Psychiatry tabs - map to appropriate permissions
   diagnosis_dsm: 'diagnostico',
   psychiatric_prescription: 'prescricoes',
@@ -43,6 +44,7 @@ export const TAB_KEY_MAP: Record<string, TabKey> = {
   aesthetic_assessment: 'anamnese',
   aesthetic_procedure: 'procedimentos',
   products_used: 'procedimentos',
+  produtos_utilizados: 'procedimentos',
   before_after_photos: 'documentos',
   consent_form: 'consentimentos',
   facial_map: 'procedimentos', // Map facial map to procedimentos
