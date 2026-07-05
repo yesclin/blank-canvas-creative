@@ -386,12 +386,14 @@ export function useUpdateProcedure() {
           allow_single_sale: formData.uses_sessions ? (formData.allow_single_sale ?? true) : true,
           package_validity_days: formData.uses_sessions ? (formData.package_validity_days ?? null) : null,
           protocol_notes: formData.uses_sessions ? (formData.protocol_notes ?? null) : null,
+          ...pickExtras(formData),
           updated_at: new Date().toISOString(),
-        })
+        } as never)
         .eq("id", id)
         .eq("clinic_id", clinicId)
         .select()
         .single();
+
       
       if (error) throw error;
       return data;
