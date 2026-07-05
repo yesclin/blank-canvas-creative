@@ -678,6 +678,11 @@ export function AppointmentDialog({
                 )}
               />
 
+              {/* Treatment package link */}
+              <PackageLinkField form={form} />
+
+
+
               {/* Professional */}
               <FormField
                 control={form.control}
