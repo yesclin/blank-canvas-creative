@@ -2,9 +2,6 @@ import { useState } from "react";
 import { DollarSign } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Progress } from "@/components/ui/progress";
 import { FinanceDashboard } from "@/components/financeiro/FinanceDashboard";
 import { ReceivablesTab } from "@/components/financeiro/tabs/ReceivablesTab";
 import { PayablesTab } from "@/components/financeiro/tabs/PayablesTab";
@@ -12,8 +9,6 @@ import { CashRegisterTab } from "@/components/financeiro/tabs/CashRegisterTab";
 import { PackagesTab } from "@/components/financeiro/tabs/PackagesTab";
 import { MarginAlertSettings } from "@/components/config/MarginAlertSettings";
 import { useFinancialAccessControl } from "@/hooks/useFinancialAccessControl";
-
-const fmt = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 
 function ComingSoon({ title, phase }: { title: string; phase: string }) {
   return (
@@ -28,45 +23,7 @@ function ComingSoon({ title, phase }: { title: string; phase: string }) {
   );
 }
 
-function PackagesTab() {
-  const { data: packages = [], isLoading } = useTreatmentPackages();
-  return (
-    <Card>
-      <CardHeader><CardTitle>Pacotes / Sessões</CardTitle></CardHeader>
-      <CardContent>
-        {isLoading ? <div className="text-sm text-muted-foreground">Carregando…</div> : packages.length === 0 ? (
-          <div className="text-sm text-muted-foreground py-8 text-center">Nenhum pacote cadastrado.</div>
-        ) : (
-          <Table>
-            <TableHeader><TableRow>
-              <TableHead>Paciente</TableHead><TableHead>Pacote</TableHead><TableHead>Sessões</TableHead>
-              <TableHead>Total</TableHead><TableHead>Pago</TableHead><TableHead>Status</TableHead>
-            </TableRow></TableHeader>
-            <TableBody>
-              {packages.map((p: any) => {
-                const pct = p.total_sessions > 0 ? (p.completed_sessions / p.total_sessions) * 100 : 0;
-                return (
-                  <TableRow key={p.id}>
-                    <TableCell>{p.patients?.full_name ?? "-"}</TableCell>
-                    <TableCell>{p.name}</TableCell>
-                    <TableCell className="w-[180px]">
-                      <div className="flex items-center gap-2 text-xs">{p.completed_sessions}/{p.total_sessions}</div>
-                      <Progress value={pct} className="h-1.5 mt-1" />
-                    </TableCell>
-                    <TableCell>{fmt(Number(p.total_amount))}</TableCell>
-                    <TableCell>{fmt(Number(p.paid_amount))}</TableCell>
-                    <TableCell><Badge className={packageStatusColors[p.status as PackageStatus]}>{packageStatusLabels[p.status as PackageStatus]}</Badge></TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        )}
-        <p className="text-xs text-muted-foreground mt-4">CRUD completo, venda, geração de sessões e parcelamento serão entregues na Fase 2B.</p>
-      </CardContent>
-    </Card>
-  );
-}
+
 
 export default function Financas() {
   const [tab, setTab] = useState("overview");
