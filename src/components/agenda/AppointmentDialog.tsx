@@ -217,9 +217,10 @@ export function AppointmentDialog({
       is_fit_in: mode === "fitIn",
       care_mode: "presencial",
       meeting_provider: "",
+      treatment_package_id: defaultPackageId || "",
     });
     form.clearErrors();
-  }, [appointment, defaultDate, defaultProfessionalId, defaultStartTime, form, globalSpecialtyId, lockedPatientId, lockedProfessionalId, mode, open]);
+  }, [appointment, defaultDate, defaultPackageId, defaultProfessionalId, defaultStartTime, form, globalSpecialtyId, lockedPatientId, lockedProfessionalId, mode, open]);
 
   const resolveProfessionalId = useCallback(() => {
     const candidates = appointment
