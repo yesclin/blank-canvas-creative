@@ -318,9 +318,11 @@ export function useCreateProcedure() {
           allow_single_sale: formData.uses_sessions ? (formData.allow_single_sale ?? true) : true,
           package_validity_days: formData.uses_sessions ? (formData.package_validity_days ?? null) : null,
           protocol_notes: formData.uses_sessions ? (formData.protocol_notes ?? null) : null,
-        })
+          ...pickExtras(formData),
+        } as never)
         .select()
         .single();
+
       
       if (error) throw error;
       return data;
