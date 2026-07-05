@@ -1,7 +1,56 @@
 import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useActiveSpecialty } from "./useActiveSpecialty";
-import { useSpecialtyModules } from "@/hooks/useClinicalModules";
 import type { ClinicalModuleKey, ModuleWithStatus } from "@/types/clinical-modules";
+import type { SpecialtyKey } from "./useActiveSpecialty";
+import {
+  PRONTUARIO_FEATURE_TAB_ALIASES,
+  doesResourceApplyToSpecialty,
+  getProntuarioResourceTab,
+  isProntuarioResourceActive,
+  normalizeProntuarioSpecialtySlug,
+  type ClinicProntuarioResource,
+} from "./prontuarioFeatureTabs";
+
+const MODULE_TO_RESOURCE_KEYS: Record<ClinicalModuleKey, string[]> = {
+  recurring_sessions: ["medical_records.treatment_sessions", "treatment_sessions", "recurring_sessions"],
+  clinical_scales: ["psicologia.escalas", "psychological_scales", "clinical_scales"],
+  procedures_module: ["procedures", "procedures_module", "procedimentos"],
+  advanced_uploads: ["global.anexos", "clinical_attachments", "attachments"],
+  interactive_map: ["estetica.facial_map", "facial_map", "interactive_map"],
+  odontogram: ["odontologia.odontogram", "odontogram", "odontograma"],
+  body_measurements: ["body_measurements", "pediatria.grafico_oms", "growth_charts"],
+  before_after: ["estetica.before_after", "before_after", "before_after_photos"],
+  consent_terms: ["global.consentimentos", "clinical_consent_terms", "consent_terms"],
+  therapeutic_plan: ["psicologia.plano_terapeutico", "therapeutic_plan", "plano_terapeutico"],
+};
+
+const MODULE_LABELS: Record<ClinicalModuleKey, string> = {
+  recurring_sessions: "Sessões de Tratamento / Pacotes",
+  clinical_scales: "Escalas Psicológicas",
+  procedures_module: "Procedimentos",
+  advanced_uploads: "Anexos / Exames",
+  interactive_map: "Mapa Facial",
+  odontogram: "Odontograma",
+  body_measurements: "Medidas / Gráficos",
+  before_after: "Antes e Depois",
+  consent_terms: "Consentimentos",
+  therapeutic_plan: "Plano Terapêutico",
+};
+
+const MODULE_CATEGORIES: Record<ClinicalModuleKey, ModuleWithStatus["category"]> = {
+  recurring_sessions: "planning",
+  clinical_scales: "assessment",
+  procedures_module: "clinical_record",
+  advanced_uploads: "documentation",
+  interactive_map: "visual",
+  odontogram: "assessment",
+  body_measurements: "assessment",
+  before_after: "visual",
+  consent_terms: "documentation",
+  therapeutic_plan: "planning",
+};
 
 /**
  * Hook that provides the enabled clinical modules for the currently active specialty
@@ -19,12 +68,33 @@ export function useActiveMedicalRecordModules(patientId: string | null | undefin
     isFromAppointment,
     loading: specialtyLoading,
     activeAppointment,
+    specialties,
   } = useActiveSpecialty(patientId);
-  
-  const { 
-    data: allModules = [], 
-    isLoading: modulesLoading 
-  } = useSpecialtyModules(activeSpecialtyId);
+
+  const clinicId = activeSpecialty?.id ? activeSpecialty.id : null;
+
+  const {
+    data: resources = [],
+    isLoading: modulesLoading,
+  } = useQuery({
+    queryKey: ["clinic-prontuario-resources", activeSpecialty?.id ? undefined : null],
+    enabled: false,
+    queryFn: async () => [] as ClinicProntuarioResource[],
+  });
+
+  const clinicSpecialtyKeys = useMemo(() => {
+    return new Set(
+      specialties
+        .map((specialty) => specialty.key)
+        .filter(Boolean),
+    );
+  }, [specialties]);
+
+  const activeResourcesQuery = useQuery({
+    queryKey: ["clinic-prontuario-resources", activeSpecialty?.id, activeSpecialtyId, activeSpecialtyKey],
+    enabled: false,
+    queryFn: async () => [] as ClinicProntuarioResource[],
+  });
   
   // Get only enabled modules
   const enabledModules = useMemo(() => {
