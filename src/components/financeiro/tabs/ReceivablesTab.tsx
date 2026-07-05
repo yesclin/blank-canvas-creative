@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Plus, Download, CheckCircle2, XCircle, RotateCcw } from "lucide-react";
 import { useReceivables, type ReceivableRow } from "@/hooks/finance/useReceivables";
-import { useSettleTransaction, useCancelTransaction, useReverseTransaction, useCreateReceivable } from "@/hooks/finance/useTransactionActions";
+import { useSettleTransaction, useCancelTransaction, useReverseTransaction, useCreateReceivable, useRenegotiateTransaction } from "@/hooks/finance/useTransactionActions";
 import { paymentMethods } from "@/types/gestao";
 import { format } from "date-fns";
 
@@ -46,6 +46,7 @@ export function ReceivablesTab() {
   const cancel = useCancelTransaction();
   const reverse = useReverseTransaction();
   const create = useCreateReceivable();
+  const renegotiate = useRenegotiateTransaction();
 
   const [openNew, setOpenNew] = useState(false);
   const [payTarget, setPayTarget] = useState<ReceivableRow | null>(null);
@@ -53,6 +54,12 @@ export function ReceivablesTab() {
   const [payMethod, setPayMethod] = useState("");
   const [reverseTarget, setReverseTarget] = useState<ReceivableRow | null>(null);
   const [reverseReason, setReverseReason] = useState("");
+  const [cancelTarget, setCancelTarget] = useState<ReceivableRow | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [renegTarget, setRenegTarget] = useState<ReceivableRow | null>(null);
+  const [renegAmount, setRenegAmount] = useState("");
+  const [renegDue, setRenegDue] = useState("");
+  const [renegReason, setRenegReason] = useState("");
 
   const [newForm, setNewForm] = useState({ description: "", amount: "", due_date: today(), installments: "1", payment_method: "", notes: "" });
 
@@ -225,8 +232,18 @@ export function ReceivablesTab() {
                                 <RotateCcw className="h-4 w-4 mr-2" />Estornar
                               </DropdownMenuItem>
                             )}
+                            {(r.status === "pendente" || r.status === "parcial") && (
+                              <DropdownMenuItem onClick={() => {
+                                setRenegTarget(r);
+                                setRenegAmount(String(Number(r.amount)));
+                                setRenegDue(r.due_date ?? today());
+                                setRenegReason("");
+                              }}>
+                                <RotateCcw className="h-4 w-4 mr-2" />Renegociar
+                              </DropdownMenuItem>
+                            )}
                             {r.status !== "pago" && r.status !== "cancelado" && (
-                              <DropdownMenuItem onClick={() => cancel.mutate({ id: r.id, reason: "Cancelado pelo usuário" })}>
+                              <DropdownMenuItem onClick={() => { setCancelTarget(r); setCancelReason(""); }}>
                                 <XCircle className="h-4 w-4 mr-2" />Cancelar cobrança
                               </DropdownMenuItem>
                             )}
@@ -281,6 +298,54 @@ export function ReceivablesTab() {
               await reverse.mutateAsync({ parent: { ...reverseTarget, type: "receita" }, reason: reverseReason });
               setReverseTarget(null); setReverseReason("");
             }}>Estornar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel dialog */}
+      <Dialog open={!!cancelTarget} onOpenChange={o => !o && setCancelTarget(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Cancelar cobrança</DialogTitle></DialogHeader>
+          <div className="grid gap-3 text-sm">
+            <div>A cobrança será cancelada; o histórico é mantido em auditoria.</div>
+            <div><Label>Motivo *</Label><Textarea value={cancelReason} onChange={e => setCancelReason(e.target.value)} /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelTarget(null)}>Fechar</Button>
+            <Button disabled={cancelReason.trim().length < 3 || cancel.isPending} onClick={async () => {
+              if (!cancelTarget) return;
+              await cancel.mutateAsync({ id: cancelTarget.id, reason: cancelReason.trim() });
+              setCancelTarget(null); setCancelReason("");
+            }}>Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Renegotiate dialog */}
+      <Dialog open={!!renegTarget} onOpenChange={o => !o && setRenegTarget(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Renegociar lançamento</DialogTitle></DialogHeader>
+          {renegTarget && (
+            <div className="grid gap-3 text-sm">
+              <div>Original: <b>{fmt(Number(renegTarget.amount))}</b> · Pago: {fmt(Number(renegTarget.paid_amount || 0))}</div>
+              <div><Label>Novo valor (R$)</Label><Input type="number" min="0" step="0.01" value={renegAmount} onChange={e => setRenegAmount(e.target.value)} /></div>
+              <div><Label>Novo vencimento</Label><Input type="date" value={renegDue} onChange={e => setRenegDue(e.target.value)} /></div>
+              <div><Label>Motivo *</Label><Textarea value={renegReason} onChange={e => setRenegReason(e.target.value)} /></div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenegTarget(null)}>Fechar</Button>
+            <Button disabled={!Number(renegAmount) || renegReason.trim().length < 3 || renegotiate.isPending}
+              onClick={async () => {
+                if (!renegTarget) return;
+                await renegotiate.mutateAsync({
+                  id: renegTarget.id,
+                  newAmount: Number(renegAmount),
+                  newDueDate: renegDue || undefined,
+                  reason: renegReason.trim(),
+                });
+                setRenegTarget(null); setRenegAmount(""); setRenegDue(""); setRenegReason("");
+              }}>Confirmar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

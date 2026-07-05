@@ -16640,6 +16640,15 @@ export type Database = {
         }
         Returns: string
       }
+      renegotiate_transaction: {
+        Args: {
+          _id: string
+          _new_amount: number
+          _new_due_date: string
+          _reason: string
+        }
+        Returns: undefined
+      }
       request_subscription: { Args: { _cycle: string }; Returns: Json }
       reset_anamnesis_templates: {
         Args: { p_clinic_id: string; p_user_id: string }

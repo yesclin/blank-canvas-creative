@@ -10,9 +10,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Plus, Download, CheckCircle2, XCircle, Paperclip } from "lucide-react";
+import { MoreHorizontal, Plus, Download, CheckCircle2, XCircle, Paperclip, RotateCcw } from "lucide-react";
 import { usePayables, type PayableRow } from "@/hooks/finance/usePayables";
-import { useCreatePayable, useSettleTransaction, useCancelTransaction } from "@/hooks/finance/useTransactionActions";
+import { useCreatePayable, useSettleTransaction, useCancelTransaction, useRenegotiateTransaction } from "@/hooks/finance/useTransactionActions";
 import { useFinanceCategories } from "@/hooks/useFinanceTransactions";
 import { paymentMethods } from "@/types/gestao";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,6 +50,14 @@ export function PayablesTab() {
   const create = useCreatePayable();
   const settle = useSettleTransaction();
   const cancel = useCancelTransaction();
+  const renegotiate = useRenegotiateTransaction();
+
+  const [cancelTarget, setCancelTarget] = useState<PayableRow | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [renegTarget, setRenegTarget] = useState<PayableRow | null>(null);
+  const [renegAmount, setRenegAmount] = useState("");
+  const [renegDue, setRenegDue] = useState("");
+  const [renegReason, setRenegReason] = useState("");
 
   const [openNew, setOpenNew] = useState(false);
   const [payTarget, setPayTarget] = useState<PayableRow | null>(null);
@@ -256,8 +264,18 @@ export function PayablesTab() {
                                 <CheckCircle2 className="h-4 w-4 mr-2" />Dar baixa
                               </DropdownMenuItem>
                             )}
+                            {(r.status === "pendente" || r.status === "parcial") && (
+                              <DropdownMenuItem onClick={() => {
+                                setRenegTarget(r);
+                                setRenegAmount(String(Number(r.amount)));
+                                setRenegDue(r.due_date ?? today());
+                                setRenegReason("");
+                              }}>
+                                <RotateCcw className="h-4 w-4 mr-2" />Renegociar
+                              </DropdownMenuItem>
+                            )}
                             {r.status !== "pago" && r.status !== "cancelado" && (
-                              <DropdownMenuItem onClick={() => cancel.mutate({ id: r.id, reason: "Cancelado pelo usuário" })}>
+                              <DropdownMenuItem onClick={() => { setCancelTarget(r); setCancelReason(""); }}>
                                 <XCircle className="h-4 w-4 mr-2" />Cancelar
                               </DropdownMenuItem>
                             )}
@@ -293,6 +311,51 @@ export function PayablesTab() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setPayTarget(null)}>Cancelar</Button>
             <Button disabled={settle.isPending} onClick={confirmPay}>Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!cancelTarget} onOpenChange={o => !o && setCancelTarget(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Cancelar conta a pagar</DialogTitle></DialogHeader>
+          <div className="grid gap-3 text-sm">
+            <div><Label>Motivo *</Label><Textarea value={cancelReason} onChange={e => setCancelReason(e.target.value)} /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelTarget(null)}>Fechar</Button>
+            <Button disabled={cancelReason.trim().length < 3 || cancel.isPending} onClick={async () => {
+              if (!cancelTarget) return;
+              await cancel.mutateAsync({ id: cancelTarget.id, reason: cancelReason.trim() });
+              setCancelTarget(null); setCancelReason("");
+            }}>Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!renegTarget} onOpenChange={o => !o && setRenegTarget(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Renegociar lançamento</DialogTitle></DialogHeader>
+          {renegTarget && (
+            <div className="grid gap-3 text-sm">
+              <div>Original: <b>{fmt(Number(renegTarget.amount))}</b> · Pago: {fmt(Number(renegTarget.paid_amount || 0))}</div>
+              <div><Label>Novo valor (R$)</Label><Input type="number" min="0" step="0.01" value={renegAmount} onChange={e => setRenegAmount(e.target.value)} /></div>
+              <div><Label>Novo vencimento</Label><Input type="date" value={renegDue} onChange={e => setRenegDue(e.target.value)} /></div>
+              <div><Label>Motivo *</Label><Textarea value={renegReason} onChange={e => setRenegReason(e.target.value)} /></div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenegTarget(null)}>Fechar</Button>
+            <Button disabled={!Number(renegAmount) || renegReason.trim().length < 3 || renegotiate.isPending}
+              onClick={async () => {
+                if (!renegTarget) return;
+                await renegotiate.mutateAsync({
+                  id: renegTarget.id,
+                  newAmount: Number(renegAmount),
+                  newDueDate: renegDue || undefined,
+                  reason: renegReason.trim(),
+                });
+                setRenegTarget(null); setRenegAmount(""); setRenegDue(""); setRenegReason("");
+              }}>Confirmar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

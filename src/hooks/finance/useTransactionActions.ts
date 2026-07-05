@@ -44,9 +44,17 @@ export function useCancelTransaction() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      if (!reason || reason.trim().length < 3) throw new Error("Motivo obrigatório");
+      const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase
         .from("finance_transactions")
-        .update({ status: "cancelado", notes: reason, updated_at: new Date().toISOString() } as any)
+        .update({
+          status: "cancelado",
+          cancel_reason: reason,
+          canceled_at: new Date().toISOString(),
+          canceled_by: user?.id ?? null,
+          updated_at: new Date().toISOString(),
+        } as any)
         .eq("id", id);
       if (error) throw error;
     },
@@ -60,6 +68,7 @@ export function useReverseTransaction() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ parent, reason }: { parent: any; reason: string }) => {
+      if (!reason || reason.trim().length < 3) throw new Error("Motivo obrigatório");
       const clinic_id = await getClinicId();
       const reverseType = parent.type === "receita" ? "despesa" : "receita";
       const { error } = await supabase.from("finance_transactions").insert({
@@ -72,6 +81,7 @@ export function useReverseTransaction() {
         paid_at: new Date().toISOString(),
         parent_transaction_id: parent.id,
         origin: "estorno",
+        reversal_reason: reason,
         notes: reason,
         patient_id: parent.patient_id ?? null,
         professional_id: parent.professional_id ?? null,
@@ -79,12 +89,37 @@ export function useReverseTransaction() {
         procedure_id: parent.procedure_id ?? null,
       } as any);
       if (error) throw error;
+      const { data: { user } } = await supabase.auth.getUser();
       await supabase.from("finance_transactions")
-        .update({ status: "cancelado", notes: `Estornado: ${reason}` } as any)
+        .update({
+          status: "cancelado",
+          reversal_reason: reason,
+          canceled_at: new Date().toISOString(),
+          canceled_by: user?.id ?? null,
+        } as any)
         .eq("id", parent.id);
     },
     onSuccess: () => { invalidate(qc); toast.success("Estorno registrado."); },
     onError: (e: Error) => toast.error("Erro ao estornar: " + e.message),
+  });
+}
+
+/** Renegociação: altera valor/vencimento de uma parcela pendente/parcial */
+export function useRenegotiateTransaction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, newAmount, newDueDate, reason }:
+      { id: string; newAmount: number; newDueDate?: string; reason: string }) => {
+      const { error } = await (supabase as any).rpc("renegotiate_transaction", {
+        _id: id,
+        _new_amount: newAmount,
+        _new_due_date: newDueDate ?? null,
+        _reason: reason,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => { invalidate(qc); toast.success("Lançamento renegociado."); },
+    onError: (e: Error) => toast.error("Erro ao renegociar: " + e.message),
   });
 }
 
