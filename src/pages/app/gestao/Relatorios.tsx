@@ -273,21 +273,7 @@ ${data.professionalPerformance.map(p => `${p.professionalName}: ${p.appointments
         </TabsContent>
 
         <TabsContent value="financeiro">
-          {data.isLoading ? (
-            <ReportSkeleton />
-          ) : data.financialData.length === 0 ? (
-            <ReportEmptyState title="Sem dados financeiros" />
-          ) : (
-            <FinancialReports
-              financialData={data.financialData}
-              revenueByProfessional={data.revenueByProfessional}
-              revenueByProcedure={data.revenueByProcedure}
-              revenueByPaymentMethod={data.revenueByPaymentMethod}
-              packagesReport={data.packagesReport}
-              totals={data.totals}
-              filters={filters}
-            />
-          )}
+          <FinanceFullReports />
         </TabsContent>
 
         <TabsContent value="vendas">
