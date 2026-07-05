@@ -124,20 +124,31 @@ export function useReportsRealData(filters: ReportFilters) {
   // DADOS DE TRANSAÇÕES FINANCEIRAS
   // =============================================
   const { data: financialTransactions = [], isLoading: loadingFinance } = useQuery({
-    queryKey: ['report-finance-transactions', startDateStr, endDateStr, filters.professionalId],
+    queryKey: ['report-finance-transactions', clinicId, startDateStr, endDateStr, filters.professionalId],
+    enabled: !!clinicId,
     queryFn: async () => {
       let query = supabase
         .from('finance_transactions')
         .select('*')
-        .gte('transaction_date', startDateStr)
-        .lte('transaction_date', endDateStr);
+        .eq('clinic_id', clinicId)
+        .or(
+          `and(transaction_date.gte.${startDateStr},transaction_date.lte.${endDateStr}),` +
+          `and(paid_at.gte.${startDateStr},paid_at.lte.${endDateStr}),` +
+          `and(due_date.gte.${startDateStr},due_date.lte.${endDateStr})`
+        );
 
       if (filters.professionalId) {
         query = query.eq('professional_id', filters.professionalId);
       }
 
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error('[Relatorios] finance_transactions error:', error);
+        throw error;
+      }
+      if (import.meta.env.DEV) {
+        console.log('[Relatorios] finance_transactions', { clinicId, startDateStr, endDateStr, count: data?.length ?? 0 });
+      }
       return data || [];
     },
   });
