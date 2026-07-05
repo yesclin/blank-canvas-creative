@@ -24,7 +24,7 @@ export function useFinanceReports(filters: ReportFilters = {}) {
           transaction_date, due_date, paid_at, payment_method, origin,
           patient_id, professional_id, procedure_id,
           patients(id, full_name),
-          professionals(id, full_name, specialty_id, specialties(id, name)),
+          professionals(id, full_name, specialty_id, specialties!professionals_specialty_id_fkey(id, name)),
           procedures(id, name),
           finance_categories(id, name, type)
         `)
