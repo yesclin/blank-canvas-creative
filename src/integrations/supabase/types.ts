@@ -1077,6 +1077,7 @@ export type Database = {
           status: string
           technical_issue_count: number
           teleconsultation_notes: string | null
+          treatment_package_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1135,6 +1136,7 @@ export type Database = {
           status?: string
           technical_issue_count?: number
           teleconsultation_notes?: string | null
+          treatment_package_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1193,6 +1195,7 @@ export type Database = {
           status?: string
           technical_issue_count?: number
           teleconsultation_notes?: string | null
+          treatment_package_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1264,6 +1267,13 @@ export type Database = {
             columns: ["specialty_id"]
             isOneToOne: false
             referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_treatment_package_id_fkey"
+            columns: ["treatment_package_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_packages"
             referencedColumns: ["id"]
           },
         ]
