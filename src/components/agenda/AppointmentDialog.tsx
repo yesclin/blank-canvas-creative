@@ -506,16 +506,30 @@ export function AppointmentDialog({
       const procedure = procedures.find(p => p.id === watchProcedureId);
       if (procedure) {
         setSelectedProcedure(procedure);
-        form.setValue("duration_minutes", String(procedure.duration_minutes));
-        if (procedure.price) {
-          form.setValue("expected_value", procedure.price);
+        // Duração: se o procedimento é por sessão e tem duração de sessão específica, usa ela
+        const dur = procedure.uses_sessions && procedure.session_duration_minutes
+          ? procedure.session_duration_minutes
+          : procedure.duration_minutes;
+        if (dur) form.setValue("duration_minutes", String(dur));
+
+        // Preço: se procedimento é de sessão avulsa, preferir price_per_session
+        const price = procedure.uses_sessions && procedure.price_per_session
+          ? Number(procedure.price_per_session)
+          : (procedure.price ? Number(procedure.price) : 0);
+        if (price) form.setValue("expected_value", price);
+
+        // Tipo de atendimento: se procedimento é do tipo "procedimento/sessao/pacote", alinhar
+        if (procedure.type === "sessao" || procedure.type === "pacote" || procedure.type === "procedimento") {
+          if (form.getValues("appointment_type") !== "procedimento") {
+            form.setValue("appointment_type", "procedimento");
+          }
         }
-        // Set specialty_id directly from procedure if available
+
+        // Especialidade
         if (procedure.specialty_id) {
           form.setValue("specialty_id", procedure.specialty_id);
         } else if (procedure.specialty) {
-          // Fallback: match by name for backwards compatibility
-          const matchingSpecialty = availableSpecialties.find(s => 
+          const matchingSpecialty = availableSpecialties.find(s =>
             s.name.toLowerCase() === procedure.specialty?.toLowerCase()
           );
           if (matchingSpecialty) {
@@ -638,6 +652,41 @@ export function AppointmentDialog({
         message: "Selecione um profissional",
       });
       return;
+    }
+
+    // Fase 2 — regras do procedimento selecionado
+    if (selectedProcedure) {
+      // Sala obrigatória
+      if (selectedProcedure.requires_room && !normalizedData.room_id) {
+        form.setError("room_id", {
+          type: "required",
+          message: "Este procedimento exige seleção de sala.",
+        });
+        toast.error("Este procedimento exige seleção de sala.");
+        return;
+      }
+
+      // Prazo mínimo/máximo para agendamento
+      try {
+        const [hh, mm] = (normalizedData.start_time || "00:00").split(":").map(Number);
+        const scheduled = new Date(normalizedData.scheduled_date);
+        scheduled.setHours(hh || 0, mm || 0, 0, 0);
+        const now = new Date();
+        const diffHours = (scheduled.getTime() - now.getTime()) / 36e5;
+
+        const minH = Number(selectedProcedure.min_booking_notice_hours ?? 0);
+        if (minH > 0 && diffHours < minH) {
+          toast.error(`Agendamento requer antecedência mínima de ${minH}h.`);
+          return;
+        }
+        const maxD = Number(selectedProcedure.max_booking_notice_days ?? 0);
+        if (maxD > 0 && diffHours / 24 > maxD) {
+          toast.error(`Agendamento não pode ser feito com mais de ${maxD} dias de antecedência.`);
+          return;
+        }
+      } catch (e) {
+        console.warn("booking notice validation error:", e);
+      }
     }
 
     // Check for critical conflicts - block save

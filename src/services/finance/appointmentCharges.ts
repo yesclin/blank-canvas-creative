@@ -22,11 +22,19 @@ type Appointment = {
   appointment_type?: string | null;
   payment_type?: string | null;
   scheduled_date?: string | null;
+  status?: string | null;
   amount_expected?: number | null;
   expected_value?: number | null;
   patients?: { full_name?: string | null } | null;
-  procedures?: { name?: string | null; price?: number | null } | null;
+  procedures?: {
+    name?: string | null;
+    price?: number | null;
+    charge_on_schedule?: boolean | null;
+    charge_on_finish?: boolean | null;
+  } | null;
 };
+
+export type ChargePhase = "schedule" | "finish";
 
 function resolveExpected(appt: Appointment): number {
   const stored = Number(appt.amount_expected ?? appt.expected_value ?? 0) || 0;
@@ -45,15 +53,18 @@ function shouldAutoCharge(paymentType: string | null | undefined): boolean {
  * Garante que existe (no máximo) uma cobrança vinculada ao agendamento.
  * Retorna o id da transação existente/criada, ou null se não é caso de cobrar.
  */
-export async function ensureAppointmentCharge(appointmentId: string): Promise<string | null> {
+export async function ensureAppointmentCharge(
+  appointmentId: string,
+  phase: ChargePhase = "schedule",
+): Promise<string | null> {
   // 1. Recarrega o agendamento com os dados essenciais.
   const { data: appt, error: apErr } = await supabase
     .from("appointments")
     .select(`
       id, clinic_id, patient_id, professional_id, procedure_id,
-      appointment_type, payment_type, scheduled_date, amount_expected, expected_value,
+      appointment_type, payment_type, scheduled_date, status, amount_expected, expected_value,
       patients(full_name),
-      procedures(name, price)
+      procedures(name, price, charge_on_schedule, charge_on_finish)
     `)
     .eq("id", appointmentId)
     .maybeSingle();
@@ -64,6 +75,16 @@ export async function ensureAppointmentCharge(appointmentId: string): Promise<st
   if (!shouldAutoCharge(appointment.payment_type)) return null;
   const expected = resolveExpected(appointment);
   if (expected <= 0) return null;
+
+  // Regra do procedimento (fase 2 - integração com agenda):
+  //  - charge_on_schedule === false  => não gera cobrança ao agendar (aguarda finalização)
+  //  - Fase "finish" ignora esse bloqueio (idempotente na finalização)
+  //  - Legado / sem procedimento / flags nulas => mantém comportamento antigo (cobra ao agendar)
+  const proc = appointment.procedures;
+  if (phase === "schedule" && proc && proc.charge_on_schedule === false) {
+    return null;
+  }
+
 
   // 2. Dedup: qualquer cobrança viva (pendente/atrasado/pago/parcial) trava a criação.
   const { data: existing } = await supabase
