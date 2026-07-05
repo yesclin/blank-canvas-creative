@@ -10,9 +10,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Plus, Download, CheckCircle2, XCircle, Paperclip } from "lucide-react";
+import { MoreHorizontal, Plus, Download, CheckCircle2, XCircle, Paperclip, RotateCcw } from "lucide-react";
 import { usePayables, type PayableRow } from "@/hooks/finance/usePayables";
-import { useCreatePayable, useSettleTransaction, useCancelTransaction } from "@/hooks/finance/useTransactionActions";
+import { useCreatePayable, useSettleTransaction, useCancelTransaction, useRenegotiateTransaction } from "@/hooks/finance/useTransactionActions";
 import { useFinanceCategories } from "@/hooks/useFinanceTransactions";
 import { paymentMethods } from "@/types/gestao";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,6 +50,14 @@ export function PayablesTab() {
   const create = useCreatePayable();
   const settle = useSettleTransaction();
   const cancel = useCancelTransaction();
+  const renegotiate = useRenegotiateTransaction();
+
+  const [cancelTarget, setCancelTarget] = useState<PayableRow | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [renegTarget, setRenegTarget] = useState<PayableRow | null>(null);
+  const [renegAmount, setRenegAmount] = useState("");
+  const [renegDue, setRenegDue] = useState("");
+  const [renegReason, setRenegReason] = useState("");
 
   const [openNew, setOpenNew] = useState(false);
   const [payTarget, setPayTarget] = useState<PayableRow | null>(null);
