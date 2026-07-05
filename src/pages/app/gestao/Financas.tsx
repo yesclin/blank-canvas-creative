@@ -8,7 +8,6 @@ import { PayablesTab } from "@/components/financeiro/tabs/PayablesTab";
 import { CashRegisterTab } from "@/components/financeiro/tabs/CashRegisterTab";
 import { PackagesTab } from "@/components/financeiro/tabs/PackagesTab";
 import { CommissionsTab } from "@/components/financeiro/tabs/CommissionsTab";
-import { ReportsTab } from "@/components/financeiro/tabs/ReportsTab";
 import { MarginAlertSettings } from "@/components/config/MarginAlertSettings";
 import { useFinancialAccessControl } from "@/hooks/useFinancialAccessControl";
 
@@ -58,7 +57,6 @@ export default function Financas() {
           <TabsTrigger value="cash">Caixa</TabsTrigger>
           <TabsTrigger value="packages">Pacotes/Sessões</TabsTrigger>
           <TabsTrigger value="commissions">Comissões</TabsTrigger>
-          <TabsTrigger value="reports">Relatórios</TabsTrigger>
           <TabsTrigger value="settings">Configurações</TabsTrigger>
         </TabsList>
 
@@ -68,7 +66,6 @@ export default function Financas() {
         <TabsContent value="cash"><CashRegisterTab /></TabsContent>
         <TabsContent value="packages"><PackagesTab /></TabsContent>
         <TabsContent value="commissions"><CommissionsTab /></TabsContent>
-        <TabsContent value="reports"><ReportsTab /></TabsContent>
         <TabsContent value="settings"><MarginAlertSettings /></TabsContent>
       </Tabs>
     </div>

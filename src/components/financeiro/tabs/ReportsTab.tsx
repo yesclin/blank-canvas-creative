@@ -380,7 +380,7 @@ export function ReportsTab() {
             exportName="comissoes"
             rows={commissions}
             columns={[
-              { key: "generated_at", label: "Gerada em", format: (v) => (v ? new Date(v).toLocaleDateString("pt-BR") : "—") },
+              { key: "reference_date", label: "Referência", format: (v) => (v ? new Date(v).toLocaleDateString("pt-BR") : "—") },
               { key: "professionals", label: "Profissional", format: (v) => v?.full_name ?? "—" },
               { key: "gross_amount", label: "Base", format: (v) => fmtMoney(Number(v)) },
               { key: "commission_amount", label: "Comissão", format: (v) => fmtMoney(Number(v)) },
