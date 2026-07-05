@@ -506,16 +506,30 @@ export function AppointmentDialog({
       const procedure = procedures.find(p => p.id === watchProcedureId);
       if (procedure) {
         setSelectedProcedure(procedure);
-        form.setValue("duration_minutes", String(procedure.duration_minutes));
-        if (procedure.price) {
-          form.setValue("expected_value", procedure.price);
+        // Duração: se o procedimento é por sessão e tem duração de sessão específica, usa ela
+        const dur = procedure.uses_sessions && procedure.session_duration_minutes
+          ? procedure.session_duration_minutes
+          : procedure.duration_minutes;
+        if (dur) form.setValue("duration_minutes", String(dur));
+
+        // Preço: se procedimento é de sessão avulsa, preferir price_per_session
+        const price = procedure.uses_sessions && procedure.price_per_session
+          ? Number(procedure.price_per_session)
+          : (procedure.price ? Number(procedure.price) : 0);
+        if (price) form.setValue("expected_value", price);
+
+        // Tipo de atendimento: se procedimento é do tipo "procedimento/sessao/pacote", alinhar
+        if (procedure.type === "sessao" || procedure.type === "pacote" || procedure.type === "procedimento") {
+          if (form.getValues("appointment_type") !== "procedimento") {
+            form.setValue("appointment_type", "procedimento");
+          }
         }
-        // Set specialty_id directly from procedure if available
+
+        // Especialidade
         if (procedure.specialty_id) {
           form.setValue("specialty_id", procedure.specialty_id);
         } else if (procedure.specialty) {
-          // Fallback: match by name for backwards compatibility
-          const matchingSpecialty = availableSpecialties.find(s => 
+          const matchingSpecialty = availableSpecialties.find(s =>
             s.name.toLowerCase() === procedure.specialty?.toLowerCase()
           );
           if (matchingSpecialty) {
