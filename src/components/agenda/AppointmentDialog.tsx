@@ -122,6 +122,61 @@ interface AppointmentDialogProps {
   defaultPackageId?: string;
 }
 
+function PackageLinkField({ form }: { form: any }) {
+  const patientId = form.watch("patient_id");
+  const { data: pkgs = [] } = useActivePackagesByPatient(patientId);
+  const value = form.watch("treatment_package_id") || "";
+  if (!patientId || pkgs.length === 0) return null;
+  const selected = pkgs.find(p => p.id === value);
+  const nextIdx = selected ? Math.min(selected.used_sessions + 1, selected.total_sessions) : null;
+  return (
+    <FormField
+      control={form.control}
+      name="treatment_package_id"
+      render={({ field }) => (
+        <FormItem className="md:col-span-2">
+          <FormLabel className="flex items-center gap-1.5">
+            <PackageIcon className="h-3.5 w-3.5" /> Vincular a pacote ativo (opcional)
+          </FormLabel>
+          <Select
+            value={field.value || "__none__"}
+            onValueChange={(v) => {
+              const val = v === "__none__" ? "" : v;
+              field.onChange(val);
+              const pkg = pkgs.find(p => p.id === val);
+              if (pkg) {
+                if (pkg.procedure_id) form.setValue("procedure_id", pkg.procedure_id, { shouldDirty: true });
+                if (pkg.professional_id) form.setValue("professional_id", pkg.professional_id, { shouldDirty: true });
+              }
+            }}
+          >
+            <FormControl>
+              <SelectTrigger>
+                <SelectValue placeholder="Nenhum pacote vinculado" />
+              </SelectTrigger>
+            </FormControl>
+            <SelectContent>
+              <SelectItem value="__none__">Nenhum</SelectItem>
+              {pkgs.map(p => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name} · {p.used_sessions}/{p.total_sessions} sessões
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {selected && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Sessões pendentes: <strong>{selected.remaining_sessions}</strong>
+              {nextIdx ? ` · Próxima recomendada: sessão ${nextIdx} de ${selected.total_sessions}` : ""}
+            </p>
+          )}
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+}
+
 export function AppointmentDialog({
   open,
   onOpenChange,
