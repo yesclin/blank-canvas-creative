@@ -47,6 +47,7 @@ import {
   Eye,
   Focus,
   Microscope,
+  Package,
 } from "lucide-react";
 
 // Fallback nav items when no config exists
