@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { ProcedureFormDialog } from "@/components/procedures/ProcedureFormDialog";
+
 import { ProcedureProductsDialog } from "@/components/procedures/ProcedureProductsDialog";
 import {
   Procedure,
