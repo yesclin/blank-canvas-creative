@@ -86,7 +86,8 @@ export function useReportsRealData(filters: ReportFilters) {
   // DADOS DE AGENDAMENTOS/ATENDIMENTOS
   // =============================================
   const { data: appointmentsData, isLoading: loadingAppointments } = useQuery({
-    queryKey: ['report-appointments', startDateStr, endDateStr, filters.professionalId, filters.insuranceId],
+    queryKey: ['report-appointments', clinicId, startDateStr, endDateStr, filters.professionalId, filters.insuranceId],
+    enabled: !!clinicId,
     queryFn: async () => {
       let query = supabase
         .from('appointments')
@@ -104,18 +105,21 @@ export function useReportsRealData(filters: ReportFilters) {
           procedures:procedure_id (id, name),
           insurances:insurance_id (id, name)
         `)
+        .eq('clinic_id', clinicId)
         .gte('scheduled_date', startDateStr)
         .lte('scheduled_date', endDateStr);
 
-      if (filters.professionalId) {
-        query = query.eq('professional_id', filters.professionalId);
-      }
-      if (filters.insuranceId) {
-        query = query.eq('insurance_id', filters.insuranceId);
-      }
+      if (filters.professionalId) query = query.eq('professional_id', filters.professionalId);
+      if (filters.insuranceId) query = query.eq('insurance_id', filters.insuranceId);
 
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error('[Relatorios] appointments error:', error);
+        throw error;
+      }
+      if (import.meta.env.DEV) {
+        console.log('[Relatorios] appointments', { clinicId, startDateStr, endDateStr, count: data?.length ?? 0 });
+      }
       return data || [];
     },
   });
@@ -124,20 +128,31 @@ export function useReportsRealData(filters: ReportFilters) {
   // DADOS DE TRANSAÇÕES FINANCEIRAS
   // =============================================
   const { data: financialTransactions = [], isLoading: loadingFinance } = useQuery({
-    queryKey: ['report-finance-transactions', startDateStr, endDateStr, filters.professionalId],
+    queryKey: ['report-finance-transactions', clinicId, startDateStr, endDateStr, filters.professionalId],
+    enabled: !!clinicId,
     queryFn: async () => {
       let query = supabase
         .from('finance_transactions')
         .select('*')
-        .gte('transaction_date', startDateStr)
-        .lte('transaction_date', endDateStr);
+        .eq('clinic_id', clinicId)
+        .or(
+          `and(transaction_date.gte.${startDateStr},transaction_date.lte.${endDateStr}),` +
+          `and(paid_at.gte.${startDateStr},paid_at.lte.${endDateStr}),` +
+          `and(due_date.gte.${startDateStr},due_date.lte.${endDateStr})`
+        );
 
       if (filters.professionalId) {
         query = query.eq('professional_id', filters.professionalId);
       }
 
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error('[Relatorios] finance_transactions error:', error);
+        throw error;
+      }
+      if (import.meta.env.DEV) {
+        console.log('[Relatorios] finance_transactions', { clinicId, startDateStr, endDateStr, count: data?.length ?? 0 });
+      }
       return data || [];
     },
   });
@@ -146,12 +161,15 @@ export function useReportsRealData(filters: ReportFilters) {
   // DADOS DE PACIENTES
   // =============================================
   const { data: patientsData = [], isLoading: loadingPatients } = useQuery({
-    queryKey: ['report-patients'],
+    queryKey: ['report-patients', clinicId],
+    enabled: !!clinicId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('patients')
-        .select('id, created_at');
+        .select('id, created_at')
+        .eq('clinic_id', clinicId);
       if (error) throw error;
+      if (import.meta.env.DEV) console.log('[Relatorios] patients', { count: data?.length ?? 0 });
       return data || [];
     },
   });
@@ -200,29 +218,33 @@ export function useReportsRealData(filters: ReportFilters) {
 
   const isLoading = loadingAppointments || loadingFinance || loadingPatients || loadingStock;
 
-  // Dados financeiros por período
+  // Dados financeiros por período — faturamento pela data da transação, recebido por paid_at, pendente por due_date
   const financialData: FinancialReportData[] = (() => {
-    if (!financialTransactions.length) return [];
-    
     const days = eachDayOfInterval({ start: filters.startDate, end: filters.endDate });
     const byDay = new Map<string, { faturamento: number; recebido: number; pendente: number }>();
-    
     days.forEach(day => {
       byDay.set(format(day, 'yyyy-MM-dd'), { faturamento: 0, recebido: 0, pendente: 0 });
     });
 
     financialTransactions.forEach(tx => {
-      const dateKey = tx.transaction_date;
-      const entry = byDay.get(dateKey);
-      if (!entry) return;
-      
-      if (isRevenue(tx.type)) {
-        entry.faturamento += Number(tx.amount) || 0;
-        if (tx.status === 'pago') {
-          entry.recebido += Number(tx.amount) || 0;
-        } else {
-          entry.pendente += Number(tx.amount) || 0;
-        }
+      if (!isRevenue(tx.type)) return;
+      const amt = Number(tx.amount) || 0;
+      const paid = Number(tx.paid_amount) || 0;
+
+      const txDate = (tx.transaction_date || '').slice(0, 10);
+      const bucketTx = byDay.get(txDate);
+      if (bucketTx) bucketTx.faturamento += amt;
+
+      if (tx.paid_at) {
+        const pd = String(tx.paid_at).slice(0, 10);
+        const bucketPaid = byDay.get(pd);
+        if (bucketPaid) bucketPaid.recebido += paid || amt;
+      }
+
+      if (tx.status !== 'pago' && tx.due_date) {
+        const dd = String(tx.due_date).slice(0, 10);
+        const bucketDue = byDay.get(dd);
+        if (bucketDue) bucketDue.pendente += Math.max(amt - paid, 0);
       }
     });
 
@@ -316,7 +338,8 @@ export function useReportsRealData(filters: ReportFilters) {
 
   // Pacotes de tratamento (real data from treatment_packages)
   const { data: treatmentPackagesData = [] } = useQuery({
-    queryKey: ['report-treatment-packages', startDateStr, endDateStr],
+    queryKey: ['report-treatment-packages', clinicId],
+    enabled: !!clinicId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('treatment_packages')
@@ -325,13 +348,18 @@ export function useReportsRealData(filters: ReportFilters) {
           name,
           total_sessions,
           used_sessions,
-          total_value,
-          paid_value,
+          total_amount,
+          paid_amount,
           status,
           patient_id,
           patients:patient_id (full_name)
-        `);
-      if (error) throw error;
+        `)
+        .eq('clinic_id', clinicId);
+      if (error) {
+        console.error('[Relatorios] treatment_packages error:', error);
+        throw error;
+      }
+      if (import.meta.env.DEV) console.log('[Relatorios] treatment_packages', { count: data?.length ?? 0 });
       return data || [];
     },
   });
@@ -342,8 +370,8 @@ export function useReportsRealData(filters: ReportFilters) {
     packageName: pkg.name || 'Pacote',
     totalSessions: pkg.total_sessions || 0,
     usedSessions: pkg.used_sessions || 0,
-    totalValue: Number(pkg.total_value) || 0,
-    paidValue: Number(pkg.paid_value) || 0,
+    totalValue: Number(pkg.total_amount) || 0,
+    paidValue: Number(pkg.paid_amount) || 0,
     status: pkg.status || 'ativo',
   }));
 

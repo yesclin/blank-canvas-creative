@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { BarChart3, DollarSign, Calendar, Users, Building2, User, Package, MessageSquare, Briefcase, ShoppingCart, TrendingUp, Receipt } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -50,9 +50,9 @@ const reportTabs = [
 export default function Relatorios() {
   const today = new Date();
   
-  // Filtros gerais para outros relatórios
+  // Filtros gerais para outros relatórios — default: últimos 3 meses
   const [filters, setFilters] = useState<ReportFilters>({
-    startDate: startOfMonth(today),
+    startDate: startOfMonth(subMonths(today, 2)),
     endDate: endOfMonth(today),
   });
 
@@ -265,8 +265,8 @@ ${data.professionalPerformance.map(p => `${p.professionalName}: ${p.appointments
         <TabsContent value="gerencial">
           {data.isLoading ? (
             <ReportSkeleton />
-          ) : data.financialData.length === 0 ? (
-            <ReportEmptyState title="Sem dados gerenciais" />
+          ) : (data.executiveSummary.faturamentoAtual === 0 && data.executiveSummary.atendimentosRealizados === 0 && data.executiveSummary.novosPacientes === 0) ? (
+            <ReportEmptyState title="Sem dados no período selecionado" />
           ) : (
             <ExecutiveReport summary={data.executiveSummary} financialTrend={data.financialData} />
           )}
