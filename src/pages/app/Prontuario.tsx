@@ -1581,16 +1581,21 @@ export default function Prontuario() {
                 latestPHQ9={latestPHQ9Score}
                 latestGAD7={latestGAD7Score}
               />
+              {!hasTherapeuticPlan && (
+                <>
+                  <Separator />
+                  <PlanoTerapeuticoBlock
+                    currentPlano={currentPlanoTerapeutico}
+                    planoHistory={planoTerapeuticoHistory}
+                    loading={planoTerapeuticoLoading}
+                    saving={planoTerapeuticoSaving}
+                    canEdit={canEditCurrentTab}
+                    onSave={savePlanoTerapeutico}
+                  />
+                </>
+              )}
               <Separator />
-              <PlanoTerapeuticoBlock
-                currentPlano={currentPlanoTerapeutico}
-                planoHistory={planoTerapeuticoHistory}
-                loading={planoTerapeuticoLoading}
-                saving={planoTerapeuticoSaving}
-                canEdit={canEditCurrentTab}
-                onSave={savePlanoTerapeutico}
-              />
-              <Separator />
+
               <RelatorioPsicologicoBlock
                 patientId={patientId}
                 patientName={patient?.full_name}
