@@ -40,12 +40,12 @@ export function useFinanceReports(filters: ReportFilters = {}) {
 
       let cq: any = supabase
         .from("commission_entries")
-        .select(`id, professional_id, gross_amount, commission_amount, status, generated_at, paid_at,
+        .select(`id, professional_id, gross_amount, commission_amount, status, reference_date, paid_at, created_at,
           professionals(id, full_name)`)
-        .order("generated_at", { ascending: false })
+        .order("reference_date", { ascending: false, nullsFirst: false })
         .limit(2000);
-      if (filters.startDate) cq = cq.gte("generated_at", filters.startDate);
-      if (filters.endDate) cq = cq.lte("generated_at", filters.endDate);
+      if (filters.startDate) cq = cq.gte("reference_date", filters.startDate);
+      if (filters.endDate) cq = cq.lte("reference_date", filters.endDate);
       if (filters.professionalId) cq = cq.eq("professional_id", filters.professionalId);
 
       const { data: commissions, error: ce } = await cq;
