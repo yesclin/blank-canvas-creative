@@ -22,11 +22,19 @@ type Appointment = {
   appointment_type?: string | null;
   payment_type?: string | null;
   scheduled_date?: string | null;
+  status?: string | null;
   amount_expected?: number | null;
   expected_value?: number | null;
   patients?: { full_name?: string | null } | null;
-  procedures?: { name?: string | null; price?: number | null } | null;
+  procedures?: {
+    name?: string | null;
+    price?: number | null;
+    charge_on_schedule?: boolean | null;
+    charge_on_finish?: boolean | null;
+  } | null;
 };
+
+export type ChargePhase = "schedule" | "finish";
 
 function resolveExpected(appt: Appointment): number {
   const stored = Number(appt.amount_expected ?? appt.expected_value ?? 0) || 0;
