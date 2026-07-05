@@ -74,6 +74,7 @@ export function ActiveAppointmentDrawer() {
   const finalizeSession = useFinalizeSession();
   const updateStatusMutation = useUpdateAppointmentStatus();
   const { pendingAppointment, setPendingAppointment, generateGuide } = useTissGuideGeneration();
+  const { data: procedureRequirements, isLoading: procReqLoading } = useProcedureRequirements(appointment?.id);
 
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [materialsDialogOpen, setMaterialsDialogOpen] = useState(false);
