@@ -8,7 +8,6 @@ import { PayablesTab } from "@/components/financeiro/tabs/PayablesTab";
 import { CashRegisterTab } from "@/components/financeiro/tabs/CashRegisterTab";
 import { PackagesTab } from "@/components/financeiro/tabs/PackagesTab";
 import { CommissionsTab } from "@/components/financeiro/tabs/CommissionsTab";
-import { ReportsTab } from "@/components/financeiro/tabs/ReportsTab";
 import { MarginAlertSettings } from "@/components/config/MarginAlertSettings";
 import { useFinancialAccessControl } from "@/hooks/useFinancialAccessControl";
 
