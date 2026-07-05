@@ -142,6 +142,7 @@ export function AppointmentDialog({
   lockedPatientId,
   lockedPatientName,
   scheduleBlocks = [],
+  defaultPackageId,
 }: AppointmentDialogProps) {
   const { enabledSpecialties, selectedSpecialtyId } = useGlobalSpecialty();
   const resolvedClinicSpecialty = useMemo(
