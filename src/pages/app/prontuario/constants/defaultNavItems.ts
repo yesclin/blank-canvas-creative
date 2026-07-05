@@ -53,6 +53,7 @@ import {
 // Fallback nav items when no config exists
 export const DEFAULT_NAV_ITEMS = [
   { id: 'resumo', label: 'Visão Geral', icon: LayoutDashboard },
+  { id: 'tratamentos', label: 'Tratamentos/Sessões', icon: Package },
   { id: 'anamnese', label: 'Anamnese', icon: FileText },
   { id: 'sinais_vitais', label: 'Sinais Vitais', icon: Heart },
   { id: 'odontograma', label: 'Odontograma', icon: Smile },
