@@ -161,12 +161,15 @@ export function useReportsRealData(filters: ReportFilters) {
   // DADOS DE PACIENTES
   // =============================================
   const { data: patientsData = [], isLoading: loadingPatients } = useQuery({
-    queryKey: ['report-patients'],
+    queryKey: ['report-patients', clinicId],
+    enabled: !!clinicId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('patients')
-        .select('id, created_at');
+        .select('id, created_at')
+        .eq('clinic_id', clinicId);
       if (error) throw error;
+      if (import.meta.env.DEV) console.log('[Relatorios] patients', { count: data?.length ?? 0 });
       return data || [];
     },
   });
