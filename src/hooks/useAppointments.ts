@@ -200,6 +200,7 @@ export function useCreateAppointment() {
           meeting_provider: data.meeting_provider || null,
           expected_value: expectedValue || null,
           amount_expected: expectedValue || 0,
+          treatment_package_id: data.treatment_package_id || null,
         })
         .select()
         .single();
