@@ -951,10 +951,12 @@ export default function Agenda() {
           if (!open) {
             setLockedPatientId(undefined);
             setLockedPatientName(undefined);
+            setDefaultDialogPackageId(undefined);
           }
         }}
         lockedPatientId={lockedPatientId}
         lockedPatientName={lockedPatientName}
+        defaultPackageId={defaultDialogPackageId}
         mode={appointmentDialogMode}
         professionals={professionals}
         patients={patients}
