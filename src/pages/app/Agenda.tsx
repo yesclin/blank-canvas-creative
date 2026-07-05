@@ -673,6 +673,7 @@ export default function Agenda() {
       is_fit_in: data.is_fit_in,
       care_mode: (data as any).care_mode || 'presencial',
       meeting_provider: (data as any).meeting_provider || undefined,
+      treatment_package_id: data.treatment_package_id || undefined,
     };
     
     createAppointmentMutation.mutate(formData, {
