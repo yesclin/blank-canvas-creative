@@ -34,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { MyCommissionsPanel } from "@/components/financeiro/MyCommissionsPanel";
 
 type PeriodFilter = "current" | "last" | "last3";
 
@@ -287,8 +288,12 @@ export default function MeuFinanceiro() {
         <TabsList>
           <TabsTrigger value="appointments">Atendimentos</TabsTrigger>
           <TabsTrigger value="transactions">Recebimentos</TabsTrigger>
+          <TabsTrigger value="my-commissions">Minhas Comissões</TabsTrigger>
           <TabsTrigger value="commissions">Repasses (Convênios)</TabsTrigger>
         </TabsList>
+        <TabsContent value="my-commissions">
+          <MyCommissionsPanel professionalId={professionalId!} dateRange={dateRange} />
+        </TabsContent>
 
         {/* Appointments Tab */}
         <TabsContent value="appointments">
