@@ -12033,77 +12033,227 @@ export type Database = {
       }
       procedures: {
         Row: {
+          accepts_insurance: boolean
+          alert_when_no_stock: boolean
+          allow_cancel_without_losing_package: boolean
+          allow_discount: boolean
+          allow_installments: boolean
+          allow_manual_stock_adjust: boolean
           allow_single_sale: boolean
+          allow_walkin: boolean
           allows_return: boolean
+          auto_deduct_stock: boolean
+          block_outside_interval: boolean
+          bookable_online: boolean
+          category: string | null
+          charge_mode: Database["public"]["Enums"]["procedure_charge_mode"]
+          charge_on_finish: boolean
+          charge_on_schedule: boolean
           clinic_id: string
+          color: string | null
+          commission_trigger: Database["public"]["Enums"]["procedure_commission_trigger"]
+          commission_type: Database["public"]["Enums"]["procedure_commission_type"]
+          commission_value: number | null
+          contraindications: string | null
+          cost_center: string | null
           created_at: string
+          default_anamnesis_template_id: string | null
+          default_consent_term_id: string | null
+          default_finance_category_id: string | null
+          default_payment_method_id: string | null
           default_sessions_count: number | null
           description: string | null
           duration_minutes: number
           id: string
+          insurance_price: number | null
           is_active: boolean
+          is_free: boolean
+          max_booking_notice_days: number | null
+          max_installments: number | null
+          min_booking_notice_hours: number | null
+          min_interval_minutes: number | null
+          min_price: number | null
           name: string
           open_package: boolean
+          open_treatment: boolean
           package_price: number | null
           package_validity_days: number | null
+          particular_price: number | null
+          possible_intercurrences: string | null
+          post_procedure_care: string | null
+          pre_procedure_care: string | null
           price: number | null
           price_per_session: number | null
           protocol_notes: string | null
+          requires_anamnesis: boolean
+          requires_before_after_photos: boolean
+          requires_consent_term: boolean
+          requires_evolution: boolean
+          requires_insurance_authorization: boolean
+          requires_room: boolean
+          requires_signature: boolean
+          requires_specific_professional: boolean
+          restrict_to_authorized_professionals: boolean
           return_days: number | null
           session_duration_minutes: number | null
           session_interval_days: number | null
+          show_in_agenda: boolean
           specialty: string | null
           specialty_id: string | null
+          suggest_next_session: boolean
+          tiss_code: string | null
+          tuss_code: string | null
+          type: Database["public"]["Enums"]["procedure_type"]
           updated_at: string
           uses_sessions: boolean
         }
         Insert: {
+          accepts_insurance?: boolean
+          alert_when_no_stock?: boolean
+          allow_cancel_without_losing_package?: boolean
+          allow_discount?: boolean
+          allow_installments?: boolean
+          allow_manual_stock_adjust?: boolean
           allow_single_sale?: boolean
+          allow_walkin?: boolean
           allows_return?: boolean
+          auto_deduct_stock?: boolean
+          block_outside_interval?: boolean
+          bookable_online?: boolean
+          category?: string | null
+          charge_mode?: Database["public"]["Enums"]["procedure_charge_mode"]
+          charge_on_finish?: boolean
+          charge_on_schedule?: boolean
           clinic_id: string
+          color?: string | null
+          commission_trigger?: Database["public"]["Enums"]["procedure_commission_trigger"]
+          commission_type?: Database["public"]["Enums"]["procedure_commission_type"]
+          commission_value?: number | null
+          contraindications?: string | null
+          cost_center?: string | null
           created_at?: string
+          default_anamnesis_template_id?: string | null
+          default_consent_term_id?: string | null
+          default_finance_category_id?: string | null
+          default_payment_method_id?: string | null
           default_sessions_count?: number | null
           description?: string | null
           duration_minutes?: number
           id?: string
+          insurance_price?: number | null
           is_active?: boolean
+          is_free?: boolean
+          max_booking_notice_days?: number | null
+          max_installments?: number | null
+          min_booking_notice_hours?: number | null
+          min_interval_minutes?: number | null
+          min_price?: number | null
           name: string
           open_package?: boolean
+          open_treatment?: boolean
           package_price?: number | null
           package_validity_days?: number | null
+          particular_price?: number | null
+          possible_intercurrences?: string | null
+          post_procedure_care?: string | null
+          pre_procedure_care?: string | null
           price?: number | null
           price_per_session?: number | null
           protocol_notes?: string | null
+          requires_anamnesis?: boolean
+          requires_before_after_photos?: boolean
+          requires_consent_term?: boolean
+          requires_evolution?: boolean
+          requires_insurance_authorization?: boolean
+          requires_room?: boolean
+          requires_signature?: boolean
+          requires_specific_professional?: boolean
+          restrict_to_authorized_professionals?: boolean
           return_days?: number | null
           session_duration_minutes?: number | null
           session_interval_days?: number | null
+          show_in_agenda?: boolean
           specialty?: string | null
           specialty_id?: string | null
+          suggest_next_session?: boolean
+          tiss_code?: string | null
+          tuss_code?: string | null
+          type?: Database["public"]["Enums"]["procedure_type"]
           updated_at?: string
           uses_sessions?: boolean
         }
         Update: {
+          accepts_insurance?: boolean
+          alert_when_no_stock?: boolean
+          allow_cancel_without_losing_package?: boolean
+          allow_discount?: boolean
+          allow_installments?: boolean
+          allow_manual_stock_adjust?: boolean
           allow_single_sale?: boolean
+          allow_walkin?: boolean
           allows_return?: boolean
+          auto_deduct_stock?: boolean
+          block_outside_interval?: boolean
+          bookable_online?: boolean
+          category?: string | null
+          charge_mode?: Database["public"]["Enums"]["procedure_charge_mode"]
+          charge_on_finish?: boolean
+          charge_on_schedule?: boolean
           clinic_id?: string
+          color?: string | null
+          commission_trigger?: Database["public"]["Enums"]["procedure_commission_trigger"]
+          commission_type?: Database["public"]["Enums"]["procedure_commission_type"]
+          commission_value?: number | null
+          contraindications?: string | null
+          cost_center?: string | null
           created_at?: string
+          default_anamnesis_template_id?: string | null
+          default_consent_term_id?: string | null
+          default_finance_category_id?: string | null
+          default_payment_method_id?: string | null
           default_sessions_count?: number | null
           description?: string | null
           duration_minutes?: number
           id?: string
+          insurance_price?: number | null
           is_active?: boolean
+          is_free?: boolean
+          max_booking_notice_days?: number | null
+          max_installments?: number | null
+          min_booking_notice_hours?: number | null
+          min_interval_minutes?: number | null
+          min_price?: number | null
           name?: string
           open_package?: boolean
+          open_treatment?: boolean
           package_price?: number | null
           package_validity_days?: number | null
+          particular_price?: number | null
+          possible_intercurrences?: string | null
+          post_procedure_care?: string | null
+          pre_procedure_care?: string | null
           price?: number | null
           price_per_session?: number | null
           protocol_notes?: string | null
+          requires_anamnesis?: boolean
+          requires_before_after_photos?: boolean
+          requires_consent_term?: boolean
+          requires_evolution?: boolean
+          requires_insurance_authorization?: boolean
+          requires_room?: boolean
+          requires_signature?: boolean
+          requires_specific_professional?: boolean
+          restrict_to_authorized_professionals?: boolean
           return_days?: number | null
           session_duration_minutes?: number | null
           session_interval_days?: number | null
+          show_in_agenda?: boolean
           specialty?: string | null
           specialty_id?: string | null
+          suggest_next_session?: boolean
+          tiss_code?: string | null
+          tuss_code?: string | null
+          type?: Database["public"]["Enums"]["procedure_type"]
           updated_at?: string
           uses_sessions?: boolean
         }
@@ -12127,6 +12277,20 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "public_clinic_booking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procedures_default_finance_category_id_fkey"
+            columns: ["default_finance_category_id"]
+            isOneToOne: false
+            referencedRelation: "finance_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procedures_default_payment_method_id_fkey"
+            columns: ["default_payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
             referencedColumns: ["id"]
           },
           {
@@ -16788,6 +16952,18 @@ export type Database = {
         | "corrigido"
         | "ignorado"
         | "recorrente"
+      procedure_charge_mode: "automatic" | "manual"
+      procedure_commission_trigger: "on_finish" | "on_payment"
+      procedure_commission_type: "none" | "fixed" | "percent"
+      procedure_type:
+        | "consulta"
+        | "retorno"
+        | "procedimento"
+        | "sessao"
+        | "pacote"
+        | "avaliacao"
+        | "acompanhamento"
+        | "outro"
       product_type: "material_clinico" | "insumo" | "item_venda" | "medicamento"
       stock_movement_type:
         | "entrada"
@@ -16999,6 +17175,19 @@ export const Constants = {
         "corrigido",
         "ignorado",
         "recorrente",
+      ],
+      procedure_charge_mode: ["automatic", "manual"],
+      procedure_commission_trigger: ["on_finish", "on_payment"],
+      procedure_commission_type: ["none", "fixed", "percent"],
+      procedure_type: [
+        "consulta",
+        "retorno",
+        "procedimento",
+        "sessao",
+        "pacote",
+        "avaliacao",
+        "acompanhamento",
+        "outro",
       ],
       product_type: ["material_clinico", "insumo", "item_venda", "medicamento"],
       stock_movement_type: [

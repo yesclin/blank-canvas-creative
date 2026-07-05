@@ -4,7 +4,81 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useClinicData } from "@/hooks/useClinicData";
 
-export interface Procedure {
+export type ProcedureType =
+  | "consulta"
+  | "retorno"
+  | "procedimento"
+  | "sessao"
+  | "pacote"
+  | "avaliacao"
+  | "acompanhamento"
+  | "outro";
+
+export type ProcedureChargeMode = "automatic" | "manual";
+export type ProcedureCommissionType = "none" | "fixed" | "percent";
+export type ProcedureCommissionTrigger = "on_finish" | "on_payment";
+
+export interface ProcedureExtras {
+  // Básico
+  type?: ProcedureType;
+  category?: string | null;
+  color?: string | null;
+  // Agenda
+  show_in_agenda?: boolean;
+  bookable_online?: boolean;
+  min_interval_minutes?: number | null;
+  allow_walkin?: boolean;
+  requires_specific_professional?: boolean;
+  requires_room?: boolean;
+  min_booking_notice_hours?: number | null;
+  max_booking_notice_days?: number | null;
+  charge_on_schedule?: boolean;
+  charge_on_finish?: boolean;
+  // Sessões extras
+  open_treatment?: boolean;
+  block_outside_interval?: boolean;
+  allow_cancel_without_losing_package?: boolean;
+  suggest_next_session?: boolean;
+  // Financeiro
+  particular_price?: number | null;
+  insurance_price?: number | null;
+  is_free?: boolean;
+  allow_discount?: boolean;
+  min_price?: number | null;
+  allow_installments?: boolean;
+  max_installments?: number | null;
+  charge_mode?: ProcedureChargeMode;
+  default_finance_category_id?: string | null;
+  default_payment_method_id?: string | null;
+  cost_center?: string | null;
+  commission_type?: ProcedureCommissionType;
+  commission_value?: number | null;
+  commission_trigger?: ProcedureCommissionTrigger;
+  // Prontuário
+  requires_anamnesis?: boolean;
+  default_anamnesis_template_id?: string | null;
+  requires_evolution?: boolean;
+  requires_signature?: boolean;
+  requires_before_after_photos?: boolean;
+  requires_consent_term?: boolean;
+  default_consent_term_id?: string | null;
+  pre_procedure_care?: string | null;
+  post_procedure_care?: string | null;
+  contraindications?: string | null;
+  possible_intercurrences?: string | null;
+  // Estoque
+  auto_deduct_stock?: boolean;
+  allow_manual_stock_adjust?: boolean;
+  alert_when_no_stock?: boolean;
+  // Profissionais / convênio
+  restrict_to_authorized_professionals?: boolean;
+  accepts_insurance?: boolean;
+  requires_insurance_authorization?: boolean;
+  tuss_code?: string | null;
+  tiss_code?: string | null;
+}
+
+export interface Procedure extends ProcedureExtras {
   id: string;
   clinic_id: string;
   name: string;
@@ -32,7 +106,7 @@ export interface Procedure {
   protocol_notes?: string | null;
 }
 
-export interface ProcedureFormData {
+export interface ProcedureFormData extends ProcedureExtras {
   name: string;
   specialty?: string;
   specialty_id?: string;
@@ -53,6 +127,43 @@ export interface ProcedureFormData {
   package_validity_days?: number | null;
   protocol_notes?: string | null;
 }
+
+// Fields from ProcedureExtras that we persist to DB (no transformation needed).
+const EXTRAS_FIELDS: (keyof ProcedureExtras)[] = [
+  "type", "category", "color",
+  "show_in_agenda", "bookable_online", "min_interval_minutes", "allow_walkin",
+  "requires_specific_professional", "requires_room",
+  "min_booking_notice_hours", "max_booking_notice_days",
+  "charge_on_schedule", "charge_on_finish",
+  "open_treatment", "block_outside_interval",
+  "allow_cancel_without_losing_package", "suggest_next_session",
+  "particular_price", "insurance_price", "is_free", "allow_discount",
+  "min_price", "allow_installments", "max_installments", "charge_mode",
+  "default_finance_category_id", "default_payment_method_id", "cost_center",
+  "commission_type", "commission_value", "commission_trigger",
+  "requires_anamnesis", "default_anamnesis_template_id",
+  "requires_evolution", "requires_signature",
+  "requires_before_after_photos", "requires_consent_term",
+  "default_consent_term_id",
+  "pre_procedure_care", "post_procedure_care",
+  "contraindications", "possible_intercurrences",
+  "auto_deduct_stock", "allow_manual_stock_adjust", "alert_when_no_stock",
+  "restrict_to_authorized_professionals",
+  "accepts_insurance", "requires_insurance_authorization",
+  "tuss_code", "tiss_code",
+];
+
+function pickExtras(formData: ProcedureFormData): Record<string, unknown> {
+  const src = formData as unknown as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const k of EXTRAS_FIELDS) {
+    const v = src[k as string];
+    if (v !== undefined) out[k as string] = v;
+  }
+  return out;
+}
+
+
 
 // Fetch all procedures (including inactive for admin view)
 export function useProceduresList(includeInactive: boolean = true) {
@@ -207,9 +318,11 @@ export function useCreateProcedure() {
           allow_single_sale: formData.uses_sessions ? (formData.allow_single_sale ?? true) : true,
           package_validity_days: formData.uses_sessions ? (formData.package_validity_days ?? null) : null,
           protocol_notes: formData.uses_sessions ? (formData.protocol_notes ?? null) : null,
-        })
+          ...pickExtras(formData),
+        } as never)
         .select()
         .single();
+
       
       if (error) throw error;
       return data;
@@ -273,12 +386,14 @@ export function useUpdateProcedure() {
           allow_single_sale: formData.uses_sessions ? (formData.allow_single_sale ?? true) : true,
           package_validity_days: formData.uses_sessions ? (formData.package_validity_days ?? null) : null,
           protocol_notes: formData.uses_sessions ? (formData.protocol_notes ?? null) : null,
+          ...pickExtras(formData),
           updated_at: new Date().toISOString(),
-        })
+        } as never)
         .eq("id", id)
         .eq("clinic_id", clinicId)
         .select()
         .single();
+
       
       if (error) throw error;
       return data;
@@ -421,6 +536,12 @@ export function useProcedureForm(initialData?: Procedure | null) {
   };
 
   const loadProcedure = (procedure: Procedure) => {
+    const extras: ProcedureExtras = {};
+    const src = procedure as unknown as Record<string, unknown>;
+    for (const k of EXTRAS_FIELDS) {
+      const v = src[k as string];
+      if (v !== undefined) (extras as Record<string, unknown>)[k as string] = v;
+    }
     setFormData({
       name: procedure.name,
       specialty: procedure.specialty || "",
@@ -440,8 +561,10 @@ export function useProcedureForm(initialData?: Procedure | null) {
       allow_single_sale: procedure.allow_single_sale ?? true,
       package_validity_days: procedure.package_validity_days ?? null,
       protocol_notes: procedure.protocol_notes ?? null,
+      ...extras,
     });
   };
+
 
   // Validation: name required, duration > 0, and specialty_id required
   const isValid = formData.name.trim().length > 0 && formData.duration_minutes > 0;

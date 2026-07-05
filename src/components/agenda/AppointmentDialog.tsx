@@ -812,6 +812,7 @@ export function AppointmentDialog({
                       <SelectContent>
                         <SelectItem value="none">Nenhum procedimento</SelectItem>
                         {procedures
+                          .filter(proc => proc.show_in_agenda !== false)
                           .filter(proc => !watchSpecialtyId || proc.specialty_id === watchSpecialtyId)
                           .map((proc) => (
                           <SelectItem key={proc.id} value={proc.id}>
