@@ -46,6 +46,10 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { QuickClinicalSummary } from "./QuickClinicalSummary";
 import { removeGlobalActiveAppointment } from "@/lib/globalActiveAppointments";
+import { PackageSessionBadge } from "@/components/atendimento/PackageSessionBadge";
+import { ProcedureRequirementsPanel } from "@/components/atendimento/ProcedureRequirementsPanel";
+import { useProcedureRequirements } from "@/hooks/useProcedureRequirements";
+import { logAudit } from "@/utils/auditLog";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
