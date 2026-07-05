@@ -133,6 +133,21 @@ export function ActiveAppointmentDrawer() {
         status: "finalizado",
       });
 
+      // Audit: registra finalização com contexto do procedimento
+      void logAudit({
+        clinicId: finalizingAppointment.clinic_id,
+        action: "appointment.finalize",
+        entityType: "appointments",
+        entityId: finalizingAppointment.id,
+        metadata: {
+          patient_id: finalizingAppointment.patient_id,
+          procedure_id: finalizingAppointment.procedure_id ?? null,
+          procedure_name: procedureRequirements?.procedure?.name ?? null,
+          charge_on_finish: procedureRequirements?.procedure?.charge_on_finish ?? null,
+          requirements_satisfied: (procedureRequirements?.requirements ?? []).map((r) => ({ key: r.key, satisfied: r.satisfied })),
+        },
+      });
+
       syncAfterFinalize(finalizingAppointment.id);
       toast.success("Atendimento finalizado com sucesso");
 
