@@ -217,18 +217,18 @@ export function doesResourceApplyToSpecialty(
   const resourceSpecialtyKey = normalizeProntuarioSpecialtySlug(resource.specialty_slug);
 
   if (!resource.specialty_id && !resourceSpecialtyKey) return true;
-  if (resourceSpecialtyKey === specialtyKey) return true;
-  if (resource.specialty_id && specialtyId && resource.specialty_id === specialtyId) return true;
 
-  // Legacy compatibility: older Super Admin rows used English catalog slugs
-  // (psychology/aesthetics/dentistry) even when the clinic did not have that
-  // exact specialty record. Do not hide an enabled clinic resource solely
-  // because its catalog specialty is absent from this clinic.
-  if (resourceSpecialtyKey && !clinicSpecialtyKeys.has(resourceSpecialtyKey)) {
-    return true;
+  if (resourceSpecialtyKey) {
+    if (resourceSpecialtyKey === specialtyKey) return true;
+
+    // Legacy compatibility: older Super Admin rows used English catalog slugs
+    // (psychology/aesthetics/dentistry) even when the clinic did not have that
+    // exact specialty record. Do not hide an enabled clinic resource solely
+    // because its catalog specialty is absent from this clinic.
+    return !clinicSpecialtyKeys.has(resourceSpecialtyKey);
   }
 
-  return false;
+  return Boolean(resource.specialty_id && specialtyId && resource.specialty_id === specialtyId);
 }
 
 export function getProntuarioResourceTab(resource: ClinicProntuarioResource): string | null {

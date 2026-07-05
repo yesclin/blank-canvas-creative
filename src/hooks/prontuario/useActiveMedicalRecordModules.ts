@@ -1,15 +1,12 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useClinicData } from "@/hooks/useClinicData";
 import { useActiveSpecialty } from "./useActiveSpecialty";
 import type { ClinicalModuleKey, ModuleWithStatus } from "@/types/clinical-modules";
-import type { SpecialtyKey } from "./useActiveSpecialty";
 import {
-  PRONTUARIO_FEATURE_TAB_ALIASES,
   doesResourceApplyToSpecialty,
-  getProntuarioResourceTab,
   isProntuarioResourceActive,
-  normalizeProntuarioSpecialtySlug,
   type ClinicProntuarioResource,
 } from "./prontuarioFeatureTabs";
 
@@ -61,6 +58,7 @@ const MODULE_CATEGORIES: Record<ClinicalModuleKey, ModuleWithStatus["category"]>
  * - Clinical modules configuration
  */
 export function useActiveMedicalRecordModules(patientId: string | null | undefined) {
+  const { clinic } = useClinicData();
   const { 
     activeSpecialtyId, 
     activeSpecialty,
@@ -71,15 +69,29 @@ export function useActiveMedicalRecordModules(patientId: string | null | undefin
     specialties,
   } = useActiveSpecialty(patientId);
 
-  const clinicId = activeSpecialty?.id ? activeSpecialty.id : null;
-
   const {
     data: resources = [],
     isLoading: modulesLoading,
   } = useQuery({
-    queryKey: ["clinic-prontuario-resources", activeSpecialty?.id ? undefined : null],
-    enabled: false,
-    queryFn: async () => [] as ClinicProntuarioResource[],
+    queryKey: ["clinic-prontuario-resources", clinic?.id],
+    enabled: !!clinic?.id,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      if (!clinic?.id) return [];
+      const { data, error } = await supabase
+        .from("clinic_resources")
+        .select("id, clinic_id, resource_key, resource_type, specialty_id, specialty_slug, enabled, effective_at, expires_at")
+        .eq("clinic_id", clinic.id);
+
+      if (error) {
+        console.error("[useActiveMedicalRecordModules] erro ao buscar clinic_resources:", error);
+        return [];
+      }
+
+      return (data ?? []) as ClinicProntuarioResource[];
+    },
   });
 
   const clinicSpecialtyKeys = useMemo(() => {
@@ -90,11 +102,37 @@ export function useActiveMedicalRecordModules(patientId: string | null | undefin
     );
   }, [specialties]);
 
-  const activeResourcesQuery = useQuery({
-    queryKey: ["clinic-prontuario-resources", activeSpecialty?.id, activeSpecialtyId, activeSpecialtyKey],
-    enabled: false,
-    queryFn: async () => [] as ClinicProntuarioResource[],
-  });
+  const applicableResources = useMemo(() => {
+    return resources.filter((resource) =>
+      doesResourceApplyToSpecialty(resource, activeSpecialtyId, activeSpecialtyKey, clinicSpecialtyKeys),
+    );
+  }, [resources, activeSpecialtyId, activeSpecialtyKey, clinicSpecialtyKeys]);
+
+  const isResourceKeyEnabled = (resourceKeys: string[]): boolean => {
+    const matching = applicableResources.filter((resource) => resourceKeys.includes(resource.resource_key));
+    if (matching.length === 0) return false;
+    const latest = [...matching].sort((a, b) => {
+      const aTime = a.effective_at ? new Date(a.effective_at).getTime() : 0;
+      const bTime = b.effective_at ? new Date(b.effective_at).getTime() : 0;
+      return bTime - aTime;
+    })[0];
+    return isProntuarioResourceActive(latest);
+  };
+
+  const allModules = useMemo(() => {
+    return (Object.keys(MODULE_TO_RESOURCE_KEYS) as ClinicalModuleKey[]).map((moduleKey, index) => ({
+      id: moduleKey,
+      key: moduleKey,
+      name: MODULE_LABELS[moduleKey],
+      description: null,
+      category: MODULE_CATEGORIES[moduleKey],
+      icon: null,
+      display_order: index + 1,
+      is_system: true,
+      is_enabled: isResourceKeyEnabled(MODULE_TO_RESOURCE_KEYS[moduleKey]),
+      source: "clinic_override" as const,
+    }));
+  }, [applicableResources]);
   
   // Get only enabled modules
   const enabledModules = useMemo(() => {
@@ -139,6 +177,9 @@ export function useActiveMedicalRecordModules(patientId: string | null | undefin
     enabledModules,
     modulesByCategory,
     isModuleEnabled,
+    clinicResources: resources,
+    applicableResources,
+    clinicSpecialtyKeys,
     
     // Loading state
     loading: specialtyLoading || modulesLoading,
