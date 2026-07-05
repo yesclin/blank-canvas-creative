@@ -46,6 +46,10 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { QuickClinicalSummary } from "./QuickClinicalSummary";
 import { removeGlobalActiveAppointment } from "@/lib/globalActiveAppointments";
+import { PackageSessionBadge } from "@/components/atendimento/PackageSessionBadge";
+import { ProcedureRequirementsPanel } from "@/components/atendimento/ProcedureRequirementsPanel";
+import { useProcedureRequirements } from "@/hooks/useProcedureRequirements";
+import { logAudit } from "@/utils/auditLog";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -70,6 +74,7 @@ export function ActiveAppointmentDrawer() {
   const finalizeSession = useFinalizeSession();
   const updateStatusMutation = useUpdateAppointmentStatus();
   const { pendingAppointment, setPendingAppointment, generateGuide } = useTissGuideGeneration();
+  const { data: procedureRequirements, isLoading: procReqLoading } = useProcedureRequirements(appointment?.id);
 
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [materialsDialogOpen, setMaterialsDialogOpen] = useState(false);
@@ -97,9 +102,17 @@ export function ActiveAppointmentDrawer() {
     closeDrawer();
   }, [appointments, closeDrawer, queryClient, setSelectedAppointment]);
 
-  // Step 1: Click "Finalizar" → finalize session summary → open materials dialog
+  // Step 1: Click "Finalizar" → validate procedure requirements → finalize session → open materials
   const handleFinalize = useCallback(async () => {
     if (!appointment) return;
+    if (procedureRequirements?.hasBlockingPending) {
+      const pending = procedureRequirements.requirements.filter((r) => !r.satisfied).map((r) => r.label);
+      toast.error(
+        `Não é possível finalizar. Pendente: ${pending.join(", ")}`,
+        { description: "Complete os requisitos exigidos pelo procedimento." },
+      );
+      return;
+    }
     try {
       await finalizeSession.mutateAsync({ appointmentId: appointment.id });
     } catch (e) {
@@ -107,7 +120,7 @@ export function ActiveAppointmentDrawer() {
     }
     setFinalizingAppointment(appointment);
     setMaterialsDialogOpen(true);
-  }, [appointment, finalizeSession]);
+  }, [appointment, finalizeSession, procedureRequirements]);
 
   // Step 2: Materials confirmed → update status → check TISS
   const handleMaterialsConfirm = useCallback(async () => {
@@ -118,6 +131,21 @@ export function ActiveAppointmentDrawer() {
       await updateStatusMutation.mutateAsync({
         id: finalizingAppointment.id,
         status: "finalizado",
+      });
+
+      // Audit: registra finalização com contexto do procedimento
+      void logAudit({
+        clinicId: finalizingAppointment.clinic_id,
+        action: "appointment.finalize",
+        entityType: "appointments",
+        entityId: finalizingAppointment.id,
+        metadata: {
+          patient_id: finalizingAppointment.patient_id,
+          procedure_id: finalizingAppointment.procedure_id ?? null,
+          procedure_name: procedureRequirements?.procedure?.name ?? null,
+          charge_on_finish: procedureRequirements?.procedure?.charge_on_finish ?? null,
+          requirements_satisfied: (procedureRequirements?.requirements ?? []).map((r) => ({ key: r.key, satisfied: r.satisfied })),
+        },
       });
 
       syncAfterFinalize(finalizingAppointment.id);
@@ -136,7 +164,7 @@ export function ActiveAppointmentDrawer() {
     }
 
     setFinalizingAppointment(null);
-  }, [finalizingAppointment, updateStatusMutation, syncAfterFinalize, setPendingAppointment, invalidateAll]);
+  }, [finalizingAppointment, updateStatusMutation, syncAfterFinalize, setPendingAppointment, invalidateAll, procedureRequirements]);
 
   const handleMaterialsCancel = useCallback(() => {
     setMaterialsDialogOpen(false);
@@ -288,10 +316,15 @@ export function ActiveAppointmentDrawer() {
               className="w-full gap-2 mt-3"
               size="sm"
               onClick={handleFinalize}
-              disabled={finalizeSession.isPending || materialsDialogOpen}
+              disabled={finalizeSession.isPending || materialsDialogOpen || procedureRequirements?.hasBlockingPending}
+              title={procedureRequirements?.hasBlockingPending ? "Complete os requisitos do procedimento" : undefined}
             >
               <Square className="h-4 w-4" />
-              {finalizeSession.isPending ? "Preparando..." : "Finalizar Atendimento"}
+              {finalizeSession.isPending
+                ? "Preparando..."
+                : procedureRequirements?.hasBlockingPending
+                  ? "Requisitos pendentes"
+                  : "Finalizar Atendimento"}
             </Button>
           </div>
 
@@ -308,6 +341,14 @@ export function ActiveAppointmentDrawer() {
                     <p className="text-xs text-destructive/80 mt-0.5">{patient.clinical_alert_text}</p>
                   </div>
                 </div>
+              )}
+
+              {/* Package / session context */}
+              <PackageSessionBadge appointmentId={appointment.id} />
+
+              {/* Procedure details + requirements checklist */}
+              {canAccessClinicalContent && (
+                <ProcedureRequirementsPanel data={procedureRequirements} isLoading={procReqLoading} />
               )}
 
               {/* Section: Atendimento */}
