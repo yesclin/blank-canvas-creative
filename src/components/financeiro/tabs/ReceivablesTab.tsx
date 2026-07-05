@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Plus, Download, CheckCircle2, XCircle, RotateCcw } from "lucide-react";
 import { useReceivables, type ReceivableRow } from "@/hooks/finance/useReceivables";
-import { useSettleTransaction, useCancelTransaction, useReverseTransaction, useCreateReceivable } from "@/hooks/finance/useTransactionActions";
+import { useSettleTransaction, useCancelTransaction, useReverseTransaction, useCreateReceivable, useRenegotiateTransaction } from "@/hooks/finance/useTransactionActions";
 import { paymentMethods } from "@/types/gestao";
 import { format } from "date-fns";
 
@@ -46,6 +46,7 @@ export function ReceivablesTab() {
   const cancel = useCancelTransaction();
   const reverse = useReverseTransaction();
   const create = useCreateReceivable();
+  const renegotiate = useRenegotiateTransaction();
 
   const [openNew, setOpenNew] = useState(false);
   const [payTarget, setPayTarget] = useState<ReceivableRow | null>(null);
@@ -53,6 +54,12 @@ export function ReceivablesTab() {
   const [payMethod, setPayMethod] = useState("");
   const [reverseTarget, setReverseTarget] = useState<ReceivableRow | null>(null);
   const [reverseReason, setReverseReason] = useState("");
+  const [cancelTarget, setCancelTarget] = useState<ReceivableRow | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [renegTarget, setRenegTarget] = useState<ReceivableRow | null>(null);
+  const [renegAmount, setRenegAmount] = useState("");
+  const [renegDue, setRenegDue] = useState("");
+  const [renegReason, setRenegReason] = useState("");
 
   const [newForm, setNewForm] = useState({ description: "", amount: "", due_date: today(), installments: "1", payment_method: "", notes: "" });
 
