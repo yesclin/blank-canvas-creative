@@ -7,6 +7,7 @@ import { ReceivablesTab } from "@/components/financeiro/tabs/ReceivablesTab";
 import { PayablesTab } from "@/components/financeiro/tabs/PayablesTab";
 import { CashRegisterTab } from "@/components/financeiro/tabs/CashRegisterTab";
 import { PackagesTab } from "@/components/financeiro/tabs/PackagesTab";
+import { CommissionsTab } from "@/components/financeiro/tabs/CommissionsTab";
 import { MarginAlertSettings } from "@/components/config/MarginAlertSettings";
 import { useFinancialAccessControl } from "@/hooks/useFinancialAccessControl";
 
@@ -65,7 +66,7 @@ export default function Financas() {
         <TabsContent value="payables"><PayablesTab /></TabsContent>
         <TabsContent value="cash"><CashRegisterTab /></TabsContent>
         <TabsContent value="packages"><PackagesTab /></TabsContent>
-        <TabsContent value="commissions"><ComingSoon title="Comissões" phase="Fase 2B" /></TabsContent>
+        <TabsContent value="commissions"><CommissionsTab /></TabsContent>
         <TabsContent value="reports"><ComingSoon title="Relatórios financeiros" phase="Fase 2C" /></TabsContent>
         <TabsContent value="settings"><MarginAlertSettings /></TabsContent>
       </Tabs>
