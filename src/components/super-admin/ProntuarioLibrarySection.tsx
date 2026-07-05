@@ -6,6 +6,7 @@
  * expiração opcional). A alteração só é salva após a confirmação.
  */
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -201,6 +202,7 @@ function ResourceCard({
 }
 
 export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSummary }: Props) {
+  const queryClient = useQueryClient();
   const [items, setItems] = useState<Resource[]>([]);
   const [auditByKey, setAuditByKey] = useState<Record<string, AuditMeta>>({});
   const [loading, setLoading] = useState(false);
@@ -402,6 +404,8 @@ export function ProntuarioLibrarySection({ clinicId, modulesContent, modulesSumm
     });
 
     toast.success(nextEnabled ? 'Recurso liberado.' : 'Recurso bloqueado.');
+    queryClient.invalidateQueries({ queryKey: ['clinic-prontuario-resources', clinicId] });
+    queryClient.invalidateQueries({ queryKey: ['clinic-enabled-resources', clinicId] });
     setSaving(false);
     setPending(null);
     load();
