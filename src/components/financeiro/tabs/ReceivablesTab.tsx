@@ -232,8 +232,18 @@ export function ReceivablesTab() {
                                 <RotateCcw className="h-4 w-4 mr-2" />Estornar
                               </DropdownMenuItem>
                             )}
+                            {(r.status === "pendente" || r.status === "parcial") && (
+                              <DropdownMenuItem onClick={() => {
+                                setRenegTarget(r);
+                                setRenegAmount(String(Number(r.amount)));
+                                setRenegDue(r.due_date ?? today());
+                                setRenegReason("");
+                              }}>
+                                <RotateCcw className="h-4 w-4 mr-2" />Renegociar
+                              </DropdownMenuItem>
+                            )}
                             {r.status !== "pago" && r.status !== "cancelado" && (
-                              <DropdownMenuItem onClick={() => cancel.mutate({ id: r.id, reason: "Cancelado pelo usuário" })}>
+                              <DropdownMenuItem onClick={() => { setCancelTarget(r); setCancelReason(""); }}>
                                 <XCircle className="h-4 w-4 mr-2" />Cancelar cobrança
                               </DropdownMenuItem>
                             )}
