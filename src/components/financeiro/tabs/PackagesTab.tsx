@@ -270,9 +270,19 @@ function PackageDetailSheet({ pkg, onClose }: { pkg: TreatmentPackageRow | null;
 }
 
 export function PackagesTab() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<PackageStatusExt | "all">("all");
   const [selected, setSelected] = useState<TreatmentPackageRow | null>(null);
+
+  const goSchedule = (p: TreatmentPackageRow) => {
+    const params = new URLSearchParams();
+    params.set("patient_id", p.patient_id);
+    params.set("package_id", p.id);
+    if (p.procedure_id) params.set("procedure_id", p.procedure_id);
+    if (p.professional_id) params.set("professional_id", p.professional_id);
+    navigate(`/app/agenda?${params.toString()}`);
+  };
   const { data = [], isLoading, refetch } = useTreatmentPackages({
     status: status === "all" ? undefined : status,
     search: search || undefined,
