@@ -34,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { MyCommissionsPanel } from "@/components/financeiro/MyCommissionsPanel";
 
 type PeriodFilter = "current" | "last" | "last3";
 
