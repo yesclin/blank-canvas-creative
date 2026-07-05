@@ -265,8 +265,8 @@ ${data.professionalPerformance.map(p => `${p.professionalName}: ${p.appointments
         <TabsContent value="gerencial">
           {data.isLoading ? (
             <ReportSkeleton />
-          ) : data.financialData.length === 0 ? (
-            <ReportEmptyState title="Sem dados gerenciais" />
+          ) : (data.executiveSummary.faturamentoAtual === 0 && data.executiveSummary.atendimentosRealizados === 0 && data.executiveSummary.novosPacientes === 0) ? (
+            <ReportEmptyState title="Sem dados no período selecionado" />
           ) : (
             <ExecutiveReport summary={data.executiveSummary} financialTrend={data.financialData} />
           )}
