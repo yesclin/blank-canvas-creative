@@ -301,6 +301,54 @@ export function ReceivablesTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Cancel dialog */}
+      <Dialog open={!!cancelTarget} onOpenChange={o => !o && setCancelTarget(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Cancelar cobrança</DialogTitle></DialogHeader>
+          <div className="grid gap-3 text-sm">
+            <div>A cobrança será cancelada; o histórico é mantido em auditoria.</div>
+            <div><Label>Motivo *</Label><Textarea value={cancelReason} onChange={e => setCancelReason(e.target.value)} /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelTarget(null)}>Fechar</Button>
+            <Button disabled={cancelReason.trim().length < 3 || cancel.isPending} onClick={async () => {
+              if (!cancelTarget) return;
+              await cancel.mutateAsync({ id: cancelTarget.id, reason: cancelReason.trim() });
+              setCancelTarget(null); setCancelReason("");
+            }}>Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Renegotiate dialog */}
+      <Dialog open={!!renegTarget} onOpenChange={o => !o && setRenegTarget(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Renegociar lançamento</DialogTitle></DialogHeader>
+          {renegTarget && (
+            <div className="grid gap-3 text-sm">
+              <div>Original: <b>{fmt(Number(renegTarget.amount))}</b> · Pago: {fmt(Number(renegTarget.paid_amount || 0))}</div>
+              <div><Label>Novo valor (R$)</Label><Input type="number" min="0" step="0.01" value={renegAmount} onChange={e => setRenegAmount(e.target.value)} /></div>
+              <div><Label>Novo vencimento</Label><Input type="date" value={renegDue} onChange={e => setRenegDue(e.target.value)} /></div>
+              <div><Label>Motivo *</Label><Textarea value={renegReason} onChange={e => setRenegReason(e.target.value)} /></div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenegTarget(null)}>Fechar</Button>
+            <Button disabled={!Number(renegAmount) || renegReason.trim().length < 3 || renegotiate.isPending}
+              onClick={async () => {
+                if (!renegTarget) return;
+                await renegotiate.mutateAsync({
+                  id: renegTarget.id,
+                  newAmount: Number(renegAmount),
+                  newDueDate: renegDue || undefined,
+                  reason: renegReason.trim(),
+                });
+                setRenegTarget(null); setRenegAmount(""); setRenegDue(""); setRenegReason("");
+              }}>Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
