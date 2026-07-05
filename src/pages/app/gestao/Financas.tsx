@@ -9,10 +9,8 @@ import { FinanceDashboard } from "@/components/financeiro/FinanceDashboard";
 import { ReceivablesTab } from "@/components/financeiro/tabs/ReceivablesTab";
 import { PayablesTab } from "@/components/financeiro/tabs/PayablesTab";
 import { CashRegisterTab } from "@/components/financeiro/tabs/CashRegisterTab";
+import { PackagesTab } from "@/components/financeiro/tabs/PackagesTab";
 import { MarginAlertSettings } from "@/components/config/MarginAlertSettings";
-import { useTreatmentPackages } from "@/hooks/useFinanceTransactions";
-import { packageStatusColors, packageStatusLabels } from "@/types/gestao";
-import type { PackageStatus } from "@/types/gestao";
 import { useFinancialAccessControl } from "@/hooks/useFinancialAccessControl";
 
 const fmt = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
