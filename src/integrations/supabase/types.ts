@@ -4100,13 +4100,26 @@ export type Database = {
         Row: {
           appointment_id: string | null
           base_amount: number
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
           clinic_id: string
           commission_amount: number
           created_at: string
+          due_date: string | null
+          fixed_applied: number | null
+          gross_amount: number | null
           id: string
+          insurance_id: string | null
           notes: string | null
+          paid_at: string | null
+          patient_id: string | null
+          payer_type: string | null
           payout_id: string | null
+          percent_applied: number | null
+          procedure_id: string | null
           professional_id: string
+          received_amount: number
           reference_date: string
           rule_id: string | null
           status: Database["public"]["Enums"]["commission_entry_status"]
@@ -4116,13 +4129,26 @@ export type Database = {
         Insert: {
           appointment_id?: string | null
           base_amount?: number
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           clinic_id: string
           commission_amount?: number
           created_at?: string
+          due_date?: string | null
+          fixed_applied?: number | null
+          gross_amount?: number | null
           id?: string
+          insurance_id?: string | null
           notes?: string | null
+          paid_at?: string | null
+          patient_id?: string | null
+          payer_type?: string | null
           payout_id?: string | null
+          percent_applied?: number | null
+          procedure_id?: string | null
           professional_id: string
+          received_amount?: number
           reference_date?: string
           rule_id?: string | null
           status?: Database["public"]["Enums"]["commission_entry_status"]
@@ -4132,13 +4158,26 @@ export type Database = {
         Update: {
           appointment_id?: string | null
           base_amount?: number
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           clinic_id?: string
           commission_amount?: number
           created_at?: string
+          due_date?: string | null
+          fixed_applied?: number | null
+          gross_amount?: number | null
           id?: string
+          insurance_id?: string | null
           notes?: string | null
+          paid_at?: string | null
+          patient_id?: string | null
+          payer_type?: string | null
           payout_id?: string | null
+          percent_applied?: number | null
+          procedure_id?: string | null
           professional_id?: string
+          received_amount?: number
           reference_date?: string
           rule_id?: string | null
           status?: Database["public"]["Enums"]["commission_entry_status"]
@@ -4175,6 +4214,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "commission_entries_insurance_id_fkey"
+            columns: ["insurance_id"]
+            isOneToOne: false
+            referencedRelation: "insurances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_entries_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_entries_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "commission_entries_professional_id_fkey"
             columns: ["professional_id"]
             isOneToOne: false
@@ -4199,10 +4259,13 @@ export type Database = {
       }
       commission_rules: {
         Row: {
+          applies_to_convenio: boolean
+          applies_to_particular: boolean
           clinic_id: string
           created_at: string
           created_by: string | null
           id: string
+          insurance_id: string | null
           is_active: boolean
           kind: Database["public"]["Enums"]["commission_rule_kind"]
           notes: string | null
@@ -4217,10 +4280,13 @@ export type Database = {
           valor_fixo: number | null
         }
         Insert: {
+          applies_to_convenio?: boolean
+          applies_to_particular?: boolean
           clinic_id: string
           created_at?: string
           created_by?: string | null
           id?: string
+          insurance_id?: string | null
           is_active?: boolean
           kind: Database["public"]["Enums"]["commission_rule_kind"]
           notes?: string | null
@@ -4235,10 +4301,13 @@ export type Database = {
           valor_fixo?: number | null
         }
         Update: {
+          applies_to_convenio?: boolean
+          applies_to_particular?: boolean
           clinic_id?: string
           created_at?: string
           created_by?: string | null
           id?: string
+          insurance_id?: string | null
           is_active?: boolean
           kind?: Database["public"]["Enums"]["commission_rule_kind"]
           notes?: string | null
@@ -4272,6 +4341,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "public_clinic_booking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_rules_insurance_id_fkey"
+            columns: ["insurance_id"]
+            isOneToOne: false
+            referencedRelation: "insurances"
             referencedColumns: ["id"]
           },
           {
@@ -16149,6 +16225,10 @@ export type Database = {
           reason: string
         }[]
       }
+      cancel_commission: {
+        Args: { _id: string; _reason: string }
+        Returns: undefined
+      }
       cancel_sale_transaction: {
         Args: { p_reason?: string; p_sale_id: string; p_user_id: string }
         Returns: Json
@@ -16259,6 +16339,10 @@ export type Database = {
         Returns: string
       }
       generate_clinic_slug: { Args: { _name: string }; Returns: string }
+      generate_commission_entry: {
+        Args: { _appointment_id: string; _trigger: string }
+        Returns: string
+      }
       generate_platform_occurrence_code: { Args: never; Returns: string }
       generate_quote_number: { Args: { p_clinic_id: string }; Returns: string }
       generate_secure_token: { Args: { p_length?: number }; Returns: string }
@@ -16493,6 +16577,7 @@ export type Database = {
         }
         Returns: string
       }
+      mark_commission_paid: { Args: { _id: string }; Returns: undefined }
       notify_clinic_users: {
         Args: {
           _clinic_id: string
@@ -16540,6 +16625,10 @@ export type Database = {
         Args: { _clinic_id: string; _specialty_slug: string }
         Returns: undefined
       }
+      refund_commission: {
+        Args: { _id: string; _reason: string }
+        Returns: undefined
+      }
       render_appointment_message: {
         Args: {
           p_clinic_name: string
@@ -16563,6 +16652,43 @@ export type Database = {
           p_resource_type: string
         }
         Returns: string
+      }
+      resolve_commission_rule: {
+        Args: {
+          _clinic_id: string
+          _insurance_id: string
+          _is_particular: boolean
+          _procedure_id: string
+          _professional_id: string
+          _specialty_id: string
+        }
+        Returns: {
+          applies_to_convenio: boolean
+          applies_to_particular: boolean
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          insurance_id: string | null
+          is_active: boolean
+          kind: Database["public"]["Enums"]["commission_rule_kind"]
+          notes: string | null
+          package_id: string | null
+          pay_trigger: string
+          percentual: number | null
+          priority: number
+          procedure_id: string | null
+          professional_id: string | null
+          specialty_id: string | null
+          updated_at: string
+          valor_fixo: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "commission_rules"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       restore_system_anamnesis_templates: {
         Args: { p_clinic_id: string; p_specialty_id?: string }
@@ -16628,13 +16754,21 @@ export type Database = {
         | "meu_financeiro"
         | "comercial"
       app_role: "owner" | "admin" | "profissional" | "recepcionista"
-      commission_entry_status: "pendente" | "aprovado" | "pago" | "cancelado"
+      commission_entry_status:
+        | "pendente"
+        | "aprovado"
+        | "pago"
+        | "cancelado"
+        | "estornada"
+        | "bloqueada"
       commission_rule_kind:
         | "percentual"
         | "fixo"
         | "por_procedimento"
         | "por_especialidade"
         | "por_pacote"
+        | "por_convenio"
+        | "por_particular"
       consent_status: "granted" | "revoked" | "pending"
       document_status: "rascunho" | "assinado" | "cancelado"
       invitation_status: "pending" | "accepted" | "expired" | "cancelled"
@@ -16829,13 +16963,22 @@ export const Constants = {
         "comercial",
       ],
       app_role: ["owner", "admin", "profissional", "recepcionista"],
-      commission_entry_status: ["pendente", "aprovado", "pago", "cancelado"],
+      commission_entry_status: [
+        "pendente",
+        "aprovado",
+        "pago",
+        "cancelado",
+        "estornada",
+        "bloqueada",
+      ],
       commission_rule_kind: [
         "percentual",
         "fixo",
         "por_procedimento",
         "por_especialidade",
         "por_pacote",
+        "por_convenio",
+        "por_particular",
       ],
       consent_status: ["granted", "revoked", "pending"],
       document_status: ["rascunho", "assinado", "cancelado"],
