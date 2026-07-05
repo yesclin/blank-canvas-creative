@@ -316,10 +316,15 @@ export function ActiveAppointmentDrawer() {
               className="w-full gap-2 mt-3"
               size="sm"
               onClick={handleFinalize}
-              disabled={finalizeSession.isPending || materialsDialogOpen}
+              disabled={finalizeSession.isPending || materialsDialogOpen || procedureRequirements?.hasBlockingPending}
+              title={procedureRequirements?.hasBlockingPending ? "Complete os requisitos do procedimento" : undefined}
             >
               <Square className="h-4 w-4" />
-              {finalizeSession.isPending ? "Preparando..." : "Finalizar Atendimento"}
+              {finalizeSession.isPending
+                ? "Preparando..."
+                : procedureRequirements?.hasBlockingPending
+                  ? "Requisitos pendentes"
+                  : "Finalizar Atendimento"}
             </Button>
           </div>
 
