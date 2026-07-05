@@ -1056,6 +1056,8 @@ export default function Prontuario() {
     }
 
     switch (activeTab) {
+      case 'tratamentos':
+        return <TratamentosSessoesTab patientId={patientId!} canEdit={canEditCurrentTab} />;
       case 'resumo':
         // Render specialty-specific Visão Geral
         if (activeSpecialtyKey === 'psicologia') {
