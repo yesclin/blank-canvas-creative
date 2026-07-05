@@ -820,10 +820,13 @@ export default function Prontuario() {
     return map;
   }, []);
 
+  // Clinic-level feature toggles (respects clinic_id + active specialty + RLS)
+  const { hasTherapeuticPlan } = useActiveMedicalRecordModules(patientId);
+
   const navItems = useMemo(() => {
     const enabledBlocks = getVisibleTabsForSpecialty(activeSpecialtyKey);
-    
-    return enabledBlocks
+
+    const items = enabledBlocks
       .filter(blockKey => {
         const standardKey = getStandardTabKey(blockKey);
         return canViewTab(standardKey);
@@ -833,7 +836,24 @@ export default function Prontuario() {
         label: getClinicalBlockLabel(blockKey, activeSpecialtyKey),
         icon: defaultNavLookup[blockKey]?.icon || FileText,
       }));
-  }, [activeSpecialtyKey, defaultNavLookup]);
+
+    // Feature-gated: Plano Terapêutico is a separate tab from Plano/Conduta.
+    // It appears only when the clinic enables the "therapeutic_plan" module for the active specialty.
+    if (hasTherapeuticPlan && !items.some(i => i.id === 'plano_terapeutico')) {
+      if (canViewTab(getStandardTabKey('plano_terapeutico'))) {
+        const condutaIdx = items.findIndex(i => i.id === 'conduta');
+        const insertAt = condutaIdx >= 0 ? condutaIdx + 1 : items.length;
+        items.splice(insertAt, 0, {
+          id: 'plano_terapeutico',
+          label: 'Plano Terapêutico',
+          icon: defaultNavLookup['plano_terapeutico']?.icon || FileText,
+        });
+      }
+    }
+
+    return items;
+  }, [activeSpecialtyKey, defaultNavLookup, hasTherapeuticPlan, canViewTab]);
+
 
   // CRITICAL: Reset state completely when specialty changes
   // This ensures no visual artifacts from previous specialty remain
