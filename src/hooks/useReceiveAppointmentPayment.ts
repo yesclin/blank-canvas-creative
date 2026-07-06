@@ -51,6 +51,12 @@ export function useReceiveAppointmentPayment() {
       if (amountToReceive <= 0) throw new Error("Valor deve ser maior que zero");
       if (!paymentMethodId) throw new Error("Forma de pagamento obrigatória");
 
+      // Fase 4 — validações do procedimento (valor mínimo, desconto, parcelamento, gratuito)
+      const amtCheck = await validateChargeAmount(appointmentId, amountToReceive);
+      if (!amtCheck.ok) throw new Error(amtCheck.reason || "Valor não permitido pelo procedimento");
+      const instCheck = await validateInstallments(appointmentId, installments);
+      if (!instCheck.ok) throw new Error(instCheck.reason || "Parcelamento não permitido");
+
       const newAmountReceived = amountReceivedBefore + amountToReceive;
       const newAmountDue = Math.max(amountExpected - newAmountReceived, 0);
 
