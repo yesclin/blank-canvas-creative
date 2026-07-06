@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { generateAppointmentCommission, validateChargeAmount, validateInstallments } from "@/services/finance/appointmentCharges";
 
 export interface ReceivePaymentInput {
   appointmentId: string;
