@@ -143,6 +143,16 @@ export function useReceiveAppointmentPayment() {
 
       if (apError) throw new Error(`Erro ao registrar pagamento: ${apError.message}`);
 
+      // Fase 4 — comissão on_payment (idempotente)
+      try {
+        await generateAppointmentCommission(appointmentId, "on_payment", {
+          transactionId: financeTransactionId,
+          receivedAmount: newAmountReceived,
+        });
+      } catch (e) {
+        console.warn("commission on_payment:", e);
+      }
+
       return { newPaymentStatus, newAmountReceived, newAmountDue };
     },
     onSuccess: () => {
