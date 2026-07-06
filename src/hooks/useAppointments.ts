@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { usePlanLimitGate } from "@/hooks/usePlanLimitGate";
 import { getCachedClinicContext } from "@/hooks/useClinicContext";
-import { ensureAppointmentCharge, cancelAppointmentCharges } from "@/services/finance/appointmentCharges";
+import { ensureAppointmentCharge, cancelAppointmentCharges, generateAppointmentCommission } from "@/services/finance/appointmentCharges";
 
 export type AppointmentStatus = 
   | "nao_confirmado"
