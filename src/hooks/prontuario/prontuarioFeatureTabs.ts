@@ -50,7 +50,7 @@ export const PRONTUARIO_SPECIALTY_SLUG_ALIASES: Record<string, SpecialtyKey> = {
   custom: "other_specialty",
 };
 
-export const PRONTUARIO_FEATURE_TAB_ALIASES: Record<string, string> = {
+export const PRONTUARIO_FEATURE_TAB_MAP: Record<string, string> = {
   "global.alertas": "alertas",
   clinical_alerts: "alertas",
   alerts: "alertas",
@@ -58,6 +58,7 @@ export const PRONTUARIO_FEATURE_TAB_ALIASES: Record<string, string> = {
 
   "global.anexos": "exames",
   clinical_attachments: "exames",
+  anexos_exames: "exames",
   attachments: "exames",
   anexos: "exames",
   exams: "exames",
@@ -91,15 +92,18 @@ export const PRONTUARIO_FEATURE_TAB_ALIASES: Record<string, string> = {
   "estetica.before_after": "before_after_photos",
   before_after: "before_after_photos",
   before_after_photos: "before_after_photos",
+  antes_depois: "before_after_photos",
 
   "estetica.facial_map": "facial_map",
   interactive_map: "facial_map",
   facial_map: "facial_map",
+  mapa_facial: "facial_map",
 
   "estetica.products_used": "produtos_utilizados",
   used_products: "produtos_utilizados",
   products_used: "produtos_utilizados",
   produtos_utilizados: "produtos_utilizados",
+  produtos_usados: "produtos_utilizados",
 
   "odontologia.odontogram": "odontograma",
   odontogram: "odontograma",
@@ -120,6 +124,7 @@ export const PRONTUARIO_FEATURE_TAB_ALIASES: Record<string, string> = {
   "psicologia.plano_crise": "plano_acao_crise",
   crisis_action_plan: "plano_acao_crise",
   plano_acao_crise: "plano_acao_crise",
+  plano_crise: "plano_acao_crise",
 
   "psicologia.plano_terapeutico": "plano_terapeutico",
   therapeutic_plan: "plano_terapeutico",
@@ -137,6 +142,102 @@ export const PRONTUARIO_FEATURE_TAB_ALIASES: Record<string, string> = {
   "medical_records.treatment_sessions": "tratamentos",
   treatment_sessions: "tratamentos",
   recurring_sessions: "tratamentos",
+};
+
+export const PRONTUARIO_FEATURE_TAB_ALIASES = PRONTUARIO_FEATURE_TAB_MAP;
+
+export const PRONTUARIO_RESOURCE_FEATURE_MAP: Record<string, string> = {
+  "global.alertas": "clinical_alerts",
+  clinical_alerts: "clinical_alerts",
+  alerts: "clinical_alerts",
+  alertas: "clinical_alerts",
+
+  "global.anexos": "clinical_attachments",
+  clinical_attachments: "clinical_attachments",
+  anexos_exames: "clinical_attachments",
+  attachments: "attachments",
+  anexos: "attachments",
+  exams: "clinical_attachments",
+  exames: "clinical_attachments",
+
+  "global.consentimentos": "consent_terms",
+  clinical_consent_terms: "consent_terms",
+  consent_terms: "consent_terms",
+  consentimentos: "consent_terms",
+
+  "global.documentos": "clinical_documents",
+  clinical_documents: "clinical_documents",
+  documentos_clinicos: "clinical_documents",
+  documents: "clinical_documents",
+
+  "global.timeline": "timeline",
+  clinical_timeline: "timeline",
+  timeline: "timeline",
+  linha_tempo: "timeline",
+
+  "global.evolucao": "evolution",
+  clinical_evolution: "evolution",
+  evolution: "evolution",
+  evolucao: "evolution",
+
+  "global.prescricao": "prescription",
+  prescription: "prescription",
+  prescriptions: "prescription",
+  prescricoes: "prescription",
+
+  "estetica.before_after": "before_after",
+  before_after: "before_after",
+  before_after_photos: "before_after",
+  antes_depois: "before_after",
+
+  "estetica.facial_map": "facial_map",
+  interactive_map: "facial_map",
+  facial_map: "facial_map",
+  mapa_facial: "facial_map",
+
+  "estetica.products_used": "used_products",
+  used_products: "used_products",
+  products_used: "used_products",
+  produtos_utilizados: "used_products",
+  produtos_usados: "used_products",
+
+  "odontologia.odontogram": "odontogram",
+  odontogram: "odontogram",
+  odontograma: "odontogram",
+
+  "pediatria.grafico_oms": "growth_charts",
+  growth_charts: "growth_charts",
+  growth_chart: "growth_charts",
+  graficos_oms: "growth_charts",
+  grafico_oms: "growth_charts",
+
+  "psicologia.escalas": "psychological_scales",
+  psychological_scales: "psychological_scales",
+  clinical_scales: "psychological_scales",
+  escalas_psicologicas: "psychological_scales",
+  instrumentos: "psychological_scales",
+
+  "psicologia.plano_crise": "crisis_action_plan",
+  crisis_action_plan: "crisis_action_plan",
+  plano_acao_crise: "crisis_action_plan",
+  plano_crise: "crisis_action_plan",
+
+  "psicologia.plano_terapeutico": "therapeutic_plan",
+  therapeutic_plan: "therapeutic_plan",
+  plano_terapeutico: "therapeutic_plan",
+
+  procedures: "procedures",
+  procedures_module: "procedures",
+  procedimentos: "procedures",
+  procedimentos_realizados: "procedures",
+
+  history: "history",
+  historico: "history",
+  histórico: "history",
+
+  "medical_records.treatment_sessions": "treatment_sessions",
+  treatment_sessions: "treatment_sessions",
+  recurring_sessions: "treatment_sessions",
 };
 
 export const PRONTUARIO_TAB_LABELS: Record<string, string> = {
@@ -201,6 +302,12 @@ export function normalizeProntuarioFeatureTab(value: string | null | undefined):
   return PRONTUARIO_FEATURE_TAB_ALIASES[normalized] ?? PRONTUARIO_FEATURE_TAB_ALIASES[value] ?? null;
 }
 
+export function normalizeProntuarioFeatureKey(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const normalized = value.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return PRONTUARIO_RESOURCE_FEATURE_MAP[normalized] ?? PRONTUARIO_RESOURCE_FEATURE_MAP[value] ?? null;
+}
+
 export function isProntuarioResourceActive(resource: ClinicProntuarioResource, now = new Date()): boolean {
   if (!resource.enabled) return false;
   if (resource.effective_at && new Date(resource.effective_at) > now) return false;
@@ -214,6 +321,9 @@ export function doesResourceApplyToSpecialty(
   specialtyKey: SpecialtyKey,
   clinicSpecialtyKeys: Set<string>,
 ): boolean {
+  const resourceType = resource.resource_type?.trim().toLowerCase() ?? null;
+  if (resourceType === "aba" || resourceType === "funcao") return true;
+
   const resourceSpecialtyKey = normalizeProntuarioSpecialtySlug(resource.specialty_slug);
 
   if (!resource.specialty_id && !resourceSpecialtyKey) return true;

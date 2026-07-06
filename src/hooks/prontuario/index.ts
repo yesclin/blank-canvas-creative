@@ -52,6 +52,10 @@ export {
   useActiveMedicalRecordModules, 
   useIsModuleAvailable 
 } from './useActiveMedicalRecordModules';
+export {
+  useEnabledProntuarioTabs,
+  type UseEnabledProntuarioTabsResult,
+} from './useEnabledProntuarioTabs';
 
 // Specialty Capabilities (central mapping: blocks + modules + anamnesis)
 export { useSpecialtyCapabilities, type SpecialtyCapabilitiesResult } from './useSpecialtyCapabilities';
