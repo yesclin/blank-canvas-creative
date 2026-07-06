@@ -834,15 +834,28 @@ export default function Prontuario() {
     enabledProntuarioTabs.visibleTabs.includes("plano_terapeutico");
 
   useEffect(() => {
-    if (!import.meta.env.DEV) return;
-    console.log("[Prontuario Features]", {
+    // Diagnóstico intencionalmente visível em produção para investigar
+    // "recursos ativos no Super Admin não aparecem no Prontuário".
+    console.log("[Prontuario Debug]", {
       clinicId: clinic?.id ?? null,
       specialtyId: activeSpecialtyId,
+      specialtyKey: activeSpecialtyKey,
+      allResourcesCount: enabledProntuarioTabs.allResources.length,
+      allResources: enabledProntuarioTabs.allResources.map(r => ({
+        key: r.resource_key,
+        type: r.resource_type,
+        slug: r.specialty_slug,
+        enabled: r.enabled,
+        eff: r.effective_at,
+        exp: r.expires_at,
+      })),
       enabledFeatures: enabledProntuarioTabs.enabledFeatures,
       mappedTabs: enabledProntuarioTabs.mappedTabs,
       visibleTabs: enabledProntuarioTabs.visibleTabs,
+      navItemIds: enabledProntuarioTabs.navItems.map(n => n.id),
     });
-  }, [clinic?.id, activeSpecialtyId, enabledProntuarioTabs.enabledFeatures, enabledProntuarioTabs.mappedTabs, enabledProntuarioTabs.visibleTabs]);
+  }, [clinic?.id, activeSpecialtyId, activeSpecialtyKey, enabledProntuarioTabs.allResources, enabledProntuarioTabs.enabledFeatures, enabledProntuarioTabs.mappedTabs, enabledProntuarioTabs.visibleTabs, enabledProntuarioTabs.navItems]);
+
 
 
   // CRITICAL: Reset state completely when specialty changes
