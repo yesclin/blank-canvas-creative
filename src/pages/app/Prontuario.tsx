@@ -95,7 +95,7 @@ import {
   type ActionKey,
 } from "@/hooks/prontuario";
 import { useActiveSpecialty } from "@/hooks/prontuario/useActiveSpecialty";
-import { useActiveMedicalRecordModules } from "@/hooks/prontuario/useActiveMedicalRecordModules";
+import { useEnabledProntuarioTabs } from "@/hooks/prontuario/useEnabledProntuarioTabs";
 import { useAutoPatientRedirect } from "@/hooks/prontuario/useAutoPatientRedirect";
 import { getClinicalBlockLabel, YESCLIN_CLINICAL_BLOCKS, type ClinicalBlockKey } from "@/hooks/prontuario/specialtyTabsConfig";
 import { isBlockEnabled } from "@/hooks/prontuario/specialtyCapabilities";
@@ -250,7 +250,6 @@ import { ICON_MAP } from "./prontuario/constants/iconMap";
 import { TAB_KEY_MAP } from "./prontuario/constants/tabKeyMap";
 import { DEFAULT_NAV_ITEMS } from "./prontuario/constants/defaultNavItems";
 import { TratamentosSessoesTab } from "@/components/prontuario/tabs/TratamentosSessoesTab";
-import { getEnabledProntuarioTabs } from "@/hooks/prontuario/prontuarioFeatureTabs";
 
 // Re-export to preserve any external imports relying on prior module shape (none currently).
 export { ICON_MAP };
@@ -821,23 +820,29 @@ export default function Prontuario() {
     return map;
   }, []);
 
-  // Clinic-level feature toggles (respects clinic_id + active specialty + RLS)
-  const { hasTherapeuticPlan, clinicResources, clinicSpecialtyKeys } = useActiveMedicalRecordModules(patientId);
+  // Clinic-level feature toggles (source of truth: Super Admin > clinic_resources)
+  const enabledProntuarioTabs = useEnabledProntuarioTabs(clinic?.id, activeSpecialtyId, {
+    specialtyKey: activeSpecialtyKey,
+    baseTabs: getVisibleTabsForSpecialty(activeSpecialtyKey),
+    canViewTab,
+    getStandardTabKey,
+    getLabel: (tabId) => getClinicalBlockLabel(tabId as ClinicalBlockKey, activeSpecialtyKey),
+    getIcon: (tabId) => defaultNavLookup[tabId]?.icon || FileText,
+  });
+  const navItems = enabledProntuarioTabs.navItems;
+  const hasTherapeuticPlan = enabledProntuarioTabs.enabledFeatures.includes("therapeutic_plan") ||
+    enabledProntuarioTabs.visibleTabs.includes("plano_terapeutico");
 
-  const navItems = useMemo(() => {
-    return getEnabledProntuarioTabs({
-      clinicId: clinic?.id,
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    console.log("[Prontuario Features]", {
+      clinicId: clinic?.id ?? null,
       specialtyId: activeSpecialtyId,
-      specialtyKey: activeSpecialtyKey,
-      baseTabs: getVisibleTabsForSpecialty(activeSpecialtyKey),
-      resources: clinicResources,
-      clinicSpecialtyKeys,
-      canViewTab,
-      getStandardTabKey,
-      getLabel: (tabId) => getClinicalBlockLabel(tabId as ClinicalBlockKey, activeSpecialtyKey),
-      getIcon: (tabId) => defaultNavLookup[tabId]?.icon || FileText,
+      enabledFeatures: enabledProntuarioTabs.enabledFeatures,
+      mappedTabs: enabledProntuarioTabs.mappedTabs,
+      visibleTabs: enabledProntuarioTabs.visibleTabs,
     });
-  }, [activeSpecialtyKey, activeSpecialtyId, clinic?.id, clinicResources, clinicSpecialtyKeys, defaultNavLookup, canViewTab]);
+  }, [clinic?.id, activeSpecialtyId, enabledProntuarioTabs.enabledFeatures, enabledProntuarioTabs.mappedTabs, enabledProntuarioTabs.visibleTabs]);
 
 
   // CRITICAL: Reset state completely when specialty changes
