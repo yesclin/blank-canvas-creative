@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { generateAppointmentCommission, validateChargeAmount, validateInstallments } from "@/services/finance/appointmentCharges";
 
 export interface ReceivePaymentInput {
   appointmentId: string;
@@ -49,6 +50,12 @@ export function useReceiveAppointmentPayment() {
 
       if (amountToReceive <= 0) throw new Error("Valor deve ser maior que zero");
       if (!paymentMethodId) throw new Error("Forma de pagamento obrigatória");
+
+      // Fase 4 — validações do procedimento (valor mínimo, desconto, parcelamento, gratuito)
+      const amtCheck = await validateChargeAmount(appointmentId, amountToReceive);
+      if (!amtCheck.ok) throw new Error(amtCheck.reason || "Valor não permitido pelo procedimento");
+      const instCheck = await validateInstallments(appointmentId, installments);
+      if (!instCheck.ok) throw new Error(instCheck.reason || "Parcelamento não permitido");
 
       const newAmountReceived = amountReceivedBefore + amountToReceive;
       const newAmountDue = Math.max(amountExpected - newAmountReceived, 0);
@@ -135,6 +142,16 @@ export function useReceiveAppointmentPayment() {
         });
 
       if (apError) throw new Error(`Erro ao registrar pagamento: ${apError.message}`);
+
+      // Fase 4 — comissão on_payment (idempotente)
+      try {
+        await generateAppointmentCommission(appointmentId, "on_payment", {
+          transactionId: financeTransactionId,
+          receivedAmount: newAmountReceived,
+        });
+      } catch (e) {
+        console.warn("commission on_payment:", e);
+      }
 
       return { newPaymentStatus, newAmountReceived, newAmountDue };
     },

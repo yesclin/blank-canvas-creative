@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { usePlanLimitGate } from "@/hooks/usePlanLimitGate";
 import { getCachedClinicContext } from "@/hooks/useClinicContext";
-import { ensureAppointmentCharge, cancelAppointmentCharges } from "@/services/finance/appointmentCharges";
+import { ensureAppointmentCharge, cancelAppointmentCharges, generateAppointmentCommission } from "@/services/finance/appointmentCharges";
 
 export type AppointmentStatus = 
   | "nao_confirmado"
@@ -291,6 +291,8 @@ export function useUpdateAppointmentStatus() {
       // Fase 3 — ao finalizar, garante que existe cobrança (idempotente).
       if (status === "finalizado") {
         try { await ensureAppointmentCharge(id, "finish"); } catch (e) { console.warn("ensureAppointmentCharge (finalizado):", e); }
+        // Fase 4 — comissão on_finish (idempotente)
+        try { await generateAppointmentCommission(id, "on_finish"); } catch (e) { console.warn("commission on_finish:", e); }
       }
 
       return { id, status };
