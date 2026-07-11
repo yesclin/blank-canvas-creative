@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
@@ -315,9 +314,9 @@ export default function MarketingAutomacoes() {
           WIZARD DIALOG — 4-Step Premium Flow
          ══════════════════════════════════════════════════════════ */}
       <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+        <DialogContent className="w-[95vw] max-w-4xl max-h-[95dvh] md:max-h-[90vh] flex flex-col overflow-hidden p-0 gap-0">
           {/* Step Progress Bar */}
-          <div className="px-6 pt-6 pb-4 border-b border-border">
+          <div className="shrink-0 px-4 sm:px-6 pt-6 pb-4 border-b border-border">
             <DialogHeader className="mb-4">
               <DialogTitle className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-primary" />
@@ -360,7 +359,7 @@ export default function MarketingAutomacoes() {
           </div>
 
           {/* Step Content */}
-          <ScrollArea className="flex-1 px-6 py-5">
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-5">
             <div key={wizardStep} className="animate-fade-in min-h-[280px]">
 
               {/* ── STEP 1: EVENT ── */}
@@ -677,10 +676,10 @@ export default function MarketingAutomacoes() {
                 </div>
               )}
             </div>
-          </ScrollArea>
+          </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/30">
+          <div className="shrink-0 flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-t border-border bg-muted/30">
             <div>
               {wizardStep > 0 && (
                 <Button variant="ghost" onClick={() => setWizardStep((s) => s - 1)} className="gap-1">
@@ -688,7 +687,7 @@ export default function MarketingAutomacoes() {
                 </Button>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               <Button variant="outline" onClick={() => setWizardOpen(false)}>
                 Cancelar
               </Button>
