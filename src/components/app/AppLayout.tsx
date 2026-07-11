@@ -91,10 +91,10 @@ export function AppLayout() {
     <GlobalSpecialtyProvider>
     <GlobalActiveAppointmentProvider>
     <SidebarProvider defaultOpen>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="h-screen flex w-full bg-background overflow-hidden">
         <AppSidebar />
         
-        <main className="flex-1 flex flex-col min-w-0">
+        <main className="flex-1 flex flex-col min-w-0 min-h-0 h-screen">
           <header className="h-14 border-b flex items-center px-4 bg-card shrink-0">
             <SidebarTrigger className="mr-4" />
             <div className="flex items-center gap-2.5">
