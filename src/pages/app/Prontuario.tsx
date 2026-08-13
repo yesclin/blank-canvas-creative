@@ -834,8 +834,8 @@ export default function Prontuario() {
     enabledProntuarioTabs.visibleTabs.includes("plano_terapeutico");
 
   useEffect(() => {
-    // Diagnóstico intencionalmente visível em produção para investigar
-    // "recursos ativos no Super Admin não aparecem no Prontuário".
+    // Diagnóstico apenas em desenvolvimento.
+    if (!import.meta.env.DEV) return;
     console.log("[Prontuario Debug]", {
       clinicId: clinic?.id ?? null,
       specialtyId: activeSpecialtyId,

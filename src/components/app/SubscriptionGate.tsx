@@ -27,15 +27,11 @@ export function SubscriptionGate({ children }: { children: React.ReactNode }) {
 }
 
 function SubscriptionGateInner({ children }: { children: React.ReactNode }) {
-  let sub: ReturnType<typeof useClinicSubscription>;
-  try {
-    sub = useClinicSubscription();
-  } catch (error) {
-    console.error('[PROVIDER_ERROR] SubscriptionGate', error);
-    return <>{children}</>;
-  }
+  // Hooks sempre executados na mesma ordem em todas as renderizações.
+  // Erros de provider são capturados pelo ErrorBoundary externo (fallback = children).
   const navigate = useNavigate();
   const location = useLocation();
+  const sub = useClinicSubscription();
 
   if (sub.loading) return <>{children}</>;
 

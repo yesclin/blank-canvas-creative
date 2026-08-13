@@ -28,11 +28,9 @@ export function ClinicalDataGuard({
   logView = true 
 }: ClinicalDataGuardProps) {
   const { canAccess, isLoading, denyReason } = useClinicalDataAccess(patientId);
-  
-  // Log view when access is granted
-  if (logView) {
-    useLogMedicalRecordView(patientId);
-  }
+
+  // Log view when access is granted (hook sempre executado; desabilitado via param)
+  useLogMedicalRecordView(logView ? patientId : null);
 
   if (isLoading && showLoading) {
     return (
