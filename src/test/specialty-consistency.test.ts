@@ -28,8 +28,8 @@ import {
 // ─── 1. WHITELIST OFICIAL ──────────────────────────────────────────────────
 
 describe('Whitelist de Especialidades Oficiais', () => {
-  it('deve conter exatamente 9 especialidades', () => {
-    expect(OFFICIAL_SPECIALTIES).toHaveLength(9);
+  it('deve conter exatamente 10 especialidades', () => {
+    expect(OFFICIAL_SPECIALTIES).toHaveLength(10);
   });
 
   it('deve incluir todas as especialidades obrigatórias', () => {
@@ -198,6 +198,7 @@ describe('Coerência Slug x Capabilities', () => {
       'odontologia': 'odontologia',
       'dermatologia': 'dermatologia',
       'pediatria': 'pediatria',
+      'other_specialty': 'other_specialty',
     };
 
     OFFICIAL_SPECIALTIES.forEach(spec => {
