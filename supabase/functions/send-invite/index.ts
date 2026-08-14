@@ -8,7 +8,7 @@
  */
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { getEmailService, sanitizeEmail, isValidEmail } from "../_shared/email-service.ts";
 import { generateInviteEmail, getRoleLabel } from "../_shared/email-templates.ts";
 
@@ -17,6 +17,8 @@ import { generateInviteEmail, getRoleLabel } from "../_shared/email-templates.ts
 // host. This prevents the front-end from being blocked when the project is
 // renamed, re-previewed under a new id, or accessed from a custom domain.
 export const ALLOWED_EXACT_ORIGINS = [
+  "https://yesclin.com.br",
+  "https://www.yesclin.com.br",
   "https://yesclin.com",
   "https://www.yesclin.com",
   "http://localhost:3000",
@@ -153,12 +155,19 @@ export const handler = async (req: Request): Promise<Response> => {
     }
   }
 
+  if (req.method !== "POST") {
+    return new Response(
+      JSON.stringify({ success: false, error: "Método não permitido" }),
+      { status: 405, headers: { "Content-Type": "application/json", ...corsHeaders } },
+    );
+  }
+
   try {
     console.log("[send-invite] Starting function");
 
     // Get authorization header
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    if (!authHeader?.startsWith("Bearer ")) {
       console.error("[send-invite] No authorization header");
       return new Response(
         JSON.stringify({ success: false, error: "Não autorizado" }),
@@ -180,8 +189,10 @@ export const handler = async (req: Request): Promise<Response> => {
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     // Verify user is authenticated
-    const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
-    if (authError || !user) {
+    const token = authHeader.slice("Bearer ".length);
+    const { data: claimsData, error: authError } = await supabaseUser.auth.getClaims(token);
+    const userId = typeof claimsData?.claims?.sub === "string" ? claimsData.claims.sub : null;
+    if (authError || !userId) {
       console.error("[send-invite] Auth error:", authError);
       return new Response(
         JSON.stringify({ success: false, error: "Não autenticado" }),
@@ -189,14 +200,14 @@ export const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log("[send-invite] User authenticated:", user.id);
+    console.log("[send-invite] User authenticated:", userId);
 
     // Get user's clinic and profile
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("clinic_id, full_name")
-      .eq("user_id", user.id)
-      .single();
+      .eq("user_id", userId)
+      .maybeSingle();
 
     if (!profile?.clinic_id) {
       return new Response(
@@ -207,7 +218,7 @@ export const handler = async (req: Request): Promise<Response> => {
 
     // Check if user is admin
     const { data: isAdmin } = await supabaseAdmin
-      .rpc("is_clinic_admin", { _user_id: user.id, _clinic_id: profile.clinic_id });
+      .rpc("is_clinic_admin", { _user_id: userId, _clinic_id: profile.clinic_id });
 
     if (!isAdmin) {
       return new Response(
@@ -223,7 +234,25 @@ export const handler = async (req: Request): Promise<Response> => {
       .eq("id", profile.clinic_id)
       .single();
 
-    // Check active users limit (max 3)
+    // Parse and validate request body before applying creation-only limits.
+    // A resend reuses an existing row and must not count as a new seat.
+    const {
+      email,
+      fullName,
+      role,
+      permissions,
+      isProfessional,
+      professionalType,
+      registrationNumber,
+      specialtyIds,
+      primarySpecialtyId,
+      council,
+      councilState,
+      rqe,
+      invitationId,
+    }: InviteRequest = await req.json();
+
+    // Check active users limit (max 3) only for brand-new invitations.
     const { data: activeProfiles, error: countError } = await supabaseAdmin
       .from("profiles")
       .select("id", { count: "exact" })
@@ -238,41 +267,48 @@ export const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Count pending invitations too
-    const { data: pendingInvites } = await supabaseAdmin
-      .from("user_invitations")
-      .select("id", { count: "exact" })
-      .eq("clinic_id", profile.clinic_id)
-      .eq("status", "pending");
+    if (!invitationId) {
+      const { data: pendingInvites, error: pendingError } = await supabaseAdmin
+        .from("user_invitations")
+        .select("id")
+        .eq("clinic_id", profile.clinic_id)
+        .eq("status", "pending");
 
-    const totalActive = (activeProfiles?.length || 0) + (pendingInvites?.length || 0);
-    if (totalActive >= 3) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Limite de 3 usuários ativos atingido neste plano" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      if (pendingError) {
+        console.error("[send-invite] Error counting pending invitations:", pendingError);
+        return new Response(
+          JSON.stringify({ success: false, error: "Erro ao verificar convites pendentes" }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      const totalActive = (activeProfiles?.length || 0) + (pendingInvites?.length || 0);
+      if (totalActive >= 3) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Limite de 3 usuários ativos atingido neste plano" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
     }
-
-    // Parse and validate request body
-    const { 
-      email, 
-      fullName, 
-      role, 
-      permissions,
-      isProfessional,
-      professionalType,
-      registrationNumber,
-      specialtyIds,
-      primarySpecialtyId,
-      council,
-      councilState,
-      rqe,
-      invitationId,
-    }: InviteRequest = await req.json();
 
     if (!email || !fullName || !role) {
       return new Response(
         JSON.stringify({ success: false, error: "E-mail, nome e perfil são obrigatórios" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const allowedRoles = new Set(["admin", "profissional", "recepcionista"]);
+    if (!allowedRoles.has(role)) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Perfil de usuário inválido" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    if (permissions !== undefined && (!Array.isArray(permissions) || permissions.some((item) => typeof item !== "string"))) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Formato de permissões inválido" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -405,7 +441,7 @@ export const handler = async (req: Request): Promise<Response> => {
           email: sanitizedEmail,
           full_name: fullName,
           role: role,
-          invited_by: user.id,
+          invited_by: userId,
           permissions: permissions || null,
           // Professional fields
           is_professional: isProfessional || false,
@@ -422,6 +458,15 @@ export const handler = async (req: Request): Promise<Response> => {
 
       if (inviteError) {
         console.error("[send-invite] Error creating invitation:", inviteError);
+        if (inviteError.code === "23505") {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "Já existe um convite pendente para este e-mail. Use a ação 'Reenviar' no convite existente.",
+            }),
+            { status: 409, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        }
         return new Response(
           JSON.stringify({ success: false, error: "Erro ao criar convite" }),
           { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -519,7 +564,7 @@ export const handler = async (req: Request): Promise<Response> => {
       clinic_id: profile.clinic_id,
       action: invitationId ? "user_invitation_resent" : "user_invited",
       target_email: email,
-      performed_by: user.id,
+      performed_by: userId,
       details: {
         full_name: fullName,
         role,
