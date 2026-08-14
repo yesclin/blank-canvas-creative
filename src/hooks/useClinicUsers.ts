@@ -101,8 +101,9 @@ export function useClinicUsers() {
       // Get all profiles in the same clinic
       const { data: clinicProfiles, error: profilesError } = await withTimeout<any>(supabase
         .from("profiles")
-        .select("id, user_id, full_name, avatar_url, is_active, created_at")
+        .select("id, user_id, full_name, email, avatar_url, is_active, created_at")
         .eq("clinic_id", profile.clinic_id));
+
 
       if (profilesError) {
         console.error("Error fetching profiles:", profilesError);
