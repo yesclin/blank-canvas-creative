@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { corsHeaders as sdkCorsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
 const ALLOWED_ORIGINS = new Set([
   "https://yesclin.com.br",
@@ -12,6 +13,7 @@ function corsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") ?? "";
   const isLovableOrigin = /^https:\/\/[a-z0-9-]+\.lovable\.app$/i.test(origin);
   return {
+    ...sdkCorsHeaders,
     "Access-Control-Allow-Origin": ALLOWED_ORIGINS.has(origin) || isLovableOrigin
       ? origin
       : "https://yesclin.com.br",
