@@ -51,7 +51,8 @@ export class EmailService {
     }
     
     this.resend = new Resend(apiKey);
-    this.fromAddress = EMAIL_CONFIG.defaultFrom;
+    this.fromAddress = resolveDefaultFrom();
+
   }
 
   /**
