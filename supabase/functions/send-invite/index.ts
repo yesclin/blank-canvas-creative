@@ -8,7 +8,7 @@
  */
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { getEmailService, sanitizeEmail, isValidEmail } from "../_shared/email-service.ts";
 import { generateInviteEmail, getRoleLabel } from "../_shared/email-templates.ts";
 
@@ -234,7 +234,25 @@ export const handler = async (req: Request): Promise<Response> => {
       .eq("id", profile.clinic_id)
       .single();
 
-    // Check active users limit (max 3)
+    // Parse and validate request body before applying creation-only limits.
+    // A resend reuses an existing row and must not count as a new seat.
+    const {
+      email,
+      fullName,
+      role,
+      permissions,
+      isProfessional,
+      professionalType,
+      registrationNumber,
+      specialtyIds,
+      primarySpecialtyId,
+      council,
+      councilState,
+      rqe,
+      invitationId,
+    }: InviteRequest = await req.json();
+
+    // Check active users limit (max 3) only for brand-new invitations.
     const { data: activeProfiles, error: countError } = await supabaseAdmin
       .from("profiles")
       .select("id", { count: "exact" })
@@ -249,37 +267,29 @@ export const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Count pending invitations too
-    const { data: pendingInvites } = await supabaseAdmin
-      .from("user_invitations")
-      .select("id", { count: "exact" })
-      .eq("clinic_id", profile.clinic_id)
-      .eq("status", "pending");
+    if (!invitationId) {
+      const { data: pendingInvites, error: pendingError } = await supabaseAdmin
+        .from("user_invitations")
+        .select("id")
+        .eq("clinic_id", profile.clinic_id)
+        .eq("status", "pending");
 
-    const totalActive = (activeProfiles?.length || 0) + (pendingInvites?.length || 0);
-    if (totalActive >= 3) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Limite de 3 usuários ativos atingido neste plano" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      if (pendingError) {
+        console.error("[send-invite] Error counting pending invitations:", pendingError);
+        return new Response(
+          JSON.stringify({ success: false, error: "Erro ao verificar convites pendentes" }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      const totalActive = (activeProfiles?.length || 0) + (pendingInvites?.length || 0);
+      if (totalActive >= 3) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Limite de 3 usuários ativos atingido neste plano" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
     }
-
-    // Parse and validate request body
-    const { 
-      email, 
-      fullName, 
-      role, 
-      permissions,
-      isProfessional,
-      professionalType,
-      registrationNumber,
-      specialtyIds,
-      primarySpecialtyId,
-      council,
-      councilState,
-      rqe,
-      invitationId,
-    }: InviteRequest = await req.json();
 
     if (!email || !fullName || !role) {
       return new Response(
