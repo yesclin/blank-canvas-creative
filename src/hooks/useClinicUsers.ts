@@ -25,6 +25,22 @@ export interface CreateUserData {
   role: "admin" | "profissional" | "recepcionista";
 }
 
+interface ClinicUsersBackendUser {
+  id: string;
+  user_id: string;
+  name: string;
+  email: string | null;
+  role: ClinicUser["role"];
+  status: "active" | "inactive";
+  clinic_id: string;
+  avatar_url: string | null;
+  created_at: string;
+}
+
+interface ClinicUsersBackendResponse {
+  users: ClinicUsersBackendUser[];
+}
+
 const MAX_USERS_PER_CLINIC = 3;
 
 const ROLE_PRIORITY: Record<ClinicUser["role"], number> = {
@@ -98,31 +114,32 @@ export function useClinicUsers() {
 
       if (!stillCurrent(expectedUserId)) return;
 
-      // Get all profiles in the same clinic
-      const { data: clinicProfiles, error: profilesError } = await withTimeout<any>(supabase
-        .from("profiles")
-        .select("id, user_id, full_name, email, avatar_url, is_active, created_at")
-        .eq("clinic_id", profile.clinic_id));
-
-
-      if (profilesError) {
-        console.error("Error fetching profiles:", profilesError);
-        setError("Erro ao carregar usuários");
+      // The Auth identity is the source of truth for email. The protected Edge
+      // Function derives clinic_id from the caller JWT and performs the
+      // auth.users lookup with service_role exclusively on the server.
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (sessionError || !accessToken) {
+        setError("Sua sessão expirou. Entre novamente.");
         setIsLoading(false);
         return;
       }
 
-      // Get roles for all users
-      const userIds = clinicProfiles?.map(p => p.user_id) || [];
-      const { data: roles } = userIds.length > 0
-        ? await withTimeout<any>(supabase
-            .from("user_roles")
-            .select("user_id, role")
-            .eq("clinic_id", profile.clinic_id)
-            .in("user_id", userIds))
-        : { data: [] };
+      const { data: clinicUsersResult, error: clinicUsersError } = await withTimeout<{
+        data: ClinicUsersBackendResponse | null;
+        error: unknown;
+      }>(
+        supabase.functions.invoke("list-clinic-users", {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+      );
 
-      if (!stillCurrent(expectedUserId)) return;
+      if (clinicUsersError || !Array.isArray(clinicUsersResult?.users)) {
+        console.error("Error fetching clinic users:", clinicUsersError);
+        setError("Erro ao carregar usuários");
+        setIsLoading(false);
+        return;
+      }
 
       // Get clinic creation info to identify primary admin
       const { data: clinic } = await withTimeout<any>(supabase
@@ -133,55 +150,26 @@ export function useClinicUsers() {
 
       if (!stillCurrent(expectedUserId)) return;
 
-      // E-mails: fonte primária é profiles.email (populado no cadastro/aceite de convite).
-      // Fallback: e-mail do convite aceito (mesma clínica, respeitando RLS).
-      const viewerRole = (currentUserRole?.role || "profissional") as ClinicUser["role"];
-      const canSeeEmails = ROLE_PRIORITY[viewerRole] >= ROLE_PRIORITY.admin;
-
-      const missingEmailNames = (clinicProfiles || [])
-        .filter((p: any) => !p.email && p.full_name)
-        .map((p: any) => p.full_name as string);
-
-      let invitedEmailByName = new Map<string, string>();
-      if (canSeeEmails && missingEmailNames.length > 0) {
-        const { data: invites } = await withTimeout<any>(supabase
-          .from("user_invitations")
-          .select("email, full_name, status")
-          .eq("clinic_id", profile.clinic_id)
-          .in("full_name", missingEmailNames));
-        if (!stillCurrent(expectedUserId)) return;
-        (invites || []).forEach((inv: any) => {
-          if (inv.email && inv.full_name && !invitedEmailByName.has(inv.full_name)) {
-            invitedEmailByName.set(inv.full_name, inv.email);
-          }
-        });
-      }
-
       // Build user list
-      const userList: ClinicUser[] = (clinicProfiles || []).map(p => {
-        const userRole = roles?.find(r => r.user_id === p.user_id);
-        const role = (userRole?.role || "profissional") as ClinicUser["role"];
+      const userList: ClinicUser[] = clinicUsersResult.users.map((backendUser) => {
+        const role = backendUser.role;
         
         // The first owner/admin created with the clinic is the primary admin
         const isElevated = ROLE_PRIORITY[role] >= ROLE_PRIORITY.admin;
         const isPrimaryAdmin = isElevated && (
-          ROLE_PRIORITY[role] === ROLE_PRIORITY.owner || p.created_at === clinic?.created_at
+          ROLE_PRIORITY[role] === ROLE_PRIORITY.owner || backendUser.created_at === clinic?.created_at
         );
 
-        const resolvedEmail =
-          (p.email as string | null) || invitedEmailByName.get(p.full_name || "") || "";
-        const isSelf = p.user_id === user.id;
-
         return {
-          id: p.id,
-          user_id: p.user_id,
-          full_name: p.full_name || "Usuário",
-          email: canSeeEmails || isSelf ? resolvedEmail : "",
+          id: backendUser.id,
+          user_id: backendUser.user_id,
+          full_name: backendUser.name,
+          email: backendUser.email || "",
           role,
-          is_active: p.is_active ?? true,
-          avatar_url: p.avatar_url,
-          clinic_id: profile.clinic_id,
-          created_at: p.created_at,
+          is_active: backendUser.status === "active",
+          avatar_url: backendUser.avatar_url,
+          clinic_id: backendUser.clinic_id,
+          created_at: backendUser.created_at,
           is_primary_admin: isPrimaryAdmin,
         };
       });
