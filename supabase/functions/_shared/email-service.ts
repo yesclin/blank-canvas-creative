@@ -8,13 +8,19 @@
 import { Resend } from "https://esm.sh/resend@2.0.0";
 
 // Email configuration
-const EMAIL_CONFIG = {
-  // Default sender - will use Resend's default domain initially
-  defaultFrom: "YESCLIN <noreply@resend.dev>",
-  
-  // For production, use your verified domain
-  // productionFrom: "YESCLIN <noreply@yesclin.com>",
-};
+// The sender is configurable via secrets so that, once a domain is verified in
+// Resend, no code change is needed:
+//   RESEND_FROM_EMAIL = "noreply@seudominio.com.br"
+//   RESEND_FROM_NAME  = "YESCLIN"
+// Without a verified domain, Resend only allows sending to the account owner's
+// own address (testing/sandbox mode) using onboarding@resend.dev.
+function resolveDefaultFrom(): string {
+  const email = (Deno.env.get("RESEND_FROM_EMAIL") || "").trim();
+  const name = (Deno.env.get("RESEND_FROM_NAME") || "YESCLIN").trim();
+  if (!email) return "YESCLIN <onboarding@resend.dev>";
+  return `${name} <${email}>`;
+}
+
 
 export interface SendEmailParams {
   to: string | string[];
