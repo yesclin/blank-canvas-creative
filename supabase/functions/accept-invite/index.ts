@@ -194,15 +194,18 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("Created new user:", userId);
     }
 
-    // Create profile for the user
+    // Create/link profile for the user (idempotent: handle_new_user may have
+    // already created a minimal profile row for this user_id).
     const { error: profileError } = await supabaseAdmin
       .from("profiles")
-      .insert({
+      .upsert({
         user_id: userId,
         clinic_id: invitation.clinic_id,
         full_name: invitation.full_name,
+        email: invitation.email,
         is_active: true,
-      });
+      }, { onConflict: "user_id" });
+
 
     if (profileError) {
       console.error("Error creating profile:", profileError);
