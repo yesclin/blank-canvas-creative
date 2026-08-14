@@ -64,30 +64,41 @@ export class EmailService {
     try {
       // Normalize recipients to array
       const recipients = Array.isArray(to) ? to : [to];
+      const fromUsed = from || this.fromAddress;
 
       console.log(`[EmailService] Sending email to ${recipients.length} recipient(s)`);
+      console.log(`[EmailService] From: ${fromUsed}`);
       console.log(`[EmailService] Subject: ${subject}`);
 
       const response = await this.resend.emails.send({
-        from: from || this.fromAddress,
+        from: fromUsed,
         to: recipients,
         subject,
         html,
         reply_to: replyTo,
       });
 
-      // Check for errors in response
+      // Check for errors in response — surface the provider's real status/name
       if (response.error) {
-        console.error(`[EmailService] Resend API error:`, response.error);
+        const err = response.error as { statusCode?: number; name?: string; message?: string };
+        console.error(
+          `[EmailService] Resend API error [status=${err.statusCode ?? "n/a"}] [name=${err.name ?? "n/a"}] from=${fromUsed}:`,
+          err.message,
+        );
+        const isSandbox =
+          err.statusCode === 403 && /only send testing emails|verify a domain/i.test(err.message || "");
         return {
           success: false,
-          error: response.error.message || "Unknown email sending error",
+          error: isSandbox
+            ? `Provedor (Resend) recusou o envio: a conta está em modo de teste e o domínio do remetente (${fromUsed}) não está verificado. Verifique um domínio em resend.com/domains e configure RESEND_FROM_EMAIL. Detalhe: ${err.message}`
+            : `Resend ${err.statusCode ?? ""} ${err.name ?? ""}: ${err.message || "erro desconhecido"}`.trim(),
         };
       }
 
       // Success response
       const messageId = response.data?.id || 'unknown';
-      console.log(`[EmailService] Email sent successfully. ID: ${messageId}`);
+      console.log(`[EmailService] Email accepted by Resend. message_id=${messageId} from=${fromUsed}`);
+
       
       return {
         success: true,
