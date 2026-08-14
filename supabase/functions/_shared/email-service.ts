@@ -8,13 +8,19 @@
 import { Resend } from "https://esm.sh/resend@2.0.0";
 
 // Email configuration
-const EMAIL_CONFIG = {
-  // Default sender - will use Resend's default domain initially
-  defaultFrom: "YESCLIN <noreply@resend.dev>",
-  
-  // For production, use your verified domain
-  // productionFrom: "YESCLIN <noreply@yesclin.com>",
-};
+// The sender is configurable via secrets so that, once a domain is verified in
+// Resend, no code change is needed:
+//   RESEND_FROM_EMAIL = "noreply@seudominio.com.br"
+//   RESEND_FROM_NAME  = "YESCLIN"
+// Without a verified domain, Resend only allows sending to the account owner's
+// own address (testing/sandbox mode) using onboarding@resend.dev.
+function resolveDefaultFrom(): string {
+  const email = (Deno.env.get("RESEND_FROM_EMAIL") || "").trim();
+  const name = (Deno.env.get("RESEND_FROM_NAME") || "YESCLIN").trim();
+  if (!email) return "YESCLIN <onboarding@resend.dev>";
+  return `${name} <${email}>`;
+}
+
 
 export interface SendEmailParams {
   to: string | string[];
@@ -45,7 +51,8 @@ export class EmailService {
     }
     
     this.resend = new Resend(apiKey);
-    this.fromAddress = EMAIL_CONFIG.defaultFrom;
+    this.fromAddress = resolveDefaultFrom();
+
   }
 
   /**
@@ -57,30 +64,41 @@ export class EmailService {
     try {
       // Normalize recipients to array
       const recipients = Array.isArray(to) ? to : [to];
+      const fromUsed = from || this.fromAddress;
 
       console.log(`[EmailService] Sending email to ${recipients.length} recipient(s)`);
+      console.log(`[EmailService] From: ${fromUsed}`);
       console.log(`[EmailService] Subject: ${subject}`);
 
       const response = await this.resend.emails.send({
-        from: from || this.fromAddress,
+        from: fromUsed,
         to: recipients,
         subject,
         html,
         reply_to: replyTo,
       });
 
-      // Check for errors in response
+      // Check for errors in response — surface the provider's real status/name
       if (response.error) {
-        console.error(`[EmailService] Resend API error:`, response.error);
+        const err = response.error as { statusCode?: number; name?: string; message?: string };
+        console.error(
+          `[EmailService] Resend API error [status=${err.statusCode ?? "n/a"}] [name=${err.name ?? "n/a"}] from=${fromUsed}:`,
+          err.message,
+        );
+        const isSandbox =
+          err.statusCode === 403 && /only send testing emails|verify a domain/i.test(err.message || "");
         return {
           success: false,
-          error: response.error.message || "Unknown email sending error",
+          error: isSandbox
+            ? `Provedor (Resend) recusou o envio: a conta está em modo de teste e o domínio do remetente (${fromUsed}) não está verificado. Verifique um domínio em resend.com/domains e configure RESEND_FROM_EMAIL. Detalhe: ${err.message}`
+            : `Resend ${err.statusCode ?? ""} ${err.name ?? ""}: ${err.message || "erro desconhecido"}`.trim(),
         };
       }
 
       // Success response
       const messageId = response.data?.id || 'unknown';
-      console.log(`[EmailService] Email sent successfully. ID: ${messageId}`);
+      console.log(`[EmailService] Email accepted by Resend. message_id=${messageId} from=${fromUsed}`);
+
       
       return {
         success: true,
