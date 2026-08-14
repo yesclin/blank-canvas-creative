@@ -248,20 +248,26 @@ export default function ConfigUsuarios() {
         toast.error("Selecione pelo menos uma especialidade para o profissional");
         return;
       }
-      // Validate registration when council requires it
-      const primary = specialties.find(
-        (s) => s.id === (newUserForm.primarySpecialtyId || newUserForm.selectedSpecialtyIds[0])
-      );
-      const { getCouncilRuleBySpecialtyName } = await import("@/constants/specialtyCouncilMap");
-      const rule = getCouncilRuleBySpecialtyName(primary?.name);
-      if (
-        rule.required &&
-        newUserForm.council !== "NAO_SE_APLICA" &&
-        !newUserForm.registrationNumber.trim()
-      ) {
-        toast.error("Informe o número de registro profissional");
+      // Conselho é definido pelo tipo de profissional
+      if (!newUserForm.professionalType) {
+        toast.error("Selecione o tipo de profissional");
         return;
       }
+      const { getCouncilRuleByProfessionalType } = await import("@/constants/specialtyCouncilMap");
+      const rule = getCouncilRuleByProfessionalType(newUserForm.professionalType);
+      const councilApplies =
+        rule.suggested !== "NAO_SE_APLICA" && newUserForm.council !== "NAO_SE_APLICA";
+      if (rule.required && councilApplies) {
+        if (!newUserForm.registrationNumber.trim()) {
+          toast.error("Informe o número de registro profissional");
+          return;
+        }
+        if (!newUserForm.councilState) {
+          toast.error("Informe a UF do conselho profissional");
+          return;
+        }
+      }
+
     }
 
     // Bloqueio por limite do plano (apenas para profissionais)

@@ -67,6 +67,36 @@ export const FALLBACK_RULE: SpecialtyCouncilRule = {
   allowed: Object.keys(ALL_COUNCILS) as CouncilCode[],
 };
 
+/**
+ * Conselho é definido pelo TIPO DE PROFISSIONAL (não pela especialidade).
+ * Especialidades permanecem um dado independente.
+ */
+export const PROFESSIONAL_TYPE_COUNCIL_RULES: Record<string, SpecialtyCouncilRule> = {
+  medico:        { slug: "medico",        suggested: "CRM",     required: true,  rqe: "optional", allowed: ["CRM", "OUTRO"] },
+  dentista:      { slug: "dentista",      suggested: "CRO",     required: true,  rqe: "no",       allowed: ["CRO", "OUTRO"] },
+  psicologo:     { slug: "psicologo",     suggested: "CRP",     required: true,  rqe: "no",       allowed: ["CRP", "OUTRO"] },
+  fisioterapeuta:{ slug: "fisioterapeuta",suggested: "CREFITO", required: true,  rqe: "no",       allowed: ["CREFITO", "OUTRO"] },
+  terapeuta_ocupacional: { slug: "terapeuta_ocupacional", suggested: "CREFITO", required: true, rqe: "no", allowed: ["CREFITO", "OUTRO"] },
+  nutricionista: { slug: "nutricionista", suggested: "CRN",     required: true,  rqe: "no",       allowed: ["CRN", "OUTRO"] },
+  enfermeiro:    { slug: "enfermeiro",    suggested: "COREN",   required: true,  rqe: "no",       allowed: ["COREN", "OUTRO"] },
+  biomedico:     { slug: "biomedico",     suggested: "CRBM",    required: true,  rqe: "no",       allowed: ["CRBM", "OUTRO"] },
+  farmaceutico:  { slug: "farmaceutico",  suggested: "CRF",     required: true,  rqe: "no",       allowed: ["CRF", "OUTRO"] },
+  educador_fisico:{ slug: "educador_fisico", suggested: "CREF", required: true,  rqe: "no",       allowed: ["CREF", "OUTRO"] },
+  esteticista:   { slug: "esteticista",   suggested: "NAO_SE_APLICA", required: false, rqe: "no", allowed: ["NAO_SE_APLICA", "OUTRO"] },
+  outro:         { slug: "outro",         suggested: "OUTRO",   required: false, rqe: "no",       allowed: Object.keys(ALL_COUNCILS) as CouncilCode[] },
+};
+
+export function getCouncilRuleByProfessionalType(type?: string | null): SpecialtyCouncilRule {
+  if (!type) return FALLBACK_RULE;
+  return PROFESSIONAL_TYPE_COUNCIL_RULES[type] || FALLBACK_RULE;
+}
+
+export function professionalTypeHasCouncil(type?: string | null): boolean {
+  const rule = getCouncilRuleByProfessionalType(type);
+  return rule.suggested !== "NAO_SE_APLICA";
+}
+
+
 export function getCouncilRuleBySpecialtyName(name?: string | null): SpecialtyCouncilRule {
   if (!name) return FALLBACK_RULE;
   const slug = getSpecialtySlug(name);
