@@ -133,9 +133,30 @@ export function useClinicUsers() {
 
       if (!stillCurrent(expectedUserId)) return;
 
-      // Get user emails from auth (we need to get this differently)
-      // For now, we'll use a placeholder - in production this would come from a secure function
-      
+      // E-mails: fonte primária é profiles.email (populado no cadastro/aceite de convite).
+      // Fallback: e-mail do convite aceito (mesma clínica, respeitando RLS).
+      const viewerRole = (currentUserRole?.role || "profissional") as ClinicUser["role"];
+      const canSeeEmails = ROLE_PRIORITY[viewerRole] >= ROLE_PRIORITY.admin;
+
+      const missingEmailNames = (clinicProfiles || [])
+        .filter((p: any) => !p.email && p.full_name)
+        .map((p: any) => p.full_name as string);
+
+      let invitedEmailByName = new Map<string, string>();
+      if (canSeeEmails && missingEmailNames.length > 0) {
+        const { data: invites } = await withTimeout<any>(supabase
+          .from("user_invitations")
+          .select("email, full_name, status")
+          .eq("clinic_id", profile.clinic_id)
+          .in("full_name", missingEmailNames));
+        if (!stillCurrent(expectedUserId)) return;
+        (invites || []).forEach((inv: any) => {
+          if (inv.email && inv.full_name && !invitedEmailByName.has(inv.full_name)) {
+            invitedEmailByName.set(inv.full_name, inv.email);
+          }
+        });
+      }
+
       // Build user list
       const userList: ClinicUser[] = (clinicProfiles || []).map(p => {
         const userRole = roles?.find(r => r.user_id === p.user_id);
@@ -147,11 +168,15 @@ export function useClinicUsers() {
           ROLE_PRIORITY[role] === ROLE_PRIORITY.owner || p.created_at === clinic?.created_at
         );
 
+        const resolvedEmail =
+          (p.email as string | null) || invitedEmailByName.get(p.full_name || "") || "";
+        const isSelf = p.user_id === user.id;
+
         return {
           id: p.id,
           user_id: p.user_id,
           full_name: p.full_name || "Usuário",
-          email: "", // Will be filled by edge function or profile data
+          email: canSeeEmails || isSelf ? resolvedEmail : "",
           role,
           is_active: p.is_active ?? true,
           avatar_url: p.avatar_url,
@@ -160,6 +185,7 @@ export function useClinicUsers() {
           is_primary_admin: isPrimaryAdmin,
         };
       });
+
 
       // Sort: primary admin first, then by name
       userList.sort((a, b) => {
