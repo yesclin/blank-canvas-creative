@@ -11,8 +11,7 @@ import {
   BRAZIL_STATES,
   CouncilCode,
   getCouncilOptions,
-  getCouncilRuleBySpecialtyName,
-  getCouncilRuleBySpecialtySlug,
+  getCouncilRuleByProfessionalType,
 } from "@/constants/specialtyCouncilMap";
 
 interface Specialty {
@@ -49,8 +48,12 @@ export const professionalTypeLabels: Record<string, string> = {
   dentista: "Dentista",
   psicologo: "Psicólogo(a)",
   fisioterapeuta: "Fisioterapeuta",
+  terapeuta_ocupacional: "Terapeuta Ocupacional",
   nutricionista: "Nutricionista",
   enfermeiro: "Enfermeiro(a)",
+  biomedico: "Biomédico(a)",
+  farmaceutico: "Farmacêutico(a)",
+  educador_fisico: "Educador(a) Físico(a)",
   esteticista: "Esteticista",
   outro: "Outro",
 };
@@ -91,20 +94,14 @@ export function ProfessionalFields({
     }
   }, [selectedSpecialtyIds, primarySpecialtyId, onPrimarySpecialtyChange]);
 
-  const primarySpecialty = useMemo(
-    () => specialties.find((s) => s.id === (primarySpecialtyId || selectedSpecialtyIds[0])),
-    [specialties, primarySpecialtyId, selectedSpecialtyIds]
-  );
-
+  // O conselho é definido pelo TIPO DE PROFISSIONAL (não pela especialidade)
   const rule = useMemo(
-    () => primarySpecialty?.slug
-      ? getCouncilRuleBySpecialtySlug(primarySpecialty.slug)
-      : getCouncilRuleBySpecialtyName(primarySpecialty?.name),
-    [primarySpecialty?.name, primarySpecialty?.slug]
+    () => getCouncilRuleByProfessionalType(professionalType),
+    [professionalType]
   );
   const councilOptions = useMemo(() => getCouncilOptions(rule), [rule]);
 
-  // Suggest council automatically when specialty changes and field is empty
+  // Suggest council automatically when professional type changes and field is empty
   useEffect(() => {
     if (!onCouncilChange) return;
     if (!council && rule.suggested) {
@@ -233,8 +230,8 @@ export function ProfessionalFields({
         </div>
       )}
 
-      {/* Conselho profissional */}
-      {onCouncilChange && (
+      {/* Conselho profissional — derivado do tipo de profissional */}
+      {onCouncilChange && !!professionalType && (
         <div className="grid gap-2">
           <Label>
             Conselho profissional{rule.required ? " *" : " (opcional)"}
@@ -251,16 +248,16 @@ export function ProfessionalFields({
               ))}
             </SelectContent>
           </Select>
-          {primarySpecialty && (
+          {professionalType && (
             <p className="text-xs text-muted-foreground">
-              Sugestão automática conforme a especialidade selecionada.
+              Definido pelo tipo de profissional selecionado.
             </p>
           )}
         </div>
       )}
 
-      {/* Número de registro + UF */}
-      {council !== "NAO_SE_APLICA" && (
+      {/* Número de registro + UF — apenas quando o tipo profissional tem conselho aplicável */}
+      {rule.suggested !== "NAO_SE_APLICA" && council !== "NAO_SE_APLICA" && (
         <div className="grid grid-cols-1 sm:grid-cols-[1fr_120px] gap-3">
           <div className="grid gap-2">
             <Label htmlFor="registrationNumber">
