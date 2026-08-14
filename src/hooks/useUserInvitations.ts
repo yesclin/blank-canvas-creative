@@ -101,12 +101,25 @@ export function useUserInvitations(clinicId: string | null) {
     }
 
     setIsSending(true);
-    console.log("[send-invite] payload:", data);
 
     try {
+      // Read the current Supabase session immediately before invoking the
+      // protected function. This prevents a stale/anonymous request after a
+      // token refresh and keeps authentication on the standard Supabase flow.
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      const session = sessionData?.session;
+      if (sessionError || !session?.access_token || !session.user?.id) {
+        const authError = new Error("Sua sessão expirou. Entre novamente para enviar o convite.");
+        (authError as any).code = "invite_session_missing";
+        throw authError;
+      }
+
       const { data: result, error } = await withTimeout<any>(
-        supabase.functions.invoke("send-invite", { body: data }),
-        15000,
+        supabase.functions.invoke("send-invite", {
+          body: data,
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        }),
+        25000,
         "Tempo esgotado ao enviar convite. Tente novamente ou copie o link manualmente."
       );
 
@@ -249,9 +262,14 @@ export function useUserInvitations(clinicId: string | null) {
           compact.length > 240 ? `Payload: ${compact.slice(0, 240)}…` : `Payload: ${compact}`
         );
       }
-      const description = summaryLines.length > 0
-        ? summaryLines.join("\n")
-        : "Tente novamente em instantes.";
+      const isGenericTransportError =
+        err?.message === "Failed to send a request to the Edge Function" ||
+        err?.message === "Failed to fetch";
+      const description = isGenericTransportError
+        ? "Não foi possível conectar ao serviço de convites. Tente novamente."
+        : summaryLines.length > 0
+          ? summaryLines.join("\n")
+          : "Não foi possível enviar o convite. Tente novamente.";
 
       toast.error(
         timedOut ? "Tempo esgotado ao enviar convite" : "Erro ao enviar convite",
