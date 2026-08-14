@@ -458,6 +458,15 @@ export const handler = async (req: Request): Promise<Response> => {
 
       if (inviteError) {
         console.error("[send-invite] Error creating invitation:", inviteError);
+        if (inviteError.code === "23505") {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "Já existe um convite pendente para este e-mail. Use a ação 'Reenviar' no convite existente.",
+            }),
+            { status: 409, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        }
         return new Response(
           JSON.stringify({ success: false, error: "Erro ao criar convite" }),
           { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
