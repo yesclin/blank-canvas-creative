@@ -25,6 +25,22 @@ export interface CreateUserData {
   role: "admin" | "profissional" | "recepcionista";
 }
 
+interface ClinicUsersBackendUser {
+  id: string;
+  user_id: string;
+  name: string;
+  email: string | null;
+  role: ClinicUser["role"];
+  status: "active" | "inactive";
+  clinic_id: string;
+  avatar_url: string | null;
+  created_at: string;
+}
+
+interface ClinicUsersBackendResponse {
+  users: ClinicUsersBackendUser[];
+}
+
 const MAX_USERS_PER_CLINIC = 3;
 
 const ROLE_PRIORITY: Record<ClinicUser["role"], number> = {
@@ -109,9 +125,11 @@ export function useClinicUsers() {
         return;
       }
 
-      const { data: clinicUsersResult, error: clinicUsersError } = await withTimeout<any>(
+      const { data: clinicUsersResult, error: clinicUsersError } = await withTimeout<{
+        data: ClinicUsersBackendResponse | null;
+        error: unknown;
+      }>(
         supabase.functions.invoke("list-clinic-users", {
-          method: "POST",
           headers: { Authorization: `Bearer ${accessToken}` },
         }),
       );
@@ -133,8 +151,8 @@ export function useClinicUsers() {
       if (!stillCurrent(expectedUserId)) return;
 
       // Build user list
-      const userList: ClinicUser[] = clinicUsersResult.users.map((backendUser: any) => {
-        const role = backendUser.role as ClinicUser["role"];
+      const userList: ClinicUser[] = clinicUsersResult.users.map((backendUser) => {
+        const role = backendUser.role;
         
         // The first owner/admin created with the clinic is the primary admin
         const isElevated = ROLE_PRIORITY[role] >= ROLE_PRIORITY.admin;
