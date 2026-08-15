@@ -78,6 +78,7 @@ async function fetchScope(userId: string): Promise<ActiveClinicScope> {
         .eq("user_id", userId)
         .limit(1)
         .maybeSingle(),
+      25000,
     );
     if (profileError) throw profileError;
     if (profile && profile.user_id === userId) {
@@ -100,6 +101,7 @@ async function fetchScope(userId: string): Promise<ActiveClinicScope> {
         .eq("clinic_id", clinicId)
         .limit(1)
         .maybeSingle(),
+      25000,
     );
     if (error) throw error;
     if (data && data.user_id === userId && data.role) {
@@ -125,11 +127,15 @@ export function useActiveClinicScope() {
     staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,
     refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    // Falha transitória no boot (token sendo renovado / rede lenta) não pode
+    // deixar o app preso em "Não foi possível carregar suas permissões".
+    refetchOnReconnect: true,
     refetchOnMount: false,
-    retry: 1,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
     throwOnError: false,
   });
+
 
   // Invalidar APENAS em eventos reais de troca de identidade ou modo suporte.
   // TOKEN_REFRESHED e INITIAL_SESSION são ignorados para não causar refetch
@@ -163,9 +169,13 @@ export function useActiveClinicScope() {
 
   return {
     scope: query.data ?? EMPTY,
-    isLoading: authIdentityLoading || (query.isLoading && !query.data),
+    // Enquanto qualquer tentativa (inclusive retries) estiver em voo sem dado
+    // resolvido, o app segue em "carregando" — nunca em "sem permissão".
+    isLoading: authIdentityLoading || ((query.isLoading || query.isFetching) && !query.data),
+    isFetching: query.isFetching,
     isReady: !authIdentityLoading && !!authUserId && !!query.data,
     error: query.error ?? null,
     refetch: () => void query.refetch(),
   };
+
 }

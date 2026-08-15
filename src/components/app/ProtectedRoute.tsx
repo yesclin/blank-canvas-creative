@@ -40,8 +40,9 @@ export function ProtectedRoute({
   redirectTo,
 }: ProtectedRouteProps) {
   const { can, isLoading, isOwner, isAdmin, role, refetch } = usePermissions();
-  const { scope, isLoading: scopeLoading } = useActiveClinicScope();
+  const { scope, isLoading: scopeLoading, isFetching: scopeFetching, error: scopeError, refetch: refetchScope } = useActiveClinicScope();
   const previousLoadingRef = useRef<boolean | null>(null);
+  const autoRetriedRef = useRef(false);
 
   useEffect(() => {
     if (!import.meta.env.DEV) return;
@@ -50,7 +51,18 @@ export function ProtectedRoute({
   }, [module, action]);
 
   const isActive = scope.profileIsActive ?? true;
-  const routeLoading = scopeLoading || isLoading;
+  const routeLoading = scopeLoading || scopeFetching || isLoading;
+
+  // Falha transitória no boot/refresh: tenta recarregar o escopo UMA vez
+  // automaticamente antes de mostrar a tela de erro recuperável.
+  useEffect(() => {
+    if (routeLoading || role || autoRetriedRef.current) return;
+    if (!scopeError && scope.clinicId) return;
+    autoRetriedRef.current = true;
+    refetchScope();
+    void refetch();
+  }, [routeLoading, role, scopeError, scope.clinicId, refetchScope, refetch]);
+
   useEffect(() => {
     if (!import.meta.env.DEV) return;
     if (previousLoadingRef.current === routeLoading) return;
@@ -84,7 +96,7 @@ export function ProtectedRoute({
   // null/undefined, foi falha temporária de dados — NÃO é falha de auth.
   // Mostrar erro recuperável com "Tentar novamente". NUNCA deslogar aqui.
   if (!isLoading && !role) {
-    return <PermissionsLoadFailedPage onRetry={() => refetch()} />;
+    return <PermissionsLoadFailedPage onRetry={async () => { refetchScope(); await refetch(); }} />;
   }
 
   // Owner and Admin bypass all permission checks
