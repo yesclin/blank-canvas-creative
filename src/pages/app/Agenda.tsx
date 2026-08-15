@@ -27,7 +27,8 @@ import { PatientFormDialog } from "@/components/pacientes/PatientFormDialog";
 import { useCreatePatient, type PatientFormData as PatientFullFormData } from "@/hooks/usePatients";
 
 import { useQueryClient } from "@tanstack/react-query";
-import type { AgendaFilters as FiltersType, ViewMode, Appointment, AppointmentStatus } from "@/types/agenda";
+import type { AgendaFilters as FiltersType, ViewMode, Appointment, AppointmentStatus, ScheduleBlock } from "@/types/agenda";
+import { ScheduleBlockDetailDialog } from "@/components/agenda/ScheduleBlockDetailDialog";
 import { toast } from "sonner";
 import { validateProcedureStock, StockValidationResult } from "@/hooks/useProcedureStockValidation";
 import { supabase } from "@/integrations/supabase/client";
