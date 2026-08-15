@@ -43,6 +43,9 @@ interface AgendaGridProps {
   onReschedule?: (appointment: Appointment) => void;
   onLaunchSale?: (appointment: Appointment) => void;
   onSlotClick?: (data: SlotClickData) => void;
+  /** Profissional em foco (aba selecionada), para escopo visual dos bloqueios */
+  selectedProfessionalId?: string;
+  onBlockClick?: (block: ScheduleBlock) => void;
 }
 
 const SLOT_MIN = 30;
