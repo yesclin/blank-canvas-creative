@@ -515,7 +515,9 @@ export function AgendaGrid({
                   {/* Layer 1: 30-min slot backgrounds (visual only) */}
                   {timeSlots.map((time, i) => {
                     const pastSlot = isSlotInPast(day, time);
-                    const block = !pastSlot ? isSlotBlocked(day, time) : null;
+                    const rawBlock = !pastSlot ? isSlotBlocked(day, time, selectedProfessionalId) : null;
+                    // Sem profissional em foco, só escurece a coluna em bloqueio geral da clínica
+                    const block = rawBlock && (selectedProfessionalId || isClinicWideBlock(rawBlock)) ? rawBlock : null;
                     return (
                       <div
                         key={`${dayStr}-${time}`}
