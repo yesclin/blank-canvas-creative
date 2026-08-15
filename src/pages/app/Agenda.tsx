@@ -849,6 +849,11 @@ export default function Agenda() {
                 onStatusChange={handleStatusChange}
                 onLaunchSale={handleLaunchSale}
                 onSlotClick={handleSlotClick}
+                selectedProfessionalId={effectiveSelectedProfessionalId || filters.professionalId || undefined}
+                onBlockClick={(block) => {
+                  setSelectedBlock(block);
+                  setBlockDetailOpen(true);
+                }}
               />
             </>
           )}
