@@ -96,7 +96,7 @@ export function ProtectedRoute({
   // null/undefined, foi falha temporária de dados — NÃO é falha de auth.
   // Mostrar erro recuperável com "Tentar novamente". NUNCA deslogar aqui.
   if (!isLoading && !role) {
-    return <PermissionsLoadFailedPage onRetry={() => refetch()} />;
+    return <PermissionsLoadFailedPage onRetry={async () => { refetchScope(); await refetch(); }} />;
   }
 
   // Owner and Admin bypass all permission checks
