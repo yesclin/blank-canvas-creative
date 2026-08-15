@@ -1049,6 +1049,37 @@ export default function Agenda() {
         onSaved={() => queryClient.invalidateQueries({ queryKey: ['schedule-blocks'] })}
       />
 
+      <ScheduleBlockDetailDialog
+        block={selectedBlock}
+        professionalName={
+          selectedBlock?.professional_id
+            ? professionals.find(p => p.id === selectedBlock.professional_id)?.full_name
+            : undefined
+        }
+        open={blockDetailOpen}
+        onOpenChange={(open) => {
+          setBlockDetailOpen(open);
+          if (!open) setSelectedBlock(null);
+        }}
+        canManage={role === 'owner' || role === 'admin' || role === 'recepcionista'}
+        isDeleting={deletingBlock}
+        onDelete={async (block) => {
+          setDeletingBlock(true);
+          const { error } = await supabase.from('schedule_blocks').delete().eq('id', block.id);
+          setDeletingBlock(false);
+          if (error) {
+            toast.error(error.message);
+            return;
+          }
+          toast.success('Bloqueio removido');
+          queryClient.invalidateQueries({ queryKey: ['schedule-blocks'] });
+          setBlockDetailOpen(false);
+          setSelectedBlock(null);
+        }}
+      />
+
+
+
 
       <TissGuideGenerationDialog
         open={tissDialogOpen}
