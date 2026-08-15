@@ -8,6 +8,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Lock } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { Appointment, ViewMode, GroupBy, Professional, Room, Specialty, ScheduleBlock } from '@/types/agenda';
+import {
+  getBlocksForDay,
+  blockBandTitle,
+  blockDisplayTitle,
+  blockMinuteRange,
+  isClinicWideBlock,
+} from './scheduleBlockUtils';
 
 const SNAP_MIN = 15;
 const minutesToTime = (mins: number) => {
