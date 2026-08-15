@@ -167,9 +167,13 @@ export function useActiveClinicScope() {
 
   return {
     scope: query.data ?? EMPTY,
-    isLoading: authIdentityLoading || (query.isLoading && !query.data),
+    // Enquanto qualquer tentativa (inclusive retries) estiver em voo sem dado
+    // resolvido, o app segue em "carregando" — nunca em "sem permissão".
+    isLoading: authIdentityLoading || ((query.isLoading || query.isFetching) && !query.data),
+    isFetching: query.isFetching,
     isReady: !authIdentityLoading && !!authUserId && !!query.data,
     error: query.error ?? null,
     refetch: () => void query.refetch(),
   };
+
 }
