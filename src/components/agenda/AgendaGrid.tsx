@@ -625,6 +625,32 @@ export function AgendaGrid({
                     </div>
                   )}
                 </div>
+                {/* Bloqueios do dia (badges discretos) */}
+                {getBlocksForDay(scheduleBlocks, day, {
+                  professionalId: selectedProfessionalId,
+                  includeIndividual: !selectedProfessionalId,
+                }).slice(0, 2).map(block => {
+                  const profName = block.professional_id ? professionalNameById[block.professional_id] : undefined;
+                  const clinicWide = isClinicWideBlock(block);
+                  return (
+                    <button
+                      key={`mblock-${block.id}-${dayStr}`}
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onBlockClick?.(block); }}
+                      title={`${block.title}${block.reason ? ` — ${block.reason}` : ''}`}
+                      className={cn(
+                        'w-full flex items-center gap-1 text-[11px] p-1 mb-1 rounded truncate text-left',
+                        clinicWide
+                          ? 'bg-destructive/15 text-destructive hover:bg-destructive/20'
+                          : 'bg-muted text-muted-foreground hover:bg-muted/80',
+                      )}
+                    >
+                      <Lock className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{blockDisplayTitle(block, profName)}</span>
+                    </button>
+                  );
+                })}
+
                 {dayAppointments.slice(0, 3).map(apt => (
                   <div 
                     key={apt.id}
