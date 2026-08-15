@@ -116,6 +116,9 @@ export default function Agenda() {
   const [defaultDialogDate, setDefaultDialogDate] = useState<Date | undefined>();
   const [defaultDialogPackageId, setDefaultDialogPackageId] = useState<string | undefined>();
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+  const [selectedBlock, setSelectedBlock] = useState<ScheduleBlock | null>(null);
+  const [blockDetailOpen, setBlockDetailOpen] = useState(false);
+  const [deletingBlock, setDeletingBlock] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | undefined>();
   const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
   const [detailAppointment, setDetailAppointment] = useState<Appointment | null>(null);
