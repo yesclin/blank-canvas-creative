@@ -532,7 +532,10 @@ export function AgendaGrid({
                       />
                     );
                   })}
+                  {/* Layer 1b: faixas visuais de bloqueio */}
+                  {renderBlockBands(day)}
                   {/* Layer 2: Appointments */}
+
                   {dayAppointments.map(apt => {
                     const startStr = apt.start_time?.slice(0, 5);
                     const endStr = apt.end_time?.slice(0, 5);
