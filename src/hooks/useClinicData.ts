@@ -149,9 +149,10 @@ export function useClinicData() {
     staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,
     refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    refetchOnReconnect: true,
     refetchOnMount: false,
-    retry: 1,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
     throwOnError: false,
   });
 
@@ -209,8 +210,10 @@ export function useClinicData() {
 
   return {
     clinic,
-    isLoading: authLoading || (query.isLoading && !query.data),
-    error: scopeError ?? query.error ?? null,
+    isLoading: authLoading || scopeLoading || ((query.isLoading || query.isFetching) && !query.data),
+    // Só reporta erro quando não há mais tentativa em voo — evita banner de
+    // "contexto da clínica" durante retries transitórios do boot.
+    error: query.isFetching ? null : (scopeError ?? query.error ?? null),
     refetch: () => {
       void query.refetch();
     },

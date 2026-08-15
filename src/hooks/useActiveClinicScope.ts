@@ -78,6 +78,7 @@ async function fetchScope(userId: string): Promise<ActiveClinicScope> {
         .eq("user_id", userId)
         .limit(1)
         .maybeSingle(),
+      25000,
     );
     if (profileError) throw profileError;
     if (profile && profile.user_id === userId) {
@@ -100,6 +101,7 @@ async function fetchScope(userId: string): Promise<ActiveClinicScope> {
         .eq("clinic_id", clinicId)
         .limit(1)
         .maybeSingle(),
+      25000,
     );
     if (error) throw error;
     if (data && data.user_id === userId && data.role) {
