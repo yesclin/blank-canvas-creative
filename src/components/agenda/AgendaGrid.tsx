@@ -288,6 +288,66 @@ export function AgendaGrid({
     );
   };
 
+  const professionalNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    professionals.forEach(p => { map[p.id] = p.full_name; });
+    return map;
+  }, [professionals]);
+
+  const DAY_END_MIN = DAY_START_MIN + timeSlots.length * SLOT_MIN;
+
+  /** Faixas visuais dos bloqueios já cadastrados (visões Dia/Semana) */
+  const renderBlockBands = (date: Date, professionalId?: string) => {
+    const scopedProfessionalId = professionalId || selectedProfessionalId;
+    const blocks = getBlocksForDay(scheduleBlocks, date, {
+      professionalId: scopedProfessionalId,
+      includeIndividual: !scopedProfessionalId,
+    });
+    if (blocks.length === 0) return null;
+
+    return blocks.map(block => {
+      const { startMin, endMin } = blockMinuteRange(block, DAY_START_MIN, DAY_END_MIN);
+      if (endMin <= startMin) return null;
+      const top = (startMin - DAY_START_MIN) * PX_PER_MIN;
+      const height = Math.max(28, (endMin - startMin) * PX_PER_MIN);
+      const profName = block.professional_id ? professionalNameById[block.professional_id] : undefined;
+      const clinicWide = isClinicWideBlock(block);
+      const showName = !!block.professional_id && !scopedProfessionalId;
+
+      return (
+        <button
+          key={`block-${block.id}-${format(date, 'yyyy-MM-dd')}`}
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onBlockClick?.(block); }}
+          title={`${blockBandTitle(block, profName)}${block.reason ? ` — ${block.reason}` : ''}`}
+          className={cn(
+            'absolute left-0 right-0 z-[10] px-2 py-1 text-left overflow-hidden border-y cursor-pointer',
+            clinicWide
+              ? 'bg-destructive/15 border-destructive/40 hover:bg-destructive/20'
+              : 'bg-muted/70 border-border hover:bg-muted',
+            !clinicWide && 'border-l-4 border-l-muted-foreground/40',
+          )}
+          style={{
+            top,
+            height,
+            backgroundImage:
+              'repeating-linear-gradient(135deg, hsl(var(--muted-foreground) / 0.08) 0 6px, transparent 6px 12px)',
+          }}
+        >
+          <span className="flex items-center gap-1 text-xs font-medium text-foreground/80">
+            <Lock className="h-3 w-3 shrink-0" />
+            <span className="truncate">{blockBandTitle(block, showName ? profName : undefined)}</span>
+          </span>
+          <span className="block text-[11px] text-muted-foreground truncate">
+            {block.title}{block.reason ? ` — ${block.reason}` : ''}
+          </span>
+        </button>
+      );
+    });
+  };
+
+
+
   // Daily View
   if (viewMode === 'daily') {
     return (
