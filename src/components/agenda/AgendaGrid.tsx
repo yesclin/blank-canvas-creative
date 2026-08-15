@@ -82,6 +82,8 @@ export function AgendaGrid({
   onReschedule,
   onLaunchSale,
   onSlotClick,
+  selectedProfessionalId,
+  onBlockClick,
 }: AgendaGridProps) {
   const weekDays = useMemo(() => {
     const start = startOfWeek(selectedDate, { weekStartsOn: 1 });
