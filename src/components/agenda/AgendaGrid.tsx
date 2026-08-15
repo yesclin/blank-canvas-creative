@@ -8,6 +8,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Lock } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { Appointment, ViewMode, GroupBy, Professional, Room, Specialty, ScheduleBlock } from '@/types/agenda';
+import {
+  getBlocksForDay,
+  blockBandTitle,
+  blockDisplayTitle,
+  blockMinuteRange,
+  isClinicWideBlock,
+} from './scheduleBlockUtils';
 
 const SNAP_MIN = 15;
 const minutesToTime = (mins: number) => {
@@ -36,6 +43,9 @@ interface AgendaGridProps {
   onReschedule?: (appointment: Appointment) => void;
   onLaunchSale?: (appointment: Appointment) => void;
   onSlotClick?: (data: SlotClickData) => void;
+  /** Profissional em foco (aba selecionada), para escopo visual dos bloqueios */
+  selectedProfessionalId?: string;
+  onBlockClick?: (block: ScheduleBlock) => void;
 }
 
 const SLOT_MIN = 30;
@@ -72,6 +82,8 @@ export function AgendaGrid({
   onReschedule,
   onLaunchSale,
   onSlotClick,
+  selectedProfessionalId,
+  onBlockClick,
 }: AgendaGridProps) {
   const weekDays = useMemo(() => {
     const start = startOfWeek(selectedDate, { weekStartsOn: 1 });
@@ -276,6 +288,66 @@ export function AgendaGrid({
     );
   };
 
+  const professionalNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    professionals.forEach(p => { map[p.id] = p.full_name; });
+    return map;
+  }, [professionals]);
+
+  const DAY_END_MIN = DAY_START_MIN + timeSlots.length * SLOT_MIN;
+
+  /** Faixas visuais dos bloqueios já cadastrados (visões Dia/Semana) */
+  const renderBlockBands = (date: Date, professionalId?: string) => {
+    const scopedProfessionalId = professionalId || selectedProfessionalId;
+    const blocks = getBlocksForDay(scheduleBlocks, date, {
+      professionalId: scopedProfessionalId,
+      includeIndividual: !scopedProfessionalId,
+    });
+    if (blocks.length === 0) return null;
+
+    return blocks.map(block => {
+      const { startMin, endMin } = blockMinuteRange(block, DAY_START_MIN, DAY_END_MIN);
+      if (endMin <= startMin) return null;
+      const top = (startMin - DAY_START_MIN) * PX_PER_MIN;
+      const height = Math.max(28, (endMin - startMin) * PX_PER_MIN);
+      const profName = block.professional_id ? professionalNameById[block.professional_id] : undefined;
+      const clinicWide = isClinicWideBlock(block);
+      const showName = !!block.professional_id && !scopedProfessionalId;
+
+      return (
+        <button
+          key={`block-${block.id}-${format(date, 'yyyy-MM-dd')}`}
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onBlockClick?.(block); }}
+          title={`${blockBandTitle(block, profName)}${block.reason ? ` — ${block.reason}` : ''}`}
+          className={cn(
+            'absolute left-0 right-0 z-[10] px-2 py-1 text-left overflow-hidden border-y cursor-pointer',
+            clinicWide
+              ? 'bg-destructive/15 border-destructive/40 hover:bg-destructive/20'
+              : 'bg-muted/70 border-border hover:bg-muted',
+            !clinicWide && 'border-l-4 border-l-muted-foreground/40',
+          )}
+          style={{
+            top,
+            height,
+            backgroundImage:
+              'repeating-linear-gradient(135deg, hsl(var(--muted-foreground) / 0.08) 0 6px, transparent 6px 12px)',
+          }}
+        >
+          <span className="flex items-center gap-1 text-xs font-medium text-foreground/80">
+            <Lock className="h-3 w-3 shrink-0" />
+            <span className="truncate">{blockBandTitle(block, showName ? profName : undefined)}</span>
+          </span>
+          <span className="block text-[11px] text-muted-foreground truncate">
+            {block.title}{block.reason ? ` — ${block.reason}` : ''}
+          </span>
+        </button>
+      );
+    });
+  };
+
+
+
   // Daily View
   if (viewMode === 'daily') {
     return (
@@ -336,7 +408,10 @@ export function AgendaGrid({
                       />
                     );
                   })}
+                  {/* Layer 1b: faixas visuais de bloqueio */}
+                  {renderBlockBands(selectedDate, profId)}
                   {/* Layer 2: Appointments positioned by minute (z-20) */}
+
                   {apts.map(apt => {
                     const startStr = apt.start_time?.slice(0, 5);
                     const endStr = apt.end_time?.slice(0, 5);
@@ -440,7 +515,9 @@ export function AgendaGrid({
                   {/* Layer 1: 30-min slot backgrounds (visual only) */}
                   {timeSlots.map((time, i) => {
                     const pastSlot = isSlotInPast(day, time);
-                    const block = !pastSlot ? isSlotBlocked(day, time) : null;
+                    const rawBlock = !pastSlot ? isSlotBlocked(day, time, selectedProfessionalId) : null;
+                    // Sem profissional em foco, só escurece a coluna em bloqueio geral da clínica
+                    const block = rawBlock && (selectedProfessionalId || isClinicWideBlock(rawBlock)) ? rawBlock : null;
                     return (
                       <div
                         key={`${dayStr}-${time}`}
@@ -455,7 +532,10 @@ export function AgendaGrid({
                       />
                     );
                   })}
+                  {/* Layer 1b: faixas visuais de bloqueio */}
+                  {renderBlockBands(day)}
                   {/* Layer 2: Appointments */}
+
                   {dayAppointments.map(apt => {
                     const startStr = apt.start_time?.slice(0, 5);
                     const endStr = apt.end_time?.slice(0, 5);
@@ -545,6 +625,32 @@ export function AgendaGrid({
                     </div>
                   )}
                 </div>
+                {/* Bloqueios do dia (badges discretos) */}
+                {getBlocksForDay(scheduleBlocks, day, {
+                  professionalId: selectedProfessionalId,
+                  includeIndividual: !selectedProfessionalId,
+                }).slice(0, 2).map(block => {
+                  const profName = block.professional_id ? professionalNameById[block.professional_id] : undefined;
+                  const clinicWide = isClinicWideBlock(block);
+                  return (
+                    <button
+                      key={`mblock-${block.id}-${dayStr}`}
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onBlockClick?.(block); }}
+                      title={`${block.title}${block.reason ? ` — ${block.reason}` : ''}`}
+                      className={cn(
+                        'w-full flex items-center gap-1 text-[11px] p-1 mb-1 rounded truncate text-left',
+                        clinicWide
+                          ? 'bg-destructive/15 text-destructive hover:bg-destructive/20'
+                          : 'bg-muted text-muted-foreground hover:bg-muted/80',
+                      )}
+                    >
+                      <Lock className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{blockDisplayTitle(block, profName)}</span>
+                    </button>
+                  );
+                })}
+
                 {dayAppointments.slice(0, 3).map(apt => (
                   <div 
                     key={apt.id}

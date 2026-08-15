@@ -27,7 +27,8 @@ import { PatientFormDialog } from "@/components/pacientes/PatientFormDialog";
 import { useCreatePatient, type PatientFormData as PatientFullFormData } from "@/hooks/usePatients";
 
 import { useQueryClient } from "@tanstack/react-query";
-import type { AgendaFilters as FiltersType, ViewMode, Appointment, AppointmentStatus } from "@/types/agenda";
+import type { AgendaFilters as FiltersType, ViewMode, Appointment, AppointmentStatus, ScheduleBlock } from "@/types/agenda";
+import { ScheduleBlockDetailDialog } from "@/components/agenda/ScheduleBlockDetailDialog";
 import { toast } from "sonner";
 import { validateProcedureStock, StockValidationResult } from "@/hooks/useProcedureStockValidation";
 import { supabase } from "@/integrations/supabase/client";
@@ -116,6 +117,9 @@ export default function Agenda() {
   const [defaultDialogDate, setDefaultDialogDate] = useState<Date | undefined>();
   const [defaultDialogPackageId, setDefaultDialogPackageId] = useState<string | undefined>();
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+  const [selectedBlock, setSelectedBlock] = useState<ScheduleBlock | null>(null);
+  const [blockDetailOpen, setBlockDetailOpen] = useState(false);
+  const [deletingBlock, setDeletingBlock] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | undefined>();
   const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
   const [detailAppointment, setDetailAppointment] = useState<Appointment | null>(null);
@@ -845,6 +849,11 @@ export default function Agenda() {
                 onStatusChange={handleStatusChange}
                 onLaunchSale={handleLaunchSale}
                 onSlotClick={handleSlotClick}
+                selectedProfessionalId={effectiveSelectedProfessionalId || filters.professionalId || undefined}
+                onBlockClick={(block) => {
+                  setSelectedBlock(block);
+                  setBlockDetailOpen(true);
+                }}
               />
             </>
           )}
@@ -1039,6 +1048,37 @@ export default function Agenda() {
         professionals={professionals}
         onSaved={() => queryClient.invalidateQueries({ queryKey: ['schedule-blocks'] })}
       />
+
+      <ScheduleBlockDetailDialog
+        block={selectedBlock}
+        professionalName={
+          selectedBlock?.professional_id
+            ? professionals.find(p => p.id === selectedBlock.professional_id)?.full_name
+            : undefined
+        }
+        open={blockDetailOpen}
+        onOpenChange={(open) => {
+          setBlockDetailOpen(open);
+          if (!open) setSelectedBlock(null);
+        }}
+        canManage={role === 'owner' || role === 'admin' || role === 'recepcionista'}
+        isDeleting={deletingBlock}
+        onDelete={async (block) => {
+          setDeletingBlock(true);
+          const { error } = await supabase.from('schedule_blocks').delete().eq('id', block.id);
+          setDeletingBlock(false);
+          if (error) {
+            toast.error(error.message);
+            return;
+          }
+          toast.success('Bloqueio removido');
+          queryClient.invalidateQueries({ queryKey: ['schedule-blocks'] });
+          setBlockDetailOpen(false);
+          setSelectedBlock(null);
+        }}
+      />
+
+
 
 
       <TissGuideGenerationDialog
