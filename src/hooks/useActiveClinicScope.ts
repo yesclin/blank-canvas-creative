@@ -125,11 +125,15 @@ export function useActiveClinicScope() {
     staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,
     refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    // Falha transitória no boot (token sendo renovado / rede lenta) não pode
+    // deixar o app preso em "Não foi possível carregar suas permissões".
+    refetchOnReconnect: true,
     refetchOnMount: false,
-    retry: 1,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
     throwOnError: false,
   });
+
 
   // Invalidar APENAS em eventos reais de troca de identidade ou modo suporte.
   // TOKEN_REFRESHED e INITIAL_SESSION são ignorados para não causar refetch
