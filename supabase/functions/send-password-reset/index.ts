@@ -131,7 +131,7 @@ const handler = async (req: Request): Promise<Response> => {
       type: 'recovery',
       email: sanitizedEmail,
       options: {
-        redirectTo: `${req.headers.get("origin") || "https://yesclin.com"}/`,
+        redirectTo: `${isAllowedOrigin(req.headers.get("origin") || "") ? req.headers.get("origin") : "https://yesclin.com.br"}/redefinir-senha`,
       }
     });
 
