@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
 
     const { data: profiles, error: profilesError } = await adminClient
       .from("profiles")
-      .select("id, user_id, full_name, avatar_url, is_active, created_at, clinic_id")
+      .select("id, user_id, full_name, email, avatar_url, is_active, created_at, clinic_id")
       .eq("clinic_id", clinicId)
       .order("full_name");
     if (profilesError) throw profilesError;
@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
         id: profile.id,
         user_id: profile.user_id,
         name: profile.full_name ?? "Usuário",
-        email: authData?.user?.email ?? null,
+        email: authData?.user?.email ?? profile.email ?? null,
         role: roleByUserId.get(profile.user_id) ?? "profissional",
         status: profile.is_active === false ? "inactive" : "active",
         clinic_id: clinicId,

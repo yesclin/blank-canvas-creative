@@ -114,31 +114,76 @@ export function useClinicUsers() {
 
       if (!stillCurrent(expectedUserId)) return;
 
-      // The Auth identity is the source of truth for email. The protected Edge
-      // Function derives clinic_id from the caller JWT and performs the
-      // auth.users lookup with service_role exclusively on the server.
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      const accessToken = sessionData.session?.access_token;
-      if (sessionError || !accessToken) {
-        setError("Sua sessão expirou. Entre novamente.");
+      // FONTE PRIMÁRIA: profiles + user_roles da própria clínica (RLS garante o
+      // isolamento por clinic_id). O e-mail vem de profiles.email, mantido em
+      // sincronia com o Auth. A Edge Function protegida é apenas um
+      // ENRIQUECIMENTO opcional para e-mails ausentes — se ela falhar, a lista
+      // continua sendo exibida e o erro real é registrado no console.
+      const [{ data: profiles, error: profilesError }, { data: roles, error: rolesError }] = await Promise.all([
+        withTimeout<any>(
+          supabase
+            .from("profiles")
+            .select("id, user_id, clinic_id, full_name, email, avatar_url, is_active, created_at")
+            .eq("clinic_id", profile.clinic_id)
+            .order("full_name"),
+        ),
+        withTimeout<any>(
+          supabase
+            .from("user_roles")
+            .select("user_id, role")
+            .eq("clinic_id", profile.clinic_id),
+        ),
+      ]);
+
+      if (!stillCurrent(expectedUserId)) return;
+
+      if (profilesError || rolesError) {
+        console.error("Error fetching clinic users:", profilesError ?? rolesError);
+        setError(
+          `Erro ao carregar usuários: ${(profilesError ?? rolesError)?.message ?? "falha desconhecida"}`,
+        );
         setIsLoading(false);
         return;
       }
 
-      const { data: clinicUsersResult, error: clinicUsersError } = await withTimeout<{
-        data: ClinicUsersBackendResponse | null;
-        error: unknown;
-      }>(
-        supabase.functions.invoke("list-clinic-users", {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
+      const roleByUserId = new Map<string, ClinicUser["role"]>(
+        (roles ?? []).map((r: any) => [r.user_id, r.role as ClinicUser["role"]]),
       );
 
-      if (clinicUsersError || !Array.isArray(clinicUsersResult?.users)) {
-        console.error("Error fetching clinic users:", clinicUsersError);
-        setError("Erro ao carregar usuários");
-        setIsLoading(false);
-        return;
+      const emailByUserId = new Map<string, string>();
+      (profiles ?? []).forEach((p: any) => {
+        if (p.email) emailByUserId.set(p.user_id, p.email);
+      });
+
+      // Enriquecimento de e-mails faltantes via Edge Function (service_role
+      // somente no servidor). Falha aqui NUNCA derruba a listagem.
+      const missingEmails = (profiles ?? []).some((p: any) => !p.email);
+      if (missingEmails) {
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const accessToken = sessionData.session?.access_token;
+          if (accessToken) {
+            const { data: enrich, error: enrichError } = await withTimeout<{
+              data: ClinicUsersBackendResponse | null;
+              error: unknown;
+            }>(
+              supabase.functions.invoke("list-clinic-users", {
+                headers: { Authorization: `Bearer ${accessToken}` },
+              }),
+              12000,
+            );
+            if (enrichError) {
+              console.warn("[useClinicUsers] enriquecimento de e-mails falhou:", enrichError);
+            } else {
+              (enrich?.users ?? []).forEach((u) => {
+                if (u.email) emailByUserId.set(u.user_id, u.email);
+              });
+            }
+          }
+        } catch (enrichErr) {
+          console.warn("[useClinicUsers] enriquecimento de e-mails indisponível:", enrichErr);
+        }
+        if (!stillCurrent(expectedUserId)) return;
       }
 
       // Get clinic creation info to identify primary admin
@@ -151,28 +196,29 @@ export function useClinicUsers() {
       if (!stillCurrent(expectedUserId)) return;
 
       // Build user list
-      const userList: ClinicUser[] = clinicUsersResult.users.map((backendUser) => {
-        const role = backendUser.role;
-        
+      const userList: ClinicUser[] = (profiles ?? []).map((p: any) => {
+        const role = (roleByUserId.get(p.user_id) ?? "profissional") as ClinicUser["role"];
+
         // The first owner/admin created with the clinic is the primary admin
         const isElevated = ROLE_PRIORITY[role] >= ROLE_PRIORITY.admin;
         const isPrimaryAdmin = isElevated && (
-          ROLE_PRIORITY[role] === ROLE_PRIORITY.owner || backendUser.created_at === clinic?.created_at
+          ROLE_PRIORITY[role] === ROLE_PRIORITY.owner || p.created_at === clinic?.created_at
         );
 
         return {
-          id: backendUser.id,
-          user_id: backendUser.user_id,
-          full_name: backendUser.name,
-          email: backendUser.email || "",
+          id: p.id,
+          user_id: p.user_id,
+          full_name: p.full_name ?? "Usuário",
+          email: emailByUserId.get(p.user_id) ?? "",
           role,
-          is_active: backendUser.status === "active",
-          avatar_url: backendUser.avatar_url,
-          clinic_id: backendUser.clinic_id,
-          created_at: backendUser.created_at,
+          is_active: p.is_active !== false,
+          avatar_url: p.avatar_url ?? null,
+          clinic_id: p.clinic_id,
+          created_at: p.created_at,
           is_primary_admin: isPrimaryAdmin,
         };
       });
+
 
 
       // Sort: primary admin first, then by name
