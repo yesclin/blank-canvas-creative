@@ -105,8 +105,11 @@ export default function ConfigUsuarios() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState({ full_name: "", email: "" });
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [resetUser, setResetUser] = useState<ClinicUser | null>(null);
+  const [isSendingReset, setIsSendingReset] = useState(false);
   const [newUserForm, setNewUserForm] = useState<NewUserFormState>(initialFormState);
   const queryClient = useQueryClient();
+
 
   const { 
     users, 
