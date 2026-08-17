@@ -866,9 +866,11 @@ export default function ConfigUsuarios() {
                                       variant="ghost" 
                                       size="icon" 
                                       disabled={!canManageUsers}
+                                      onClick={() => setResetUser(user)}
                                   >
                                     <RotateCcw className="h-4 w-4" />
                                   </Button>
+
                                 </TooltipTrigger>
                                 <TooltipContent>Redefinir senha</TooltipContent>
                               </Tooltip>
