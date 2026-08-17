@@ -14,21 +14,31 @@ import { generatePasswordResetEmail } from "../_shared/email-templates.ts";
 
 // Allowed origins for CORS - restrict to known domains
 const ALLOWED_ORIGINS = [
-  "https://id-preview--e2305a67-dd71-4dc6-bb28-50ab8384c9ab.lovable.app",
-  "https://yesclin.com",
-  "https://www.yesclin.com",
+  "https://yesclin.com.br",
+  "https://www.yesclin.com.br",
+  "https://yescin.lovable.app",
 ];
+
+function isAllowedOrigin(origin: string): boolean {
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  // Preview/sandbox domains do Lovable e desenvolvimento local
+  return /^https:\/\/[a-z0-9-]+\.lovable\.app$/i.test(origin)
+    || /^https:\/\/[a-z0-9-]+\.lovableproject\.com$/i.test(origin)
+    || /^http:\/\/localhost(:\d+)?$/i.test(origin);
+}
 
 function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") || "";
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-  
+  const allowedOrigin = isAllowedOrigin(origin) ? origin : ALLOWED_ORIGINS[0];
+
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
   };
 }
+
 
 interface PasswordResetRequest {
   email: string;
@@ -121,7 +131,7 @@ const handler = async (req: Request): Promise<Response> => {
       type: 'recovery',
       email: sanitizedEmail,
       options: {
-        redirectTo: `${req.headers.get("origin") || "https://yesclin.com"}/`,
+        redirectTo: `${isAllowedOrigin(req.headers.get("origin") || "") ? req.headers.get("origin") : "https://yesclin.com.br"}/redefinir-senha`,
       }
     });
 

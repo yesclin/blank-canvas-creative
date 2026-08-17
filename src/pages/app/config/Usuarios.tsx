@@ -15,7 +15,12 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
+
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -105,8 +110,11 @@ export default function ConfigUsuarios() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState({ full_name: "", email: "" });
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [resetUser, setResetUser] = useState<ClinicUser | null>(null);
+  const [isSendingReset, setIsSendingReset] = useState(false);
   const [newUserForm, setNewUserForm] = useState<NewUserFormState>(initialFormState);
   const queryClient = useQueryClient();
+
 
   const { 
     users, 
@@ -306,6 +314,37 @@ export default function ConfigUsuarios() {
   const handleToggleStatus = async (userId: string) => {
     await toggleUserStatus(userId);
   };
+
+  const handleSendPasswordReset = async () => {
+    if (!resetUser) return;
+    const email = resetUser.email?.trim();
+    if (!email) {
+      toast.error("Este usuário não possui e-mail cadastrado. Cadastre um e-mail antes de redefinir a senha.");
+      return;
+    }
+
+    setIsSendingReset(true);
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("send-password-reset", {
+        body: { email },
+      });
+
+      if (fnError) throw fnError;
+      if (data && (data as { error?: string }).error) {
+        throw new Error((data as { error?: string }).error);
+      }
+
+      toast.success("E-mail de redefinição enviado com sucesso");
+      setResetUser(null);
+    } catch (err) {
+      console.error("[Usuarios] Falha ao enviar redefinição de senha:", err);
+      const message = err instanceof Error ? err.message : "Erro desconhecido";
+      toast.error(`Não foi possível enviar o e-mail de redefinição. ${message}`);
+    } finally {
+      setIsSendingReset(false);
+    }
+  };
+
 
   const handleEditUser = (user: ClinicUser) => {
     setEditingUser(user);
@@ -832,9 +871,11 @@ export default function ConfigUsuarios() {
                                       variant="ghost" 
                                       size="icon" 
                                       disabled={!canManageUsers}
+                                      onClick={() => setResetUser(user)}
                                   >
                                     <RotateCcw className="h-4 w-4" />
                                   </Button>
+
                                 </TooltipTrigger>
                                 <TooltipContent>Redefinir senha</TooltipContent>
                               </Tooltip>
@@ -992,6 +1033,40 @@ export default function ConfigUsuarios() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Confirmação de redefinição de senha */}
+      <AlertDialog open={!!resetUser} onOpenChange={(open) => !open && setResetUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Redefinir senha</AlertDialogTitle>
+            <AlertDialogDescription>
+              Um e-mail com o link de redefinição de senha será enviado para{" "}
+              <strong>{resetUser?.email || "e-mail não cadastrado"}</strong>
+              {resetUser?.full_name ? ` (${resetUser.full_name})` : ""}. O link expira em 60 minutos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSendingReset}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void handleSendPasswordReset();
+              }}
+              disabled={isSendingReset || !resetUser?.email}
+            >
+              {isSendingReset ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                "Enviar e-mail"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
+
   );
 }
