@@ -1028,6 +1028,40 @@ export default function ConfigUsuarios() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Confirmação de redefinição de senha */}
+      <AlertDialog open={!!resetUser} onOpenChange={(open) => !open && setResetUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Redefinir senha</AlertDialogTitle>
+            <AlertDialogDescription>
+              Um e-mail com o link de redefinição de senha será enviado para{" "}
+              <strong>{resetUser?.email || "e-mail não cadastrado"}</strong>
+              {resetUser?.full_name ? ` (${resetUser.full_name})` : ""}. O link expira em 60 minutos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSendingReset}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void handleSendPasswordReset();
+              }}
+              disabled={isSendingReset || !resetUser?.email}
+            >
+              {isSendingReset ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                "Enviar e-mail"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
+
   );
 }
