@@ -310,6 +310,37 @@ export default function ConfigUsuarios() {
     await toggleUserStatus(userId);
   };
 
+  const handleSendPasswordReset = async () => {
+    if (!resetUser) return;
+    const email = resetUser.email?.trim();
+    if (!email) {
+      toast.error("Este usuário não possui e-mail cadastrado. Cadastre um e-mail antes de redefinir a senha.");
+      return;
+    }
+
+    setIsSendingReset(true);
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("send-password-reset", {
+        body: { email },
+      });
+
+      if (fnError) throw fnError;
+      if (data && (data as { error?: string }).error) {
+        throw new Error((data as { error?: string }).error);
+      }
+
+      toast.success("E-mail de redefinição enviado com sucesso");
+      setResetUser(null);
+    } catch (err) {
+      console.error("[Usuarios] Falha ao enviar redefinição de senha:", err);
+      const message = err instanceof Error ? err.message : "Erro desconhecido";
+      toast.error(`Não foi possível enviar o e-mail de redefinição. ${message}`);
+    } finally {
+      setIsSendingReset(false);
+    }
+  };
+
+
   const handleEditUser = (user: ClinicUser) => {
     setEditingUser(user);
     setEditForm({ full_name: user.full_name, email: user.email || "" });
