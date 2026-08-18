@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { withTimeout } from "@/lib/asyncTimeout";
 import { logAuthDiagnostic } from "@/lib/authDiagnostics";
 import { useActiveClinicScope } from "@/hooks/useActiveClinicScope";
+import { useClinicFeatures } from "@/hooks/useClinicFeatures";
 
 export interface ClinicUser {
   id: string;
@@ -41,7 +42,10 @@ interface ClinicUsersBackendResponse {
   users: ClinicUsersBackendUser[];
 }
 
-const MAX_USERS_PER_CLINIC = 3;
+// Não há limite hardcoded: o limite de usuários ativos vem do plano da
+// clínica (view clinic_effective_features → max_professionals). `null`
+// significa ilimitado (ex.: plano Clínica).
+
 
 const ROLE_PRIORITY: Record<ClinicUser["role"], number> = {
   owner: 4, // Owner has highest priority and full bypass
@@ -54,6 +58,10 @@ const ROLE_PRIORITY: Record<ClinicUser["role"], number> = {
 const isProtectedOwner = (user: ClinicUser) => user.role === "owner";
 
 export function useClinicUsers() {
+  // Limite real do plano da clínica (fonte única: clinic_effective_features).
+  const { limits: planLimits, loading: planLoading } = useClinicFeatures();
+  const maxUsers = planLimits.max_professionals; // null = ilimitado
+
   const [users, setUsers] = useState<ClinicUser[]>([]);
   const [currentUser, setCurrentUser] = useState<ClinicUser | null>(null);
   const [clinicId, setClinicId] = useState<string | null>(null);
@@ -257,7 +265,10 @@ export function useClinicUsers() {
   }, [fetchUsers]);
 
   const activeUsersCount = users.filter(u => u.is_active).length;
-  const canCreateUser = activeUsersCount < MAX_USERS_PER_CLINIC;
+  const canCreateUser =
+    planLoading || maxUsers === null || maxUsers === undefined
+      ? true
+      : activeUsersCount < maxUsers;
   // Only OWNER can manage users (not admin)
   const isOwner = currentUser?.role === "owner";
   const isAdmin = !!currentUser?.role && (ROLE_PRIORITY[currentUser.role] >= ROLE_PRIORITY.admin);
@@ -313,8 +324,8 @@ export function useClinicUsers() {
     const newStatus = !user.is_active;
 
     // Check limit when activating
-    if (newStatus && activeUsersCount >= MAX_USERS_PER_CLINIC) {
-      toast.error(`Limite de ${MAX_USERS_PER_CLINIC} usuários ativos atingido`);
+    if (newStatus && maxUsers != null && activeUsersCount >= maxUsers) {
+      toast.error(`Limite de ${maxUsers} usuários ativos atingido`);
       return false;
     }
 
@@ -342,7 +353,7 @@ export function useClinicUsers() {
       toast.error("Erro ao alterar status do usuário");
       return false;
     }
-  }, [canManageUsers, users, activeUsersCount, fetchUsers, logAuditAction]);
+  }, [canManageUsers, users, activeUsersCount, maxUsers, fetchUsers, logAuditAction]);
 
   const updateUserRole = useCallback(async (userId: string, newRole: ClinicUser["role"]) => {
     // Only OWNER can change roles
@@ -408,7 +419,7 @@ export function useClinicUsers() {
     error,
     refetch: fetchUsers,
     activeUsersCount,
-    maxUsers: MAX_USERS_PER_CLINIC,
+    maxUsers,
     canCreateUser,
     isAdmin,
     isOwner,

@@ -252,7 +252,7 @@ export const handler = async (req: Request): Promise<Response> => {
       invitationId,
     }: InviteRequest = await req.json();
 
-    // Check active users limit (max 3) only for brand-new invitations.
+    // Check active users limit against the clinic's real plan limit.
     const { data: activeProfiles, error: countError } = await supabaseAdmin
       .from("profiles")
       .select("id", { count: "exact" })
@@ -282,14 +282,27 @@ export const handler = async (req: Request): Promise<Response> => {
         );
       }
 
+      // Limite real do plano da clínica (null = ilimitado).
+      const { data: effective } = await supabaseAdmin
+        .from("clinic_effective_features")
+        .select("max_professionals, plan_name")
+        .eq("clinic_id", profile.clinic_id)
+        .maybeSingle();
+
+      const maxUsers: number | null = effective?.max_professionals ?? null;
       const totalActive = (activeProfiles?.length || 0) + (pendingInvites?.length || 0);
-      if (totalActive >= 3) {
+
+      if (maxUsers !== null && totalActive >= maxUsers) {
         return new Response(
-          JSON.stringify({ success: false, error: "Limite de 3 usuários ativos atingido neste plano" }),
+          JSON.stringify({
+            success: false,
+            error: `Limite de ${maxUsers} usuários ativos atingido no plano ${effective?.plan_name ?? "atual"}`,
+          }),
           { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
     }
+
 
     if (!email || !fullName || !role) {
       return new Response(
