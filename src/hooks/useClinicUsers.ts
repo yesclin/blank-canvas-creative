@@ -324,8 +324,8 @@ export function useClinicUsers() {
     const newStatus = !user.is_active;
 
     // Check limit when activating
-    if (newStatus && activeUsersCount >= MAX_USERS_PER_CLINIC) {
-      toast.error(`Limite de ${MAX_USERS_PER_CLINIC} usuários ativos atingido`);
+    if (newStatus && maxUsers != null && activeUsersCount >= maxUsers) {
+      toast.error(`Limite de ${maxUsers} usuários ativos atingido`);
       return false;
     }
 
@@ -419,7 +419,7 @@ export function useClinicUsers() {
     error,
     refetch: fetchUsers,
     activeUsersCount,
-    maxUsers: MAX_USERS_PER_CLINIC,
+    maxUsers,
     canCreateUser,
     isAdmin,
     isOwner,
