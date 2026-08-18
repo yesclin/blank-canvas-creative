@@ -33,7 +33,7 @@ export default function SuperAdminSubscriptions() {
     setLoading(true);
     const [{ data: subs }, { data: ps }] = await Promise.all([
       supabase.from('clinic_subscriptions').select('*, clinics(name), subscription_plans(name, slug)').order('created_at', { ascending: false }),
-      supabase.from('subscription_plans').select('id, name').order('sort_order'),
+      supabase.from('subscription_plans').select('id, name').eq('is_active', true).order('sort_order'),
     ]);
     setRows(subs ?? []);
     setPlans(ps ?? []);
