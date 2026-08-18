@@ -252,7 +252,7 @@ export const handler = async (req: Request): Promise<Response> => {
       invitationId,
     }: InviteRequest = await req.json();
 
-    // Check active users limit (max 3) only for brand-new invitations.
+    // Check active users limit against the clinic's real plan limit.
     const { data: activeProfiles, error: countError } = await supabaseAdmin
       .from("profiles")
       .select("id", { count: "exact" })
