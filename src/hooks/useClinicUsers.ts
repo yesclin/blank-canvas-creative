@@ -353,7 +353,7 @@ export function useClinicUsers() {
       toast.error("Erro ao alterar status do usuário");
       return false;
     }
-  }, [canManageUsers, users, activeUsersCount, fetchUsers, logAuditAction]);
+  }, [canManageUsers, users, activeUsersCount, maxUsers, fetchUsers, logAuditAction]);
 
   const updateUserRole = useCallback(async (userId: string, newRole: ClinicUser["role"]) => {
     // Only OWNER can change roles

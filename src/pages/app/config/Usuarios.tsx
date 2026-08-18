@@ -460,7 +460,7 @@ export default function ConfigUsuarios() {
                         <DialogHeader>
                           <DialogTitle>Novo Usuário</DialogTitle>
                           <DialogDescription>
-                            Cadastre um novo usuário para a clínica. Limite: {maxUsers} usuários ativos.
+                            Cadastre um novo usuário para a clínica. {maxUsers == null ? 'Seu plano não limita a quantidade de usuários ativos.' : `Limite: ${maxUsers} usuários ativos.`}
                           </DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
@@ -771,7 +771,7 @@ export default function ConfigUsuarios() {
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="gap-1">
                     <Users className="h-3 w-3" />
-                    {activeUsersCount}/{maxUsers} ativos
+                    {activeUsersCount}/{maxUsers == null ? '∞' : maxUsers} ativos
                   </Badge>
                 </div>
               </div>
