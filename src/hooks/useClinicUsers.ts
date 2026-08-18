@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { withTimeout } from "@/lib/asyncTimeout";
 import { logAuthDiagnostic } from "@/lib/authDiagnostics";
 import { useActiveClinicScope } from "@/hooks/useActiveClinicScope";
+import { useClinicFeatures } from "@/hooks/useClinicFeatures";
 
 export interface ClinicUser {
   id: string;
@@ -41,7 +42,10 @@ interface ClinicUsersBackendResponse {
   users: ClinicUsersBackendUser[];
 }
 
-const MAX_USERS_PER_CLINIC = 3;
+// Não há limite hardcoded: o limite de usuários ativos vem do plano da
+// clínica (view clinic_effective_features → max_professionals). `null`
+// significa ilimitado (ex.: plano Clínica).
+
 
 const ROLE_PRIORITY: Record<ClinicUser["role"], number> = {
   owner: 4, // Owner has highest priority and full bypass
