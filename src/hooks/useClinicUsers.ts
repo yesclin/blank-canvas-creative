@@ -58,6 +58,10 @@ const ROLE_PRIORITY: Record<ClinicUser["role"], number> = {
 const isProtectedOwner = (user: ClinicUser) => user.role === "owner";
 
 export function useClinicUsers() {
+  // Limite real do plano da clínica (fonte única: clinic_effective_features).
+  const { limits: planLimits, loading: planLoading } = useClinicFeatures();
+  const maxUsers = planLimits.max_professionals; // null = ilimitado
+
   const [users, setUsers] = useState<ClinicUser[]>([]);
   const [currentUser, setCurrentUser] = useState<ClinicUser | null>(null);
   const [clinicId, setClinicId] = useState<string | null>(null);
