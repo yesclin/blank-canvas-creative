@@ -265,7 +265,10 @@ export function useClinicUsers() {
   }, [fetchUsers]);
 
   const activeUsersCount = users.filter(u => u.is_active).length;
-  const canCreateUser = activeUsersCount < MAX_USERS_PER_CLINIC;
+  const canCreateUser =
+    planLoading || maxUsers === null || maxUsers === undefined
+      ? true
+      : activeUsersCount < maxUsers;
   // Only OWNER can manage users (not admin)
   const isOwner = currentUser?.role === "owner";
   const isAdmin = !!currentUser?.role && (ROLE_PRIORITY[currentUser.role] >= ROLE_PRIORITY.admin);
