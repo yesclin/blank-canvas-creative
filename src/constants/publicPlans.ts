@@ -42,6 +42,8 @@ export interface PublicPlan {
     audit: boolean;
     prioritySupport: boolean;
   };
+  /** Resumo de progressão do plano (1 linha). */
+  summary: string;
   /** Bullets curtos, orientados a benefício (derivados dos dados acima). */
   highlights: string[];
   inheritsFrom?: string;
@@ -56,6 +58,7 @@ export const PUBLIC_PLANS: readonly PublicPlan[] = [
       "Para profissionais autônomos e consultórios que querem organizar toda a rotina clínica.",
     monthly: 97,
     yearly: 970,
+    summary: "A base do atendimento clínico: agenda, pacientes, prontuário e financeiro.",
     limits: {
       professionals: 2,
       patients: 500,
@@ -97,6 +100,7 @@ export const PUBLIC_PLANS: readonly PublicPlan[] = [
     yearly: 2970,
     badge: "popular",
     inheritsFrom: "Essencial",
+    summary: "Tudo do Essencial + mais gestão, convênios e relacionamento.",
     limits: {
       professionals: 5,
       patients: 1500,
@@ -137,6 +141,8 @@ export const PUBLIC_PLANS: readonly PublicPlan[] = [
     yearly: 5970,
     badge: "complete",
     inheritsFrom: "Profissional",
+    summary:
+      "Tudo do Profissional + mais controle, comercial e escala para operar a clínica por completo.",
     limits: {
       professionals: 10,
       patients: null,
