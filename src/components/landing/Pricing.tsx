@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Check, Crown, Minus, Sparkles, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -264,8 +264,8 @@ export default function Pricing() {
                   </thead>
                   <tbody>
                     {PLAN_COMPARISON.map((group) => (
-                      <>
-                        <tr key={group.group} className="bg-muted/30">
+                      <Fragment key={group.group}>
+                        <tr className="bg-muted/30">
                           <th
                             scope="colgroup"
                             colSpan={4}
@@ -297,7 +297,7 @@ export default function Pricing() {
                             ))}
                           </tr>
                         ))}
-                      </>
+                      </Fragment>
                     ))}
                   </tbody>
                 </table>
