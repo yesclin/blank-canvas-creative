@@ -1,5 +1,5 @@
 import { Fragment, useState } from "react";
-import { Check, Crown, Minus, Sparkles, Stethoscope } from "lucide-react";
+import { Check, Crown, Sparkles, Stethoscope, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -37,17 +37,16 @@ function ComparisonCell({ value }: { value: ComparisonValue }) {
   if (value === false) {
     return (
       <>
-        <Minus className="mx-auto h-4 w-4 text-muted-foreground/50" aria-hidden />
+        <X className="mx-auto h-4 w-4 text-muted-foreground/50" aria-hidden />
         <span className="sr-only">Não incluído</span>
       </>
     );
   }
-  return <span className="text-foreground">{value}</span>;
+  return <span className="font-medium text-foreground">{value}</span>;
 }
 
 export default function Pricing() {
   const [cycle, setCycle] = useState<Cycle>("monthly");
-  const [showCompare, setShowCompare] = useState(false);
 
   return (
     <section id="pricing" className="border-t border-border bg-background py-16 md:py-24">
@@ -161,6 +160,10 @@ export default function Pricing() {
                   <a href="/criar-conta">Começar teste grátis de 7 dias</a>
                 </Button>
 
+                <p className="mb-4 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs leading-relaxed text-foreground">
+                  {plan.summary}
+                </p>
+
                 {plan.inheritsFrom && (
                   <p className="mb-3 text-sm font-semibold text-foreground">
                     Tudo do {plan.inheritsFrom}, mais:
@@ -224,84 +227,110 @@ export default function Pricing() {
         </div>
 
         {/* Comparativo */}
-        <div className="mt-10">
-          <div className="flex justify-center">
-            <Button variant="outline" onClick={() => setShowCompare((v) => !v)}>
-              {showCompare ? "Ocultar comparativo" : "Compare os planos"}
-            </Button>
+        <div className="mt-14">
+          <div className="mx-auto max-w-2xl text-center">
+            <h3 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">
+              Compare os planos
+            </h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Recursos e limites exatamente como o sistema libera em cada plano.
+            </p>
           </div>
 
-          {showCompare && (
-            <div className="mt-6 overflow-hidden rounded-xl border border-border bg-card">
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[640px] border-collapse text-sm">
-                  <caption className="sr-only">
-                    Comparativo de recursos entre os planos Essencial, Profissional e Clínica
-                  </caption>
-                  <thead className="bg-muted/50">
-                    <tr>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              <Check className="h-4 w-4 text-primary" aria-hidden /> Disponível
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <X className="h-4 w-4 text-muted-foreground/50" aria-hidden /> Não disponível
+            </span>
+            <span>Números indicam o limite real do plano</span>
+          </div>
+
+          <div className="mt-6 overflow-hidden rounded-xl border border-border bg-card">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[600px] border-collapse text-sm">
+                <caption className="sr-only">
+                  Comparativo de recursos entre os planos Essencial, Profissional e Clínica
+                </caption>
+                <thead className="sticky top-0 z-20 bg-muted/70 backdrop-blur">
+                  <tr>
+                    <th
+                      scope="col"
+                      className="sticky left-0 z-10 min-w-[190px] bg-muted/70 px-3 py-3 text-left font-semibold text-foreground md:px-4"
+                    >
+                      Recurso
+                    </th>
+                    {PUBLIC_PLANS.map((plan) => (
                       <th
+                        key={plan.slug}
                         scope="col"
-                        className="sticky left-0 z-10 bg-muted/50 px-4 py-3 text-left font-semibold text-foreground"
+                        className={cn(
+                          "px-2 py-3 text-center font-semibold text-foreground md:px-4",
+                          plan.badge === "popular" && "bg-primary/10 text-primary",
+                          plan.badge === "complete" && "bg-primary/5",
+                        )}
                       >
-                        Recurso
+                        <span className="block">{plan.name}</span>
+                        {plan.badge && (
+                          <span className="mt-0.5 block text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                            {plan.badge === "popular" ? "Mais escolhido" : "Mais completo"}
+                          </span>
+                        )}
                       </th>
-                      {PUBLIC_PLANS.map((plan) => (
-                        <th
-                          key={plan.slug}
-                          scope="col"
-                          className={cn(
-                            "px-4 py-3 text-center font-semibold text-foreground",
-                            plan.badge === "popular" && "bg-primary/5 text-primary",
-                          )}
-                        >
-                          {plan.name}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {PLAN_COMPARISON.map((group) => (
-                      <Fragment key={group.group}>
-                        <tr className="bg-muted/30">
-                          <th
-                            scope="colgroup"
-                            colSpan={4}
-                            className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wide text-muted-foreground"
-                          >
-                            {group.group}
-                          </th>
-                        </tr>
-                        {group.rows.map((row) => (
-                          <tr key={`${group.group}-${row.label}`} className="border-t border-border">
-                            <th
-                              scope="row"
-                              className="sticky left-0 z-10 bg-card px-4 py-3 text-left font-normal text-foreground"
-                            >
-                              {row.label}
-                            </th>
-                            {PUBLIC_PLANS.map((plan) => (
-                              <td
-                                key={plan.slug}
-                                className={cn(
-                                  "px-4 py-3 text-center",
-                                  plan.badge === "popular" && "bg-primary/5",
-                                )}
-                              >
-                                <ComparisonCell
-                                  value={row.values[plan.slug as PublicPlanSlug]}
-                                />
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </Fragment>
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                  </tr>
+                </thead>
+                <tbody>
+                  {PLAN_COMPARISON.map((group) => (
+                    <Fragment key={group.group}>
+                      <tr className="bg-muted/40">
+                        <th
+                          scope="colgroup"
+                          colSpan={4}
+                          className="px-3 py-2 text-left text-xs font-bold uppercase tracking-wide text-muted-foreground md:px-4"
+                        >
+                          {group.group}
+                        </th>
+                      </tr>
+                      {group.rows.map((row) => (
+                        <tr key={`${group.group}-${row.label}`} className="border-t border-border">
+                          <th
+                            scope="row"
+                            className="sticky left-0 z-10 bg-card px-3 py-3 text-left font-normal text-foreground md:px-4"
+                          >
+                            <span className="block leading-snug">{row.label}</span>
+                            {row.note && (
+                              <span className="mt-0.5 block text-xs text-muted-foreground">
+                                {row.note}
+                              </span>
+                            )}
+                          </th>
+                          {PUBLIC_PLANS.map((plan) => (
+                            <td
+                              key={plan.slug}
+                              className={cn(
+                                "px-2 py-3 text-center md:px-4",
+                                plan.badge === "popular" && "bg-primary/5",
+                              )}
+                            >
+                              <ComparisonCell value={row.values[plan.slug as PublicPlanSlug]} />
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </Fragment>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
+          </div>
+
+          <div className="mt-6 flex justify-center">
+            <Button asChild size="lg">
+              <a href="/criar-conta">Começar teste grátis de 7 dias</a>
+            </Button>
+          </div>
         </div>
 
         <p className="mx-auto mt-8 max-w-2xl text-center text-xs leading-relaxed text-muted-foreground">
