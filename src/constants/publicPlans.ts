@@ -42,6 +42,8 @@ export interface PublicPlan {
     audit: boolean;
     prioritySupport: boolean;
   };
+  /** Resumo de progressão do plano (1 linha). */
+  summary: string;
   /** Bullets curtos, orientados a benefício (derivados dos dados acima). */
   highlights: string[];
   inheritsFrom?: string;
@@ -56,6 +58,7 @@ export const PUBLIC_PLANS: readonly PublicPlan[] = [
       "Para profissionais autônomos e consultórios que querem organizar toda a rotina clínica.",
     monthly: 97,
     yearly: 970,
+    summary: "A base do atendimento clínico: agenda, pacientes, prontuário e financeiro.",
     limits: {
       professionals: 2,
       patients: 500,
@@ -97,6 +100,7 @@ export const PUBLIC_PLANS: readonly PublicPlan[] = [
     yearly: 2970,
     badge: "popular",
     inheritsFrom: "Essencial",
+    summary: "Tudo do Essencial + mais gestão, convênios e relacionamento.",
     limits: {
       professionals: 5,
       patients: 1500,
@@ -137,6 +141,8 @@ export const PUBLIC_PLANS: readonly PublicPlan[] = [
     yearly: 5970,
     badge: "complete",
     inheritsFrom: "Profissional",
+    summary:
+      "Tudo do Profissional + mais controle, comercial e escala para operar a clínica por completo.",
     limits: {
       professionals: 10,
       patients: null,
@@ -188,6 +194,7 @@ export type ComparisonValue = boolean | string;
 
 export interface ComparisonRow {
   label: string;
+  note?: string;
   values: Record<PublicPlanSlug, ComparisonValue>;
 }
 
@@ -198,23 +205,29 @@ export interface ComparisonGroup {
 
 export const PLAN_COMPARISON: readonly ComparisonGroup[] = [
   {
-    group: "Capacidade",
+    group: "Limites do plano",
     rows: [
       {
         label: "Profissionais",
+        note: "Cada profissional é um usuário com agenda própria",
         values: { essencial: "Até 2", profissional: "Até 5", clinica: "Até 10" },
       },
       {
-        label: "Pacientes",
-        values: { essencial: "500", profissional: "1.500", clinica: "Ilimitado" },
+        label: "Usuários da clínica",
+        note: "Recepção, financeiro e administrativo entram no mesmo limite",
+        values: { essencial: "Até 2", profissional: "Até 5", clinica: "Até 10" },
+      },
+      {
+        label: "Pacientes cadastrados",
+        values: { essencial: "Até 500", profissional: "Até 1.500", clinica: "Ilimitado" },
+      },
+      {
+        label: "Agendamentos por mês",
+        values: { essencial: "Até 300", profissional: "Até 1.500", clinica: "Ilimitado" },
       },
       {
         label: "Especialidades ativas",
         values: { essencial: "2", profissional: "4", clinica: "4" },
-      },
-      {
-        label: "Agendamentos por mês",
-        values: { essencial: "300", profissional: "1.500", clinica: "Ilimitado" },
       },
       {
         label: "Instâncias de WhatsApp",
@@ -223,41 +236,56 @@ export const PLAN_COMPARISON: readonly ComparisonGroup[] = [
     ],
   },
   {
-    group: "Clínico",
+    group: "Base clínica",
     rows: [
-      { label: "Agenda completa", values: { essencial: true, profissional: true, clinica: true } },
-      { label: "Prontuário eletrônico", values: { essencial: true, profissional: true, clinica: true } },
-      { label: "Atendimento clínico", values: { essencial: true, profissional: true, clinica: true } },
-      { label: "Documentos e assinatura eletrônica", values: { essencial: true, profissional: true, clinica: true } },
-      { label: "Teleconsulta", values: { essencial: true, profissional: true, clinica: true } },
-      { label: "Odontograma e mapa facial", values: { essencial: true, profissional: true, clinica: true } },
+      { label: "Agenda completa (dia, semana, mês e bloqueios)", values: { essencial: true, profissional: true, clinica: true } },
+      { label: "Cadastro de pacientes e pré-cadastro online", values: { essencial: true, profissional: true, clinica: true } },
+      { label: "Prontuário eletrônico por especialidade", values: { essencial: true, profissional: true, clinica: true } },
+      { label: "Atendimento clínico com sessão cronometrada", values: { essencial: true, profissional: true, clinica: true } },
+      { label: "Modelos de prontuário e anamnese", values: { essencial: true, profissional: true, clinica: true } },
+      { label: "Documentos clínicos (atestados, receitas, termos)", values: { essencial: true, profissional: true, clinica: true } },
+      { label: "Assinatura eletrônica com validação pública", values: { essencial: true, profissional: true, clinica: true } },
+      { label: "Odontograma", values: { essencial: true, profissional: true, clinica: true } },
+      { label: "Mapa facial (Estética)", values: { essencial: true, profissional: true, clinica: true } },
     ],
   },
   {
-    group: "Gestão",
+    group: "Atendimento e operação",
     rows: [
-      { label: "Financeiro e caixa", values: { essencial: true, profissional: true, clinica: true } },
-      { label: "Estoque e materiais", values: { essencial: true, profissional: true, clinica: true } },
-      { label: "Pacotes, sessões e comissões", values: { essencial: true, profissional: true, clinica: true } },
-      { label: "Permissões por usuário", values: { essencial: true, profissional: true, clinica: true } },
-      { label: "Convênios e guias TISS", values: { essencial: false, profissional: true, clinica: true } },
-      { label: "Relatórios avançados", values: { essencial: false, profissional: false, clinica: true } },
-      { label: "Auditoria completa", values: { essencial: false, profissional: false, clinica: true } },
+      { label: "Teleconsulta integrada", values: { essencial: true, profissional: true, clinica: true } },
+      { label: "Procedimentos e protocolos configuráveis", values: { essencial: true, profissional: true, clinica: true } },
+      { label: "Pacotes e controle de sessões", values: { essencial: true, profissional: true, clinica: true } },
+      { label: "Estoque, materiais e baixa automática", values: { essencial: true, profissional: true, clinica: true } },
+      { label: "Financeiro, caixa e contas a receber/pagar", values: { essencial: true, profissional: true, clinica: true } },
+      { label: "Comissões por profissional", values: { essencial: true, profissional: true, clinica: true } },
+      { label: "Relatórios operacionais", values: { essencial: true, profissional: true, clinica: true } },
+      { label: "Convênios, guias TISS e repasses", values: { essencial: false, profissional: true, clinica: true } },
+      { label: "Relatórios gerenciais avançados e DRE", values: { essencial: false, profissional: false, clinica: true } },
+      { label: "Auditoria completa de acessos e alterações", values: { essencial: false, profissional: false, clinica: true } },
     ],
   },
   {
-    group: "Crescimento",
+    group: "Comunicação e comercial",
     rows: [
-      { label: "WhatsApp integrado", values: { essencial: true, profissional: true, clinica: true } },
-      { label: "Marketing e campanhas", values: { essencial: false, profissional: true, clinica: true } },
-      { label: "CRM Comercial (leads, orçamentos)", values: { essencial: false, profissional: false, clinica: true } },
-      { label: "Automações", values: { essencial: false, profissional: false, clinica: true } },
+      { label: "WhatsApp integrado (confirmações e lembretes)", values: { essencial: true, profissional: true, clinica: true } },
+      { label: "Marketing e campanhas de relacionamento", values: { essencial: false, profissional: true, clinica: true } },
+      { label: "CRM comercial (leads, oportunidades, orçamentos)", values: { essencial: false, profissional: false, clinica: true } },
+      { label: "Automações de mensagens e follow-ups", values: { essencial: false, profissional: false, clinica: true } },
+    ],
+  },
+  {
+    group: "Gestão e controle",
+    rows: [
+      { label: "Múltiplos usuários na mesma clínica", values: { essencial: true, profissional: true, clinica: true } },
+      { label: "Permissões por usuário e por perfil", values: { essencial: true, profissional: true, clinica: true } },
+      { label: "Controle administrativo e configurações da clínica", values: { essencial: true, profissional: true, clinica: true } },
+      { label: "Segurança e conformidade LGPD", values: { essencial: true, profissional: true, clinica: true } },
     ],
   },
   {
     group: "Suporte",
     rows: [
-      { label: "Suporte padrão", values: { essencial: true, profissional: true, clinica: true } },
+      { label: "Suporte por e-mail e WhatsApp", values: { essencial: true, profissional: true, clinica: true } },
       { label: "Suporte prioritário", values: { essencial: false, profissional: false, clinica: true } },
     ],
   },
