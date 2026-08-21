@@ -117,12 +117,10 @@ export default function Pricing() {
                 )}
 
                 <div className="mb-5">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-xl font-bold text-foreground">{plan.name}</h3>
-                    <span className="text-xs font-medium uppercase tracking-wide text-primary">
-                      {plan.tagline}
-                    </span>
-                  </div>
+                  <h3 className="text-xl font-bold text-foreground">{plan.name}</h3>
+                  <span className="mt-1 block text-xs font-semibold uppercase tracking-wide text-primary">
+                    {plan.tagline}
+                  </span>
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                     {plan.positioning}
                   </p>
