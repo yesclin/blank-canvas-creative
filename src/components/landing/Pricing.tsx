@@ -253,7 +253,7 @@ export default function Pricing() {
                 <caption className="sr-only">
                   Comparativo de recursos entre os planos Essencial, Profissional e Clínica
                 </caption>
-                <thead className="sticky top-0 z-20 bg-muted/70 backdrop-blur">
+                <thead className="bg-muted/70">
                   <tr>
                     <th
                       scope="col"
