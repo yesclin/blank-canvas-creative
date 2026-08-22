@@ -85,6 +85,16 @@ type Step = "review" | "sign" | "selfie" | "confirm";
 const CANVAS_WIDTH = 520;
 const CANVAS_HEIGHT = 180;
 
+/** Diagnóstico do contexto só é exibido quando o suporte habilita a flag. */
+function isSignatureDebugEnabled(): boolean {
+  try {
+    return localStorage.getItem("lovable_debug_errors") === "1";
+  } catch {
+    return false;
+  }
+}
+
+
 const STEPS: { key: Step; label: string }[] = [
   { key: "review", label: "Revisão" },
   { key: "sign", label: "Assinatura" },
