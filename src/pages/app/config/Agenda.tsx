@@ -29,6 +29,7 @@ export default function ConfigAgenda() {
           <TabsTrigger value="clinic">Horário da Clínica</TabsTrigger>
           <TabsTrigger value="professionals">Por Profissional</TabsTrigger>
           <TabsTrigger value="exceptions">Exceções</TabsTrigger>
+          <TabsTrigger value="rooms">Salas</TabsTrigger>
           <TabsTrigger value="types">Tipos & Status</TabsTrigger>
           <TabsTrigger value="rules">Regras</TabsTrigger>
           <TabsTrigger value="alerts">Alertas de Ociosidade</TabsTrigger>
