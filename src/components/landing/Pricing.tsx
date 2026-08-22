@@ -251,7 +251,7 @@ export default function Pricing() {
             <div className="overflow-x-auto">
               <table className="w-full min-w-[600px] border-collapse text-sm">
                 <caption className="sr-only">
-                  Comparativo de recursos entre os planos Essencial, Profissional e Clínica
+                  Comparativo de recursos entre os planos Essencial, Pro e Premium
                 </caption>
                 <thead className="bg-muted/70">
                   <tr>

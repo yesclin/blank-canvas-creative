@@ -151,11 +151,11 @@ const faqs: { q: string; aText: string; a: ReactNode }[] = [
   {
     q: "Como funciona o teste grátis de 7 dias?",
     aText:
-      "Ao criar sua conta, você libera automaticamente 7 dias de acesso ao plano Profissional, sem precisar informar cartão de crédito. Pode testar todos os recursos com seus dados reais. Dúvidas no caminho? A Central de Ajuda tem tutoriais rápidos.",
+      "Ao criar sua conta, você libera automaticamente 7 dias de acesso ao plano Pro, sem precisar informar cartão de crédito. Pode testar todos os recursos com seus dados reais. Dúvidas no caminho? A Central de Ajuda tem tutoriais rápidos.",
     a: (
       <>
         Ao criar sua conta, você libera automaticamente 7 dias de acesso ao
-        plano Profissional, sem precisar informar cartão de crédito. Pode
+        plano Pro, sem precisar informar cartão de crédito. Pode
         testar todos os recursos com seus dados reais. Dúvidas no caminho? A{" "}
         {inlineLink("/ajuda", "Central de Ajuda")} tem tutoriais rápidos.
       </>
@@ -178,13 +178,13 @@ const faqs: { q: string; aText: string; a: ReactNode }[] = [
   {
     q: "Tem suporte humano de verdade?",
     aText:
-      "Sim. Suporte humano por WhatsApp e e-mail está incluído em todos os planos, com tempo de resposta rápido em horário comercial. O plano Clínica conta com suporte prioritário e onboarding guiado.",
+      "Sim. Suporte humano por WhatsApp e e-mail está incluído em todos os planos, com tempo de resposta rápido em horário comercial. O plano Premium conta com suporte prioritário e onboarding guiado.",
     a: (
       <>
         Sim. Suporte humano por WhatsApp e e-mail está incluído em todos os
         planos, com tempo de resposta rápido em horário comercial. Veja os
         canais em {inlineLink("/contato", "contato")} ou use a{" "}
-        {inlineLink("/ajuda", "Central de Ajuda")}. O plano Clínica conta
+        {inlineLink("/ajuda", "Central de Ajuda")}. O plano Premium conta
         com suporte prioritário e onboarding guiado.
       </>
     ),
