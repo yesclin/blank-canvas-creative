@@ -521,9 +521,11 @@ export function UnifiedSignatureWizard({
           </Alert>
         )}
 
-        {/* Context diagnostics — DEV only. Never exposed in production
-            because it contains raw IDs and snapshot payload. */}
-        {import.meta.env.DEV && (
+        {/* Context diagnostics — nunca visível no sistema normal/produção.
+            Só aparece quando o suporte habilita a flag de debug explicitamente
+            (localStorage.lovable_debug_errors = "1"), pois expõe IDs e snapshot. */}
+        {isSignatureDebugEnabled() && (
+
         <details
           open={hasMissingContext}
           className="rounded-md border bg-muted/30 text-xs"
