@@ -10,7 +10,7 @@
  * Super Admin (banco) e refletida aqui. Nunca inventar recurso ou limite.
  *
  * Sincronizado em: 2026-08-21 com `subscription_plans` (slugs:
- * essencial, profissional, clinica).
+ * essencial, profissional, clinica → exibidos como Essencial, Pro, Premium).
  */
 
 export type PublicPlanSlug = "essencial" | "profissional" | "clinica";
@@ -92,7 +92,7 @@ export const PUBLIC_PLANS: readonly PublicPlan[] = [
   },
   {
     slug: "profissional",
-    name: "Profissional",
+    name: "Pro",
     tagline: "Gerenciar e controlar",
     positioning:
       "Para clínicas em crescimento que precisam de mais organização, controle e gestão.",
@@ -133,16 +133,16 @@ export const PUBLIC_PLANS: readonly PublicPlan[] = [
   },
   {
     slug: "clinica",
-    name: "Clínica",
+    name: "Premium",
     tagline: "Gerenciar, crescer e operar por completo",
     positioning:
       "Para clínicas que querem uma operação completa, integrada e preparada para crescer.",
     monthly: 597,
     yearly: 5970,
     badge: "complete",
-    inheritsFrom: "Profissional",
+    inheritsFrom: "Pro",
     summary:
-      "Tudo do Profissional + mais controle, comercial e escala para operar a clínica por completo.",
+      "Tudo do Pro + mais controle, comercial e escala para operar a clínica por completo.",
     limits: {
       professionals: 10,
       patients: null,
