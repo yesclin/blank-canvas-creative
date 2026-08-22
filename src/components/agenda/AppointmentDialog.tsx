@@ -43,6 +43,7 @@ import { useAppointmentTypes } from "@/hooks/useAppointmentTypes";
 
 import { useSlotSuggestions } from "@/hooks/useSlotSuggestions";
 import { useConflictDetection } from "@/hooks/useConflictDetection";
+import { useClinicRooms, useRoomAuthorizations, buildRoomAuthorizationMap } from "@/hooks/useClinicRooms";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useProfessionalSpecialties } from "@/hooks/useProfessionalSpecialties";
 import { SlotSuggestions } from "./SlotSuggestions";
@@ -619,6 +620,25 @@ export function AppointmentDialog({
   // Conflict detection
   const activeSpecialtyIds = useMemo(() => availableSpecialties.map(s => s.id), [availableSpecialties]);
   
+  // Rooms: apenas salas ativas para novos agendamentos, preservando a sala
+  // historicamente usada em agendamentos existentes.
+  const { data: allRooms = [] } = useClinicRooms(true);
+  const { data: roomAuthRows = [] } = useRoomAuthorizations();
+  const roomAuthorizations = useMemo(() => buildRoomAuthorizationMap(roomAuthRows), [roomAuthRows]);
+  const activeRoomIds = useMemo(() => allRooms.filter(r => r.is_active).map(r => r.id), [allRooms]);
+  const watchRoomId = form.watch("room_id");
+  const selectableRooms = useMemo(() => {
+    const base = allRooms.length > 0 ? allRooms : rooms;
+    return base.filter((room) => {
+      if (!room.is_active && room.id !== appointment?.room_id) return false;
+      const authorized = roomAuthorizations.get(room.id);
+      if (authorized && authorized.length > 0 && watchProfessionalId) {
+        return authorized.includes(watchProfessionalId) || room.id === appointment?.room_id;
+      }
+      return true;
+    });
+  }, [allRooms, rooms, roomAuthorizations, watchProfessionalId, appointment?.room_id]);
+
   const conflictResult = useConflictDetection({
     professionalId: watchProfessionalId,
     scheduledDate: watchScheduledDate,
@@ -633,6 +653,9 @@ export function AppointmentDialog({
     selectedSpecialtyId: watchSpecialtyId,
     activeSpecialtyIds,
     scheduleBlocks,
+    roomId: watchRoomId,
+    activeRoomIds,
+    roomAuthorizations,
   });
 
   const handleSubmit = (data: AppointmentFormData) => {
@@ -958,11 +981,18 @@ export function AppointmentDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {rooms.map((room) => (
-                          <SelectItem key={room.id} value={room.id}>
-                            {room.name}
-                          </SelectItem>
-                        ))}
+                        {selectableRooms.length === 0 ? (
+                          <div className="px-2 py-3 text-sm text-muted-foreground">
+                            Nenhuma sala disponível
+                          </div>
+                        ) : (
+                          selectableRooms.map((room) => (
+                            <SelectItem key={room.id} value={room.id}>
+                              {room.name}
+                              {!room.is_active ? " (inativa)" : ""}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
