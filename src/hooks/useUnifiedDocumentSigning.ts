@@ -443,10 +443,16 @@ export function useUnifiedDocumentSigning() {
         const userAgent = navigator.userAgent;
         let ipAddress: string | null = null;
         try {
-          const r = await fetch("https://api.ipify.org?format=json");
+          // Timeout curto: a captura de IP é evidência opcional e nunca deve
+          // travar o fluxo de assinatura.
+          const ctrl = new AbortController();
+          const timer = setTimeout(() => ctrl.abort(), 3000);
+          const r = await fetch("https://api.ipify.org?format=json", { signal: ctrl.signal });
+          clearTimeout(timer);
           const j = await r.json();
           ipAddress = j?.ip || null;
         } catch { /* ignore */ }
+
 
         // Upload evidence (signature image used in this signing act)
         const evidenceDataUrl = method === "handwritten" ? handwrittenDataUrl! : savedSignatureDataUrl!;
