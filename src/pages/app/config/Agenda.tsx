@@ -49,6 +49,11 @@ export default function ConfigAgenda() {
           <ScheduleBlocksSection />
         </TabsContent>
 
+        <TabsContent value="rooms" className="space-y-4">
+          <RoomsSection />
+        </TabsContent>
+
+
         <TabsContent value="types" className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
             <AppointmentTypesCard />
