@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClinicScheduleSection } from "@/components/config/agenda/ClinicScheduleSection";
 import { ProfessionalScheduleSection } from "@/components/config/agenda/ProfessionalScheduleSection";
 import { ScheduleBlocksSection } from "@/components/config/agenda/ScheduleBlocksSection";
+import { RoomsSection } from "@/components/config/agenda/RoomsSection";
 import { AppointmentTypesCard } from "@/components/config/atendimento/AppointmentTypesCard";
 import { AppointmentStatusCard } from "@/components/config/atendimento/AppointmentStatusCard";
 import { AppointmentRulesCard } from "@/components/config/atendimento/AppointmentRulesCard";
