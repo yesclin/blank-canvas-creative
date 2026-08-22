@@ -173,6 +173,7 @@ export function UnifiedSignatureWizard({
       setShowPassword(false);
       setSetAsDefault(false);
       setHasInk(false);
+      setInkDataUrl(null);
       setSelfieDataUrl(null);
       setCameraError(null);
       setCameraReady(false);
