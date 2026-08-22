@@ -433,40 +433,56 @@ export function UnifiedSignatureWizard({
 
   // ─── Submit ────────────────────────────────────────────────
   const handleSubmit = async () => {
-    if (!context) return;
+    if (signing) return;
+    if (!context) {
+      toast.error("Contexto do documento indisponível. Reabra a assinatura.");
+      return;
+    }
     if (submitBlockers.length > 0) {
       toast.error("Não foi possível assinar", { description: submitBlockers.join(" • ") });
       return;
     }
-    if (signing) return;
 
-    let handwrittenDataUrl: string | undefined;
-    if (mode === "handwritten") {
-      const c = canvasRef.current;
-      if (!c) return;
-      handwrittenDataUrl = c.toDataURL("image/png");
+    try {
+      let handwrittenDataUrl: string | undefined;
+      if (mode === "handwritten") {
+        // O canvas já foi desmontado nesta etapa: usa o snapshot em estado e,
+        // como fallback, o canvas caso ainda esteja montado.
+        handwrittenDataUrl = inkDataUrl || canvasRef.current?.toDataURL("image/png") || undefined;
+        if (!handwrittenDataUrl) {
+          toast.error("Assinatura manuscrita não foi capturada", {
+            description: "Volte à etapa Assinatura e desenhe novamente.",
+          });
+          return;
+        }
 
-      if (setAsDefault) {
-        const blob = await new Promise<Blob | null>((resolve) =>
-          c.toBlob((b) => resolve(b), "image/png")
-        );
-        if (blob) await saveSignature(blob, { type: "drawn" });
+        if (setAsDefault) {
+          try {
+            const blob = dataUrlToBlob(handwrittenDataUrl);
+            if (blob) await saveSignature(blob, { type: "drawn" });
+          } catch (e) {
+            console.warn("[SIGN] falha ao salvar assinatura padrão:", e);
+          }
+        }
       }
-    }
 
-    const result = await signDocument({
-      context,
-      password,
-      method: mode === "saved" ? "saved_signature" : "handwritten",
-      handwrittenDataUrl,
-      savedSignatureDataUrl: mode === "saved" ? savedDataUrl || undefined : undefined,
-      selfieDataUrl,
-      geolocation,
-    });
+      const result = await signDocument({
+        context,
+        password,
+        method: mode === "saved" ? "saved_signature" : "handwritten",
+        handwrittenDataUrl,
+        savedSignatureDataUrl: mode === "saved" ? savedDataUrl || undefined : undefined,
+        selfieDataUrl,
+        geolocation,
+      });
 
-    if (result.success) {
-      onSigned?.(result);
-      onOpenChange(false);
+      if (result.success) {
+        onSigned?.(result);
+        onOpenChange(false);
+      }
+    } catch (err: any) {
+      console.error("[SIGN] erro inesperado no submit:", err);
+      toast.error(err?.message || "Erro inesperado ao assinar o documento.");
     }
   };
 
