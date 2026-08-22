@@ -391,12 +391,35 @@ export function useUnifiedDocumentSigning() {
           return { success: false };
         }
 
+        // Nome do assinante é obrigatório (NOT NULL em medical_record_signatures).
+        const signerName =
+          context.professional_name?.trim() ||
+          (userData?.user?.user_metadata?.full_name as string | undefined)?.trim() ||
+          userData?.user?.email ||
+          "Profissional";
+
+        // Evita assinatura duplicada do mesmo registro (não recria evidências
+        // nem deixa o documento em estado inconsistente).
+        const { data: existingSig } = await supabase
+          .from("medical_record_signatures")
+          .select("id")
+          .eq("record_id", context.document_id)
+          .eq("clinic_id", clinic.id)
+          .eq("is_revoked", false)
+          .limit(1)
+          .maybeSingle();
+        if (existingSig?.id) {
+          toast.error("Este documento já possui assinatura registrada.");
+          return { success: false, signatureId: existingSig.id };
+        }
+
         await logEvent(null, clinic.id, "signature_requested", {
           trace_id: traceId,
           document_id: context.document_id,
           document_type: context.document_type,
           signature_length: signatureLength,
         });
+
 
         // Re-auth
         const ok = await reAuthenticate(password);
@@ -420,10 +443,16 @@ export function useUnifiedDocumentSigning() {
         const userAgent = navigator.userAgent;
         let ipAddress: string | null = null;
         try {
-          const r = await fetch("https://api.ipify.org?format=json");
+          // Timeout curto: a captura de IP é evidência opcional e nunca deve
+          // travar o fluxo de assinatura.
+          const ctrl = new AbortController();
+          const timer = setTimeout(() => ctrl.abort(), 3000);
+          const r = await fetch("https://api.ipify.org?format=json", { signal: ctrl.signal });
+          clearTimeout(timer);
           const j = await r.json();
           ipAddress = j?.ip || null;
         } catch { /* ignore */ }
+
 
         // Upload evidence (signature image used in this signing act)
         const evidenceDataUrl = method === "handwritten" ? handwrittenDataUrl! : savedSignatureDataUrl!;
@@ -469,7 +498,7 @@ export function useUnifiedDocumentSigning() {
             document_snapshot_json: (context.snapshot || {}) as any,
             signed_by: userId,
             signed_by_professional_id: professionalId,
-            signed_by_name: context.professional_name || null,
+            signed_by_name: signerName,
             sign_method: method,
             ip_address: ipAddress,
             user_agent: userAgent,
@@ -563,10 +592,11 @@ export function useUnifiedDocumentSigning() {
                 signed_by: userId,
               };
 
-        const { error: updErr } = await supabase
+        const { data: updRows, error: updErr } = await supabase
           .from(targetTable as any)
           .update(updatePayload as any)
-          .eq("id", context.document_id);
+          .eq("id", context.document_id)
+          .select("id");
         if (updErr) {
           logAppError(updErr, {
             ...baseLogContext,
@@ -588,6 +618,29 @@ export function useUnifiedDocumentSigning() {
           }
           throw updErr;
         }
+
+        // RLS não gera erro quando a linha simplesmente não é visível/atualizável:
+        // o update retorna 0 linhas. Sem esta checagem a assinatura seria
+        // registrada e o documento continuaria como rascunho.
+        if (!updRows || updRows.length === 0) {
+          logAppError(new Error("SIGN_UPDATE_NO_ROWS"), {
+            ...baseLogContext,
+            action: "updateSourceDocument",
+            userId,
+            extra: {
+              ...baseLogContext.extra,
+              target_table: targetTable,
+              signature_id: sigRow.id,
+              reason: "update afetou 0 linhas (RLS ou status já alterado)",
+            },
+          });
+          // Remove a assinatura órfã para permitir nova tentativa.
+          await supabase.from("medical_record_signatures").delete().eq("id", sigRow.id);
+          throw new Error(
+            "Não foi possível concluir a assinatura: você não é o profissional responsável por este registro (ou ele não está mais como rascunho). Solicite ao profissional autor ou a um administrador da clínica.",
+          );
+        }
+
 
         console.info("[useUnifiedDocumentSigning] document signed", {
           trace_id: traceId,
