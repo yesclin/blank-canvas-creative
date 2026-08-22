@@ -215,6 +215,7 @@ export function UnifiedSignatureWizard({
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     setHasInk(false);
+    setInkDataUrl(null);
   };
 
   useEffect(() => {
