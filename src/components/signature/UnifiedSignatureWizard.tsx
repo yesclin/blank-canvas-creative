@@ -143,6 +143,12 @@ export function UnifiedSignatureWizard({
   const [showPassword, setShowPassword] = useState(false);
   const [setAsDefault, setSetAsDefault] = useState(false);
   const [hasInk, setHasInk] = useState(false);
+  /**
+   * Snapshot (PNG dataURL) da assinatura manuscrita. O canvas só existe na
+   * etapa "sign"; ao chegar na etapa final ele já está desmontado, então o
+   * traço precisa ficar guardado em estado para o submit funcionar.
+   */
+  const [inkDataUrl, setInkDataUrl] = useState<string | null>(null);
 
   // Selfie state
   const [selfieDataUrl, setSelfieDataUrl] = useState<string | null>(null);
