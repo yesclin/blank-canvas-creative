@@ -259,7 +259,17 @@ export function UnifiedSignatureWizard({
   };
 
   const endDraw = () => {
+    if (!drawingRef.current) return;
     drawingRef.current = false;
+    // Persiste o traço em estado: o canvas é desmontado nas etapas seguintes.
+    const c = canvasRef.current;
+    if (c) {
+      try {
+        setInkDataUrl(c.toDataURL("image/png"));
+      } catch (e) {
+        console.warn("[SIGN] falha ao capturar traço do canvas:", e);
+      }
+    }
   };
 
   const clearCanvas = () => initCanvas();
