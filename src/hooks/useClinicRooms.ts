@@ -10,7 +10,8 @@ import type { Room } from "@/types/agenda";
  * Todo acesso é isolado por clinic_id (além da RLS já existente).
  */
 export function useClinicRooms(includeInactive = true) {
-  const { clinicId } = useActiveClinicScope();
+  const { scope } = useActiveClinicScope();
+  const clinicId = scope.clinicId;
 
   return useQuery({
     queryKey: ["clinic-rooms", clinicId, includeInactive],
@@ -43,7 +44,8 @@ export interface RoomAuthorizationRow {
  * Sala sem nenhuma autorização = liberada para todos os profissionais.
  */
 export function useRoomAuthorizations() {
-  const { clinicId } = useActiveClinicScope();
+  const { scope } = useActiveClinicScope();
+  const clinicId = scope.clinicId;
 
   return useQuery({
     queryKey: ["room-authorizations", clinicId],
@@ -82,7 +84,8 @@ export function buildRoomAuthorizationMap(rows: RoomAuthorizationRow[] = []) {
 
 export function useManageClinicRooms() {
   const queryClient = useQueryClient();
-  const { clinicId } = useActiveClinicScope();
+  const { scope } = useActiveClinicScope();
+  const clinicId = scope.clinicId;
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["clinic-rooms"] });

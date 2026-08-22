@@ -50,7 +50,8 @@ import type { Room } from "@/types/agenda";
 export function RoomsSection() {
   const { isOwner, isAdmin } = usePermissions();
   const canManage = isOwner || isAdmin;
-  const { clinicId } = useActiveClinicScope();
+  const { scope } = useActiveClinicScope();
+  const clinicId = scope.clinicId;
 
   const { data: rooms = [], isLoading, isError, refetch } = useClinicRooms(true);
   const { data: authRows = [] } = useRoomAuthorizations();
