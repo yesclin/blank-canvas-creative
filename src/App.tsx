@@ -176,12 +176,17 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      staleTime: 30_000,
+      // Antes: staleTime 30s + refetchOnMount + refetchOnWindowFocus = tempestade
+      // de requests (medido: milhares de scans em tabelas de 30-150 linhas).
+      // Agora: stale-while-revalidate real — cache serve na hora, revalida só
+      // quando os dados realmente envelhecem ou a rede volta.
+      staleTime: 5 * 60_000,
       gcTime: 30 * 60_000,
-      refetchOnMount: true,
-      refetchOnWindowFocus: true,
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
       refetchOnReconnect: true,
     },
+
     mutations: {
       retry: 0,
     },
