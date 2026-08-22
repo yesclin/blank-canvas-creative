@@ -85,10 +85,10 @@ type Step = "review" | "sign" | "selfie" | "confirm";
 const CANVAS_WIDTH = 520;
 const CANVAS_HEIGHT = 180;
 
-/** Diagnóstico do contexto só é exibido quando o suporte habilita a flag. */
+/** Diagnóstico do contexto: apenas em desenvolvimento e com a flag do suporte. */
 function isSignatureDebugEnabled(): boolean {
   try {
-    return localStorage.getItem("lovable_debug_errors") === "1";
+    return import.meta.env.DEV && localStorage.getItem("lovable_debug_errors") === "1";
   } catch {
     return false;
   }
