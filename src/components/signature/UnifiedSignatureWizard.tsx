@@ -85,10 +85,24 @@ type Step = "review" | "sign" | "selfie" | "confirm";
 const CANVAS_WIDTH = 520;
 const CANVAS_HEIGHT = 180;
 
-/** Diagnóstico do contexto só é exibido quando o suporte habilita a flag. */
+/** Converte um dataURL PNG em Blob (upload da assinatura padrão). */
+function dataUrlToBlob(dataUrl: string): Blob | null {
+  try {
+    const [meta, b64] = dataUrl.split(",");
+    const mime = meta.match(/data:(.*?);base64/)?.[1] || "image/png";
+    const bin = atob(b64);
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return new Blob([arr], { type: mime });
+  } catch {
+    return null;
+  }
+}
+
+/** Diagnóstico do contexto: apenas em desenvolvimento e com a flag do suporte. */
 function isSignatureDebugEnabled(): boolean {
   try {
-    return localStorage.getItem("lovable_debug_errors") === "1";
+    return import.meta.env.DEV && localStorage.getItem("lovable_debug_errors") === "1";
   } catch {
     return false;
   }
@@ -143,6 +157,12 @@ export function UnifiedSignatureWizard({
   const [showPassword, setShowPassword] = useState(false);
   const [setAsDefault, setSetAsDefault] = useState(false);
   const [hasInk, setHasInk] = useState(false);
+  /**
+   * Snapshot (PNG dataURL) da assinatura manuscrita. O canvas só existe na
+   * etapa "sign"; ao chegar na etapa final ele já está desmontado, então o
+   * traço precisa ficar guardado em estado para o submit funcionar.
+   */
+  const [inkDataUrl, setInkDataUrl] = useState<string | null>(null);
 
   // Selfie state
   const [selfieDataUrl, setSelfieDataUrl] = useState<string | null>(null);
@@ -167,6 +187,7 @@ export function UnifiedSignatureWizard({
       setShowPassword(false);
       setSetAsDefault(false);
       setHasInk(false);
+      setInkDataUrl(null);
       setSelfieDataUrl(null);
       setCameraError(null);
       setCameraReady(false);
@@ -209,6 +230,7 @@ export function UnifiedSignatureWizard({
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     setHasInk(false);
+    setInkDataUrl(null);
   };
 
   useEffect(() => {
@@ -253,7 +275,17 @@ export function UnifiedSignatureWizard({
   };
 
   const endDraw = () => {
+    if (!drawingRef.current) return;
     drawingRef.current = false;
+    // Persiste o traço em estado: o canvas é desmontado nas etapas seguintes.
+    const c = canvasRef.current;
+    if (c) {
+      try {
+        setInkDataUrl(c.toDataURL("image/png"));
+      } catch (e) {
+        console.warn("[SIGN] falha ao capturar traço do canvas:", e);
+      }
+    }
   };
 
   const clearCanvas = () => initCanvas();
@@ -415,40 +447,56 @@ export function UnifiedSignatureWizard({
 
   // ─── Submit ────────────────────────────────────────────────
   const handleSubmit = async () => {
-    if (!context) return;
+    if (signing) return;
+    if (!context) {
+      toast.error("Contexto do documento indisponível. Reabra a assinatura.");
+      return;
+    }
     if (submitBlockers.length > 0) {
       toast.error("Não foi possível assinar", { description: submitBlockers.join(" • ") });
       return;
     }
-    if (signing) return;
 
-    let handwrittenDataUrl: string | undefined;
-    if (mode === "handwritten") {
-      const c = canvasRef.current;
-      if (!c) return;
-      handwrittenDataUrl = c.toDataURL("image/png");
+    try {
+      let handwrittenDataUrl: string | undefined;
+      if (mode === "handwritten") {
+        // O canvas já foi desmontado nesta etapa: usa o snapshot em estado e,
+        // como fallback, o canvas caso ainda esteja montado.
+        handwrittenDataUrl = inkDataUrl || canvasRef.current?.toDataURL("image/png") || undefined;
+        if (!handwrittenDataUrl) {
+          toast.error("Assinatura manuscrita não foi capturada", {
+            description: "Volte à etapa Assinatura e desenhe novamente.",
+          });
+          return;
+        }
 
-      if (setAsDefault) {
-        const blob = await new Promise<Blob | null>((resolve) =>
-          c.toBlob((b) => resolve(b), "image/png")
-        );
-        if (blob) await saveSignature(blob, { type: "drawn" });
+        if (setAsDefault) {
+          try {
+            const blob = dataUrlToBlob(handwrittenDataUrl);
+            if (blob) await saveSignature(blob, { type: "drawn" });
+          } catch (e) {
+            console.warn("[SIGN] falha ao salvar assinatura padrão:", e);
+          }
+        }
       }
-    }
 
-    const result = await signDocument({
-      context,
-      password,
-      method: mode === "saved" ? "saved_signature" : "handwritten",
-      handwrittenDataUrl,
-      savedSignatureDataUrl: mode === "saved" ? savedDataUrl || undefined : undefined,
-      selfieDataUrl,
-      geolocation,
-    });
+      const result = await signDocument({
+        context,
+        password,
+        method: mode === "saved" ? "saved_signature" : "handwritten",
+        handwrittenDataUrl,
+        savedSignatureDataUrl: mode === "saved" ? savedDataUrl || undefined : undefined,
+        selfieDataUrl,
+        geolocation,
+      });
 
-    if (result.success) {
-      onSigned?.(result);
-      onOpenChange(false);
+      if (result.success) {
+        onSigned?.(result);
+        onOpenChange(false);
+      }
+    } catch (err: any) {
+      console.error("[SIGN] erro inesperado no submit:", err);
+      toast.error(err?.message || "Erro inesperado ao assinar o documento.");
     }
   };
 
