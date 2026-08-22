@@ -391,12 +391,35 @@ export function useUnifiedDocumentSigning() {
           return { success: false };
         }
 
+        // Nome do assinante é obrigatório (NOT NULL em medical_record_signatures).
+        const signerName =
+          context.professional_name?.trim() ||
+          (userData?.user?.user_metadata?.full_name as string | undefined)?.trim() ||
+          userData?.user?.email ||
+          "Profissional";
+
+        // Evita assinatura duplicada do mesmo registro (não recria evidências
+        // nem deixa o documento em estado inconsistente).
+        const { data: existingSig } = await supabase
+          .from("medical_record_signatures")
+          .select("id")
+          .eq("record_id", context.document_id)
+          .eq("clinic_id", clinic.id)
+          .eq("is_revoked", false)
+          .limit(1)
+          .maybeSingle();
+        if (existingSig?.id) {
+          toast.error("Este documento já possui assinatura registrada.");
+          return { success: false, signatureId: existingSig.id };
+        }
+
         await logEvent(null, clinic.id, "signature_requested", {
           trace_id: traceId,
           document_id: context.document_id,
           document_type: context.document_type,
           signature_length: signatureLength,
         });
+
 
         // Re-auth
         const ok = await reAuthenticate(password);
