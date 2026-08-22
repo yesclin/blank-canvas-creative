@@ -11,7 +11,7 @@ export type ConflictSeverity = 'critical' | 'warning';
 
 export interface ScheduleConflict {
   id: string;
-  type: 'overlap' | 'outside_hours' | 'during_block' | 'during_break' | 'fit_in_overlap' | 'past_date' | 'inactive_specialty';
+  type: 'overlap' | 'outside_hours' | 'during_block' | 'during_break' | 'fit_in_overlap' | 'past_date' | 'inactive_specialty' | 'room_overlap' | 'room_not_authorized' | 'room_inactive';
   severity: ConflictSeverity;
   message: string;
   details?: string;
@@ -69,6 +69,12 @@ export interface UseConflictDetectionParams {
   selectedSpecialtyId?: string;
   activeSpecialtyIds?: string[];
   scheduleBlocks?: ScheduleBlock[];
+  /** Sala selecionada no agendamento */
+  roomId?: string;
+  /** Salas ativas da clínica atual */
+  activeRoomIds?: string[];
+  /** room_id -> profissionais autorizados (lista vazia/ausente = todos) */
+  roomAuthorizations?: Map<string, string[]>;
 }
 
 export function useConflictDetection({
@@ -85,6 +91,9 @@ export function useConflictDetection({
   selectedSpecialtyId,
   activeSpecialtyIds,
   scheduleBlocks = [],
+  roomId,
+  activeRoomIds,
+  roomAuthorizations,
 }: UseConflictDetectionParams): ConflictCheckResult {
   return useMemo(() => {
     const conflicts: ScheduleConflict[] = [];
@@ -243,6 +252,52 @@ export function useConflictDetection({
       }
     }
     
+    // 2b. Room rules (CRITICAL) — sala inativa, sala ocupada, profissional não autorizado
+    if (roomId) {
+      if (activeRoomIds && activeRoomIds.length > 0 && !activeRoomIds.includes(roomId)) {
+        conflicts.push({
+          id: 'room_inactive',
+          type: 'room_inactive',
+          severity: 'critical',
+          message: 'Sala inativa',
+          details: 'A sala selecionada está inativa. Escolha uma sala ativa.',
+        });
+      }
+
+      const authorized = roomAuthorizations?.get(roomId);
+      if (authorized && authorized.length > 0 && !authorized.includes(professionalId)) {
+        conflicts.push({
+          id: 'room_not_authorized',
+          type: 'room_not_authorized',
+          severity: 'critical',
+          message: 'Profissional não autorizado nesta sala',
+          details: 'Este profissional não está autorizado a utilizar a sala selecionada.',
+        });
+      }
+
+      const roomAppointments = existingAppointments.filter(apt =>
+        apt.room_id === roomId &&
+        apt.scheduled_date === dateStr &&
+        apt.id !== editingAppointmentId &&
+        !['cancelado', 'faltou'].includes(apt.status)
+      );
+
+      for (const apt of roomAppointments) {
+        const aptStart = timeToMinutes(apt.start_time);
+        const aptEnd = timeToMinutes(apt.end_time);
+        if (startMinutes < aptEnd && endMinutes > aptStart) {
+          conflicts.push({
+            id: `room_overlap_${apt.id}`,
+            type: 'room_overlap',
+            severity: 'critical',
+            message: 'Sala já ocupada neste horário',
+            details: `Ocupada das ${formatTimeForDisplay(apt.start_time)} às ${formatTimeForDisplay(apt.end_time)}`,
+            conflictingAppointment: apt,
+          });
+        }
+      }
+    }
+
     // 3. Check schedule blocks (CRITICAL)
     for (const block of scheduleBlocks) {
       if (dateStr < block.start_date || dateStr > block.end_date) continue;
@@ -300,5 +355,8 @@ export function useConflictDetection({
     selectedSpecialtyId,
     activeSpecialtyIds,
     scheduleBlocks,
+    roomId,
+    activeRoomIds,
+    roomAuthorizations,
   ]);
 }

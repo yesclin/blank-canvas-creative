@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClinicScheduleSection } from "@/components/config/agenda/ClinicScheduleSection";
 import { ProfessionalScheduleSection } from "@/components/config/agenda/ProfessionalScheduleSection";
 import { ScheduleBlocksSection } from "@/components/config/agenda/ScheduleBlocksSection";
+import { RoomsSection } from "@/components/config/agenda/RoomsSection";
 import { AppointmentTypesCard } from "@/components/config/atendimento/AppointmentTypesCard";
 import { AppointmentStatusCard } from "@/components/config/atendimento/AppointmentStatusCard";
 import { AppointmentRulesCard } from "@/components/config/atendimento/AppointmentRulesCard";
@@ -28,6 +29,7 @@ export default function ConfigAgenda() {
           <TabsTrigger value="clinic">Horário da Clínica</TabsTrigger>
           <TabsTrigger value="professionals">Por Profissional</TabsTrigger>
           <TabsTrigger value="exceptions">Exceções</TabsTrigger>
+          <TabsTrigger value="rooms">Salas</TabsTrigger>
           <TabsTrigger value="types">Tipos & Status</TabsTrigger>
           <TabsTrigger value="rules">Regras</TabsTrigger>
           <TabsTrigger value="alerts">Alertas de Ociosidade</TabsTrigger>
@@ -46,6 +48,11 @@ export default function ConfigAgenda() {
         <TabsContent value="exceptions" className="space-y-4">
           <ScheduleBlocksSection />
         </TabsContent>
+
+        <TabsContent value="rooms" className="space-y-4">
+          <RoomsSection />
+        </TabsContent>
+
 
         <TabsContent value="types" className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
