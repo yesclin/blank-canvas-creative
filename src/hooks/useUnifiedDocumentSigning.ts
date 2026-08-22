@@ -498,7 +498,7 @@ export function useUnifiedDocumentSigning() {
             document_snapshot_json: (context.snapshot || {}) as any,
             signed_by: userId,
             signed_by_professional_id: professionalId,
-            signed_by_name: context.professional_name || null,
+            signed_by_name: signerName,
             sign_method: method,
             ip_address: ipAddress,
             user_agent: userAgent,
