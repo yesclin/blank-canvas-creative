@@ -42,6 +42,7 @@ import { AppointmentPaymentBadge } from "./AppointmentPaymentBadge";
 import { AppointmentHoverPreview } from "./AppointmentHoverPreview";
 import { useAppointmentFinancialStatus } from "@/hooks/useAppointmentFinancialStatus";
 import { getAppointmentSourceLabel } from "@/utils/appointmentSource";
+import { resolveProfessionalColor } from "@/utils/professionalColors";
 
 interface AppointmentCardProps {
   appointment: Appointment;
@@ -80,6 +81,10 @@ export function AppointmentCard({
   const financial = useAppointmentFinancialStatus(appointment);
   const isReceptionist = role === 'recepcionista';
   const sourceLabel = getAppointmentSourceLabel(appointment);
+  const professionalColor = resolveProfessionalColor(
+    professional?.color,
+    professional?.id || appointment.professional_id,
+  );
 
   const getStatusActions = () => {
     switch (status) {
@@ -113,10 +118,11 @@ export function AppointmentCard({
       <AppointmentHoverPreview appointment={appointment}>
         <div 
           className={cn(
-            "px-2 py-1.5 rounded-md border cursor-pointer transition-all duration-150",
+            "px-2 py-1.5 rounded-md border cursor-pointer transition-all duration-150 border-l-4",
             "hover:shadow-sm hover:scale-[1.01] active:scale-[0.99]",
             statusColors[status]
           )}
+          style={{ borderLeftColor: professionalColor }}
           onClick={() => onClick?.(appointment)}
         >
           <div className="flex items-center justify-between gap-1.5">
@@ -138,10 +144,11 @@ export function AppointmentCard({
     <AppointmentHoverPreview appointment={appointment}>
       <div 
         className={cn(
-          "group relative p-3 rounded-lg border bg-card transition-all duration-150 cursor-pointer",
+          "group relative p-3 rounded-lg border bg-card transition-all duration-150 cursor-pointer border-l-4",
           "hover:shadow-md hover:border-primary/20 active:scale-[0.995]",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         )}
+        style={{ borderLeftColor: professionalColor }}
         onClick={() => onClick?.(appointment)}
         tabIndex={0}
         role="button"

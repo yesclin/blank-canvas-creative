@@ -55,7 +55,7 @@ const deliveryStatusMeta: Record<DeliveryStatus, { label: string; className: str
   cancelled:    { label: "Cancelado",      className: "bg-muted text-muted-foreground border-border",         Icon: XCircle },
 };
 import {
-  UserTypeSelector, UserType, ProfessionalFields,
+  UserTypeSelector, UserType, ProfessionalFields, ProfessionalColorField,
   GranularPermissions, getDefaultPermissions, ModuleAction,
 } from "@/components/config/users";
 
@@ -110,6 +110,10 @@ export default function ConfigUsuarios() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState({ full_name: "", email: "" });
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  // Profissional vinculado ao usuário em edição (para editar a cor da Agenda)
+  const [editProfessional, setEditProfessional] = useState<{ id: string; color: string | null } | null>(null);
+  const [editColor, setEditColor] = useState<string | null>(null);
+  const [isLoadingProfessional, setIsLoadingProfessional] = useState(false);
   const [resetUser, setResetUser] = useState<ClinicUser | null>(null);
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [newUserForm, setNewUserForm] = useState<NewUserFormState>(initialFormState);
@@ -346,10 +350,34 @@ export default function ConfigUsuarios() {
   };
 
 
-  const handleEditUser = (user: ClinicUser) => {
+  const handleEditUser = async (user: ClinicUser) => {
     setEditingUser(user);
     setEditForm({ full_name: user.full_name, email: user.email || "" });
+    setEditProfessional(null);
+    setEditColor(null);
     setIsEditDialogOpen(true);
+
+    if (!clinicId) return;
+    setIsLoadingProfessional(true);
+    try {
+      const { data, error: profError } = await supabase
+        .from("professionals")
+        .select("id, color")
+        .eq("clinic_id", clinicId)
+        .eq("user_id", user.user_id)
+        .limit(1)
+        .maybeSingle();
+
+      if (profError) throw profError;
+      if (data) {
+        setEditProfessional({ id: data.id, color: data.color ?? null });
+        setEditColor(data.color ?? null);
+      }
+    } catch (err) {
+      console.error("[Usuarios] Falha ao carregar profissional:", err);
+    } finally {
+      setIsLoadingProfessional(false);
+    }
   };
 
   const handleSaveEdit = async () => {
@@ -368,9 +396,25 @@ export default function ConfigUsuarios() {
 
       if (error) throw error;
 
+      // Cor na Agenda (apenas quando o usuário é um profissional e a cor mudou)
+      if (editProfessional && editColor && editColor !== editProfessional.color) {
+        const { error: colorError } = await supabase
+          .from("professionals")
+          .update({ color: editColor })
+          .eq("id", editProfessional.id)
+          .eq("clinic_id", clinicId!);
+
+        if (colorError) throw colorError;
+
+        queryClient.invalidateQueries({ queryKey: ["professionals"] });
+        queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      }
+
       toast.success("Dados atualizados com sucesso");
       setIsEditDialogOpen(false);
       setEditingUser(null);
+      setEditProfessional(null);
+      setEditColor(null);
       refetch();
     } catch (err) {
       console.error("Error updating user:", err);
@@ -1011,6 +1055,26 @@ export default function ConfigUsuarios() {
                   )}
                 </div>
               </div>
+            )}
+
+            {isLoadingProfessional && (
+              <p className="text-xs text-muted-foreground flex items-center gap-2">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Carregando dados do profissional...
+              </p>
+            )}
+
+            {editProfessional && (
+              <>
+                <Separator />
+                <ProfessionalColorField
+                  value={editColor}
+                  professionalId={editProfessional.id}
+                  previewName={editForm.full_name || editingUser?.full_name}
+                  onChange={setEditColor}
+                  disabled={isSavingEdit || !canManageUsers}
+                />
+              </>
             )}
           </div>
           <DialogFooter>

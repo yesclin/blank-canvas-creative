@@ -7,6 +7,7 @@ import { AppointmentCard } from './AppointmentCard';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Lock } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { resolveProfessionalColor } from '@/utils/professionalColors';
 import type { Appointment, ViewMode, GroupBy, Professional, Room, Specialty, ScheduleBlock } from '@/types/agenda';
 import {
   getBlocksForDay,
@@ -294,6 +295,13 @@ export function AgendaGrid({
     return map;
   }, [professionals]);
 
+  /** Cor configurada pela clínica para cada profissional (com fallback automático) */
+  const professionalColorById = useMemo(() => {
+    const map: Record<string, string> = {};
+    professionals.forEach(p => { map[p.id] = resolveProfessionalColor(p.color, p.id); });
+    return map;
+  }, [professionals]);
+
   const DAY_END_MIN = DAY_START_MIN + timeSlots.length * SLOT_MIN;
 
   /** Faixas visuais dos bloqueios já cadastrados (visões Dia/Semana) */
@@ -358,11 +366,25 @@ export function AgendaGrid({
             <div className="sticky top-0 z-20 bg-muted border-b p-2 text-center text-sm font-medium">
               Hora
             </div>
-            {Object.keys(groupedAppointments).map(group => (
-              <div key={group} className="sticky top-0 z-20 bg-muted border-b border-l p-2 text-center text-sm font-medium truncate">
-                {group}
-              </div>
-            ))}
+            {Object.keys(groupedAppointments).map(group => {
+              const headerProfId = groupBy === 'professional' ? professionalNameToId[group] : undefined;
+              const headerColor = headerProfId
+                ? resolveProfessionalColor(professionalColorById[headerProfId], headerProfId)
+                : undefined;
+              return (
+                <div key={group} className="sticky top-0 z-20 bg-muted border-b border-l p-2 text-center text-sm font-medium truncate">
+                  <span className="inline-flex items-center gap-1.5 min-w-0">
+                    {headerColor && (
+                      <span
+                        className="h-2.5 w-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: headerColor }}
+                      />
+                    )}
+                    <span className="truncate">{group}</span>
+                  </span>
+                </div>
+              );
+            })}
 
             {/* Time labels column */}
             <div className="relative bg-muted/30" style={{ height: TOTAL_HEIGHT }}>
@@ -651,18 +673,28 @@ export function AgendaGrid({
                   );
                 })}
 
-                {dayAppointments.slice(0, 3).map(apt => (
-                  <div 
-                    key={apt.id}
-                    className="text-xs p-1 mb-1 rounded bg-primary/10 truncate cursor-pointer hover:bg-primary/20"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onAppointmentClick?.(apt);
-                    }}
-                  >
-                    {apt.start_time.slice(0, 5)} {apt.patient?.full_name?.split(' ')[0]}
-                  </div>
-                ))}
+                {dayAppointments.slice(0, 3).map(apt => {
+                  const aptColor = resolveProfessionalColor(
+                    apt.professional?.color ?? professionalColorById[apt.professional_id || ''],
+                    apt.professional_id,
+                  );
+                  return (
+                    <div
+                      key={apt.id}
+                      className="text-xs p-1 mb-1 rounded bg-muted/60 truncate cursor-pointer hover:bg-muted flex items-center gap-1 border-l-[3px]"
+                      style={{ borderLeftColor: aptColor }}
+                      title={apt.professional?.full_name}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAppointmentClick?.(apt);
+                      }}
+                    >
+                      <span className="truncate">
+                        {apt.start_time.slice(0, 5)} {apt.patient?.full_name?.split(' ')[0]}
+                      </span>
+                    </div>
+                  );
+                })}
                 {dayAppointments.length > 3 && (
                   <div className="text-xs text-muted-foreground">
                     +{dayAppointments.length - 3} mais

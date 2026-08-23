@@ -1,5 +1,6 @@
 export { UserTypeSelector, type UserType } from "./UserTypeSelector";
 export { ProfessionalFields, professionalTypeLabels } from "./ProfessionalFields";
+export { ProfessionalColorField } from "./ProfessionalColorField";
 export { 
   GranularPermissions, 
   getDefaultPermissions, 

@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { WeekSchedule, getDefaultWeekSchedule } from "@/components/config/EnhancedWorkingHoursCard";
 import type { Json } from "@/integrations/supabase/types";
+import { resolveProfessionalColor } from "@/utils/professionalColors";
 
 export interface Professional {
   id: string;
@@ -74,7 +75,7 @@ export function useProfessionalSchedules() {
         email: p.email,
         specialty_id: p.specialty_id,
         specialty_name: (p.specialties as any)?.name || undefined,
-        color: p.color || "#10B981",
+        color: resolveProfessionalColor(p.color, p.id),
         is_active: p.is_active,
       }));
 

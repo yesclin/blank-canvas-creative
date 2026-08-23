@@ -18,6 +18,7 @@ import type {
 } from "@/types/agenda";
 import { WeekSchedule, getDefaultWeekSchedule } from "@/components/config/EnhancedWorkingHoursCard";
 import { fetchClinicSpecialtyAliases, getSpecialtyDisplayName } from "@/lib/specialtyDisplay";
+import { resolveProfessionalColor } from "@/utils/professionalColors";
 
 // ============= PROFESSIONALS =============
 export function useProfessionals(clinicId?: string | null) {
@@ -67,7 +68,7 @@ export function useProfessionals(clinicId?: string | null) {
         } : undefined,
         registration_number: p.registration_number,
         avatar_url: p.avatar_url,
-        color: p.color || "#6366f1",
+        color: resolveProfessionalColor(p.color, p.id),
         is_active: p.is_active,
       })) as Professional[];
     },
@@ -309,7 +310,7 @@ export function useAppointmentsForPeriod(
           id: apt.professionals.id,
           clinic_id: apt.clinic_id,
           full_name: apt.professionals.full_name,
-          color: apt.professionals.color || "#6366f1",
+          color: resolveProfessionalColor(apt.professionals.color, apt.professionals.id),
           specialty_id: apt.professionals.specialty_id,
           is_active: true,
         } : undefined,
