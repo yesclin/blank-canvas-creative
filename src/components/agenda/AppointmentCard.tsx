@@ -144,10 +144,11 @@ export function AppointmentCard({
     <AppointmentHoverPreview appointment={appointment}>
       <div 
         className={cn(
-          "group relative p-3 rounded-lg border bg-card transition-all duration-150 cursor-pointer",
+          "group relative p-3 rounded-lg border bg-card transition-all duration-150 cursor-pointer border-l-4",
           "hover:shadow-md hover:border-primary/20 active:scale-[0.995]",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         )}
+        style={{ borderLeftColor: professionalColor }}
         onClick={() => onClick?.(appointment)}
         tabIndex={0}
         role="button"
