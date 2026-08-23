@@ -118,10 +118,11 @@ export function AppointmentCard({
       <AppointmentHoverPreview appointment={appointment}>
         <div 
           className={cn(
-            "px-2 py-1.5 rounded-md border cursor-pointer transition-all duration-150",
+            "px-2 py-1.5 rounded-md border cursor-pointer transition-all duration-150 border-l-4",
             "hover:shadow-sm hover:scale-[1.01] active:scale-[0.99]",
             statusColors[status]
           )}
+          style={{ borderLeftColor: professionalColor }}
           onClick={() => onClick?.(appointment)}
         >
           <div className="flex items-center justify-between gap-1.5">
