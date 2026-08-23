@@ -74,7 +74,7 @@ export function useProfessionalSchedules() {
         email: p.email,
         specialty_id: p.specialty_id,
         specialty_name: (p.specialties as any)?.name || undefined,
-        color: p.color || "#10B981",
+        color: resolveProfessionalColor(p.color, p.id),
         is_active: p.is_active,
       }));
 
