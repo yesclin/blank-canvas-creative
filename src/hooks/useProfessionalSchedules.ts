@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { WeekSchedule, getDefaultWeekSchedule } from "@/components/config/EnhancedWorkingHoursCard";
 import type { Json } from "@/integrations/supabase/types";
+import { resolveProfessionalColor } from "@/utils/professionalColors";
 
 export interface Professional {
   id: string;
