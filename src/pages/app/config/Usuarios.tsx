@@ -110,6 +110,10 @@ export default function ConfigUsuarios() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState({ full_name: "", email: "" });
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  // Profissional vinculado ao usuário em edição (para editar a cor da Agenda)
+  const [editProfessional, setEditProfessional] = useState<{ id: string; color: string | null } | null>(null);
+  const [editColor, setEditColor] = useState<string | null>(null);
+  const [isLoadingProfessional, setIsLoadingProfessional] = useState(false);
   const [resetUser, setResetUser] = useState<ClinicUser | null>(null);
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [newUserForm, setNewUserForm] = useState<NewUserFormState>(initialFormState);
