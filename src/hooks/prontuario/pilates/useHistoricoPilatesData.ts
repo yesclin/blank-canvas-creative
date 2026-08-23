@@ -1,4 +1,5 @@
 /**
+import { formatClinicalTypeLabel } from '@/utils/clinicalFieldLabels';
  * PILATES - Dados do Histórico / Linha do Tempo
  * 
  * Hook para consolidar todos os registros do paciente em uma
@@ -125,7 +126,7 @@ export function useHistoricoPilatesData({
             title = (content?.titulo as string) || 'Documento';
             const categoria = content?.categoria as string | undefined;
             if (categoria) {
-              subtitle = categoria.replace(/_/g, ' ');
+              subtitle = formatClinicalTypeLabel(categoria);
             }
             break;
           

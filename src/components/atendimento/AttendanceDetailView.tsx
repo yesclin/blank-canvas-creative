@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { formatClinicalFieldLabel, formatClinicalFieldValue } from "@/utils/clinicalFieldLabels";
+import { formatClinicalFieldLabel, formatClinicalFieldValue, formatClinicalTypeLabel } from "@/utils/clinicalFieldLabels";
 
 export type AttendanceDetailAction =
   | "sign" | "note" | "addendum" | "print" | "pdf" | "history" | null;
@@ -352,7 +352,7 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
               <div key={ev.id} className="rounded-lg border p-4 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {ev.evolution_type && <Badge variant="outline" className="text-[10px]">{ev.evolution_type}</Badge>}
+                    {ev.evolution_type && <Badge variant="outline" className="text-[10px]">{formatClinicalTypeLabel(ev.evolution_type)}</Badge>}
                     <Badge variant={statusBadgeVariant(ev.status)} className="text-[10px]">{statusLabel(ev.status)}</Badge>
                     {ev.signed_at && (
                       <span className="text-[10px] text-green-600 flex items-center gap-0.5">
@@ -721,7 +721,7 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
             {detail.addendums.map((a) => (
               <div key={a.id} className="rounded-lg border p-3 text-sm">
                 <div className="flex items-center justify-between mb-1">
-                  <Badge variant="outline" className="text-[10px]">{a.record_type}</Badge>
+                  <Badge variant="outline" className="text-[10px]">{formatClinicalTypeLabel(a.record_type)}</Badge>
                   <span className="text-[10px] text-muted-foreground">{fmtTime(a.created_at)}</span>
                 </div>
                 {a.reason && <p className="text-[11px] text-muted-foreground italic mb-1">Motivo: {a.reason}</p>}
