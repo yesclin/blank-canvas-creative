@@ -458,13 +458,18 @@ export function AppointmentDialog({
   useEffect(() => {
     const currentSpecialtyId = form.getValues("specialty_id");
     const setSpecialty = (specialtyId: string) => {
-      form.setValue("specialty_id", specialtyId, {
-        shouldValidate: true,
-        shouldDirty: false,
-        shouldTouch: false,
-      });
+      // Idempotente: só escreve quando o valor realmente muda, para não
+      // realimentar este efeito (loop de render ao selecionar profissional).
+      if (form.getValues("specialty_id") !== specialtyId) {
+        form.setValue("specialty_id", specialtyId, {
+          shouldValidate: true,
+          shouldDirty: false,
+          shouldTouch: false,
+        });
+      }
       if (specialtyId) form.clearErrors("specialty_id");
     };
+
     
     if (availableSpecialties.length === 1) {
       // Auto-select the only available specialty
