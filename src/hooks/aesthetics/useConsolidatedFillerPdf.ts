@@ -25,6 +25,7 @@ import type { FacialMapApplication } from '@/components/prontuario/aesthetics/ty
 
 // Import the filler base image
 import fillerFrontalImg from '@/assets/facial-map-filler-frontal.png';
+import { formatClinicalFieldLabel } from '@/utils/clinicalFieldLabels';
 
 interface PatientForPdf {
   full_name: string;
@@ -121,9 +122,7 @@ function isMeaningfulValue(value: unknown): boolean {
 }
 
 function humanizeKey(key: string): string {
-  return key
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+  return formatClinicalFieldLabel(key);
 }
 
 function valueToDisplay(value: unknown): string {
