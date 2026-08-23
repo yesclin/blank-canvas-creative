@@ -1,5 +1,4 @@
 /**
-import { formatClinicalTypeLabel } from '@/utils/clinicalFieldLabels';
  * PILATES - Dados do Histórico / Linha do Tempo
  * 
  * Hook para consolidar todos os registros do paciente em uma
@@ -7,6 +6,7 @@ import { formatClinicalTypeLabel } from '@/utils/clinicalFieldLabels';
  */
 
 import { useQuery } from '@tanstack/react-query';
+import { formatClinicalTypeLabel } from '@/utils/clinicalFieldLabels';
 import { supabase } from '@/integrations/supabase/client';
 
 // Tipos de registro na timeline
