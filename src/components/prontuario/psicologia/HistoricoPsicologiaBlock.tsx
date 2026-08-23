@@ -428,7 +428,7 @@ export function HistoricoPsicologiaBlock({
                                   </Badge>
                                   {event.status && (
                                     <Badge variant="secondary" className="text-xs">
-                                      {event.status}
+                                      {formatClinicalTypeLabel(event.status)}
                                     </Badge>
                                   )}
                                 </div>

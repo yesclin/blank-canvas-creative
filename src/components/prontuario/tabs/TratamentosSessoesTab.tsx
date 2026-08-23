@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatClinicalTypeLabel } from '@/utils/clinicalFieldLabels';
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -140,7 +141,7 @@ function PackageDrawer({ pkg, onClose }: { pkg: any | null; onClose: () => void 
                       <TableCell>{fmtDate(s.scheduled_date)}</TableCell>
                       <TableCell>{s.start_time?.slice(0, 5)}</TableCell>
                       <TableCell>{s.professionals?.full_name ?? "-"}</TableCell>
-                      <TableCell><Badge variant="outline">{s.status}</Badge></TableCell>
+                      <TableCell><Badge variant="outline">{formatClinicalTypeLabel(s.status)}</Badge></TableCell>
                     </TableRow>
                   ))}</TableBody>
                 </Table>
@@ -161,7 +162,7 @@ function PackageDrawer({ pkg, onClose }: { pkg: any | null; onClose: () => void 
                       <TableCell>{t.installment_number ?? "-"}/{t.total_installments ?? "-"}</TableCell>
                       <TableCell>{fmtDate(t.due_date)}</TableCell>
                       <TableCell>{fmt(Number(t.amount))}</TableCell>
-                      <TableCell><Badge variant="outline">{t.status}</Badge></TableCell>
+                      <TableCell><Badge variant="outline">{formatClinicalTypeLabel(t.status)}</Badge></TableCell>
                     </TableRow>
                   ))}</TableBody>
                 </Table>

@@ -15,6 +15,7 @@
  */
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatClinicalTypeLabel } from '@/utils/clinicalFieldLabels';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -283,7 +284,7 @@ export function VisaoGeralNutricaoBlock({
                       variant={alert.severity === 'critical' ? 'destructive' : 'secondary'}
                       className="text-xs"
                     >
-                      {alert.alert_type}
+                      {formatClinicalTypeLabel(alert.alert_type)}
                     </Badge>
                     <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
                   </div>

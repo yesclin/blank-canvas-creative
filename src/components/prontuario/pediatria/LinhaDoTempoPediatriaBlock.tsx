@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { formatClinicalTypeLabel } from '@/utils/clinicalFieldLabels';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -363,7 +364,7 @@ export function LinhaDoTempoPediatriaBlock({
                                           </Badge>
                                           {event.status && (
                                             <Badge variant="secondary" className="text-xs">
-                                              {event.status}
+                                              {formatClinicalTypeLabel(event.status)}
                                             </Badge>
                                           )}
                                         </div>
