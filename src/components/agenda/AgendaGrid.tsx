@@ -673,18 +673,28 @@ export function AgendaGrid({
                   );
                 })}
 
-                {dayAppointments.slice(0, 3).map(apt => (
-                  <div 
-                    key={apt.id}
-                    className="text-xs p-1 mb-1 rounded bg-primary/10 truncate cursor-pointer hover:bg-primary/20"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onAppointmentClick?.(apt);
-                    }}
-                  >
-                    {apt.start_time.slice(0, 5)} {apt.patient?.full_name?.split(' ')[0]}
-                  </div>
-                ))}
+                {dayAppointments.slice(0, 3).map(apt => {
+                  const aptColor = resolveProfessionalColor(
+                    apt.professional?.color ?? professionalColorById[apt.professional_id || ''],
+                    apt.professional_id,
+                  );
+                  return (
+                    <div
+                      key={apt.id}
+                      className="text-xs p-1 mb-1 rounded bg-muted/60 truncate cursor-pointer hover:bg-muted flex items-center gap-1 border-l-[3px]"
+                      style={{ borderLeftColor: aptColor }}
+                      title={apt.professional?.full_name}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAppointmentClick?.(apt);
+                      }}
+                    >
+                      <span className="truncate">
+                        {apt.start_time.slice(0, 5)} {apt.patient?.full_name?.split(' ')[0]}
+                      </span>
+                    </div>
+                  );
+                })}
                 {dayAppointments.length > 3 && (
                   <div className="text-xs text-muted-foreground">
                     +{dayAppointments.length - 3} mais
