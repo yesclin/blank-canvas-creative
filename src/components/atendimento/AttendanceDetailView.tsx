@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { formatClinicalFieldLabel, formatClinicalFieldValue } from "@/utils/clinicalFieldLabels";
 
 export type AttendanceDetailAction =
   | "sign" | "note" | "addendum" | "print" | "pdf" | "history" | null;
@@ -845,9 +846,9 @@ function AnamnesisContent({ data }: { data: any }) {
     <div className="space-y-1.5">
       {entries.slice(0, 20).map(([key, value]) => (
         <div key={key} className="text-xs">
-          <span className="font-medium text-foreground/70 capitalize">{key.replace(/_/g, " ")}:</span>{" "}
+          <span className="font-medium text-foreground/70">{formatClinicalFieldLabel(key)}:</span>{" "}
           <span className="text-foreground/80">
-            {typeof value === "object" ? JSON.stringify(value) : String(value)}
+            {formatClinicalFieldValue(value)}
           </span>
         </div>
       ))}
@@ -867,9 +868,9 @@ function EvolutionContent({ content, notes }: { content: any; notes: string | nu
         <div className="space-y-1">
           {Object.entries(content).filter(([_, v]) => v !== null && v !== undefined && v !== "").slice(0, 15).map(([key, value]) => (
             <div key={key} className="text-xs">
-              <span className="font-medium text-foreground/70 capitalize">{key.replace(/_/g, " ")}:</span>{" "}
+              <span className="font-medium text-foreground/70">{formatClinicalFieldLabel(key)}:</span>{" "}
               <span className="text-foreground/80">
-                {typeof value === "object" ? JSON.stringify(value) : String(value)}
+                {formatClinicalFieldValue(value)}
               </span>
             </div>
           ))}
