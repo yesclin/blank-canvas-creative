@@ -42,6 +42,7 @@ import { AppointmentPaymentBadge } from "./AppointmentPaymentBadge";
 import { AppointmentHoverPreview } from "./AppointmentHoverPreview";
 import { useAppointmentFinancialStatus } from "@/hooks/useAppointmentFinancialStatus";
 import { getAppointmentSourceLabel } from "@/utils/appointmentSource";
+import { resolveProfessionalColor } from "@/utils/professionalColors";
 
 interface AppointmentCardProps {
   appointment: Appointment;
