@@ -20,6 +20,7 @@ import {
 } from "@/types/prontuario";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { formatClinicalFieldLabel, formatClinicalFieldValue } from '@/utils/clinicalFieldLabels';
 
 interface EvolutionTimelineProps {
   evolutions: ClinicalEvolution[];
@@ -111,9 +112,9 @@ export function EvolutionTimeline({ evolutions, onViewEvolution, onEditEvolution
                             <div className="mt-3 p-2 bg-muted/50 rounded text-sm">
                               {Object.entries(evolution.content).slice(0, 2).map(([key, value]) => (
                                 <p key={key} className="truncate text-muted-foreground">
-                                  <span className="font-medium">{key}:</span>{' '}
-                                  {String(value).substring(0, 80)}
-                                  {String(value).length > 80 && '...'}
+                                  <span className="font-medium">{formatClinicalFieldLabel(key)}:</span>{' '}
+                                  {formatClinicalFieldValue(value).substring(0, 80)}
+                                  {formatClinicalFieldValue(value).length > 80 && '...'}
                                 </p>
                               ))}
                             </div>

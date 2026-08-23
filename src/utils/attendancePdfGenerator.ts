@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { toast } from 'sonner';
+import { formatClinicalFieldLabel, formatClinicalFieldValue, formatClinicalEnum } from '@/utils/clinicalFieldLabels';
 
 /**
  * Generates a professional PDF from the consolidated attendance snapshot_json.
@@ -344,7 +345,7 @@ export async function generateAttendancePDF(
       if (typeof data === 'object' && data !== null) {
         const entries = Object.entries(data).filter(([_, v]) => v != null && v !== '');
         for (const [key, value] of entries.slice(0, 30)) {
-          addKeyValue(key.replace(/_/g, ' '), typeof value === 'object' ? JSON.stringify(value) : String(value), 2);
+          addKeyValue(formatClinicalFieldLabel(key), formatClinicalFieldValue(value), 2);
         }
         if (entries.length > 30) {
           pdf.setFontSize(FONT_SMALL);
@@ -367,7 +368,7 @@ export async function generateAttendancePDF(
         pdf.setFont('helvetica', 'italic');
         pdf.setFontSize(FONT_SMALL);
         pdf.setTextColor(...MUTED_COLOR);
-        pdf.text(`Tipo: ${ev.evolution_type}`, M + 2, y);
+        pdf.text(`Tipo: ${formatClinicalEnum(ev.evolution_type)}`, M + 2, y);
         y += LINE_H;
       }
       pdf.setFont('helvetica', 'normal');
@@ -377,7 +378,7 @@ export async function generateAttendancePDF(
       if (ev.content && typeof ev.content === 'object') {
         const entries = Object.entries(ev.content).filter(([_, v]) => v != null && v !== '');
         for (const [key, value] of entries.slice(0, 20)) {
-          addKeyValue(key.replace(/_/g, ' '), typeof value === 'object' ? JSON.stringify(value) : String(value), 2);
+          addKeyValue(formatClinicalFieldLabel(key), formatClinicalFieldValue(value), 2);
         }
       }
       if (ev.notes) {

@@ -39,6 +39,7 @@ import type { AnamnesePsicologiaData } from "@/hooks/prontuario/psicologia/useAn
 import type { SessaoPsicologia } from "@/hooks/prontuario/psicologia/useSessoesPsicologiaData";
 import type { PlanoTerapeuticoData } from "@/hooks/prontuario/psicologia/usePlanoTerapeuticoData";
 import type { InstrumentoPsicologico } from "@/hooks/prontuario/psicologia/useInstrumentosPsicologicosData";
+import { formatClinicalFieldLabel, formatClinicalFieldValue } from '@/utils/clinicalFieldLabels';
 
 // Define a consent type locally to avoid import issues
 interface ConsentRecord {
@@ -466,7 +467,7 @@ export function HistoricoPsicologiaBlock({
                                       <div className="flex flex-wrap gap-2">
                                         {Object.entries(event.metadata).map(([key, value]) => (
                                           <Badge key={key} variant="outline" className="text-xs">
-                                            {key}: {value}
+                                            {formatClinicalFieldLabel(key)}: {formatClinicalFieldValue(value)}
                                           </Badge>
                                         ))}
                                       </div>

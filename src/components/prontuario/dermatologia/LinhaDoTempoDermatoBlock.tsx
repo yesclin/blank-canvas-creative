@@ -36,6 +36,7 @@ import {
 import { format, parseISO, isThisYear, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { formatClinicalFieldLabel, formatClinicalFieldValue } from '@/utils/clinicalFieldLabels';
 
 /**
  * Tipos de registro na linha do tempo
@@ -431,11 +432,11 @@ export function LinhaDoTempoDermatoBlock({
                   <div className="bg-muted/30 rounded-lg p-4 space-y-2">
                     {Object.entries(selectedItem.details).map(([key, value]) => (
                       <div key={key} className="flex gap-2">
-                        <span className="font-medium text-sm capitalize">
-                          {key.replace(/_/g, ' ')}:
+                        <span className="font-medium text-sm">
+                          {formatClinicalFieldLabel(key)}:
                         </span>
                         <span className="text-sm text-muted-foreground">
-                          {String(value)}
+                          {formatClinicalFieldValue(value)}
                         </span>
                       </div>
                     ))}

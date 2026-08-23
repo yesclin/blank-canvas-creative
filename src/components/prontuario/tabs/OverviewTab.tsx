@@ -27,6 +27,7 @@ import {
 import { format, parseISO, differenceInYears } from "date-fns";
 import { calculateAgeFromDateOnly } from "@/utils/dateUtils";
 import { ptBR } from "date-fns/locale";
+import { formatClinicalFieldLabel, formatClinicalFieldValue } from '@/utils/clinicalFieldLabels';
 
 interface OverviewTabProps {
   patient: PatientSummary;
@@ -270,9 +271,9 @@ export function OverviewTab({
                 <div className="p-3 bg-muted/30 rounded-lg text-sm space-y-2">
                   {Object.entries(lastEvolution.content).slice(0, 2).map(([key, value]) => (
                     <div key={key}>
-                      <span className="font-medium capitalize">{key.replace(/_/g, ' ')}:</span>
+                      <span className="font-medium">{formatClinicalFieldLabel(key)}:</span>
                       <p className="text-muted-foreground line-clamp-2">
-                        {String(value)}
+                        {formatClinicalFieldValue(value)}
                       </p>
                     </div>
                   ))}

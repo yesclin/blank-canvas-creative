@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { formatClinicalFieldLabel, formatClinicalFieldValue } from '@/utils/clinicalFieldLabels';
 import {
   type EventoTimelineNutricao,
   type TipoEventoNutricao,
@@ -255,10 +256,8 @@ export function LinhaTempoNutricaoBlock({
                                   <div className="mt-3 p-2 bg-muted/50 rounded text-sm space-y-1">
                                     {Object.entries(evento.detalhes || {}).slice(0, 6).map(([key, value]) => {
                                       if (!value || key === 'tipo_registro') return null;
-                                      const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                                      const displayValue = typeof value === 'object' 
-                                        ? JSON.stringify(value).substring(0, 100) 
-                                        : String(value).substring(0, 150);
+                                      const label = formatClinicalFieldLabel(key);
+                                      const displayValue = formatClinicalFieldValue(value).substring(0, 150);
                                       return (
                                         <p key={key} className="text-muted-foreground">
                                           <span className="font-medium">{label}:</span> {displayValue}

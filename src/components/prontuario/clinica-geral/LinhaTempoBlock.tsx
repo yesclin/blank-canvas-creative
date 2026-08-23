@@ -28,6 +28,7 @@ import {
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState, useMemo } from "react";
+import { formatClinicalFieldLabel, formatClinicalFieldValue } from '@/utils/clinicalFieldLabels';
 
 /**
  * Tipos de eventos na linha do tempo
@@ -244,13 +245,11 @@ export function LinhaTempoBlock({
                   <div className="mt-3 pt-3 border-t space-y-2">
                     {Object.entries(evento.detalhes!).map(([key, value]) => {
                       if (!value) return null;
-                      const label = key
-                        .replace(/_/g, ' ')
-                        .replace(/\b\w/g, c => c.toUpperCase());
+                      const label = formatClinicalFieldLabel(key);
                       return (
                         <div key={key} className="text-sm">
                           <span className="font-medium text-muted-foreground">{label}: </span>
-                          <span>{String(value)}</span>
+                          <span>{formatClinicalFieldValue(value)}</span>
                         </div>
                       );
                     })}
