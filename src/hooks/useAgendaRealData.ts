@@ -18,6 +18,7 @@ import type {
 } from "@/types/agenda";
 import { WeekSchedule, getDefaultWeekSchedule } from "@/components/config/EnhancedWorkingHoursCard";
 import { fetchClinicSpecialtyAliases, getSpecialtyDisplayName } from "@/lib/specialtyDisplay";
+import { resolveProfessionalColor } from "@/utils/professionalColors";
 
 // ============= PROFESSIONALS =============
 export function useProfessionals(clinicId?: string | null) {
