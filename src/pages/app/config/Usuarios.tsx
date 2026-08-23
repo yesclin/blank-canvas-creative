@@ -1056,6 +1056,26 @@ export default function ConfigUsuarios() {
                 </div>
               </div>
             )}
+
+            {isLoadingProfessional && (
+              <p className="text-xs text-muted-foreground flex items-center gap-2">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Carregando dados do profissional...
+              </p>
+            )}
+
+            {editProfessional && (
+              <>
+                <Separator />
+                <ProfessionalColorField
+                  value={editColor}
+                  professionalId={editProfessional.id}
+                  previewName={editForm.full_name || editingUser?.full_name}
+                  onChange={setEditColor}
+                  disabled={isSavingEdit || !canManageUsers}
+                />
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isSavingEdit}>
