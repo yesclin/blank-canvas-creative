@@ -55,7 +55,7 @@ const deliveryStatusMeta: Record<DeliveryStatus, { label: string; className: str
   cancelled:    { label: "Cancelado",      className: "bg-muted text-muted-foreground border-border",         Icon: XCircle },
 };
 import {
-  UserTypeSelector, UserType, ProfessionalFields,
+  UserTypeSelector, UserType, ProfessionalFields, ProfessionalColorField,
   GranularPermissions, getDefaultPermissions, ModuleAction,
 } from "@/components/config/users";
 
