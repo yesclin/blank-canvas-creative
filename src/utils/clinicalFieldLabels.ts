@@ -416,5 +416,6 @@ export function formatClinicalFieldValue(value: unknown): string {
 export function formatClinicalEnum(value?: string | null): string {
   if (!value) return '';
   const normalized = value.trim().toLowerCase();
-  return VALUE_LABELS[normalized] ?? toTitleCase(value);
+  return VALUE_LABELS[normalized] ?? TYPE_LABELS[normalized] ?? toTitleCase(value);
 }
+
