@@ -718,22 +718,27 @@ export function useAgendaRealData(selectedDate: Date, viewMode: "daily" | "weekl
                     specialtiesLoading || insurancesLoading || appointmentsLoading ||
                     clinicScheduleLoading || profSchedulesLoading || blocksLoading;
   
-  // Build professional schedules map for AppointmentDialog
-  const professionalSchedules = new Map<string, { useClinicDefault: boolean; workingDays: WeekSchedule }>();
-  professionals.forEach(prof => {
-    const config = professionalSchedulesMap.get(prof.id);
-    if (config) {
-      professionalSchedules.set(prof.id, {
-        useClinicDefault: config.use_clinic_default,
-        workingDays: config.working_days,
-      });
-    } else {
-      professionalSchedules.set(prof.id, {
-        useClinicDefault: true,
-        workingDays: clinicSchedule || getDefaultWeekSchedule(),
-      });
-    }
-  });
+  // Build professional schedules map for AppointmentDialog (memoizado: um Map novo
+  // a cada render desestabiliza os hooks de slots/conflitos do AppointmentDialog)
+  const professionalSchedules = useMemo(() => {
+    const map = new Map<string, { useClinicDefault: boolean; workingDays: WeekSchedule }>();
+    professionals.forEach(prof => {
+      const config = professionalSchedulesMap.get(prof.id);
+      if (config) {
+        map.set(prof.id, {
+          useClinicDefault: config.use_clinic_default,
+          workingDays: config.working_days,
+        });
+      } else {
+        map.set(prof.id, {
+          useClinicDefault: true,
+          workingDays: clinicSchedule || getDefaultWeekSchedule(),
+        });
+      }
+    });
+    return map;
+  }, [professionals, professionalSchedulesMap, clinicSchedule]);
+
   
   return {
     professionals,
