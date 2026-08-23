@@ -310,7 +310,7 @@ export function useAppointmentsForPeriod(
           id: apt.professionals.id,
           clinic_id: apt.clinic_id,
           full_name: apt.professionals.full_name,
-          color: apt.professionals.color || "#6366f1",
+          color: resolveProfessionalColor(apt.professionals.color, apt.professionals.id),
           specialty_id: apt.professionals.specialty_id,
           is_active: true,
         } : undefined,
