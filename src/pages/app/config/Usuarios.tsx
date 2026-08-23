@@ -396,9 +396,25 @@ export default function ConfigUsuarios() {
 
       if (error) throw error;
 
+      // Cor na Agenda (apenas quando o usuário é um profissional e a cor mudou)
+      if (editProfessional && editColor && editColor !== editProfessional.color) {
+        const { error: colorError } = await supabase
+          .from("professionals")
+          .update({ color: editColor })
+          .eq("id", editProfessional.id)
+          .eq("clinic_id", clinicId!);
+
+        if (colorError) throw colorError;
+
+        queryClient.invalidateQueries({ queryKey: ["professionals"] });
+        queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      }
+
       toast.success("Dados atualizados com sucesso");
       setIsEditDialogOpen(false);
       setEditingUser(null);
+      setEditProfessional(null);
+      setEditColor(null);
       refetch();
     } catch (err) {
       console.error("Error updating user:", err);
