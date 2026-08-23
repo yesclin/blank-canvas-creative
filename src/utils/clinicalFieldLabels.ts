@@ -339,8 +339,32 @@ function toTitleCase(key: string): string {
     .replace(/[_-]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+    .split(' ')
+    .map((word) => {
+      const mapped = WORD_LABELS[word.toLowerCase()];
+      if (mapped) return mapped;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ');
 }
+
+/**
+ * Converte um slug / valor técnico (evolution_type, record_type, chave de
+ * módulo ou especialidade) em rótulo amigável em português-BR.
+ * Nunca retorna o slug cru: usa dicionário e, em último caso, fallback
+ * palavra por palavra com acentuação correta.
+ */
+export function formatClinicalTypeLabel(value?: string | null, fallback = ''): string {
+  if (!value) return fallback;
+  const normalized = value.trim().toLowerCase();
+  return (
+    TYPE_LABELS[normalized] ??
+    VALUE_LABELS[normalized] ??
+    FIELD_LABELS[normalized] ??
+    toTitleCase(value)
+  );
+}
+
 
 /** Converte uma chave técnica em rótulo legível em português-BR. */
 export function formatClinicalFieldLabel(key: string): string {
