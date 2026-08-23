@@ -68,7 +68,7 @@ export function useProfessionals(clinicId?: string | null) {
         } : undefined,
         registration_number: p.registration_number,
         avatar_url: p.avatar_url,
-        color: p.color || "#6366f1",
+        color: resolveProfessionalColor(p.color, p.id),
         is_active: p.is_active,
       })) as Professional[];
     },
