@@ -39,7 +39,7 @@ import type { AnamnesePsicologiaData } from "@/hooks/prontuario/psicologia/useAn
 import type { SessaoPsicologia } from "@/hooks/prontuario/psicologia/useSessoesPsicologiaData";
 import type { PlanoTerapeuticoData } from "@/hooks/prontuario/psicologia/usePlanoTerapeuticoData";
 import type { InstrumentoPsicologico } from "@/hooks/prontuario/psicologia/useInstrumentosPsicologicosData";
-import { formatClinicalFieldLabel, formatClinicalFieldValue } from '@/utils/clinicalFieldLabels';
+import { formatClinicalFieldLabel, formatClinicalFieldValue, formatClinicalTypeLabel } from '@/utils/clinicalFieldLabels';
 
 // Define a consent type locally to avoid import issues
 interface ConsentRecord {
