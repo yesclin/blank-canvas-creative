@@ -294,6 +294,13 @@ export function AgendaGrid({
     return map;
   }, [professionals]);
 
+  /** Cor configurada pela clínica para cada profissional (com fallback automático) */
+  const professionalColorById = useMemo(() => {
+    const map: Record<string, string> = {};
+    professionals.forEach(p => { map[p.id] = resolveProfessionalColor(p.color, p.id); });
+    return map;
+  }, [professionals]);
+
   const DAY_END_MIN = DAY_START_MIN + timeSlots.length * SLOT_MIN;
 
   /** Faixas visuais dos bloqueios já cadastrados (visões Dia/Semana) */
