@@ -393,7 +393,12 @@ export function formatClinicalFieldValue(value: unknown): string {
     const normalized = value.trim().toLowerCase();
     if (normalized === 'true') return 'Sim';
     if (normalized === 'false') return 'Não';
-    return VALUE_LABELS[normalized] ?? value;
+    if (VALUE_LABELS[normalized]) return VALUE_LABELS[normalized];
+    if (TYPE_LABELS[normalized]) return TYPE_LABELS[normalized];
+    // slug técnico (sem espaços, com "_") nunca deve vazar para a interface
+    if (/^[a-z0-9]+(_[a-z0-9]+)+$/.test(normalized)) return toTitleCase(normalized);
+    return value;
+
   }
 
   if (typeof value === 'object') {
