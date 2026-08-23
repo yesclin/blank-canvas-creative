@@ -43,6 +43,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { formatClinicalFieldLabel } from "@/utils/clinicalFieldLabels";
 
 interface SignatureAuditTrailDrawerProps {
   open: boolean;
@@ -455,7 +456,7 @@ export function SignatureAuditTrailDrawer({
                         {entries.length > 0 && (
                           <div className="mt-1.5 rounded-md border bg-muted/30 px-2 py-1.5 space-y-0.5">
                             {entries.map(([k, v]) => {
-                              const label = METADATA_LABELS[k] || k;
+                              const label = METADATA_LABELS[k] || formatClinicalFieldLabel(k);
                               const isLong =
                                 k === "user_agent" || k.includes("hash") || k.includes("id");
                               const display =
