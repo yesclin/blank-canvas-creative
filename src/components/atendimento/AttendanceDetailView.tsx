@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { formatClinicalFieldLabel, formatClinicalFieldValue } from "@/utils/clinicalFieldLabels";
+import { formatClinicalFieldLabel, formatClinicalFieldValue, formatClinicalTypeLabel } from "@/utils/clinicalFieldLabels";
 
 export type AttendanceDetailAction =
   | "sign" | "note" | "addendum" | "print" | "pdf" | "history" | null;
@@ -314,7 +314,7 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
                 "border-blue-300 bg-blue-50 dark:bg-blue-950/30"
               )}>
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-[10px]">{a.alert_type}</Badge>
+                  <Badge variant="outline" className="text-[10px]">{formatClinicalTypeLabel(a.alert_type)}</Badge>
                   <span className="font-medium">{a.title}</span>
                 </div>
                 {a.description && <p className="text-xs text-muted-foreground mt-1">{a.description}</p>}
@@ -352,7 +352,7 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
               <div key={ev.id} className="rounded-lg border p-4 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {ev.evolution_type && <Badge variant="outline" className="text-[10px]">{ev.evolution_type}</Badge>}
+                    {ev.evolution_type && <Badge variant="outline" className="text-[10px]">{formatClinicalTypeLabel(ev.evolution_type)}</Badge>}
                     <Badge variant={statusBadgeVariant(ev.status)} className="text-[10px]">{statusLabel(ev.status)}</Badge>
                     {ev.signed_at && (
                       <span className="text-[10px] text-green-600 flex items-center gap-0.5">
@@ -378,7 +378,7 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
                 <div className="flex items-center gap-2">
                   <FileText className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-medium">{doc.title}</span>
-                  <Badge variant="outline" className="text-[10px]">{doc.document_type}</Badge>
+                  <Badge variant="outline" className="text-[10px]">{formatClinicalTypeLabel(doc.document_type)}</Badge>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant={statusBadgeVariant(doc.status)} className="text-[10px]">{statusLabel(doc.status)}</Badge>
@@ -414,7 +414,7 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
                 <div className="p-2">
                   <p className="text-[10px] font-medium truncate">{m.file_name}</p>
                   {m.description && <p className="text-[10px] text-muted-foreground truncate">{m.description}</p>}
-                  {m.classification && <Badge variant="outline" className="text-[9px] mt-1">{m.classification}</Badge>}
+                  {m.classification && <Badge variant="outline" className="text-[9px] mt-1">{formatClinicalTypeLabel(m.classification)}</Badge>}
                 </div>
               </div>
             ))}
@@ -706,7 +706,7 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
           <div className="space-y-2">
             {detail.body_measurements.map((b) => (
               <div key={b.id} className="rounded-lg border p-3 text-xs">
-                <Badge variant="outline" className="text-[10px] mb-1">{b.measurement_type}</Badge>
+                <Badge variant="outline" className="text-[10px] mb-1">{formatClinicalTypeLabel(b.measurement_type)}</Badge>
                 <pre className="text-[11px] text-foreground/80 whitespace-pre-wrap font-sans">{JSON.stringify(b.data, null, 2)}</pre>
               </div>
             ))}
@@ -721,7 +721,7 @@ export function AttendanceDetailView({ detail, initialAction = null }: Props) {
             {detail.addendums.map((a) => (
               <div key={a.id} className="rounded-lg border p-3 text-sm">
                 <div className="flex items-center justify-between mb-1">
-                  <Badge variant="outline" className="text-[10px]">{a.record_type}</Badge>
+                  <Badge variant="outline" className="text-[10px]">{formatClinicalTypeLabel(a.record_type)}</Badge>
                   <span className="text-[10px] text-muted-foreground">{fmtTime(a.created_at)}</span>
                 </div>
                 {a.reason && <p className="text-[11px] text-muted-foreground italic mb-1">Motivo: {a.reason}</p>}

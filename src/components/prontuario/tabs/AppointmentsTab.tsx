@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatClinicalTypeLabel } from '@/utils/clinicalFieldLabels';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -146,11 +147,11 @@ export function AppointmentsTab({ evolutions, onViewEvolution }: AppointmentsTab
                             <div>
                               <div className="flex items-center gap-2">
                                 <span className="font-medium">
-                                  {evolutionTypeLabels[apt.evolution_type]}
+                                  {evolutionTypeLabels[apt.evolution_type] ?? formatClinicalTypeLabel(apt.evolution_type)}
                                 </span>
                                 {apt.specialty && (
                                   <Badge variant="outline" className="text-xs">
-                                    {specialtyLabels[apt.specialty as Specialty]}
+                                    {specialtyLabels[apt.specialty as Specialty] ?? formatClinicalTypeLabel(apt.specialty)}
                                   </Badge>
                                 )}
                               </div>

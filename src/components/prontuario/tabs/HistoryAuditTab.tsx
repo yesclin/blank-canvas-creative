@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatClinicalTypeLabel } from '@/utils/clinicalFieldLabels';
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,7 +71,7 @@ export function HistoryAuditTab({ evolutions, alerts, attachments }: HistoryAudi
         action: 'create',
         entity_type: 'evolution',
         entity_id: evo.id,
-        entity_name: evolutionTypeLabels[evo.evolution_type],
+        entity_name: evolutionTypeLabels[evo.evolution_type] ?? formatClinicalTypeLabel(evo.evolution_type),
         user_name: evo.professional_name || 'Sistema',
         details: 'Evolução clínica registrada'
       });
@@ -82,7 +83,7 @@ export function HistoryAuditTab({ evolutions, alerts, attachments }: HistoryAudi
           action: 'sign',
           entity_type: 'evolution',
           entity_id: evo.id,
-          entity_name: evolutionTypeLabels[evo.evolution_type],
+          entity_name: evolutionTypeLabels[evo.evolution_type] ?? formatClinicalTypeLabel(evo.evolution_type),
           user_name: evo.professional_name || 'Sistema',
           details: 'Evolução assinada digitalmente'
         });
@@ -95,7 +96,7 @@ export function HistoryAuditTab({ evolutions, alerts, attachments }: HistoryAudi
           action: 'update',
           entity_type: 'evolution',
           entity_id: evo.id,
-          entity_name: evolutionTypeLabels[evo.evolution_type],
+          entity_name: evolutionTypeLabels[evo.evolution_type] ?? formatClinicalTypeLabel(evo.evolution_type),
           user_name: evo.professional_name || 'Sistema',
           details: 'Evolução atualizada'
         });

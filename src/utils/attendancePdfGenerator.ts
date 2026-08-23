@@ -518,7 +518,7 @@ export async function generateAttendancePDF(
       checkPage(LINE_H * 2);
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(FONT_BODY);
-      pdf.text(`• ${m.map_type || 'Mapa'}`, M + 2, y);
+      pdf.text(`• ${formatClinicalEnum(m.map_type) || 'Mapa'}`, M + 2, y);
       y += LINE_H;
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(FONT_SMALL);
@@ -561,7 +561,7 @@ export async function generateAttendancePDF(
       checkPage(LINE_H * 2);
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(FONT_SMALL);
-      const head = [b.title, b.procedure_type, b.view_angle].filter(Boolean).join(' — ') || 'Comparativo';
+      const head = [b.title, formatClinicalEnum(b.procedure_type), formatClinicalEnum(b.view_angle)].filter(Boolean).join(' — ') || 'Comparativo';
       pdf.text(`• ${head}`, M + 2, y);
       y += LINE_H - 0.5;
       if (b.description) addText(b.description, 4);
@@ -576,7 +576,7 @@ export async function generateAttendancePDF(
       checkPage(LINE_H);
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(FONT_SMALL);
-      pdf.text(`• ${bm.measurement_type}`, M + 2, y);
+      pdf.text(`• ${formatClinicalEnum(bm.measurement_type)}`, M + 2, y);
       y += LINE_H - 0.5;
     }
   }
@@ -589,7 +589,7 @@ export async function generateAttendancePDF(
       checkPage(LINE_H);
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(FONT_BODY);
-      pdf.text(`• ${doc.title} (${doc.document_type}) — ${doc.status}`, M + 2, y);
+      pdf.text(`• ${doc.title} (${formatClinicalEnum(doc.document_type)}) — ${formatClinicalEnum(doc.status)}`, M + 2, y);
       y += LINE_H;
     }
   }
@@ -602,7 +602,7 @@ export async function generateAttendancePDF(
       checkPage(LINE_H * 2);
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(FONT_BODY);
-      const desc = [m.file_name, m.classification, m.description].filter(Boolean).join(' — ');
+      const desc = [m.file_name, formatClinicalEnum(m.classification), m.description].filter(Boolean).join(' — ');
       pdf.text(`• ${desc}`, M + 2, y);
       y += LINE_H;
 

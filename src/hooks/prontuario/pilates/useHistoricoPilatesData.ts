@@ -6,6 +6,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
+import { formatClinicalTypeLabel } from '@/utils/clinicalFieldLabels';
 import { supabase } from '@/integrations/supabase/client';
 
 // Tipos de registro na timeline
@@ -125,7 +126,7 @@ export function useHistoricoPilatesData({
             title = (content?.titulo as string) || 'Documento';
             const categoria = content?.categoria as string | undefined;
             if (categoria) {
-              subtitle = categoria.replace(/_/g, ' ');
+              subtitle = formatClinicalTypeLabel(categoria);
             }
             break;
           

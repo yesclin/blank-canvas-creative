@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { formatClinicalTypeLabel } from '@/utils/clinicalFieldLabels';
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -396,7 +397,7 @@ export function HistoricoTimelineBlock({
                                           }`}
                                         >
                                           {entry.status === 'assinado' && <CheckCircle2 className="h-3 w-3 mr-1" />}
-                                          {entry.status}
+                                          {formatClinicalTypeLabel(entry.status)}
                                         </Badge>
                                       )}
                                     </div>

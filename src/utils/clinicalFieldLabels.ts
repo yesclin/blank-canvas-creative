@@ -140,10 +140,158 @@ const FIELD_LABELS: Record<string, string> = {
   total: 'Total',
 };
 
+/**
+ * Slugs técnicos (evolution_type, record_type, chaves de módulo/especialidade)
+ * que nunca devem aparecer crus na interface ou nos documentos.
+ */
+const TYPE_LABELS: Record<string, string> = {
+  // ── Estética ──
+  evolucao_estetica: 'Evolução Estética',
+  anamnese_estetica: 'Anamnese Estética',
+  avaliacao_estetica: 'Avaliação Estética',
+  harmonizacao_facial: 'Harmonização Facial',
+  toxina_botulinica: 'Toxina Botulínica',
+  preenchimento: 'Preenchimento',
+  bioestimulador: 'Bioestimulador',
+  // ── Clínica geral / especialidades ──
+  clinica_geral: 'Clínica Geral',
+  medical_general: 'Clínica Médica Geral',
+  clinica_medica: 'Clínica Médica',
+  dermatologia: 'Dermatologia',
+  odontologia: 'Odontologia',
+  psicologia: 'Psicologia',
+  psiquiatria: 'Psiquiatria',
+  pediatria: 'Pediatria',
+  nutricao: 'Nutrição',
+  fisioterapia: 'Fisioterapia',
+  pilates: 'Pilates',
+  estetica: 'Estética',
+  other_specialty: 'Outra Especialidade',
+  // ── Registros clínicos genéricos ──
+  clinical_evolution: 'Evolução Clínica',
+  consolidated_document: 'Documento Consolidado do Atendimento',
+  anamnesis: 'Anamnese',
+  evolution: 'Evolução',
+  addendum: 'Adendo',
+  prescription_doc: 'Receituário',
+  certificate: 'Atestado',
+  consent_term: 'Termo de Consentimento',
+  // ── Nutrição ──
+  anamnese_nutricional: 'Anamnese Nutricional',
+  avaliacao_nutricional_inicial: 'Avaliação Nutricional Inicial',
+  avaliacao_inicial: 'Avaliação Inicial',
+  diagnostico_nutricional: 'Diagnóstico Nutricional',
+  plano_alimentar: 'Plano Alimentar',
+  recordatorio_alimentar: 'Recordatório Alimentar',
+  meta_nutricional: 'Meta Nutricional',
+  evolucao_retorno: 'Evolução de Retorno',
+  // ── Fisioterapia ──
+  anamnese_fisioterapia: 'Anamnese de Fisioterapia',
+  avaliacao_funcional_fisio: 'Avaliação Funcional',
+  avaliacao_dor_fisio: 'Avaliação de Dor',
+  diagnostico_funcional_fisio: 'Diagnóstico Funcional',
+  exercicios_prescritos_fisio: 'Exercícios Prescritos',
+  plano_terapeutico_fisio: 'Plano Terapêutico',
+  sessao_fisioterapia: 'Sessão de Fisioterapia',
+  alerta_funcional_fisio: 'Alerta Funcional',
+  documento_fisioterapia: 'Documento de Fisioterapia',
+  // ── Pilates ──
+  anamnese_funcional_pilates: 'Anamnese Funcional',
+  avaliacao_funcional_pilates: 'Avaliação Funcional',
+  avaliacao_postural_pilates: 'Avaliação Postural',
+  avaliacao_dor_pilates: 'Avaliação de Dor',
+  plano_exercicios_pilates: 'Plano de Exercícios',
+  sessao_pilates: 'Sessão de Pilates',
+  alerta_funcional_pilates: 'Alerta Funcional',
+  documento_pilates: 'Documento de Pilates',
+  // ── Odonto / Dermato ──
+  diagnostico_odonto: 'Diagnóstico Odontológico',
+  diagnostico_dermato: 'Diagnóstico Dermatológico',
+  conduct_dermato: 'Plano e Conduta Dermatológica',
+  // ── Blocos genéricos ──
+  alerta_funcional: 'Alerta Funcional',
+  evolucao: 'Evolução',
+  exame_fisico: 'Exame Físico',
+  documentos_clinicos: 'Documentos Clínicos',
+  procedimentos_realizados: 'Procedimentos Realizados',
+  produtos_utilizados: 'Produtos Utilizados',
+  termos_consentimentos: 'Termos e Consentimentos',
+  before_after_photos: 'Fotos Antes e Depois',
+  facial_map: 'Mapa Facial',
+  odontograma: 'Odontograma',
+};
+
+/**
+ * Palavras isoladas usadas no fallback de slugs desconhecidos, para que
+ * nunca apareça texto sem acento ou em inglês na interface.
+ */
+const WORD_LABELS: Record<string, string> = {
+  evolucao: 'Evolução',
+  evolucoes: 'Evoluções',
+  estetica: 'Estética',
+  estetico: 'Estético',
+  clinica: 'Clínica',
+  clinico: 'Clínico',
+  geral: 'Geral',
+  avaliacao: 'Avaliação',
+  anamnese: 'Anamnese',
+  diagnostico: 'Diagnóstico',
+  sessao: 'Sessão',
+  sessoes: 'Sessões',
+  exercicios: 'Exercícios',
+  prescricao: 'Prescrição',
+  prescricoes: 'Prescrições',
+  recordatorio: 'Recordatório',
+  harmonizacao: 'Harmonização',
+  nutricao: 'Nutrição',
+  nutricional: 'Nutricional',
+  terapeutico: 'Terapêutico',
+  fisico: 'Físico',
+  prontuario: 'Prontuário',
+  documento: 'Documento',
+  documentos: 'Documentos',
+  odonto: 'Odontológico',
+  odontologico: 'Odontológico',
+  dermato: 'Dermatológico',
+  dermatologico: 'Dermatológico',
+  fisio: 'Fisioterapia',
+  medico: 'Médico',
+  medica: 'Médica',
+  pos: 'Pós',
+  pre: 'Pré',
+  consultation: 'Consulta',
+  evolution: 'Evolução',
+  procedure: 'Procedimento',
+  exam: 'Exame',
+  followup: 'Acompanhamento',
+  anamnesis: 'Anamnese',
+  general: 'Geral',
+  aesthetic: 'Estético',
+  aesthetics: 'Estética',
+  dentistry: 'Odontologia',
+  psychology: 'Psicologia',
+  physiotherapy: 'Fisioterapia',
+  nutrition: 'Nutrição',
+  document: 'Documento',
+  consolidated: 'Consolidado',
+  clinical: 'Clínico',
+  record: 'Registro',
+  note: 'Nota',
+  notes: 'Observações',
+  term: 'Termo',
+  terms: 'Termos',
+  map: 'Mapa',
+  facial: 'Facial',
+  photos: 'Fotos',
+  before: 'Antes',
+  after: 'Depois',
+};
+
 /** Valores enum comuns exibidos ao usuário final. */
 const VALUE_LABELS: Record<string, string> = {
   // tipos de evolução
   consultation: 'Consulta',
+
   return: 'Retorno',
   procedure: 'Procedimento',
   exam: 'Exame',
@@ -191,8 +339,32 @@ function toTitleCase(key: string): string {
     .replace(/[_-]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+    .split(' ')
+    .map((word) => {
+      const mapped = WORD_LABELS[word.toLowerCase()];
+      if (mapped) return mapped;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ');
 }
+
+/**
+ * Converte um slug / valor técnico (evolution_type, record_type, chave de
+ * módulo ou especialidade) em rótulo amigável em português-BR.
+ * Nunca retorna o slug cru: usa dicionário e, em último caso, fallback
+ * palavra por palavra com acentuação correta.
+ */
+export function formatClinicalTypeLabel(value?: string | null, fallback = ''): string {
+  if (!value) return fallback;
+  const normalized = value.trim().toLowerCase();
+  return (
+    TYPE_LABELS[normalized] ??
+    VALUE_LABELS[normalized] ??
+    FIELD_LABELS[normalized] ??
+    toTitleCase(value)
+  );
+}
+
 
 /** Converte uma chave técnica em rótulo legível em português-BR. */
 export function formatClinicalFieldLabel(key: string): string {
@@ -221,7 +393,12 @@ export function formatClinicalFieldValue(value: unknown): string {
     const normalized = value.trim().toLowerCase();
     if (normalized === 'true') return 'Sim';
     if (normalized === 'false') return 'Não';
-    return VALUE_LABELS[normalized] ?? value;
+    if (VALUE_LABELS[normalized]) return VALUE_LABELS[normalized];
+    if (TYPE_LABELS[normalized]) return TYPE_LABELS[normalized];
+    // slug técnico (sem espaços, com "_") nunca deve vazar para a interface
+    if (/^[a-z0-9]+(_[a-z0-9]+)+$/.test(normalized)) return toTitleCase(normalized);
+    return value;
+
   }
 
   if (typeof value === 'object') {
@@ -239,5 +416,6 @@ export function formatClinicalFieldValue(value: unknown): string {
 export function formatClinicalEnum(value?: string | null): string {
   if (!value) return '';
   const normalized = value.trim().toLowerCase();
-  return VALUE_LABELS[normalized] ?? toTitleCase(value);
+  return VALUE_LABELS[normalized] ?? TYPE_LABELS[normalized] ?? toTitleCase(value);
 }
+

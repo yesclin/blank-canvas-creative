@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { formatClinicalTypeLabel } from '@/utils/clinicalFieldLabels';
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinicData } from "@/hooks/useClinicData";
@@ -400,7 +401,7 @@ export function useProntuarioGlobalSearch(
         push({
           id: `evol-${e.id}`,
           type: "evolution",
-          title: e.evolution_type ? `Evolução — ${e.evolution_type}` : "Evolução",
+          title: e.evolution_type ? `Evolução — ${formatClinicalTypeLabel(e.evolution_type)}` : "Evolução",
           snippet: text,
           rawText: text,
           date: e.created_at,

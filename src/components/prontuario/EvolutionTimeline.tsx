@@ -20,7 +20,7 @@ import {
 } from "@/types/prontuario";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { formatClinicalFieldLabel, formatClinicalFieldValue } from '@/utils/clinicalFieldLabels';
+import { formatClinicalFieldLabel, formatClinicalFieldValue, formatClinicalTypeLabel } from '@/utils/clinicalFieldLabels';
 
 interface EvolutionTimelineProps {
   evolutions: ClinicalEvolution[];
@@ -80,7 +80,7 @@ export function EvolutionTimeline({ evolutions, onViewEvolution, onEditEvolution
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant="outline">
-                              {evolutionTypeLabels[evolution.evolution_type]}
+                              {evolutionTypeLabels[evolution.evolution_type] ?? formatClinicalTypeLabel(evolution.evolution_type)}
                             </Badge>
                             <Badge className={getStatusColor(evolution.status)}>
                               {evolution.status === 'signed' && <CheckCircle className="h-3 w-3 mr-1" />}
@@ -89,7 +89,7 @@ export function EvolutionTimeline({ evolutions, onViewEvolution, onEditEvolution
                             {evolution.specialty && (
                               <Badge variant="secondary" className="text-xs">
                                 <Stethoscope className="h-3 w-3 mr-1" />
-                                {specialtyLabels[evolution.specialty as Specialty]}
+                                {specialtyLabels[evolution.specialty as Specialty] ?? formatClinicalTypeLabel(evolution.specialty)}
                               </Badge>
                             )}
                           </div>

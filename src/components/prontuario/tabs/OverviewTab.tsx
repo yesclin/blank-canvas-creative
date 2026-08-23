@@ -27,7 +27,7 @@ import {
 import { format, parseISO, differenceInYears } from "date-fns";
 import { calculateAgeFromDateOnly } from "@/utils/dateUtils";
 import { ptBR } from "date-fns/locale";
-import { formatClinicalFieldLabel, formatClinicalFieldValue } from '@/utils/clinicalFieldLabels';
+import { formatClinicalFieldLabel, formatClinicalFieldValue, formatClinicalTypeLabel } from '@/utils/clinicalFieldLabels';
 
 interface OverviewTabProps {
   patient: PatientSummary;
@@ -249,11 +249,11 @@ export function OverviewTab({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">
-                      {evolutionTypeLabels[lastEvolution.evolution_type]}
+                      {evolutionTypeLabels[lastEvolution.evolution_type] ?? formatClinicalTypeLabel(lastEvolution.evolution_type)}
                     </Badge>
                     {lastEvolution.specialty && (
                       <Badge variant="secondary">
-                        {specialtyLabels[lastEvolution.specialty as Specialty]}
+                        {specialtyLabels[lastEvolution.specialty as Specialty] ?? formatClinicalTypeLabel(lastEvolution.specialty)}
                       </Badge>
                     )}
                   </div>
@@ -349,7 +349,7 @@ export function OverviewTab({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-sm">
-                          {evolutionTypeLabels[evolution.evolution_type]}
+                          {evolutionTypeLabels[evolution.evolution_type] ?? formatClinicalTypeLabel(evolution.evolution_type)}
                         </span>
                         <span className="text-xs text-muted-foreground">
                           {format(parseISO(evolution.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
