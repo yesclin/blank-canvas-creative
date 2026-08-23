@@ -350,10 +350,34 @@ export default function ConfigUsuarios() {
   };
 
 
-  const handleEditUser = (user: ClinicUser) => {
+  const handleEditUser = async (user: ClinicUser) => {
     setEditingUser(user);
     setEditForm({ full_name: user.full_name, email: user.email || "" });
+    setEditProfessional(null);
+    setEditColor(null);
     setIsEditDialogOpen(true);
+
+    if (!clinicId) return;
+    setIsLoadingProfessional(true);
+    try {
+      const { data, error: profError } = await supabase
+        .from("professionals")
+        .select("id, color")
+        .eq("clinic_id", clinicId)
+        .eq("user_id", user.user_id)
+        .limit(1)
+        .maybeSingle();
+
+      if (profError) throw profError;
+      if (data) {
+        setEditProfessional({ id: data.id, color: data.color ?? null });
+        setEditColor(data.color ?? null);
+      }
+    } catch (err) {
+      console.error("[Usuarios] Falha ao carregar profissional:", err);
+    } finally {
+      setIsLoadingProfessional(false);
+    }
   };
 
   const handleSaveEdit = async () => {
