@@ -7,6 +7,7 @@ import { AppointmentCard } from './AppointmentCard';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Lock } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { resolveProfessionalColor } from '@/utils/professionalColors';
 import type { Appointment, ViewMode, GroupBy, Professional, Room, Specialty, ScheduleBlock } from '@/types/agenda';
 import {
   getBlocksForDay,
