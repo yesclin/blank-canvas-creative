@@ -81,6 +81,10 @@ export function AppointmentCard({
   const financial = useAppointmentFinancialStatus(appointment);
   const isReceptionist = role === 'recepcionista';
   const sourceLabel = getAppointmentSourceLabel(appointment);
+  const professionalColor = resolveProfessionalColor(
+    professional?.color,
+    professional?.id || appointment.professional_id,
+  );
 
   const getStatusActions = () => {
     switch (status) {
