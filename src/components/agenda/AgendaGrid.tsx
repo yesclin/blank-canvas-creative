@@ -358,11 +358,25 @@ export function AgendaGrid({
             <div className="sticky top-0 z-20 bg-muted border-b p-2 text-center text-sm font-medium">
               Hora
             </div>
-            {Object.keys(groupedAppointments).map(group => (
-              <div key={group} className="sticky top-0 z-20 bg-muted border-b border-l p-2 text-center text-sm font-medium truncate">
-                {group}
-              </div>
-            ))}
+            {Object.keys(groupedAppointments).map(group => {
+              const headerProfId = groupBy === 'professional' ? professionalNameToId[group] : undefined;
+              const headerColor = headerProfId
+                ? resolveProfessionalColor(professionalColorById[headerProfId], headerProfId)
+                : undefined;
+              return (
+                <div key={group} className="sticky top-0 z-20 bg-muted border-b border-l p-2 text-center text-sm font-medium truncate">
+                  <span className="inline-flex items-center gap-1.5 min-w-0">
+                    {headerColor && (
+                      <span
+                        className="h-2.5 w-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: headerColor }}
+                      />
+                    )}
+                    <span className="truncate">{group}</span>
+                  </span>
+                </div>
+              );
+            })}
 
             {/* Time labels column */}
             <div className="relative bg-muted/30" style={{ height: TOTAL_HEIGHT }}>
