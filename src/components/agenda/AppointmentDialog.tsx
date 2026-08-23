@@ -531,17 +531,20 @@ export function AppointmentDialog({
           }
         }
 
-        // Especialidade
+        // Especialidade (idempotente — evita realimentar o efeito de especialidade)
         if (procedure.specialty_id) {
-          form.setValue("specialty_id", procedure.specialty_id);
+          if (form.getValues("specialty_id") !== procedure.specialty_id) {
+            form.setValue("specialty_id", procedure.specialty_id);
+          }
         } else if (procedure.specialty) {
           const matchingSpecialty = availableSpecialties.find(s =>
             s.name.toLowerCase() === procedure.specialty?.toLowerCase()
           );
-          if (matchingSpecialty) {
+          if (matchingSpecialty && form.getValues("specialty_id") !== matchingSpecialty.id) {
             form.setValue("specialty_id", matchingSpecialty.id);
           }
         }
+
       }
     } else {
       setSelectedProcedure(null);
