@@ -41,8 +41,8 @@ import {
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import {
 import { formatClinicalFieldLabel, formatClinicalFieldValue } from '@/utils/clinicalFieldLabels';
+import {
   type EventoTimelineNutricao,
   type TipoEventoNutricao,
   TIPO_EVENTO_NUTRICAO_CONFIG,
