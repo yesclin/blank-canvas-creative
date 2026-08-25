@@ -380,10 +380,18 @@ const Login = () => {
           keyProjectRef: LOGIN_SUPABASE_AUTH_KEY ? decodeJwtRef(LOGIN_SUPABASE_AUTH_KEY) : "",
         });
       }
-      const res = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password: cleanPassword,
-      }) as AuthSignInResult;
+      // Timeout explícito: se o servidor de auth não responder (ex.: banco do
+      // projeto indisponível), o usuário recebe mensagem clara em vez de ficar
+      // preso em "Entrando..." indefinidamente.
+      const res = await withTimeout<AuthSignInResult>(
+        supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password: cleanPassword,
+        }) as PromiseLike<AuthSignInResult>,
+        20000,
+        "Não foi possível conectar ao servidor de autenticação. Tente novamente em instantes.",
+      );
+
       if (import.meta.env.DEV) {
         console.info(res.error ? "LOGIN_ERROR" : "LOGIN_SUCCESS", {
           elapsedMs: Math.round(performance.now() - signInStartedAt),
