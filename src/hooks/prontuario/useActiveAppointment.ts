@@ -237,7 +237,8 @@ export function useActiveAppointment(patientId: string | null | undefined, prefe
     refetchOnMount: false,
     refetchOnReconnect: false,
     refetchOnWindowFocus: false,
-    refetchInterval: preferredAppointmentId ? 5000 : 30000,
+    // Realtime invalida o cache; polling apenas como fallback
+    refetchInterval: preferredAppointmentId ? 60_000 : 180_000,
   });
 }
 

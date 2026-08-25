@@ -62,9 +62,9 @@ export function useEnabledProntuarioTabs(
   const resourcesQuery = useQuery({
     queryKey: ["clinic-prontuario-resources", clinicId],
     enabled: Boolean(clinicId),
-    staleTime: 0,
-    refetchOnMount: "always",
-    refetchOnWindowFocus: true,
+    staleTime: 5 * 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
     refetchOnReconnect: true,
     queryFn: async () => {
       if (!clinicId) return [];
@@ -85,8 +85,8 @@ export function useEnabledProntuarioTabs(
   const specialtiesQuery = useQuery({
     queryKey: ["clinic-prontuario-specialties", clinicId],
     enabled: Boolean(clinicId),
-    staleTime: 0,
-    refetchOnMount: "always",
+    staleTime: 5 * 60_000,
+    refetchOnMount: false,
     queryFn: async () => {
       if (!clinicId) return [];
       const { data, error } = await supabase

@@ -388,10 +388,11 @@ export function useAppointmentsForPeriod(
       })) as Appointment[];
     },
     enabled: !!clinicId,
-    staleTime: 30_000,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    refetchInterval: 30000, // Refetch every 30 seconds for real-time updates
+    staleTime: 60_000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    // Realtime (useAppointmentsRealtime) invalida o cache; polling apenas como fallback
+    refetchInterval: 5 * 60_000,
   });
 }
 

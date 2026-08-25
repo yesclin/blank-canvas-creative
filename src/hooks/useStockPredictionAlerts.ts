@@ -166,7 +166,7 @@ export function useStockPredictions(daysOverride?: number) {
       return (data || []) as StockPrediction[];
     },
     enabled: settings?.enabled !== false,
-    refetchInterval: 60000, // Refresh every minute
+    refetchInterval: 5 * 60_000, // Refresh a cada 5 minutos
   });
 }
 

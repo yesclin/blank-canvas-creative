@@ -77,7 +77,8 @@ export function useAppointmentSession(appointmentId: string | null | undefined) 
       } as AppointmentSession;
     },
     enabled: !!appointmentId,
-    refetchInterval: 10000,
+    // Realtime invalida o cache; polling apenas como fallback
+    refetchInterval: 120_000,
   });
 }
 

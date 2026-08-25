@@ -100,6 +100,7 @@ export function useTransactions(filters?: {
   return useQuery({
     queryKey: ["finance-transactions", startDate, endDate, filters?.type],
     queryFn: async () => {
+      const clinicId = await getClinicId();
       let query = supabase
         .from("finance_transactions")
         .select(`
@@ -108,6 +109,7 @@ export function useTransactions(filters?: {
           patients(id, full_name),
           professionals(id, full_name)
         `)
+        .eq("clinic_id", clinicId)
         .gte("transaction_date", startDate)
         .lte("transaction_date", endDate)
         .order("transaction_date", { ascending: false })
@@ -291,9 +293,11 @@ export function useFinanceCategories() {
   return useQuery({
     queryKey: ["finance-categories"],
     queryFn: async () => {
+      const clinicId = await getClinicId();
       const { data, error } = await supabase
         .from("finance_categories")
         .select("*")
+        .eq("clinic_id", clinicId)
         .eq("is_active", true)
         .order("name");
       
@@ -341,9 +345,11 @@ export function useFinanceStats(date?: Date) {
   return useQuery({
     queryKey: ["finance-stats", today],
     queryFn: async () => {
+      const clinicId = await getClinicId();
       const { data, error } = await supabase
         .from("finance_transactions")
         .select("type, amount")
+        .eq("clinic_id", clinicId)
         .eq("transaction_date", today);
       
       if (error) throw error;
@@ -375,9 +381,11 @@ export function useMonthlyFinanceStats() {
   return useQuery({
     queryKey: ["finance-stats", "monthly", startOfMonth],
     queryFn: async () => {
+      const clinicId = await getClinicId();
       const { data, error } = await supabase
         .from("finance_transactions")
         .select("type, amount")
+        .eq("clinic_id", clinicId)
         .gte("transaction_date", startOfMonth)
         .lte("transaction_date", endOfMonth);
       
@@ -406,12 +414,14 @@ export function useTreatmentPackages() {
   return useQuery({
     queryKey: ["treatment-packages"],
     queryFn: async () => {
+      const clinicId = await getClinicId();
       const { data, error } = await supabase
         .from("treatment_packages")
         .select(`
           *,
           patients(id, full_name)
         `)
+        .eq("clinic_id", clinicId)
         .order("created_at", { ascending: false });
       
       if (error) throw error;

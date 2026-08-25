@@ -6,6 +6,7 @@ import { Plus, CalendarPlus, Ban, Settings, Loader2, Users } from "lucide-react"
 import type { SlotClickData } from "@/components/agenda/AgendaGrid";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAgendaRealData } from "@/hooks/useAgendaRealData";
+import { useAppointmentsRealtime } from "@/hooks/useAppointmentsRealtime";
 import { useUpdateAppointmentStatus, useCreateAppointment, useRescheduleAppointment, type AppointmentFormData } from "@/hooks/useAppointments";
 import { useCreateSession, useFinalizeSession } from "@/hooks/useAppointmentSession";
 import { useTissGuideGeneration } from "@/hooks/useTissGuideGeneration";
@@ -72,6 +73,7 @@ export default function Agenda() {
   const location = useLocation();
   const { role, professionalId: userProfessionalId } = usePermissions();
   const { clinicId } = useClinicContext();
+  useAppointmentsRealtime(clinicId);
 
   
   // Check if navigated from patient profile with pre-selected patient
