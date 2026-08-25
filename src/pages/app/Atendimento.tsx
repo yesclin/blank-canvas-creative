@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import { useAppointmentsRealtime } from "@/hooks/useAppointmentsRealtime";
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity, Search, Calendar, Clock, User, Stethoscope, Play, 
@@ -90,6 +91,7 @@ export default function Atendimento() {
   const { isLoading: permLoading, hasAccess } = useScreenPermissionValidation("prontuario", "view");
   const { clinic } = useClinicData();
   const clinicId = clinic?.id;
+  useAppointmentsRealtime(clinicId);
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
