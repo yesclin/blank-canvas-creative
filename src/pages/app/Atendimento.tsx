@@ -219,7 +219,7 @@ export default function Atendimento() {
       });
     },
     enabled: !!clinicId,
-    refetchInterval: 30000,
+    refetchInterval: 180_000,
   });
 
   // Filter and search
