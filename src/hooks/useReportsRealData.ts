@@ -198,7 +198,7 @@ export function useReportsRealData(filters: ReportFilters) {
           id,
           product_id,
           quantity,
-          total_cost,
+          unit_cost,
           movement_type,
           created_at,
           products:product_id (id, name, category, unit, cost_price)
@@ -625,7 +625,7 @@ export function useReportsRealData(filters: ReportFilters) {
         cost: 0 
       };
       existing.consumed += Number(mov.quantity) || 0;
-      existing.cost += Number(mov.total_cost) || 0;
+      existing.cost += (Number(mov.unit_cost) || Number((mov as any).products?.cost_price) || 0) * (Number(mov.quantity) || 0);
       byProduct.set(prod.id, existing);
     });
 

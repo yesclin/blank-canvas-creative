@@ -35,7 +35,7 @@ export function useQuotes(filters: QuotesFilters = {}, page = 1, pageSize = 20) 
           lead:crm_leads!crm_quotes_lead_id_fkey(id, name),
           patient:patients!crm_quotes_patient_id_fkey(id, full_name),
           opportunity:crm_opportunities!crm_quotes_opportunity_id_fkey(id, title),
-          professional:professionals!crm_quotes_professional_id_fkey(id, name)
+          professional:professionals!crm_quotes_professional_id_fkey(id, full_name)
         `, { count: "exact" })
         .eq("clinic_id", clinicId)
         .order("created_at", { ascending: false });
@@ -69,7 +69,7 @@ export function useQuoteWithItems(quoteId: string | null) {
           lead:crm_leads!crm_quotes_lead_id_fkey(id, name),
           patient:patients!crm_quotes_patient_id_fkey(id, full_name),
           opportunity:crm_opportunities!crm_quotes_opportunity_id_fkey(id, title),
-          professional:professionals!crm_quotes_professional_id_fkey(id, name)
+          professional:professionals!crm_quotes_professional_id_fkey(id, full_name)
         `)
         .eq("id", quoteId!)
         .single();

@@ -193,18 +193,13 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
       console.log('overview patient', patientId);
       console.log('overview clinic', clinicId);
 
-      const [proceduresResult, legacyProceduresResult, appointmentProceduresResult, evolutionsResult] = await Promise.all([
+      const [proceduresResult, appointmentProceduresResult, evolutionsResult] = await Promise.all([
         safeOverviewQuery('clinical_performed_procedures', supabase
           .from('clinical_performed_procedures')
           .select('id, procedure_id, procedure_name, region, status, performed_at, created_at, procedures(name)')
           .eq('patient_id', patientId)
           .eq('clinic_id', clinicId)
           .order('performed_at', { ascending: false })),
-        safeOverviewQuery('patient_procedures', (supabase as any)
-          .from('patient_procedures')
-          .select('id, procedure_id, procedure_name, name, title, status, performed_at, procedure_date, created_at, procedures(name)')
-          .eq('patient_id', patientId)
-          .eq('clinic_id', clinicId)),
         safeOverviewQuery('appointments_with_procedure', supabase
           .from('appointments')
           .select('id, procedure_id, appointment_type, scheduled_date, start_time, started_at, finished_at, created_at, status, procedures(name)')

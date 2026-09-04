@@ -102,11 +102,11 @@ interface RawStockMovement {
   product_id: string;
   movement_type: string;
   quantity: number;
-  reason: string;
+  unit_cost: number | null;
   reference_type: string | null;
   reference_id: string | null;
   notes: string | null;
-  created_by: string | null;
+  performed_by: string | null;
   created_at: string;
   products?: {
     name: string;

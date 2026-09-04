@@ -61,7 +61,7 @@ export function useCommercialGoals() {
         .from("crm_goals")
         .select(`
           *,
-          professional:professionals!crm_goals_professional_id_fkey(id, name)
+          professional:professionals!crm_goals_professional_id_fkey(id, full_name)
         `)
         .eq("clinic_id", clinicId)
         .order("period_end", { ascending: false });
