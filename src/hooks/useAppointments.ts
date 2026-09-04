@@ -257,34 +257,44 @@ export function useUpdateAppointmentStatus() {
       
       if (error) throw error;
 
-      // Process product consumption and record historical cost when finalizing procedure
-      // The RPC function process_procedure_product_consumption handles:
-      // 1. Stock deduction (stock_movements)
-      // 2. Material consumption tracking (material_consumption)
-      // 3. Historical cost storage on appointment (procedure_cost)
+      // Consumo de materiais/produtos ao finalizar (fluxo canônico:
+      // procedure_consumption_templates + kits clínicos -> inventory_movements FEFO).
+      // A função é idempotente: não duplica consumo em re-finalizações.
       if (status === "finalizado") {
         interface ConsumptionResult {
           success: boolean;
           error?: string;
           message?: string;
+          already_processed?: boolean;
           processed_count?: number;
           total_cost?: number;
           alerts_count?: number;
         }
-        
+
         const { data: consumptionResult, error: consumptionError } = await supabase
-          .rpc("process_procedure_product_consumption", { p_appointment_id: id }) as { 
-            data: ConsumptionResult | null; 
-            error: Error | null 
+          .rpc("process_appointment_consumption", { p_appointment_id: id }) as {
+            data: ConsumptionResult | null;
+            error: Error | null
           };
-        
+
         if (consumptionError) {
-          console.error("Error processing product consumption:", consumptionError);
-          // Don't throw - status update succeeded, just log the consumption error
+          console.error("Erro ao processar consumo de materiais:", consumptionError);
+          // Não interrompe: o status já foi atualizado com sucesso.
         } else if (consumptionResult && !consumptionResult.success) {
-          console.error("Product consumption failed:", consumptionResult.error);
-        } else if (consumptionResult?.processed_count && consumptionResult.processed_count > 0) {
-          console.log(`Procedure cost recorded: R$ ${consumptionResult.total_cost?.toFixed(2)} (${consumptionResult.processed_count} items)`);
+          console.error("Consumo de materiais não realizado:", consumptionResult.error);
+        } else if (consumptionResult?.alerts_count) {
+          toast.warning(
+            `Atendimento finalizado, mas ${consumptionResult.alerts_count} item(ns) sem estoque suficiente para baixa automática.`
+          );
+        }
+      }
+
+      // Reabertura do atendimento: reverte o consumo para não ficar baixa órfã.
+      if (status === "em_atendimento" || status === "agendado" || status === "chegou") {
+        try {
+          await supabase.rpc("revert_appointment_consumption", { p_appointment_id: id });
+        } catch (e) {
+          console.warn("revert_appointment_consumption:", e);
         }
       }
 
@@ -350,6 +360,8 @@ export function useCancelAppointment() {
 
       // Fase 3 — cancela cobranças pendentes vinculadas (não toca pagas/parciais).
       try { await cancelAppointmentCharges(id, reason); } catch (e) { console.warn("cancelAppointmentCharges:", e); }
+      // Devolve ao estoque qualquer consumo já baixado (idempotente)
+      try { await supabase.rpc("revert_appointment_consumption", { p_appointment_id: id }); } catch (e) { console.warn("revert_appointment_consumption:", e); }
 
       return { id };
     },
