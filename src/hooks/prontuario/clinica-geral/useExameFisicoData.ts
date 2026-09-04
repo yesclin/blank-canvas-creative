@@ -85,14 +85,14 @@ export function useExameFisicoData(patientId: string | null): UseExameFisicoData
         .select('*')
         .eq('patient_id', patientId)
         .eq('clinic_id', clinic.id)
-        .order('data_hora', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (fetchError) {
         throw fetchError;
       }
 
       // Get professional names
-      const professionalIds = [...new Set((data || []).map(e => e.profissional_id).filter(Boolean))];
+      const professionalIds = [...new Set((data || []).map((e: any) => e.professional_id).filter(Boolean))];
       let professionalsMap: Record<string, string> = {};
 
       if (professionalIds.length > 0) {
@@ -125,25 +125,30 @@ export function useExameFisicoData(patientId: string | null): UseExameFisicoData
         }
       }
 
-      const mapped: ExameFisico[] = (data || []).map(item => ({
-        id: item.id,
-        patient_id: item.patient_id,
-        clinic_id: item.clinic_id,
-        evolucao_id: item.evolucao_id || undefined,
-        profissional_id: item.profissional_id,
-        profissional_nome: professionalsMap[item.profissional_id] || 'Profissional',
-        data_hora: item.data_hora,
-        pressao_sistolica: item.pressao_sistolica || undefined,
-        pressao_diastolica: item.pressao_diastolica || undefined,
-        frequencia_cardiaca: item.frequencia_cardiaca || undefined,
-        frequencia_respiratoria: item.frequencia_respiratoria || undefined,
-        temperatura: item.temperatura ? parseFloat(String(item.temperatura)) : undefined,
-        peso: item.peso ? parseFloat(String(item.peso)) : undefined,
-        altura: item.altura ? parseFloat(String(item.altura)) : undefined,
-        imc: item.imc ? parseFloat(String(item.imc)) : undefined,
-        observacoes: item.observacoes || undefined,
-        created_at: item.created_at,
-      }));
+      // Sinais vitais vivem no jsonb `data`
+      const num = (v: unknown) => (v === null || v === undefined || v === '' ? undefined : parseFloat(String(v)));
+      const mapped: ExameFisico[] = (data || []).map((item: any) => {
+        const extra = (item.data || {}) as Record<string, any>;
+        return {
+          id: item.id,
+          patient_id: item.patient_id,
+          clinic_id: item.clinic_id,
+          evolucao_id: extra.evolucao_id || undefined,
+          profissional_id: item.professional_id,
+          profissional_nome: professionalsMap[item.professional_id] || 'Profissional',
+          data_hora: extra.data_hora || item.created_at,
+          pressao_sistolica: num(extra.pressao_sistolica),
+          pressao_diastolica: num(extra.pressao_diastolica),
+          frequencia_cardiaca: num(extra.frequencia_cardiaca),
+          frequencia_respiratoria: num(extra.frequencia_respiratoria),
+          temperatura: num(extra.temperatura),
+          peso: num(extra.peso),
+          altura: num(extra.altura),
+          imc: num(extra.imc),
+          observacoes: extra.observacoes || item.notes || undefined,
+          created_at: item.created_at,
+        };
+      });
 
       setExames(mapped);
 
@@ -186,18 +191,21 @@ export function useExameFisicoData(patientId: string | null): UseExameFisicoData
         .insert({
           patient_id: patientId,
           clinic_id: clinic.id,
-          profissional_id: currentProfessionalId,
-          evolucao_id: data.evolucao_id || null,
-          data_hora: new Date().toISOString(),
-          pressao_sistolica: data.pressao_sistolica || null,
-          pressao_diastolica: data.pressao_diastolica || null,
-          frequencia_cardiaca: data.frequencia_cardiaca || null,
-          frequencia_respiratoria: data.frequencia_respiratoria || null,
-          temperatura: data.temperatura || null,
-          peso: data.peso || null,
-          altura: data.altura || null,
-          imc: imc,
-          observacoes: data.observacoes || null,
+          professional_id: currentProfessionalId,
+          notes: data.observacoes || null,
+          data: {
+            evolucao_id: data.evolucao_id || null,
+            data_hora: new Date().toISOString(),
+            pressao_sistolica: data.pressao_sistolica ?? null,
+            pressao_diastolica: data.pressao_diastolica ?? null,
+            frequencia_cardiaca: data.frequencia_cardiaca ?? null,
+            frequencia_respiratoria: data.frequencia_respiratoria ?? null,
+            temperatura: data.temperatura ?? null,
+            peso: data.peso ?? null,
+            altura: data.altura ?? null,
+            imc: imc,
+            observacoes: data.observacoes || null,
+          },
         });
 
       if (insertError) throw insertError;
