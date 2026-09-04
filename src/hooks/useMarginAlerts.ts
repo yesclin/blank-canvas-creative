@@ -110,7 +110,9 @@ export function useMarginAlerts(clinicId: string | null) {
           procedures:procedure_id (
             id,
             name,
-            value
+            price,
+            particular_price,
+            insurance_price
           )
         `)
         .eq('clinic_id', clinicId)
@@ -228,7 +230,7 @@ export function useMarginAlerts(clinicId: string | null) {
       appointments.forEach(apt => {
         if (!apt.procedure_id || !apt.procedures) return;
 
-        const procedure = apt.procedures as unknown as { id: string; name: string; value: number };
+        const procedure = apt.procedures as unknown as { id: string; name: string; price: number | null; particular_price: number | null; insurance_price: number | null };
         const procedureId = procedure.id;
 
         if (!procedureMap.has(procedureId)) {
@@ -246,7 +248,10 @@ export function useMarginAlerts(clinicId: string | null) {
         const entry = procedureMap.get(procedureId)!;
         entry.appointments.push(apt);
 
-        const revenue = Number(apt.expected_value) || procedure.value || 0;
+        const fallbackPrice = apt.insurance_id
+          ? procedure.insurance_price ?? procedure.price
+          : procedure.particular_price ?? procedure.price;
+        const revenue = Number(apt.expected_value) || Number(fallbackPrice) || 0;
         entry.totalRevenue += revenue;
 
         const realCost = consumptionByAppointment.get(apt.id) || 0;
