@@ -24,7 +24,8 @@ export interface MaterialConsumptionRecord {
   clinic_id: string;
   appointment_id: string;
   procedure_id?: string;
-  material_id: string;
+  product_id: string;
+  material_id?: string;
   kit_id?: string;
   professional_id?: string;
   patient_id?: string;
@@ -32,8 +33,8 @@ export interface MaterialConsumptionRecord {
   unit: string;
   unit_cost: number;
   total_cost: number;
-  consumption_type: 'automatic' | 'manual' | 'adjustment';
-  source: 'procedure' | 'kit' | 'extra';
+  consumption_type?: 'automatic' | 'manual' | 'adjustment';
+  source?: 'procedure' | 'kit' | 'extra';
   notes?: string;
   consumed_at: string;
   created_at: string;
@@ -406,6 +407,7 @@ export function useMaterialConsumptionHistory(appointmentId?: string) {
       return (data || []).map((item: any) => ({
         ...item,
         material_name: item.products?.name,
+        consumed_at: item.created_at,
         unit: item.products?.unit ?? 'un',
         unit_cost: Number(item.products?.cost_price) || 0,
         total_cost: (Number(item.products?.cost_price) || 0) * (Number(item.quantity) || 0),
