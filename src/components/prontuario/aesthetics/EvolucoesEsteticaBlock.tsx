@@ -78,6 +78,7 @@ export function EvolucoesEsteticaBlock({
     create,
     isCreating,
     isSigning,
+    refreshEvolucoes,
   } = useEvolucoesEsteticaData({ patientId, appointmentId });
 
   // Unified Advanced Signature
@@ -381,7 +382,15 @@ export function EvolucoesEsteticaBlock({
                   </div>
                 )}
 
-                {/* Ação de Assinar */}
+                {/* Assinada: sem ação de assinar novamente */}
+                {ev.status === 'signed' && ev.signed_at && (
+                  <div className="pt-2 border-t flex items-center gap-2 text-xs text-muted-foreground">
+                    <CheckCircle className="h-3.5 w-3.5 text-primary" />
+                    Assinada em {format(parseISO(ev.signed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} — conteúdo bloqueado para edição.
+                  </div>
+                )}
+
+                {/* Ação de Assinar (somente rascunho) */}
                 {ev.status === 'draft' && canEdit && (
                   <div className="pt-2 border-t">
                     <Button
@@ -620,8 +629,13 @@ export function EvolucoesEsteticaBlock({
         open={signDialogOpen}
         onOpenChange={(o) => {
           setSignDialogOpen(o);
-          if (!o) setSignatureContext(null);
+          if (!o) {
+            setSignatureContext(null);
+            // Garante estado fresco ao fechar o wizard.
+            refreshEvolucoes();
+          }
         }}
+        onSigned={() => refreshEvolucoes()}
         context={signatureContext}
         patientName="Paciente"
         generatedAt={signatureGeneratedAt}

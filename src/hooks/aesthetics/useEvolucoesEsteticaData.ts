@@ -157,7 +157,9 @@ export function useEvolucoesEsteticaData({ patientId, appointmentId }: UseEvoluc
           follow_up_date: content.follow_up_date as string || null,
           notes: ev.notes,
           photos_taken: content.photos_taken as boolean || false,
-          status: ev.status === 'assinado' ? 'signed' : 'draft',
+          // Fonte real do estado: clinical_evolutions.status ('assinado') +
+          // signed_at (fallback para registros legados sem status atualizado).
+          status: ev.status === 'assinado' || !!ev.signed_at ? 'signed' : 'draft',
           signed_at: ev.signed_at,
           signed_by: ev.signed_by,
           created_at: ev.created_at,
@@ -366,10 +368,18 @@ export function useEvolucoesEsteticaData({ patientId, appointmentId }: UseEvoluc
     ? evolucoes.filter(e => e.appointment_id === appointmentId)
     : [];
 
+  // Revalida a lista após assinatura feita pelo UnifiedSignatureWizard
+  // (que atualiza clinical_evolutions.status diretamente).
+  const refreshEvolucoes = () => {
+    queryClient.invalidateQueries({ queryKey });
+    invalidateOverview();
+  };
+
   return {
     evolucoes,
     currentAppointmentEvolucoes,
     isLoading,
+    refreshEvolucoes,
     create: createMutation.mutateAsync,
     sign: signMutation.mutateAsync,
     update: updateMutation.mutateAsync,
