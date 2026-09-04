@@ -12,11 +12,18 @@ export interface MaterialConsumptionItem {
   quantity: number;
   unit: string;
   unit_cost: number;
-  source: 'procedure' | 'kit' | 'extra';
+  source: 'procedure' | 'kit' | 'extra' | 'canonical';
   kit_id?: string;
   kit_name?: string;
   is_required?: boolean;
   allow_manual_edit?: boolean;
+  /**
+   * true quando o item vem de `procedure_consumption_templates` /
+   * `procedure_consumption_kits`: a baixa é feita no banco pela RPC
+   * `process_appointment_consumption` na finalização, então o consumo manual
+   * deve IGNORAR esses itens para não duplicar movimentação.
+   */
+  handled_by_engine?: boolean;
 }
 
 export interface MaterialConsumptionRecord {
@@ -148,7 +155,80 @@ export function useAppointmentMaterials(appointmentId: string | null) {
       const procedureId = appointment.procedure_id;
       const items: MaterialConsumptionItem[] = [];
 
-      // === MODELO ATUAL: procedure_products → products ===
+      // === MODELO CANÔNICO: procedure_consumption_templates → inventory_items ===
+      // Estes itens são baixados no banco pela RPC process_appointment_consumption.
+      const [{ data: canonicalTemplates }, { data: canonicalKits }] = await Promise.all([
+        supabase
+          .from('procedure_consumption_templates')
+          .select(`
+            default_quantity,
+            unit,
+            is_required,
+            allow_quantity_edit_on_finish,
+            inventory_items:item_id (id, name, unit_of_measure, default_cost_price, is_active)
+          `)
+          .eq('procedure_id', procedureId),
+        supabase
+          .from('procedure_consumption_kits')
+          .select(`
+            quantity,
+            is_required,
+            inventory_kits:kit_id (
+              id,
+              name,
+              is_active,
+              inventory_kit_items (
+                quantity,
+                inventory_items:item_id (id, name, unit_of_measure, default_cost_price, is_active)
+              )
+            )
+          `)
+          .eq('procedure_id', procedureId),
+      ]);
+
+      (canonicalTemplates || []).forEach((t: any) => {
+        const item = t.inventory_items;
+        if (!item || item.is_active === false) return;
+        items.push({
+          material_id: item.id,
+          material_name: item.name,
+          quantity: Number(t.default_quantity) || 0,
+          unit: t.unit || item.unit_of_measure || 'un',
+          unit_cost: Number(item.default_cost_price) || 0,
+          source: 'canonical',
+          is_required: !!t.is_required,
+          allow_manual_edit: !!t.allow_quantity_edit_on_finish,
+          handled_by_engine: true,
+        });
+      });
+
+      (canonicalKits || []).forEach((ck: any) => {
+        const kit = ck.inventory_kits;
+        if (!kit || kit.is_active === false) return;
+        (kit.inventory_kit_items || []).forEach((ki: any) => {
+          const item = ki.inventory_items;
+          if (!item || item.is_active === false) return;
+          items.push({
+            material_id: item.id,
+            material_name: item.name,
+            quantity: (Number(ki.quantity) || 0) * (Number(ck.quantity) || 1),
+            unit: item.unit_of_measure || 'un',
+            unit_cost: Number(item.default_cost_price) || 0,
+            source: 'canonical',
+            kit_id: kit.id,
+            kit_name: kit.name,
+            is_required: !!ck.is_required,
+            allow_manual_edit: false,
+            handled_by_engine: true,
+          });
+        });
+      });
+
+      // Se o procedimento já usa o modelo canônico, NÃO carrega os vínculos
+      // legados (evita listar/baixar o mesmo insumo duas vezes).
+      if (items.length > 0) return items;
+
+      // === MODELO LEGADO: procedure_products → products ===
       const { data: procedureProducts } = await supabase
         .from('procedure_products')
         .select(`
@@ -253,6 +333,9 @@ export function useProcessMaterialConsumption() {
 
       for (const m of materials) {
         if (!m.material_id || m.quantity <= 0) continue;
+        // Itens canônicos são baixados pela RPC process_appointment_consumption
+        // na finalização — pular aqui evita consumo duplicado.
+        if (m.handled_by_engine || m.source === 'canonical') continue;
 
         // Verificar estoque atual do produto
         const { data: product } = await supabase
