@@ -92,6 +92,8 @@ for (const file of files) {
         const rel = em[2] || em[1];
         embedNames.add(em[1]);
         embedNames.add(rel);
+        // sintaxe de dica de FK: alias:coluna_fk(...) ou tabela!coluna_fk(...)
+        if (rel === "inner" || info.cols.has(rel)) continue;
         if (!info.rels.has(rel) && !schema[rel]) {
           issues.push({ file, line: chainLine, kind: "EMBED", detail: `${table} -> ${rel}` });
         } else if (!info.rels.has(rel)) {
