@@ -386,40 +386,6 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
         total_alertas: alertas.length || 0,
       };
 
-      console.log('PRONTUARIO OVERVIEW DEBUG', {
-        patientId,
-        clinicId,
-        proceduresCount: totalProcedimentos,
-        lastProcedure: result.ultimo_procedimento,
-        facialMapCount: totalMapasFaciais || totalMarcacoesFaciais,
-        beforeAfterCount: totalFotos,
-        consentCount: totalTermos,
-        alertCount: alertas.length || 0,
-        rawData: {
-          procedures: {
-            clinical_performed_procedures: proceduresResult.data || [],
-            appointments: appointmentProceduresResult.data || [],
-            clinical_evolutions: evolutionsResult.data || [],
-          },
-          facialMap: {
-            facial_maps: facialMaps,
-            facial_map_applications: facialApplications,
-            interactive_map_annotations: interactiveMaps,
-          },
-          beforeAfter: {
-            aesthetic_before_after: fotosNew.count || 0,
-            before_after_records: fotosLegacy.count || 0,
-            clinical_media: clinicalImageMedia,
-          },
-          consents: {
-            clinical_consent_acceptances: clinicalTerms,
-            patient_consents: patientTerms,
-            clinical_consent_terms: clinicalTermRows.data || [],
-            consent_terms: legacyTermRows.data || [],
-          },
-          alerts: alertas,
-        },
-      });
 
       return result;
     },

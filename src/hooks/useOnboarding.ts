@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useState, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useActiveClinicScope } from "@/hooks/useActiveClinicScope";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { withTimeout } from "@/lib/asyncTimeout";
@@ -52,109 +53,96 @@ export const ONBOARDING_STEPS = [
 export { STANDARD_SPECIALTY_CATALOG as CURATED_SPECIALTIES_MAP };
 
 export function useOnboarding() {
-  const [progress, setProgress] = useState<OnboardingProgress | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [shouldShowOnboarding, setShouldShowOnboarding] = useState(false);
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [clinicId, setClinicId] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const loadingRef = useRef(isLoading);
 
+  // Identidade/clínica/papel já resolvidos uma única vez no boot pelo escopo
+  // ativo. O onboarding NÃO refaz getUser + profiles + user_roles (3 requests
+  // sequenciais que atrasavam a inicialização).
+  const { scope, isReady: scopeReady, isLoading: scopeLoading } = useActiveClinicScope();
+  const userId = scope.userId;
+  const clinicId = scope.clinicId;
+  const userRole = scope.role;
+  const isPrivileged = userRole === "admin" || userRole === "owner";
 
-  useEffect(() => {
-    loadingRef.current = isLoading;
-  }, [isLoading]);
+  const queryKey = ["onboarding-progress", clinicId, userId] as const;
 
-  // Check if user is admin/owner and should see onboarding
-  const checkOnboardingStatus = useCallback(async () => {
-    try {
-      const { data: { user } } = await withTimeout<any>(supabase.auth.getUser(), 10000, "Tempo esgotado ao carregar onboarding.");
-      if (!user) {
-        setIsLoading(false);
-        return;
-      }
+  const query = useQuery({
+    queryKey,
+    enabled: scopeReady && !!clinicId && !!userId && isPrivileged,
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: 1,
+    throwOnError: false,
+    queryFn: async (): Promise<OnboardingProgress | null> => {
+      const { data: existing } = await withTimeout<any>(
+        supabase
+          .from("onboarding_progress")
+          .select("*")
+          .eq("clinic_id", clinicId!)
+          .eq("user_id", userId!)
+          .limit(1)
+          .maybeSingle(),
+        10000,
+        "Tempo esgotado ao carregar progresso do onboarding.",
+      );
 
-      // Get user profile
-      const { data: profile } = await withTimeout<any>(supabase
-        .from("profiles")
-        .select("clinic_id")
-        .eq("user_id", user.id)
-        .maybeSingle(), 10000, "Tempo esgotado ao carregar perfil do onboarding.");
+      if (existing) return existing as OnboardingProgress;
 
-      if (!profile) {
-        setIsLoading(false);
-        return;
-      }
-
-      // Get user role from user_roles table
-      const { data: roleData } = await withTimeout<any>(supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("clinic_id", profile.clinic_id)
-        .maybeSingle(), 10000, "Tempo esgotado ao carregar papel do onboarding.");
-
-      const role = roleData?.role || "recepcionista";
-      setUserRole(role);
-      setClinicId(profile.clinic_id);
-
-      // Only admin/owner can see onboarding
-      if (!["admin", "owner"].includes(role)) {
-        setIsLoading(false);
-        setShouldShowOnboarding(false);
-        return;
-      }
-
-      // Check if onboarding exists
-      const { data: onboardingData } = await withTimeout<any>(supabase
-        .from("onboarding_progress")
-        .select("*")
-        .eq("clinic_id", profile.clinic_id)
-        .eq("user_id", user.id)
-        .maybeSingle(), 10000, "Tempo esgotado ao carregar progresso do onboarding.");
-
-      if (onboardingData) {
-        setProgress(onboardingData as OnboardingProgress);
-        setShouldShowOnboarding(!onboardingData.is_completed && !onboardingData.skipped_at);
-      } else {
-        // First login - create onboarding record
-        const { data: newProgress, error } = await withTimeout<any>(supabase
+      const { data: created, error } = await withTimeout<any>(
+        supabase
           .from("onboarding_progress")
           .insert({
-            clinic_id: profile.clinic_id,
-            user_id: user.id,
+            clinic_id: clinicId!,
+            user_id: userId!,
             current_step: 0,
             completed_steps: [],
             preferences: {},
           })
           .select()
-          .single(), 10000, "Tempo esgotado ao criar onboarding.");
+          .limit(1)
+          .maybeSingle(),
+        10000,
+        "Tempo esgotado ao criar onboarding.",
+      );
 
-        if (error) {
-          console.error("Error creating onboarding:", error);
-        } else {
-          setProgress(newProgress as OnboardingProgress);
-          setShouldShowOnboarding(true);
-        }
+      if (error) {
+        console.error("Error creating onboarding:", error);
+        return null;
       }
-    } catch (error) {
-      console.error("[PROVIDER_ERROR] OnboardingProvider", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+      return (created as OnboardingProgress) ?? null;
+    },
+  });
 
-  useEffect(() => {
-    checkOnboardingStatus();
-    const bootTimeout = window.setTimeout(() => {
-      if (!loadingRef.current) return;
-      console.error("[BOOT_TIMEOUT] OnboardingProvider demorou demais");
-      setIsLoading(false);
-      setShouldShowOnboarding(false);
-    }, 10000);
-    return () => window.clearTimeout(bootTimeout);
-  }, [checkOnboardingStatus]);
+  const progress = query.data ?? null;
+
+  // Mutações locais continuam otimistas, mas agora escrevem no cache
+  // compartilhado — as 3 instâncias do hook (wizard + banner) ficam em sincronia
+  // sem novas requisições.
+  const setProgress = useCallback(
+    (updater: OnboardingProgress | null | ((prev: OnboardingProgress | null) => OnboardingProgress | null)) => {
+      queryClient.setQueryData<OnboardingProgress | null>(queryKey, (prev) =>
+        typeof updater === "function"
+          ? (updater as (p: OnboardingProgress | null) => OnboardingProgress | null)(prev ?? null)
+          : updater,
+      );
+    },
+    [queryClient, clinicId, userId],
+  );
+
+  const [dismissed, setDismissed] = useState(false);
+  const setShouldShowOnboarding = useCallback((next: boolean) => setDismissed(!next), []);
+
+  const shouldShowOnboarding = Boolean(
+    isPrivileged && progress && !progress.is_completed && !progress.skipped_at && !dismissed,
+  );
+
+  // Nunca bloqueia a navegação: só reporta carregamento enquanto o escopo ativo
+  // (já necessário para o app) resolve e a consulta única está em voo.
+  const isLoading = scopeLoading || (isPrivileged && query.isLoading);
 
   const updateStep = useCallback(async (step: number) => {
     if (!progress) return;
