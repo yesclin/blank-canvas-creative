@@ -109,10 +109,23 @@ interface UseAnamnesePsicologiaDataResult {
   refetch: () => Promise<void>;
 }
 
-const mapRow = (item: any, creatorsMap: Record<string, string>): AnamnesePsicologiaData => ({
+/**
+ * A tabela `patient_anamnese_psicologia` possui apenas colunas base
+ * (queixa_principal, historico_pessoal, historico_familiar, medicamentos) + `data` (jsonb).
+ * Os demais campos da avaliação vivem dentro de `data`. Não existe coluna
+ * `version`/`is_current`: o versionamento é derivado da ordem por `created_at`.
+ */
+const mapRow = (
+  row: any,
+  creatorsMap: Record<string, string>,
+  version: number,
+  isCurrent: boolean,
+): AnamnesePsicologiaData => {
+  const item = { ...(row?.data ?? {}), ...row };
+  return {
   id: item.id,
   patient_id: item.patient_id,
-  version: item.version,
+  version,
   queixa_principal: item.queixa_principal || '',
   expectativas_terapia: item.expectativas_terapia || '',
   quem_sugeriu_terapia: item.quem_sugeriu_terapia || '',
@@ -177,12 +190,29 @@ const mapRow = (item: any, creatorsMap: Record<string, string>): AnamnesePsicolo
   contexto_social: item.contexto_social || '',
   historico_tratamentos: item.historico_tratamentos || '',
   created_at: item.created_at,
-  created_by: item.created_by || '',
-  created_by_name: item.created_by ? creatorsMap[item.created_by] : undefined,
-  is_current: item.is_current ?? false,
-});
+  created_by: item.professional_id || '',
+  created_by_name: item.professional_id ? creatorsMap[item.professional_id] : undefined,
+  is_current: isCurrent,
+  };
+};
 
-const buildPayload = (data: AnamnesePsicologiaFormData) => ({
+const BASE_COLUMNS = ['queixa_principal', 'historico_pessoal', 'historico_familiar', 'medicamentos'] as const;
+
+/** Separa colunas reais da tabela dos campos que vão para `data` (jsonb). */
+const buildPayload = (data: AnamnesePsicologiaFormData) => {
+  const full = buildFullData(data);
+  const jsonData: Record<string, unknown> = { ...full };
+  BASE_COLUMNS.forEach((c) => delete jsonData[c]);
+  return {
+    queixa_principal: data.queixa_principal ?? '',
+    historico_pessoal: full.contexto_familiar || full.infancia || '',
+    historico_familiar: data.contexto_familiar ?? '',
+    medicamentos: data.uso_medicacao_qual ?? '',
+    data: jsonData,
+  };
+};
+
+const buildFullData = (data: AnamnesePsicologiaFormData): Record<string, any> => ({
   queixa_principal: data.queixa_principal,
   expectativas_terapia: data.expectativas_terapia,
   quem_sugeriu_terapia: data.quem_sugeriu_terapia,
@@ -275,29 +305,33 @@ export function useAnamnesePsicologiaData(patientId: string | null): UseAnamnese
         .select('*')
         .eq('patient_id', patientId)
         .eq('clinic_id', clinic.id)
-        .order('version', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
 
-      const creatorIds = [...new Set((data || []).map(a => a.created_by).filter(Boolean))];
+      const creatorIds = [...new Set((data || []).map(a => a.professional_id).filter(Boolean))];
       let creatorsMap: Record<string, string> = {};
-      
+
       if (creatorIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('user_id, full_name')
-          .in('user_id', creatorIds);
-        if (profiles) {
-          creatorsMap = profiles.reduce((acc, p) => {
-            if (p.user_id && p.full_name) acc[p.user_id] = p.full_name;
+        const { data: professionals } = await supabase
+          .from('professionals')
+          .select('id, full_name')
+          .in('id', creatorIds as string[]);
+        if (professionals) {
+          creatorsMap = professionals.reduce((acc, p) => {
+            if (p.id && p.full_name) acc[p.id] = p.full_name;
             return acc;
           }, {} as Record<string, string>);
         }
       }
 
-      const mapped = (data || []).map((item: any) => mapRow(item, creatorsMap));
+      const rows = data || [];
+      // rows vêm do mais recente para o mais antigo → versão decrescente
+      const mapped = rows.map((item: any, index: number) =>
+        mapRow(item, creatorsMap, rows.length - index, index === 0)
+      );
       setAnamneseHistory(mapped);
-      setCurrentAnamnese(mapped.find(a => a.is_current) || mapped[0] || null);
+      setCurrentAnamnese(mapped[0] || null);
     } catch (err) {
       console.error('Error fetching anamnese psicologia:', err);
       setError(err instanceof Error ? err.message : 'Erro ao carregar avaliação');
@@ -321,25 +355,22 @@ export function useAnamnesePsicologiaData(patientId: string | null): UseAnamnese
 
       const nextVersion = (currentAnamnese?.version || 0) + 1;
 
-      if (anamneseHistory.length > 0) {
-        const { error: updateError } = await supabase
-          .from('patient_anamnese_psicologia')
-          .update({ is_current: false } as any)
-          .eq('patient_id', patientId)
-          .eq('clinic_id', clinic.id);
-        if (updateError) throw updateError;
-      }
+      // Profissional vinculado ao usuário logado (professional_id é a única coluna de autoria)
+      const { data: professional } = await supabase
+        .from('professionals')
+        .select('id')
+        .eq('clinic_id', clinic.id)
+        .eq('user_id', user.id)
+        .maybeSingle();
 
       const { error: insertError } = await supabase
         .from('patient_anamnese_psicologia')
         .insert({
           patient_id: patientId,
           clinic_id: clinic.id,
-          version: nextVersion,
-          created_by: user.id,
-          is_current: true,
+          professional_id: professional?.id ?? null,
           ...buildPayload(data),
-        } as any);
+        });
 
       if (insertError) throw insertError;
 
@@ -367,7 +398,7 @@ export function useAnamnesePsicologiaData(patientId: string | null): UseAnamnese
     try {
       const { error: updateError } = await supabase
         .from('patient_anamnese_psicologia')
-        .update(buildPayload(data) as any)
+        .update(buildPayload(data))
         .eq('id', id);
 
       if (updateError) throw updateError;
