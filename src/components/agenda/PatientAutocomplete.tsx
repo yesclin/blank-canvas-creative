@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveClinicScope } from "@/hooks/useActiveClinicScope";
 import type { Patient } from "@/types/agenda";
 
 interface PatientAutocompleteProps {
