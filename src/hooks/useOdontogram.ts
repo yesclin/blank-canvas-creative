@@ -75,27 +75,27 @@ export function useOdontogramTeeth(odontogramId: string | null) {
 /**
  * Get history records for a specific tooth
  */
-export function useToothHistory(toothId: string | null) {
+export function useToothHistory(odontogramId: string | null, toothNumber: string | null) {
   return useQuery({
-    queryKey: ["tooth-history", toothId],
+    queryKey: ["tooth-history", odontogramId, toothNumber],
     queryFn: async () => {
-      if (!toothId) return [];
-      
+      if (!odontogramId || !toothNumber) return [];
+
       const { data, error } = await supabase
         .from("odontogram_records")
         .select(`
           *,
-          procedure:procedures(name),
-          professional:professionals(full_name)
+          procedure:procedures(name)
         `)
-        .eq("odontogram_tooth_id", toothId)
+        .eq("odontogram_id", odontogramId)
+        .eq("tooth_number", toothNumber)
         .order("created_at", { ascending: false });
-      
+
       if (error) throw error;
-      
-      return (data || []) as OdontogramRecord[];
+
+      return (data || []) as unknown as OdontogramRecord[];
     },
-    enabled: !!toothId,
+    enabled: !!odontogramId && !!toothNumber,
   });
 }
 
@@ -135,15 +135,15 @@ export function useUpdateToothStatus() {
         .from("odontogram_teeth")
         .select("id")
         .eq("odontogram_id", odontogramId)
-        .eq("tooth_code", toothCode)
+        .eq("tooth_number", toothCode)
         .maybeSingle();
       
       if (existingTooth) {
         // Update existing tooth
         const { error: updateError } = await supabase
           .from("odontogram_teeth")
-          .update({ 
-            status, 
+          .update({
+            status,
             notes,
             updated_at: new Date().toISOString(),
           })
@@ -157,7 +157,7 @@ export function useUpdateToothStatus() {
           .from("odontogram_teeth")
           .insert({
             odontogram_id: odontogramId,
-            tooth_code: toothCode,
+            tooth_number: toothCode,
             status,
             notes,
           })
@@ -172,14 +172,13 @@ export function useUpdateToothStatus() {
       const { error: historyError } = await supabase
         .from("odontogram_records")
         .insert({
-          clinic_id: clinic.id,
-          odontogram_tooth_id: toothId,
-          appointment_id: appointmentId || null,
-          professional_id: professionalId,
+          odontogram_id: odontogramId,
+          tooth_number: toothCode,
+          condition: status,
           procedure_id: procedureId || null,
-          status_applied: status,
           surface: surface || null,
           notes,
+          created_by: professionalId,
         });
       
       if (historyError) throw historyError;
@@ -206,5 +205,5 @@ export function useUpdateToothStatus() {
  * Get tooth by code from teeth array
  */
 export function getToothByCode(teeth: OdontogramTooth[], code: string): OdontogramTooth | undefined {
-  return teeth.find(t => t.tooth_code === code);
+  return teeth.find(t => t.tooth_number === code);
 }

@@ -31,28 +31,27 @@ export interface Odontogram {
 export interface OdontogramTooth {
   id: string;
   odontogram_id: string;
-  tooth_code: string;
+  /** Notação FDI (schema: odontogram_teeth.tooth_number) */
+  tooth_number: string;
   status: ToothStatus;
+  conditions: unknown | null;
   notes: string | null;
+  created_at: string;
   updated_at: string;
 }
 
 export interface OdontogramRecord {
   id: string;
-  clinic_id: string;
-  odontogram_tooth_id: string;
-  appointment_id: string | null;
-  professional_id: string;
-  procedure_id: string | null;
-  status_applied: ToothStatus;
+  odontogram_id: string;
+  tooth_number: string;
+  condition: ToothStatus;
   surface: string | null;
+  procedure_id: string | null;
   notes: string | null;
+  created_by: string | null;
   created_at: string;
   procedure?: {
     name: string;
-  };
-  professional?: {
-    full_name: string;
   };
 }
 

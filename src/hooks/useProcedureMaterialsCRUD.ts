@@ -35,10 +35,9 @@ export function useProcedureMaterialsList() {
         .from('procedure_materials')
         .select(`
           *,
-          materials:material_id (name, category, unit_cost),
-          procedures:procedure_id (name)
+          materials:products!procedure_materials_product_id_fkey (name, type, cost_price),
+          procedures:procedures!procedure_materials_procedure_id_fkey (name, clinic_id)
         `)
-        .eq('clinic_id', clinicId)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -46,8 +45,8 @@ export function useProcedureMaterialsList() {
       return (data || []).map((item: any) => ({
         ...item,
         material_name: item.materials?.name,
-        material_category: item.materials?.category,
-        material_unit_cost: item.materials?.unit_cost,
+        material_category: item.materials?.type,
+        material_unit_cost: item.materials?.cost_price,
         procedure_name: item.procedures?.name,
       })) as ProcedureMaterial[];
     },
@@ -64,7 +63,7 @@ export function useProcedureMaterialsByProcedure(procedureId: string | null) {
         .from('procedure_materials')
         .select(`
           *,
-          materials:material_id (name, category, unit_cost)
+          materials:products!procedure_materials_product_id_fkey (name, type, cost_price)
         `)
         .eq('procedure_id', procedureId)
         .order('created_at');
@@ -74,8 +73,8 @@ export function useProcedureMaterialsByProcedure(procedureId: string | null) {
       return (data || []).map((item: any) => ({
         ...item,
         material_name: item.materials?.name,
-        material_category: item.materials?.category,
-        material_unit_cost: item.materials?.unit_cost,
+        material_category: item.materials?.type,
+        material_unit_cost: item.materials?.cost_price,
       })) as ProcedureMaterial[];
     },
     enabled: !!procedureId,

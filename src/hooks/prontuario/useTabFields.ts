@@ -70,11 +70,10 @@ export function useTabFields(tabId: string | null, specialtyId: string | null) {
     try {
       const { data, error } = await supabase
         .from('medical_record_tab_fields')
+        // Escopo de clínica/especialidade vive em medical_record_tabs (tab_id)
         .select('*')
-        .eq('clinic_id', clinic.id)
         .eq('tab_id', tabId)
-        .eq('specialty_id', specialtyId)
-        .order('field_order', { ascending: true });
+        .order('sort_order', { ascending: true });
 
       if (error) throw error;
 

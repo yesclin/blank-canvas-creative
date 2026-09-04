@@ -73,7 +73,7 @@ export function ToothDetailDialog({
 }: ToothDetailDialogProps) {
   const { clinic } = useClinicData();
   const updateTooth = useUpdateToothStatus();
-  const { data: history = [], isLoading: historyLoading } = useToothHistory(toothData?.id || null);
+  const { data: history = [], isLoading: historyLoading } = useToothHistory(odontogramId, toothCode);
   
   const [activeTab, setActiveTab] = useState("status");
   const [selectedStatus, setSelectedStatus] = useState<ToothStatus>(currentStatus);
@@ -241,7 +241,7 @@ export function ToothDetailDialog({
                     >
                       <div className="flex items-center justify-between">
                         <Badge variant="secondary">
-                          {TOOTH_STATUS_LABELS[record.status_applied]}
+                          {TOOTH_STATUS_LABELS[record.condition]}
                         </Badge>
                         <span className="text-xs text-muted-foreground">
                           {format(new Date(record.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
@@ -260,9 +260,6 @@ export function ToothDetailDialog({
                       {record.notes && (
                         <p className="text-sm text-muted-foreground">{record.notes}</p>
                       )}
-                      <p className="text-xs text-muted-foreground">
-                        Por: {record.professional?.full_name || 'Profissional'}
-                      </p>
                     </div>
                   ))}
                 </div>
