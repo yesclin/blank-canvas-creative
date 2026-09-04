@@ -290,7 +290,7 @@ export function useUpdateAppointmentStatus() {
       }
 
       // Reabertura do atendimento: reverte o consumo para não ficar baixa órfã.
-      if (status === "em_atendimento" || status === "agendado" || status === "chegou") {
+      if (status === "confirmado" || status === "nao_confirmado" || status === "chegou") {
         try {
           await supabase.rpc("revert_appointment_consumption", { p_appointment_id: id });
         } catch (e) {
