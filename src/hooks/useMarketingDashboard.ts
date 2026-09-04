@@ -23,7 +23,7 @@ export function useMarketingDashboard() {
   return useQuery({
     queryKey: ['marketing-dashboard', clinic?.id],
     enabled: !!clinic?.id,
-    refetchInterval: 60000,
+    refetchInterval: 5 * 60_000,
     queryFn: async (): Promise<DashboardData> => {
       const clinicId = clinic!.id;
       const today = format(new Date(), 'yyyy-MM-dd');

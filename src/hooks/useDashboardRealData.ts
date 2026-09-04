@@ -204,7 +204,7 @@ function usePeriodAppointments(clinicId: string | null, userRole: string | null,
       });
     },
     enabled: !!clinicId,
-    refetchInterval: 30000,
+    refetchInterval: 5 * 60_000,
   });
 }
 
@@ -305,7 +305,7 @@ function useDashboardFinance(clinicId: string | null, period: DashboardPeriod) {
       };
     },
     enabled: !!clinicId,
-    refetchInterval: 60000,
+    refetchInterval: 5 * 60_000,
   });
 }
 
@@ -384,7 +384,7 @@ function useDashboardProfessionals(clinicId: string | null, period: DashboardPer
       });
     },
     enabled: !!clinicId,
-    refetchInterval: 30000,
+    refetchInterval: 5 * 60_000,
   });
 }
 
