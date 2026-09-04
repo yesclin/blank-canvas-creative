@@ -144,8 +144,7 @@ export function useProfessionalAuthorizedProcedures(professionalId: string | nul
           id,
           professional_id,
           procedure_id,
-          clinic_id,
-          procedure:procedures(id, name, specialty_id)
+          procedure:procedures(id, name, specialty_id, clinic_id)
         `)
         .eq("professional_id", professionalId);
       
@@ -233,8 +232,7 @@ export function useProfessionalAuthorizedRooms(professionalId: string | null) {
           id,
           professional_id,
           room_id,
-          clinic_id,
-          room:rooms(id, name)
+          room:rooms(id, name, clinic_id)
         `)
         .eq("professional_id", professionalId);
       

@@ -131,7 +131,7 @@ export function useAvaliacaoNutricionalData(patientId: string | null, profession
         .select('*')
         .eq('patient_id', patientId)
         .eq('clinic_id', clinic.id)
-        .order('measurement_date', { ascending: false });
+        .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data as AvaliacaoNutricional[];

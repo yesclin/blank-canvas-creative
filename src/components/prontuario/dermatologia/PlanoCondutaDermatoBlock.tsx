@@ -124,7 +124,7 @@ export function PlanoCondutaDermatoBlock({
           .select('*')
           .eq('patient_id', patientId)
           .eq('clinic_id', clinicId)
-          .order('data_hora', { ascending: false }),
+          .order('created_at', { ascending: false }),
       ]);
 
       if (evolutionRes.error) throw evolutionRes.error;

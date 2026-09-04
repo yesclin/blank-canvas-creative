@@ -54,6 +54,15 @@ export interface TabFieldInput {
   condition_value?: string | null;
 }
 
+function slugifyFieldName(label: string): string {
+  return label
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '') || 'campo';
+}
+
 export function useTabFields(tabId: string | null, specialtyId: string | null) {
   const { clinic, isLoading: clinicLoading } = useClinicData();
   const [fields, setFields] = useState<TabField[]>([]);
@@ -79,6 +88,7 @@ export function useTabFields(tabId: string | null, specialtyId: string | null) {
 
       const parsed = (data || []).map((f: any) => ({
         ...f,
+        field_order: f.sort_order ?? 0,
         options: f.options ? (f.options as unknown as string[]) : null,
         visible_to_roles: f.visible_to_roles || [],
       })) as TabField[];
@@ -103,20 +113,14 @@ export function useTabFields(tabId: string | null, specialtyId: string | null) {
       const { data, error } = await supabase
         .from('medical_record_tab_fields')
         .insert({
-          clinic_id: clinic.id,
           tab_id: tabId,
-          specialty_id: specialtyId,
+          field_name: slugifyFieldName(input.label),
           label: input.label,
           field_type: input.field_type,
           placeholder: input.placeholder || null,
-          default_value: input.default_value || null,
-          options: input.options || null,
+          options: (input.options || null) as never,
           is_required: input.is_required,
-          field_order: input.field_order,
-          visible_to_roles: input.visible_to_roles || [],
-          condition_field_id: input.condition_field_id || null,
-          condition_operator: input.condition_operator || null,
-          condition_value: input.condition_value || null,
+          sort_order: input.field_order,
         })
         .select()
         .single();
@@ -141,14 +145,10 @@ export function useTabFields(tabId: string | null, specialtyId: string | null) {
       if (input.label !== undefined) updateData.label = input.label;
       if (input.field_type !== undefined) updateData.field_type = input.field_type;
       if (input.placeholder !== undefined) updateData.placeholder = input.placeholder || null;
-      if (input.default_value !== undefined) updateData.default_value = input.default_value || null;
       if (input.options !== undefined) updateData.options = input.options || null;
       if (input.is_required !== undefined) updateData.is_required = input.is_required;
-      if (input.field_order !== undefined) updateData.field_order = input.field_order;
-      if (input.visible_to_roles !== undefined) updateData.visible_to_roles = input.visible_to_roles;
-      if (input.condition_field_id !== undefined) updateData.condition_field_id = input.condition_field_id || null;
-      if (input.condition_operator !== undefined) updateData.condition_operator = input.condition_operator || null;
-      if (input.condition_value !== undefined) updateData.condition_value = input.condition_value || null;
+      if (input.field_order !== undefined) updateData.sort_order = input.field_order;
+      if (input.label !== undefined) updateData.field_name = slugifyFieldName(input.label);
 
       const { error } = await supabase
         .from('medical_record_tab_fields')
@@ -195,7 +195,7 @@ export function useTabFields(tabId: string | null, specialtyId: string | null) {
       for (const item of reordered) {
         const { error } = await supabase
           .from('medical_record_tab_fields')
-          .update({ field_order: item.field_order })
+          .update({ sort_order: item.field_order })
           .eq('id', item.id);
         if (error) throw error;
       }
