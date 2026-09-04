@@ -346,28 +346,28 @@ export async function getAppointmentMaterialsUsed(
       supabase
         .from("procedure_materials")
         .select(`
-          id, quantity, unit, procedure_id,
-          materials:material_id (id, name, unit_cost, is_active)
+          id, quantity, procedure_id,
+          products:product_id (id, name, unit, cost_price, is_active)
         `)
         .eq("procedure_id", procedureId),
     );
 
     for (const r of predictedLegacy as any[]) {
-      const mat = r.materials;
+      const mat = r.products;
       if (!mat || mat.is_active === false) continue;
       const qty = Number(r.quantity ?? 0);
-      const unitCost = mat.unit_cost != null ? Number(mat.unit_cost) : null;
+      const unitCost = mat.cost_price != null ? Number(mat.cost_price) : null;
       items.push({
         id: `predicted-legacy-${r.id}`,
         source: "procedure_predicted",
         origin_label: originLabel("procedure_predicted"),
         is_predicted: true,
-        product_id: null,
-        material_id: mat.id,
+        product_id: mat.id,
+        material_id: null,
         procedure_id: procedureId,
         name: mat.name ?? "Material previsto",
         quantity: qty,
-        unit: r.unit ?? null,
+        unit: mat.unit ?? null,
         batch_number: null,
         expiry_date: null,
         manufacturer: null,
