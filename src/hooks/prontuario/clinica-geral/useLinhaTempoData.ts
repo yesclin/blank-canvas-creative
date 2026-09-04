@@ -56,7 +56,7 @@ export function useLinhaTempoData(patientId: string | null): UseLinhaTempoDataRe
         // Evoluções
         supabase
           .from('patient_evolucoes')
-          .select('id, tipo_atendimento, descricao_clinica, hipoteses_diagnosticas, profissional_id, created_at')
+          .select('id, data, notes, professional_id, created_at')
           .eq('patient_id', patientId)
           .eq('clinic_id', clinic.id)
           .order('created_at', { ascending: false }),
@@ -64,7 +64,7 @@ export function useLinhaTempoData(patientId: string | null): UseLinhaTempoDataRe
         // Exames Físicos
         supabase
           .from('patient_exames_fisicos')
-          .select('id, pressao_sistolica, pressao_diastolica, frequencia_cardiaca, temperatura, peso, altura, observacoes, profissional_id, created_at')
+          .select('id, data, notes, professional_id, created_at')
           .eq('patient_id', patientId)
           .eq('clinic_id', clinic.id)
           .order('created_at', { ascending: false }),
@@ -72,7 +72,7 @@ export function useLinhaTempoData(patientId: string | null): UseLinhaTempoDataRe
         // Condutas
         supabase
           .from('patient_condutas')
-          .select('id, solicitacao_exames, prescricoes, orientacoes, encaminhamentos, retorno_agendado, profissional_id, created_at')
+          .select('id, descricao, tipo, data, professional_id, created_at')
           .eq('patient_id', patientId)
           .eq('clinic_id', clinic.id)
           .order('created_at', { ascending: false }),
@@ -80,7 +80,7 @@ export function useLinhaTempoData(patientId: string | null): UseLinhaTempoDataRe
         // Documentos
         supabase
           .from('patient_documentos')
-          .select('id, titulo, categoria, observacoes, profissional_id, created_at')
+          .select('id, titulo, tipo, conteudo, professional_id, created_at')
           .eq('patient_id', patientId)
           .eq('clinic_id', clinic.id)
           .order('created_at', { ascending: false }),
@@ -88,7 +88,7 @@ export function useLinhaTempoData(patientId: string | null): UseLinhaTempoDataRe
         // Documentos Clínicos (receituário/atestado)
         supabase
           .from('documentos_clinicos')
-          .select('id, tipo, conteudo_json, status, professional_id, created_at')
+          .select('id, tipo, titulo, conteudo, status, professional_id, created_at')
           .eq('patient_id', patientId)
           .eq('clinic_id', clinic.id)
           .order('created_at', { ascending: false }),
@@ -98,10 +98,10 @@ export function useLinhaTempoData(patientId: string | null): UseLinhaTempoDataRe
       const allProfessionalIds = new Set<string>();
       
       (anamnesesRes.data || []).forEach(a => a.professional_id && allProfessionalIds.add(a.professional_id));
-      (evolucoesRes.data || []).forEach(e => e.profissional_id && allProfessionalIds.add(e.profissional_id));
-      (examesFisicosRes.data || []).forEach(e => e.profissional_id && allProfessionalIds.add(e.profissional_id));
-      (condutasRes.data || []).forEach(c => c.profissional_id && allProfessionalIds.add(c.profissional_id));
-      (documentosRes.data || []).forEach(d => d.profissional_id && allProfessionalIds.add(d.profissional_id));
+      (evolucoesRes.data || []).forEach(e => e.professional_id && allProfessionalIds.add(e.professional_id));
+      (examesFisicosRes.data || []).forEach(e => e.professional_id && allProfessionalIds.add(e.professional_id));
+      (condutasRes.data || []).forEach(c => c.professional_id && allProfessionalIds.add(c.professional_id));
+      (documentosRes.data || []).forEach(d => d.professional_id && allProfessionalIds.add(d.professional_id));
       (docClinicosRes.data || []).forEach(d => d.professional_id && allProfessionalIds.add(d.professional_id));
 
       // Fetch professional names
@@ -165,33 +165,35 @@ export function useLinhaTempoData(patientId: string | null): UseLinhaTempoDataRe
 
       // Evoluções
       (evolucoesRes.data || []).forEach(evolucao => {
-        const tipoLabel = evolucao.tipo_atendimento === 'consulta' ? 'Consulta' :
-                          evolucao.tipo_atendimento === 'retorno' ? 'Retorno' :
-                          evolucao.tipo_atendimento === 'procedimento' ? 'Procedimento' :
-                          evolucao.tipo_atendimento === 'urgencia' ? 'Urgência' : 'Evolução';
+        const d = (evolucao.data || {}) as Record<string, any>;
+        const tipoLabel = d.tipo_atendimento === 'consulta' ? 'Consulta' :
+                          d.tipo_atendimento === 'retorno' ? 'Retorno' :
+                          d.tipo_atendimento === 'procedimento' ? 'Procedimento' :
+                          d.tipo_atendimento === 'urgencia' ? 'Urgência' : 'Evolução';
         timelineEvents.push({
           id: `evolucao-${evolucao.id}`,
           tipo: 'evolucao',
           titulo: tipoLabel,
-          resumo: evolucao.descricao_clinica || evolucao.hipoteses_diagnosticas || undefined,
+          resumo: d.descricao_clinica || d.hipoteses_diagnosticas || evolucao.notes || undefined,
           detalhes: {
-            descricao_clinica: evolucao.descricao_clinica,
-            hipoteses_diagnosticas: evolucao.hipoteses_diagnosticas,
+            descricao_clinica: d.descricao_clinica,
+            hipoteses_diagnosticas: d.hipoteses_diagnosticas,
           },
-          profissional_nome: evolucao.profissional_id ? profiles[evolucao.profissional_id] : undefined,
+          profissional_nome: evolucao.professional_id ? profiles[evolucao.professional_id] : undefined,
           created_at: evolucao.created_at,
         });
       });
 
       // Exames Físicos
       (examesFisicosRes.data || []).forEach(exame => {
+        const d = (exame.data || {}) as Record<string, any>;
         const parts: string[] = [];
-        if (exame.pressao_sistolica && exame.pressao_diastolica) {
-          parts.push(`PA: ${exame.pressao_sistolica}/${exame.pressao_diastolica}`);
+        if (d.pressao_sistolica && d.pressao_diastolica) {
+          parts.push(`PA: ${d.pressao_sistolica}/${d.pressao_diastolica}`);
         }
-        if (exame.frequencia_cardiaca) parts.push(`FC: ${exame.frequencia_cardiaca}`);
-        if (exame.temperatura) parts.push(`T: ${exame.temperatura}°C`);
-        const resumo = parts.join(' | ') || exame.observacoes || undefined;
+        if (d.frequencia_cardiaca) parts.push(`FC: ${d.frequencia_cardiaca}`);
+        if (d.temperatura) parts.push(`T: ${d.temperatura}°C`);
+        const resumo = parts.join(' | ') || d.observacoes || exame.notes || undefined;
 
         timelineEvents.push({
           id: `exame-${exame.id}`,
@@ -199,41 +201,39 @@ export function useLinhaTempoData(patientId: string | null): UseLinhaTempoDataRe
           titulo: 'Exame Físico',
           resumo,
           detalhes: {
-            pressao_arterial: exame.pressao_sistolica && exame.pressao_diastolica 
-              ? `${exame.pressao_sistolica}/${exame.pressao_diastolica} mmHg` 
+            pressao_arterial: d.pressao_sistolica && d.pressao_diastolica
+              ? `${d.pressao_sistolica}/${d.pressao_diastolica} mmHg`
               : undefined,
-            frequencia_cardiaca: exame.frequencia_cardiaca ? `${exame.frequencia_cardiaca} bpm` : undefined,
-            temperatura: exame.temperatura ? `${exame.temperatura}°C` : undefined,
-            peso: exame.peso ? `${exame.peso} kg` : undefined,
-            altura: exame.altura ? `${exame.altura} cm` : undefined,
-            observacoes: exame.observacoes,
+            frequencia_cardiaca: d.frequencia_cardiaca ? `${d.frequencia_cardiaca} bpm` : undefined,
+            temperatura: d.temperatura ? `${d.temperatura}°C` : undefined,
+            peso: d.peso ? `${d.peso} kg` : undefined,
+            altura: d.altura ? `${d.altura} cm` : undefined,
+            observacoes: d.observacoes ?? exame.notes,
           },
-          profissional_nome: exame.profissional_id ? profiles[exame.profissional_id] : undefined,
+          profissional_nome: exame.professional_id ? profiles[exame.professional_id] : undefined,
           created_at: exame.created_at,
         });
       });
 
       // Condutas
       (condutasRes.data || []).forEach(conduta => {
-        // Determine the main type based on what's filled
-        let titulo = 'Plano / Conduta';
-        let resumo: string | undefined;
+        const d = (conduta.data || {}) as Record<string, any>;
+        const tipoLabels: Record<string, string> = {
+          prescricao: 'Prescrição',
+          solicitacao_exames: 'Solicitação de Exames',
+          orientacoes: 'Orientações',
+          encaminhamento: 'Encaminhamento',
+          retorno: 'Retorno Agendado',
+        };
+        let titulo = tipoLabels[conduta.tipo || ''] || 'Plano / Conduta';
+        let resumo: string | undefined = conduta.descricao || undefined;
 
-        if (conduta.prescricoes) {
-          titulo = 'Prescrição';
-          resumo = conduta.prescricoes;
-        } else if (conduta.solicitacao_exames) {
-          titulo = 'Solicitação de Exames';
-          resumo = conduta.solicitacao_exames;
-        } else if (conduta.orientacoes) {
-          titulo = 'Orientações';
-          resumo = conduta.orientacoes;
-        } else if (conduta.encaminhamentos) {
-          titulo = 'Encaminhamento';
-          resumo = conduta.encaminhamentos;
-        } else if (conduta.retorno_agendado) {
-          titulo = 'Retorno Agendado';
-          resumo = conduta.retorno_agendado;
+        if (!resumo) {
+          if (d.prescricoes) { titulo = 'Prescrição'; resumo = d.prescricoes; }
+          else if (d.solicitacao_exames) { titulo = 'Solicitação de Exames'; resumo = d.solicitacao_exames; }
+          else if (d.orientacoes) { titulo = 'Orientações'; resumo = d.orientacoes; }
+          else if (d.encaminhamentos) { titulo = 'Encaminhamento'; resumo = d.encaminhamentos; }
+          else if (d.retorno_agendado) { titulo = 'Retorno Agendado'; resumo = d.retorno_agendado; }
         }
 
         timelineEvents.push({
@@ -242,41 +242,43 @@ export function useLinhaTempoData(patientId: string | null): UseLinhaTempoDataRe
           titulo,
           resumo,
           detalhes: {
-            solicitacao_exames: conduta.solicitacao_exames,
-            prescricoes: conduta.prescricoes,
-            orientacoes: conduta.orientacoes,
-            encaminhamentos: conduta.encaminhamentos,
-            retorno_agendado: conduta.retorno_agendado,
+            descricao: conduta.descricao,
+            solicitacao_exames: d.solicitacao_exames,
+            prescricoes: d.prescricoes,
+            orientacoes: d.orientacoes,
+            encaminhamentos: d.encaminhamentos,
+            retorno_agendado: d.retorno_agendado,
           },
-          profissional_nome: conduta.profissional_id ? profiles[conduta.profissional_id] : undefined,
+          profissional_nome: conduta.professional_id ? profiles[conduta.professional_id] : undefined,
           created_at: conduta.created_at,
         });
       });
 
       // Documentos
       (documentosRes.data || []).forEach(doc => {
-        const categoriaLabel = doc.categoria === 'laboratorio' ? 'Exame Laboratorial' :
-                               doc.categoria === 'imagem' ? 'Exame de Imagem' :
-                               doc.categoria === 'laudo' ? 'Laudo' :
-                               doc.categoria === 'relatorio' ? 'Relatório' : 'Documento';
+        const conteudo = (doc.conteudo || {}) as Record<string, any>;
+        const categoriaLabel = doc.tipo === 'laboratorio' ? 'Exame Laboratorial' :
+                               doc.tipo === 'imagem' ? 'Exame de Imagem' :
+                               doc.tipo === 'laudo' ? 'Laudo' :
+                               doc.tipo === 'relatorio' ? 'Relatório' : 'Documento';
         timelineEvents.push({
           id: `documento-${doc.id}`,
           tipo: 'documento',
           titulo: doc.titulo || categoriaLabel,
-          resumo: doc.observacoes || undefined,
+          resumo: conteudo.observacoes || undefined,
           detalhes: {
             categoria: categoriaLabel,
-            observacoes: doc.observacoes,
+            observacoes: conteudo.observacoes,
           },
-          profissional_nome: doc.profissional_id ? profiles[doc.profissional_id] : undefined,
+          profissional_nome: doc.professional_id ? profiles[doc.professional_id] : undefined,
           created_at: doc.created_at,
         });
       });
 
       // Documentos Clínicos (Receituário / Atestado / Declaração / Relatório)
-      const tipoLabels: Record<string, string> = { receituario: 'Receituário', atestado: 'Atestado', declaracao: 'Declaração', relatorio: 'Relatório' };
+      const docTipoLabels: Record<string, string> = { receituario: 'Receituário', atestado: 'Atestado', declaracao: 'Declaração', relatorio: 'Relatório' };
       (docClinicosRes.data || []).forEach(doc => {
-        const conteudo = typeof doc.conteudo_json === 'string' ? JSON.parse(doc.conteudo_json) : doc.conteudo_json;
+        const conteudo = (typeof doc.conteudo === 'string' ? JSON.parse(doc.conteudo) : doc.conteudo) as Record<string, any> | null;
         let resumo: string | undefined;
         if (doc.tipo === 'receituario' && conteudo?.medicamentos?.length) {
           resumo = conteudo.medicamentos.map((m: any) => m.nome).join(', ');
@@ -289,7 +291,7 @@ export function useLinhaTempoData(patientId: string | null): UseLinhaTempoDataRe
         timelineEvents.push({
           id: `doc-clinico-${doc.id}`,
           tipo: tipoTimeline,
-          titulo: `${tipoLabels[doc.tipo] || doc.tipo} ${doc.status === 'emitido' ? 'emitido' : doc.status === 'rascunho' ? '(rascunho)' : 'cancelado'}`,
+          titulo: `${docTipoLabels[doc.tipo] || doc.tipo} ${doc.status === 'emitido' ? 'emitido' : doc.status === 'rascunho' ? '(rascunho)' : 'cancelado'}`,
           resumo,
           detalhes: { status: doc.status },
           profissional_nome: doc.professional_id ? profiles[doc.professional_id] : undefined,
