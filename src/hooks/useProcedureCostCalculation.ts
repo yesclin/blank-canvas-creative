@@ -71,9 +71,7 @@ export function useProcedureCostDetail(procedureId: string | null) {
         .select(`
           id,
           quantity,
-          unit,
-          is_required,
-          materials:material_id (name, unit_cost)
+          products:product_id (name, unit, cost_price)
         `)
         .eq('procedure_id', procedureId);
         
@@ -85,14 +83,12 @@ export function useProcedureCostDetail(procedureId: string | null) {
         .select(`
           id,
           quantity,
-          is_required,
-          material_kits:kit_id (
+          product_kits:product_kit_id (
             id,
             name,
-            material_kit_items (
+            product_kit_items (
               quantity,
-              unit,
-              materials:material_id (name, unit_cost)
+              products:product_id (name, unit, cost_price)
             )
           )
         `)
@@ -102,37 +98,37 @@ export function useProcedureCostDetail(procedureId: string | null) {
       
       // Calcular custos dos materiais
       const materialsList = (materials || []).map((m: any) => {
-        const unitCost = m.materials?.unit_cost || 0;
+        const unitCost = Number(m.products?.cost_price) || 0;
         return {
           id: m.id,
-          name: m.materials?.name || 'Material não encontrado',
+          name: m.products?.name || 'Material não encontrado',
           quantity: m.quantity,
-          unit: m.unit,
+          unit: m.products?.unit || 'un',
           unit_cost: unitCost,
           total: m.quantity * unitCost,
-          is_required: m.is_required,
+          is_required: false,
         };
       });
       
       // Calcular custos dos kits
       const kitsList = (kits || []).map((k: any) => {
-        const kitItems = k.material_kits?.material_kit_items || [];
+        const kitItems = k.product_kits?.product_kit_items || [];
         const kitCost = kitItems.reduce((sum: number, item: any) => {
-          return sum + (item.quantity * (item.materials?.unit_cost || 0));
+          return sum + (item.quantity * (Number(item.products?.cost_price) || 0));
         }, 0);
         
         return {
           id: k.id,
-          name: k.material_kits?.name || 'Kit não encontrado',
+          name: k.product_kits?.name || 'Kit não encontrado',
           quantity: k.quantity,
           kit_cost: kitCost,
           total: k.quantity * kitCost,
-          is_required: k.is_required,
+          is_required: false,
           items: kitItems.map((item: any) => ({
-            material_name: item.materials?.name || '',
+            material_name: item.products?.name || '',
             quantity: item.quantity,
-            unit: item.unit,
-            unit_cost: item.materials?.unit_cost || 0,
+            unit: item.products?.unit || 'un',
+            unit_cost: Number(item.products?.cost_price) || 0,
           })),
         };
       });
@@ -209,9 +205,9 @@ export function useProceduresWithCosts() {
       
       const kitCosts: Record<string, number> = {};
       (kits || []).forEach((k: any) => {
-        const kitItems = k.material_kits?.material_kit_items || [];
+        const kitItems = k.product_kits?.product_kit_items || [];
         const kitCost = kitItems.reduce((sum: number, item: any) => {
-          return sum + (item.quantity * (item.materials?.unit_cost || 0));
+          return sum + (item.quantity * (Number(item.products?.cost_price) || 0));
         }, 0);
         kitCosts[k.procedure_id] = (kitCosts[k.procedure_id] || 0) + (k.quantity * kitCost);
       });
