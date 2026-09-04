@@ -629,8 +629,13 @@ export function EvolucoesEsteticaBlock({
         open={signDialogOpen}
         onOpenChange={(o) => {
           setSignDialogOpen(o);
-          if (!o) setSignatureContext(null);
+          if (!o) {
+            setSignatureContext(null);
+            // Garante estado fresco ao fechar o wizard.
+            refreshEvolucoes();
+          }
         }}
+        onSigned={() => refreshEvolucoes()}
         context={signatureContext}
         patientName="Paciente"
         generatedAt={signatureGeneratedAt}
