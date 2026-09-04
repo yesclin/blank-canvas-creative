@@ -112,7 +112,7 @@ export function useAppointmentImages(appointmentId: string | null, patientId: st
 
         // Upload to storage
         const { error: uploadError } = await supabase.storage
-          .from('clinical-images')
+          .from('clinical-media')
           .upload(path, file, { contentType: file.type });
 
         if (uploadError) {
@@ -123,7 +123,7 @@ export function useAppointmentImages(appointmentId: string | null, patientId: st
 
         // Get signed URL (private bucket)
         const { data: urlData } = await supabase.storage
-          .from('clinical-images')
+          .from('clinical-media')
           .createSignedUrl(path, 60 * 60 * 24 * 365); // 1 year
 
         const fileUrl = urlData?.signedUrl || path;
@@ -207,9 +207,9 @@ export function useAppointmentImages(appointmentId: string | null, patientId: st
       if (img?.file_url) {
         try {
           const url = new URL(img.file_url);
-          const pathMatch = url.pathname.match(/clinical-images\/(.+)/);
+          const pathMatch = url.pathname.match(/clinical-media\/(.+)/);
           if (pathMatch) {
-            await supabase.storage.from('clinical-images').remove([pathMatch[1]]);
+            await supabase.storage.from('clinical-media').remove([pathMatch[1]]);
           }
         } catch { /* storage cleanup is best-effort */ }
       }
