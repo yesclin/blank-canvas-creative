@@ -123,6 +123,24 @@ export function useProcedureProfitabilityReport(filters: ReportFilters) {
     },
   });
 
+  // Insumos canônicos vinculados aos procedimentos
+  const { data: procedureTemplatesData } = useQuery({
+    queryKey: ['profitability-procedure-templates'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('procedure_consumption_templates')
+        .select(`
+          id,
+          procedure_id,
+          default_quantity,
+          inventory_items:item_id (id, name, default_cost_price)
+        `);
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   // Buscar kits vinculados aos procedimentos
   const { data: procedureKitsData, isLoading: loadingKits } = useQuery({
     queryKey: ['profitability-procedure-kits'],
@@ -184,6 +202,14 @@ export function useProcedureProfitabilityReport(filters: ReportFilters) {
         const current = estimatedCostByProcedure.get(pm.procedure_id) || 0;
         estimatedCostByProcedure.set(pm.procedure_id, current + cost);
       }
+    });
+
+    // Adicionar custo dos insumos canônicos
+    procedureTemplatesData?.forEach((t: any) => {
+      if (!t.procedure_id) return;
+      const cost = (Number(t.inventory_items?.default_cost_price) || 0) * (Number(t.default_quantity) || 0);
+      const current = estimatedCostByProcedure.get(t.procedure_id) || 0;
+      estimatedCostByProcedure.set(t.procedure_id, current + cost);
     });
 
     // Adicionar custo dos kits ao custo estimado
