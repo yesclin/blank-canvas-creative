@@ -3989,6 +3989,7 @@ export type Database = {
           address_street: string | null
           address_zip: string | null
           allow_negative_stock: boolean | null
+          auto_material_consumption: boolean
           cnpj: string | null
           cpf: string | null
           created_at: string
@@ -4022,6 +4023,7 @@ export type Database = {
           address_street?: string | null
           address_zip?: string | null
           allow_negative_stock?: boolean | null
+          auto_material_consumption?: boolean
           cnpj?: string | null
           cpf?: string | null
           created_at?: string
@@ -4055,6 +4057,7 @@ export type Database = {
           address_street?: string | null
           address_zip?: string | null
           allow_negative_stock?: boolean | null
+          auto_material_consumption?: boolean
           cnpj?: string | null
           cpf?: string | null
           created_at?: string

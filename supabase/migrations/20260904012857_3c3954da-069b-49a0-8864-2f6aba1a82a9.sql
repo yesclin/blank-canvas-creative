@@ -1,0 +1,1 @@
+ALTER TABLE public.clinics ADD COLUMN IF NOT EXISTS auto_material_consumption BOOLEAN NOT NULL DEFAULT false;
