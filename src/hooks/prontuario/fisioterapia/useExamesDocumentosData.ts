@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { resolveSpecialtyIdBySlug } from '@/lib/specialtyIdResolver';
 
 // Categorias de documentos
 export const CATEGORIA_DOCUMENTO_OPTIONS = [
@@ -151,7 +152,7 @@ export function useExamesDocumentosData({
           clinic_id: clinicId,
           professional_id: userData?.user?.id || null,
           evolution_type: 'documento_fisioterapia',
-          specialty: 'fisioterapia',
+          specialty_id: await resolveSpecialtyIdBySlug(clinicId, 'fisioterapia'),
           content,
           status: 'signed',
         })

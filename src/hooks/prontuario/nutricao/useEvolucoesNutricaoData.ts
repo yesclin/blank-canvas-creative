@@ -10,6 +10,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useClinicData } from '@/hooks/useClinicData';
 import { toast } from 'sonner';
+import { resolveSpecialtyIdBySlug, resolveSpecialtyFilterId } from '@/lib/specialtyIdResolver';
 
 export type StatusEvolucao = 'draft' | 'signed';
 export type TipoConsulta = 'primeira_consulta' | 'retorno' | 'acompanhamento' | 'emergencia';
@@ -99,7 +100,7 @@ export function useEvolucoesNutricaoData(patientId: string | null, professionalI
         `)
         .eq('patient_id', patientId)
         .eq('clinic_id', clinic.id)
-        .eq('specialty', 'nutricao')
+        .eq('specialty_id', await resolveSpecialtyFilterId(clinic.id, 'nutricao'))
         .in('evolution_type', ['consultation', 'return', 'followup'])
         .order('created_at', { ascending: false });
       
@@ -180,7 +181,7 @@ export function useEvolucoesNutricaoData(patientId: string | null, professionalI
           professional_id: professionalId,
           appointment_id: appointmentId || null,
           evolution_type: evolutionType,
-          specialty: 'nutricao',
+          specialty_id: await resolveSpecialtyIdBySlug(clinic.id, 'nutricao'),
           content,
           notes: formData.avaliacao,
           next_steps: formData.proximos_passos,

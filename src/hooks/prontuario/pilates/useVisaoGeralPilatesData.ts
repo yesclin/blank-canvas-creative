@@ -6,6 +6,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { resolveSpecialtyFilterId } from '@/lib/specialtyIdResolver';
 
 // Objetivos comuns de Pilates
 export const OBJETIVOS_PILATES = [
@@ -107,7 +108,7 @@ export function useVisaoGeralPilatesData({ patientId, clinicId }: UseVisaoGeralP
         .select('id, content, created_at')
         .eq('patient_id', patientId)
         .eq('clinic_id', clinicId)
-        .eq('specialty', 'pilates')
+        .eq('specialty_id', await resolveSpecialtyFilterId(clinicId, 'pilates'))
         .in('evolution_type', ['sessao_pilates', 'evolucao'])
         .order('created_at', { ascending: false })
         .limit(50);

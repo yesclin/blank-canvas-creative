@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { resolveSpecialtyIdBySlug } from '@/lib/specialtyIdResolver';
 
 export const INTENSIDADE_DOR_OPTIONS = [
   { value: '0', label: '0 - Sem dor' },
@@ -169,7 +170,7 @@ export function useAvaliacaoDorPilatesData({
           clinic_id: clinicId,
           professional_id: professionalId,
           evolution_type: 'avaliacao_dor_pilates',
-          specialty: 'pilates',
+          specialty_id: await resolveSpecialtyIdBySlug(clinicId, 'pilates'),
           content,
           status: 'rascunho',
         })

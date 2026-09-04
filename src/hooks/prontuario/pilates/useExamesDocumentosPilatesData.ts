@@ -10,6 +10,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { resolveSpecialtyIdBySlug } from '@/lib/specialtyIdResolver';
 
 // Categorias de documentos
 export const CATEGORIA_DOCUMENTO_OPTIONS = [
@@ -161,7 +162,7 @@ export function useExamesDocumentosPilatesData({
           clinic_id: clinicId,
           professional_id: professionalId,
           evolution_type: 'documento_pilates',
-          specialty: 'pilates',
+          specialty_id: await resolveSpecialtyIdBySlug(clinicId, 'pilates'),
           content,
           status: 'rascunho',
         })

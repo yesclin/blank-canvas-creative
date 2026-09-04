@@ -6,6 +6,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { resolveSpecialtyFilterId } from '@/lib/specialtyIdResolver';
 
 // Labels para status do plano terapêutico
 export const STATUS_PLANO_LABELS: Record<string, string> = {
@@ -109,10 +110,10 @@ export function useVisaoGeralFisioterapiaData({ patientId, clinicId }: UseVisaoG
       // Buscar última evolução com dados de fisioterapia
       const { data: evolucoes } = await supabase
         .from('clinical_evolutions')
-        .select('id, content, created_at, specialty')
+        .select('id, content, created_at')
         .eq('patient_id', patientId)
         .eq('clinic_id', clinicId)
-        .eq('specialty', 'fisioterapia')
+        .eq('specialty_id', await resolveSpecialtyFilterId(clinicId, 'fisioterapia'))
         .order('created_at', { ascending: false })
         .limit(10);
 

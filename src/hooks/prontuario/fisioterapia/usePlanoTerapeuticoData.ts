@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { resolveSpecialtyIdBySlug } from '@/lib/specialtyIdResolver';
 
 // Opções para frequência das sessões
 export const FREQUENCIA_SESSAO_OPTIONS = [
@@ -176,7 +177,7 @@ export function usePlanoTerapeuticoData({
           clinic_id: clinicId,
           professional_id: professionalId,
           evolution_type: 'plano_terapeutico_fisio',
-          specialty: 'fisioterapia',
+          specialty_id: await resolveSpecialtyIdBySlug(clinicId, 'fisioterapia'),
           content,
           status: formData.status === 'rascunho' ? 'rascunho' : 'assinado',
         })

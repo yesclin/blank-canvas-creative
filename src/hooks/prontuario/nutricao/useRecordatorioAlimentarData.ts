@@ -10,6 +10,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useClinicData } from '@/hooks/useClinicData';
 import { toast } from 'sonner';
+import { resolveSpecialtyIdBySlug } from '@/lib/specialtyIdResolver';
 
 export type TipoRecordatorio = 'recordatorio_24h' | 'frequencia_habitual' | 'diario_alimentar';
 
@@ -148,7 +149,7 @@ export function useRecordatorioAlimentarData(patientId: string | null, professio
         clinic_id: clinic.id,
         professional_id: professionalId,
         evolution_type: 'recordatorio_alimentar',
-        specialty: 'nutricao',
+        specialty_id: await resolveSpecialtyIdBySlug(clinic.id, 'nutricao'),
         content: content as unknown as Record<string, unknown>,
         notes: formData.observacoes,
         status: 'signed',

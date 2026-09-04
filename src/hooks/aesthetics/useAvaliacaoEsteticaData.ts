@@ -10,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Json } from '@/integrations/supabase/types';
+import { resolveSpecialtyIdBySlug } from '@/lib/specialtyIdResolver';
 
 // Escalas de avaliação
 export const ESCALA_INTENSIDADE = [
@@ -198,7 +199,7 @@ export function useAvaliacaoEsteticaData({
           professional_id: professionalId,
           appointment_id: appointmentId || null,
           evolution_type: 'avaliacao_estetica',
-          specialty: 'estetica',
+          specialty_id: await resolveSpecialtyIdBySlug(clinicId, 'estetica'),
           content: data as unknown as Json,
           status: 'draft',
         })

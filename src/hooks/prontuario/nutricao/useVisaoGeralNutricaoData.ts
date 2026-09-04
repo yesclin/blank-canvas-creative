@@ -9,6 +9,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useClinicData } from '@/hooks/useClinicData';
+import { resolveSpecialtyFilterId } from '@/lib/specialtyIdResolver';
 
 export type ObjetivoNutricional = 'perda_peso' | 'ganho_massa' | 'manutencao' | 'reeducacao' | 'outro';
 export type StatusAcompanhamento = 'ativo' | 'pausado' | 'finalizado' | 'aguardando';
@@ -302,7 +303,7 @@ export function useVisaoGeralNutricaoData(patientId: string | null) {
         .select('id, content, created_at')
         .eq('patient_id', patientId)
         .eq('clinic_id', clinic.id)
-        .eq('specialty', 'nutricao')
+        .eq('specialty_id', await resolveSpecialtyFilterId(clinic.id, 'nutricao'))
         .eq('evolution_type', 'followup')
         .order('created_at', { ascending: false });
       
@@ -377,7 +378,7 @@ export function useVisaoGeralNutricaoData(patientId: string | null) {
         .select('id, content, created_at')
         .eq('patient_id', patientId)
         .eq('clinic_id', clinic.id)
-        .eq('specialty', 'nutricao')
+        .eq('specialty_id', await resolveSpecialtyFilterId(clinic.id, 'nutricao'))
         .eq('evolution_type', 'evolucao_retorno')
         .order('created_at', { ascending: false });
       
@@ -411,7 +412,7 @@ export function useVisaoGeralNutricaoData(patientId: string | null) {
         .select('id, content, created_at')
         .eq('patient_id', patientId)
         .eq('clinic_id', clinic.id)
-        .eq('specialty', 'nutricao')
+        .eq('specialty_id', await resolveSpecialtyFilterId(clinic.id, 'nutricao'))
         .eq('evolution_type', 'avaliacao_inicial')
         .order('created_at', { ascending: false })
         .limit(1)

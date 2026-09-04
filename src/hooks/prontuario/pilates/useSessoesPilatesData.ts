@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { resolveSpecialtyIdBySlug } from '@/lib/specialtyIdResolver';
 
 // Níveis de resposta do aluno
 export const RESPOSTA_ALUNO_OPTIONS = [
@@ -164,7 +165,7 @@ export function useSessoesPilatesData({
           clinic_id: clinicId,
           professional_id: professionalId,
           evolution_type: 'sessao_pilates',
-          specialty: 'pilates',
+          specialty_id: await resolveSpecialtyIdBySlug(clinicId, 'pilates'),
           content,
           status: 'rascunho',
         })

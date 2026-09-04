@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { resolveSpecialtyIdBySlug } from '@/lib/specialtyIdResolver';
 
 export interface AnamneseFisioterapiaData {
   id: string;
@@ -137,7 +138,7 @@ export function useAnamneseFisioterapiaData({
           clinic_id: clinicId,
           professional_id: professionalId,
           evolution_type: 'anamnese_fisioterapia',
-          specialty: 'fisioterapia',
+          specialty_id: await resolveSpecialtyIdBySlug(clinicId, 'fisioterapia'),
           content,
           status: 'rascunho',
         })
