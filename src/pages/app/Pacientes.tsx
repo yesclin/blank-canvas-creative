@@ -15,7 +15,7 @@ import {
   useProfessionals,
   usePatientAppointments,
   usePatientsAttendanceStats,
-  isCompletedAppointment,
+  
   type Patient,
   type PatientFormData,
 } from '@/hooks/usePatients';
