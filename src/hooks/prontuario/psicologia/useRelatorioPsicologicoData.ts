@@ -290,7 +290,9 @@ export function useRelatorioPsicologicoData(): UseRelatorioPsicologicoDataResult
           .order('created_at', { ascending: false })
           .limit(1);
 
-        const anamnese = anamneses?.[0] || null;
+        // Campos estendidos vivem em `data` (jsonb) — achatar para leitura
+        const anamneseRow: any = anamneses?.[0] || null;
+        const anamnese: any = anamneseRow ? { ...(anamneseRow.data ?? {}), ...anamneseRow } : null;
 
         // 5) Plano terapêutico (current)
         const { data: planos } = await supabase
@@ -301,7 +303,8 @@ export function useRelatorioPsicologicoData(): UseRelatorioPsicologicoDataResult
           .order('created_at', { ascending: false })
           .limit(1);
 
-        const plano = planos?.[0] || null;
+        const planoRow: any = planos?.[0] || null;
+        const plano: any = planoRow ? { ...(planoRow.data ?? {}), ...planoRow } : null;
 
         // ─── Intelligent Analysis ───
         const trendAnalysis = analyzeTrend(sessionsList);
