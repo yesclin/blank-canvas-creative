@@ -50,11 +50,13 @@ export function useProcedureProfitabilityReport(filters: ReportFilters) {
           procedures:procedure_id (
             id,
             name,
-            value
+            price,
+            particular_price,
+            insurance_price
           ),
           professionals:professional_id (
             id,
-            name
+            full_name
           ),
           insurances:insurance_id (
             id,
@@ -233,7 +235,7 @@ export function useProcedureProfitabilityReport(filters: ReportFilters) {
     appointmentsData.forEach(apt => {
       if (!apt.procedure_id || !apt.procedures) return;
 
-      const procedure = apt.procedures as unknown as { id: string; name: string; value: number };
+      const procedure = apt.procedures as unknown as { id: string; name: string; price: number | null; particular_price: number | null; insurance_price: number | null };
       const procedureId = procedure.id;
       const procedureName = procedure.name;
 
@@ -254,7 +256,10 @@ export function useProcedureProfitabilityReport(filters: ReportFilters) {
       entry.appointments.push(apt);
 
       // Calcular receita (usa expected_value se disponível, senão valor do procedimento)
-      const revenue = apt.expected_value || procedure.value || 0;
+      const fallbackPrice = apt.payment_type === 'convenio' || apt.insurance_id
+        ? procedure.insurance_price ?? procedure.price
+        : procedure.particular_price ?? procedure.price;
+      const revenue = Number(apt.expected_value) || Number(fallbackPrice) || 0;
       entry.totalRevenue += revenue;
 
       // Verificar custo real do atendimento
