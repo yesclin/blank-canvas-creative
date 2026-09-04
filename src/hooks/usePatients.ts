@@ -599,7 +599,9 @@ export function useProfessionals() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("professionals")
-        .select("id, full_name, specialties(name)")
+        // FK explícita: professionals.specialty_id -> specialties.id
+        // (evita PGRST201, pois há também professionals.primary_specialty_id)
+        .select("id, full_name, specialties!professionals_specialty_id_fkey(name)")
         .eq("clinic_id", clinic!.id)
         .eq("is_active", true)
         .order("full_name");
