@@ -78,6 +78,7 @@ export function EvolucoesEsteticaBlock({
     create,
     isCreating,
     isSigning,
+    refreshEvolucoes,
   } = useEvolucoesEsteticaData({ patientId, appointmentId });
 
   // Unified Advanced Signature
