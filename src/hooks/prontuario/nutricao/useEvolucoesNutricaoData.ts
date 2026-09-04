@@ -94,7 +94,7 @@ export function useEvolucoesNutricaoData(patientId: string | null, professionalI
           *,
           professional:professionals!clinical_evolutions_professional_id_fkey(
             id,
-            profiles:profiles!professionals_user_id_fkey(full_name)
+            full_name
           )
         `)
         .eq('patient_id', patientId)
@@ -111,7 +111,7 @@ export function useEvolucoesNutricaoData(patientId: string | null, professionalI
         // O professional vem como array, pegamos o primeiro elemento
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const professionalData = item.professional as any;
-        const professionalName = professionalData?.[0]?.profiles?.[0]?.full_name || 'Profissional';
+        const professionalName = professionalData?.[0]?.full_name || 'Profissional';
         
         return {
           id: item.id,
