@@ -60,6 +60,14 @@ export function PatientAutocomplete({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  // Cancela debounce e requisição pendente ao desmontar
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      abortRef.current?.abort();
+    };
+  }, []);
+
   const searchPatients = useCallback(async (term: string) => {
     const normalized = term.trim().toLowerCase();
     if (normalized.length < 2 || !clinicId) {
