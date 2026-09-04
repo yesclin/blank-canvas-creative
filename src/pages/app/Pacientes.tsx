@@ -133,7 +133,7 @@ export default function Pacientes() {
         comparison = a.full_name.localeCompare(b.full_name);
         break;
       case 'last_appointment':
-        comparison = (lastAppointmentsMap[a.id] || '').localeCompare(lastAppointmentsMap[b.id] || '');
+        comparison = (attendanceStats[a.id]?.lastDate || '').localeCompare(attendanceStats[b.id]?.lastDate || '');
         break;
       case 'created_at':
         comparison = a.created_at.localeCompare(b.created_at);
