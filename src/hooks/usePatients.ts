@@ -495,48 +495,57 @@ export function usePatientAppointments(patientId: string | null) {
   });
 }
 
-// Build a map of patientId -> last valid past appointment date for the clinic
-const INVALID_LAST_APPT_STATUSES = new Set([
-  "canceled",
-  "cancelled",
-  "cancelado",
-  "no_show",
-  "falta",
-  "faltou",
-  "deleted",
-  "excluido",
-]);
+/**
+ * Fonte de verdade de "atendimento realizado" no sistema:
+ * appointments.status = 'finalizado' (atendimento concluído).
+ * 'em_atendimento' é considerado em andamento, e portanto não conta no histórico.
+ * Todos os demais (nao_confirmado, confirmado, chegou, cancelado, faltou) NÃO são atendimentos realizados.
+ */
+export const COMPLETED_APPOINTMENT_STATUSES = ["finalizado"] as const;
 
-export function useLastAppointmentsMap() {
+export function isCompletedAppointment(status?: string | null) {
+  return COMPLETED_APPOINTMENT_STATUSES.includes(
+    (status || "").toString().toLowerCase() as (typeof COMPLETED_APPOINTMENT_STATUSES)[number]
+  );
+}
+
+export interface PatientAttendanceStats {
+  lastDate: string | null;
+  total: number;
+}
+
+/**
+ * Mapa patientId -> { data do último atendimento concluído, total de atendimentos concluídos }.
+ * Sempre filtrado por clinic_id e restrito aos status concluídos.
+ */
+export function usePatientsAttendanceStats() {
   const { clinic } = useClinicData();
 
   return useQuery({
-    queryKey: ["patients-last-appointments", clinic?.id],
+    queryKey: ["patients-attendance-stats", clinic?.id],
     queryFn: async () => {
-      if (!clinic?.id) return {} as Record<string, string>;
-      const todayStr = new Date().toISOString().slice(0, 10);
+      if (!clinic?.id) return {} as Record<string, PatientAttendanceStats>;
 
       const { data, error } = await supabase
         .from("appointments")
         .select("patient_id, scheduled_date, start_time, status")
         .eq("clinic_id", clinic.id)
-        .lte("scheduled_date", todayStr)
+        .in("status", COMPLETED_APPOINTMENT_STATUSES as unknown as string[])
         .not("patient_id", "is", null)
         .order("scheduled_date", { ascending: false })
         .order("start_time", { ascending: false })
-        .limit(1000);
+        .limit(5000);
 
       if (error) throw error;
 
-      const map: Record<string, string> = {};
+      const map: Record<string, PatientAttendanceStats> = {};
       for (const row of data || []) {
-        const status = (row.status || "").toString().toLowerCase();
-        if (INVALID_LAST_APPT_STATUSES.has(status)) continue;
         if (!row.patient_id) continue;
         const dateStr = `${row.scheduled_date}T${row.start_time ?? "00:00:00"}`;
-        if (!map[row.patient_id] || map[row.patient_id] < dateStr) {
-          map[row.patient_id] = dateStr;
-        }
+        const current = map[row.patient_id] ?? { lastDate: null, total: 0 };
+        current.total += 1;
+        if (!current.lastDate || current.lastDate < dateStr) current.lastDate = dateStr;
+        map[row.patient_id] = current;
       }
       return map;
     },
@@ -545,6 +554,17 @@ export function useLastAppointmentsMap() {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
+}
+
+/** @deprecated use usePatientsAttendanceStats */
+export function useLastAppointmentsMap() {
+  const query = usePatientsAttendanceStats();
+  return {
+    ...query,
+    data: Object.fromEntries(
+      Object.entries(query.data || {}).map(([id, s]) => [id, s.lastDate])
+    ) as Record<string, string | null>,
+  };
 }
 
 // Fetch insurances for dropdown
