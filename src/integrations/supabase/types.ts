@@ -16760,6 +16760,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      process_appointment_consumption: {
+        Args: { p_appointment_id: string }
+        Returns: Json
+      }
       provision_estetica_anamnesis_templates: {
         Args: { _clinic_id: string; _specialty_id: string }
         Returns: number
@@ -16869,6 +16873,10 @@ export type Database = {
       restore_system_anamnesis_templates: {
         Args: { p_clinic_id: string; p_specialty_id?: string }
         Returns: number
+      }
+      revert_appointment_consumption: {
+        Args: { p_appointment_id: string }
+        Returns: Json
       }
       seed_clinic_resources: {
         Args: { _clinic_id: string }
