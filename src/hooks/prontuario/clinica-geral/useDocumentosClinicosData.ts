@@ -349,7 +349,7 @@ export function useDocumentosClinicosData(patientId: string | null): UseDocument
         titulo: TIPO_DOC_LABELS[tipo],
         status,
         conteudo: {
-          ...(conteudo as Record<string, unknown>),
+          ...(conteudo as unknown as Record<string, unknown>),
           _meta: {
             specialty_id: specialtyId || null,
             bloqueado: status === 'emitido',

@@ -70,19 +70,13 @@ export function useAutomationRules() {
     try {
       setLoading(true);
 
-      const [{ data, error }, { data: clinicData }] = await Promise.all([
-        supabase
-          .from('automation_rules')
-          .select('*, message_templates(id, name, channel, content)')
-          .eq('clinic_id', clinic.id)
-          .order('priority', { ascending: true }),
-      ]);
+      const { data, error } = await supabase
+        .from('automation_rules')
+        .select('*, message_templates(id, name, channel, content)')
+        .eq('clinic_id', clinic.id)
+        .order('priority', { ascending: true });
 
       if (error) throw error;
-
-      if (clinicData) {
-        setMaxAutomations((clinicData as any).max_automations ?? 2);
-      }
 
       const mapped = (data || []).map((row: any) => ({
         ...row,
