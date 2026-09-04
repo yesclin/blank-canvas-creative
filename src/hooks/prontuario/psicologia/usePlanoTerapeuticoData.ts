@@ -70,50 +70,55 @@ export function usePlanoTerapeuticoData(patientId: string | null): UsePlanoTerap
         .select('*')
         .eq('patient_id', patientId)
         .eq('clinic_id', clinic.id)
-        .order('version', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
 
-      // Get creator names
-      const creatorIds = [...new Set((data || []).map(p => p.created_by).filter(Boolean))];
+      // Autoria: a tabela só possui professional_id
+      const creatorIds = [...new Set((data || []).map(p => p.professional_id).filter(Boolean))];
       let creatorsMap: Record<string, string> = {};
-      
+
       if (creatorIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('user_id, full_name')
-          .in('user_id', creatorIds);
-        
-        if (profiles) {
-          creatorsMap = profiles.reduce((acc, p) => {
-            if (p.user_id && p.full_name) {
-              acc[p.user_id] = p.full_name;
+        const { data: professionals } = await supabase
+          .from('professionals')
+          .select('id, full_name')
+          .in('id', creatorIds as string[]);
+
+        if (professionals) {
+          creatorsMap = professionals.reduce((acc, p) => {
+            if (p.id && p.full_name) {
+              acc[p.id] = p.full_name;
             }
             return acc;
           }, {} as Record<string, string>);
         }
       }
 
-      const mapped: PlanoTerapeuticoData[] = (data || []).map(item => ({
-        id: item.id,
-        patient_id: item.patient_id,
-        version: item.version,
-        objetivos_terapeuticos: item.objetivos_terapeuticos || '',
-        estrategias_intervencao: item.estrategias_intervencao || '',
-        metas_curto_prazo: item.metas_curto_prazo || '',
-        metas_medio_prazo: item.metas_medio_prazo || '',
-        metas_longo_prazo: item.metas_longo_prazo || '',
-        frequencia_recomendada: item.frequencia_recomendada || '',
-        criterios_reavaliacao: item.criterios_reavaliacao || '',
-        observacoes: item.observacoes || '',
-        created_at: item.created_at,
-        created_by: item.created_by || '',
-        created_by_name: item.created_by ? creatorsMap[item.created_by] : undefined,
-        is_current: item.is_current ?? false,
-      }));
+      // Sem colunas version/is_current: derivadas da ordem por created_at (mais recente = atual)
+      const rows = data || [];
+      const mapped: PlanoTerapeuticoData[] = rows.map((row: any, index: number) => {
+        const item = { ...(row?.data ?? {}), ...row };
+        return {
+          id: item.id,
+          patient_id: item.patient_id,
+          version: rows.length - index,
+          objetivos_terapeuticos: item.objetivos_terapeuticos || item.objetivos || '',
+          estrategias_intervencao: item.estrategias_intervencao || '',
+          metas_curto_prazo: item.metas_curto_prazo || '',
+          metas_medio_prazo: item.metas_medio_prazo || '',
+          metas_longo_prazo: item.metas_longo_prazo || '',
+          frequencia_recomendada: item.frequencia_recomendada || item.frequencia || '',
+          criterios_reavaliacao: item.criterios_reavaliacao || '',
+          observacoes: item.observacoes || '',
+          created_at: item.created_at,
+          created_by: item.professional_id || '',
+          created_by_name: item.professional_id ? creatorsMap[item.professional_id] : undefined,
+          is_current: index === 0,
+        };
+      });
 
       setPlanoHistory(mapped);
-      setCurrentPlano(mapped.find(p => p.is_current) || mapped[0] || null);
+      setCurrentPlano(mapped[0] || null);
 
     } catch (err) {
       console.error('Error fetching plano terapeutico:', err);
@@ -138,34 +143,32 @@ export function usePlanoTerapeuticoData(patientId: string | null): UsePlanoTerap
 
       const nextVersion = (currentPlano?.version || 0) + 1;
 
-      // Mark all existing as not current
-      if (planoHistory.length > 0) {
-        const { error: updateError } = await supabase
-          .from('plano_terapeutico_psicologia')
-          .update({ is_current: false })
-          .eq('patient_id', patientId)
-          .eq('clinic_id', clinic.id);
+      const { data: professional } = await supabase
+        .from('professionals')
+        .select('id')
+        .eq('clinic_id', clinic.id)
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-        if (updateError) throw updateError;
-      }
-
-      // Insert new version
+      // Nova versão = novo registro (histórico preservado por created_at)
       const { error: insertError } = await supabase
         .from('plano_terapeutico_psicologia')
         .insert({
           patient_id: patientId,
           clinic_id: clinic.id,
-          version: nextVersion,
-          objetivos_terapeuticos: data.objetivos_terapeuticos,
-          estrategias_intervencao: data.estrategias_intervencao,
-          metas_curto_prazo: data.metas_curto_prazo,
-          metas_medio_prazo: data.metas_medio_prazo,
-          metas_longo_prazo: data.metas_longo_prazo,
-          frequencia_recomendada: data.frequencia_recomendada,
-          criterios_reavaliacao: data.criterios_reavaliacao,
-          observacoes: data.observacoes,
-          created_by: user.id,
-          is_current: true,
+          professional_id: professional?.id ?? null,
+          objetivos: data.objetivos_terapeuticos,
+          frequencia: data.frequencia_recomendada,
+          data: {
+            objetivos_terapeuticos: data.objetivos_terapeuticos,
+            estrategias_intervencao: data.estrategias_intervencao,
+            metas_curto_prazo: data.metas_curto_prazo,
+            metas_medio_prazo: data.metas_medio_prazo,
+            metas_longo_prazo: data.metas_longo_prazo,
+            frequencia_recomendada: data.frequencia_recomendada,
+            criterios_reavaliacao: data.criterios_reavaliacao,
+            observacoes: data.observacoes,
+          },
         });
 
       if (insertError) throw insertError;
