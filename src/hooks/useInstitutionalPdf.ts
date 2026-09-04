@@ -71,14 +71,14 @@ export async function getAnamnesisSignature(
       try {
         const { data: prof } = await supabase
           .from('professionals')
-          .select('council_number, council_type, council_state')
+          .select('registration_number, council, council_state')
           .eq('id', data.signed_by_professional_id)
           .maybeSingle();
-        if (prof?.council_number) {
-          const parts = [prof.council_type, prof.council_number, prof.council_state]
+        if (prof?.registration_number || prof?.council) {
+          const parts = [prof.council, prof.registration_number, prof.council_state]
             .filter(Boolean)
             .join(' ');
-          registration = parts || prof.council_number;
+          registration = parts || prof.registration_number || null;
         }
       } catch { /* ignore */ }
     }

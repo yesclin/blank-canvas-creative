@@ -86,14 +86,14 @@ export function useEvolucoesData(patientId: string | null): UseEvolucoesDataResu
         .select('*')
         .eq('patient_id', patientId)
         .eq('clinic_id', clinic.id)
-        .order('data_hora', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (fetchError) {
         throw fetchError;
       }
 
       // Get professional names
-      const professionalIds = [...new Set((data || []).map(e => e.profissional_id).filter(Boolean))];
+      const professionalIds = [...new Set((data || []).map((e: any) => e.professional_id).filter(Boolean))];
       let professionalsMap: Record<string, string> = {};
 
       if (professionalIds.length > 0) {
@@ -126,21 +126,25 @@ export function useEvolucoesData(patientId: string | null): UseEvolucoesDataResu
         }
       }
 
-      const mapped: EvolucaoClinica[] = (data || []).map(item => ({
-        id: item.id,
-        patient_id: item.patient_id,
-        clinic_id: item.clinic_id,
-        data_hora: item.data_hora,
-        profissional_id: item.profissional_id,
-        profissional_nome: professionalsMap[item.profissional_id] || 'Profissional',
-        tipo_atendimento: item.tipo_atendimento as TipoAtendimento,
-        descricao_clinica: item.descricao_clinica || '',
-        hipoteses_diagnosticas: item.hipoteses_diagnosticas || '',
-        conduta: item.conduta || '',
-        status: item.status as 'rascunho' | 'assinada',
-        assinada_em: item.assinada_em || undefined,
-        created_at: item.created_at,
-      }));
+      // Conteúdo clínico vive no jsonb `data`
+      const mapped: EvolucaoClinica[] = (data || []).map((item: any) => {
+        const extra = (item.data || {}) as Record<string, any>;
+        return {
+          id: item.id,
+          patient_id: item.patient_id,
+          clinic_id: item.clinic_id,
+          data_hora: extra.data_hora || item.created_at,
+          profissional_id: item.professional_id,
+          profissional_nome: professionalsMap[item.professional_id] || 'Profissional',
+          tipo_atendimento: (extra.tipo_atendimento || 'consulta') as TipoAtendimento,
+          descricao_clinica: extra.descricao_clinica || item.notes || '',
+          hipoteses_diagnosticas: extra.hipoteses_diagnosticas || '',
+          conduta: extra.conduta || '',
+          status: (item.status || 'rascunho') as 'rascunho' | 'assinada',
+          assinada_em: extra.assinada_em || undefined,
+          created_at: item.created_at,
+        };
+      });
 
       setEvolucoes(mapped);
 
@@ -175,14 +179,17 @@ export function useEvolucoesData(patientId: string | null): UseEvolucoesDataResu
         .insert({
           patient_id: patientId,
           clinic_id: clinic.id,
-          profissional_id: currentProfessionalId,
-          data_hora: now,
-          tipo_atendimento: data.tipo_atendimento,
-          descricao_clinica: data.descricao_clinica,
-          hipoteses_diagnosticas: data.hipoteses_diagnosticas,
-          conduta: data.conduta,
+          professional_id: currentProfessionalId,
           status: data.assinar ? 'assinada' : 'rascunho',
-          assinada_em: data.assinar ? now : null,
+          notes: data.descricao_clinica || null,
+          data: {
+            data_hora: now,
+            tipo_atendimento: data.tipo_atendimento,
+            descricao_clinica: data.descricao_clinica,
+            hipoteses_diagnosticas: data.hipoteses_diagnosticas,
+            conduta: data.conduta,
+            assinada_em: data.assinar ? now : null,
+          },
         });
 
       if (insertError) throw insertError;
@@ -205,11 +212,20 @@ export function useEvolucoesData(patientId: string | null): UseEvolucoesDataResu
     setError(null);
 
     try {
+      const { data: current } = await supabase
+        .from('patient_evolucoes')
+        .select('data')
+        .eq('id', evolucaoId)
+        .maybeSingle();
+
       const { error: updateError } = await supabase
         .from('patient_evolucoes')
         .update({
           status: 'assinada',
-          assinada_em: new Date().toISOString(),
+          data: {
+            ...(((current as any)?.data || {}) as Record<string, unknown>),
+            assinada_em: new Date().toISOString(),
+          },
         })
         .eq('id', evolucaoId);
 

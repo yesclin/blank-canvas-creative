@@ -76,11 +76,6 @@ export function useAutomationRules() {
           .select('*, message_templates(id, name, channel, content)')
           .eq('clinic_id', clinic.id)
           .order('priority', { ascending: true }),
-        supabase
-          .from('clinics')
-          .select('max_automations')
-          .eq('id', clinic.id)
-          .single(),
       ]);
 
       if (error) throw error;

@@ -133,7 +133,7 @@ export function useProfessionalValidSpecialties(professionalId: string | null | 
       // Get clinic's enabled specialties that the professional has
       const { data: validSpecialties, error: specError } = await supabase
         .from('specialties')
-        .select('id, name, description, color, area')
+        .select('id, name, description, color')
         .in('id', profSpecialtyIds)
         .eq('is_active', true)
         .or(`clinic_id.is.null,clinic_id.eq.${clinic.id}`)

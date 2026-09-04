@@ -83,14 +83,14 @@ export function useCondutaData(patientId: string | null): UseCondutaDataResult {
         .select('*')
         .eq('patient_id', patientId)
         .eq('clinic_id', clinic.id)
-        .order('data_hora', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (fetchError) {
         throw fetchError;
       }
 
       // Get professional names
-      const professionalIds = [...new Set((data || []).map(c => c.profissional_id).filter(Boolean))];
+      const professionalIds = [...new Set((data || []).map((c: any) => c.professional_id).filter(Boolean))];
       let professionalsMap: Record<string, string> = {};
 
       if (professionalIds.length > 0) {
@@ -123,22 +123,26 @@ export function useCondutaData(patientId: string | null): UseCondutaDataResult {
         }
       }
 
-      const mapped: Conduta[] = (data || []).map(item => ({
-        id: item.id,
-        patient_id: item.patient_id,
-        clinic_id: item.clinic_id,
-        evolucao_id: item.evolucao_id || undefined,
-        profissional_id: item.profissional_id,
-        profissional_nome: professionalsMap[item.profissional_id] || 'Profissional',
-        data_hora: item.data_hora,
-        solicitacao_exames: item.solicitacao_exames || undefined,
-        prescricoes: item.prescricoes || undefined,
-        orientacoes: item.orientacoes || undefined,
-        encaminhamentos: item.encaminhamentos || undefined,
-        retorno_agendado: item.retorno_agendado || undefined,
-        retorno_observacoes: item.retorno_observacoes || undefined,
-        created_at: item.created_at,
-      }));
+      // Campos detalhados vivem no jsonb `data`
+      const mapped: Conduta[] = (data || []).map((item: any) => {
+        const extra = (item.data || {}) as Record<string, any>;
+        return {
+          id: item.id,
+          patient_id: item.patient_id,
+          clinic_id: item.clinic_id,
+          evolucao_id: extra.evolucao_id || undefined,
+          profissional_id: item.professional_id,
+          profissional_nome: professionalsMap[item.professional_id] || 'Profissional',
+          data_hora: extra.data_hora || item.created_at,
+          solicitacao_exames: extra.solicitacao_exames || undefined,
+          prescricoes: extra.prescricoes || undefined,
+          orientacoes: extra.orientacoes || undefined,
+          encaminhamentos: extra.encaminhamentos || undefined,
+          retorno_agendado: extra.retorno_agendado || undefined,
+          retorno_observacoes: extra.retorno_observacoes || undefined,
+          created_at: item.created_at,
+        };
+      });
 
       setCondutas(mapped);
 
@@ -173,15 +177,19 @@ export function useCondutaData(patientId: string | null): UseCondutaDataResult {
         .insert({
           patient_id: patientId,
           clinic_id: clinic.id,
-          profissional_id: currentProfessionalId,
-          evolucao_id: data.evolucao_id || null,
-          data_hora: new Date().toISOString(),
-          solicitacao_exames: data.solicitacao_exames || null,
-          prescricoes: data.prescricoes || null,
-          orientacoes: data.orientacoes || null,
-          encaminhamentos: data.encaminhamentos || null,
-          retorno_agendado: data.retorno_agendado || null,
-          retorno_observacoes: data.retorno_observacoes || null,
+          professional_id: currentProfessionalId,
+          tipo: 'conduta',
+          descricao: data.orientacoes || data.prescricoes || data.solicitacao_exames || null,
+          data: {
+            evolucao_id: data.evolucao_id || null,
+            data_hora: new Date().toISOString(),
+            solicitacao_exames: data.solicitacao_exames || null,
+            prescricoes: data.prescricoes || null,
+            orientacoes: data.orientacoes || null,
+            encaminhamentos: data.encaminhamentos || null,
+            retorno_agendado: data.retorno_agendado || null,
+            retorno_observacoes: data.retorno_observacoes || null,
+          },
         });
 
       if (insertError) throw insertError;

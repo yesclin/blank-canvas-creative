@@ -210,19 +210,36 @@ export function useVisaoGeralNutricaoData(patientId: string | null) {
     queryFn: async () => {
       if (!patientId || !clinic?.id) return { last: null, previous: null };
       
+      // Schema atual: métricas ficam no jsonb `data`
       const { data, error } = await supabase
         .from('body_measurements')
-        .select('id, measurement_date, weight_kg, height_cm, bmi, body_fat_percent, waist_cm, hip_cm')
+        .select('id, data, created_at')
         .eq('patient_id', patientId)
         .eq('clinic_id', clinic.id)
-        .order('measurement_date', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(2);
       
       if (error) throw error;
-      
+
+      const toMeasurement = (row: any): LastMeasurement | null => {
+        if (!row) return null;
+        const d = (row.data || {}) as Record<string, any>;
+        const num = (v: unknown) => (v === null || v === undefined || v === '' ? null : Number(v));
+        return {
+          id: row.id,
+          measurement_date: d.measurement_date || row.created_at,
+          weight_kg: num(d.weight_kg ?? d.peso),
+          height_cm: num(d.height_cm ?? d.altura),
+          bmi: num(d.bmi ?? d.imc),
+          body_fat_percent: num(d.body_fat_percent ?? d.percentual_gordura),
+          waist_cm: num(d.waist_cm ?? d.circunferencia_abdominal),
+          hip_cm: num(d.hip_cm ?? d.circunferencia_quadril),
+        };
+      };
+
       return {
-        last: (data?.[0] as LastMeasurement) || null,
-        previous: (data?.[1] as LastMeasurement) || null,
+        last: toMeasurement(data?.[0]),
+        previous: toMeasurement(data?.[1]),
       };
     },
     enabled: !!patientId && !!clinic?.id,

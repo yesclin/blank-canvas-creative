@@ -128,7 +128,7 @@ export function usePrescricoesData(patientId: string | null): UsePrescricoesData
         .select('*')
         .eq('patient_id', patientId)
         .eq('clinic_id', clinic.id)
-        .order('data_prescricao', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
 
@@ -146,7 +146,7 @@ export function usePrescricoesData(patientId: string | null): UsePrescricoesData
         .order('ordem', { ascending: true });
 
       // Get professional names
-      const professionalIds = [...new Set(prescricoesData.map(p => p.profissional_id).filter(Boolean))];
+      const professionalIds = [...new Set(prescricoesData.map((p: any) => p.professional_id).filter(Boolean))];
       let professionalsMap: Record<string, string> = {};
 
       if (professionalIds.length > 0) {
@@ -178,41 +178,45 @@ export function usePrescricoesData(patientId: string | null): UsePrescricoesData
       }
 
       // Map prescriptions with their items
-      const mapped: Prescricao[] = prescricoesData.map(presc => ({
-        id: presc.id,
-        patient_id: presc.patient_id,
-        clinic_id: presc.clinic_id,
-        appointment_id: presc.appointment_id,
-        profissional_id: presc.profissional_id,
-        profissional_nome: professionalsMap[presc.profissional_id] || 'Profissional',
-        data_prescricao: presc.data_prescricao,
-        tipo_receita: presc.tipo_receita as TipoReceita,
-        status: presc.status as StatusPrescricao,
-        assinada_em: presc.assinada_em,
-        numero_receita: presc.numero_receita,
-        validade_dias: presc.validade_dias || 30,
-        observacoes: presc.observacoes,
-        itens: (itensData || [])
-          .filter(item => item.prescricao_id === presc.id)
-          .map(item => ({
-            id: item.id,
-            prescricao_id: item.prescricao_id,
-            medicamento_nome: item.medicamento_nome,
-            medicamento_principio_ativo: item.medicamento_principio_ativo,
-            medicamento_concentracao: item.medicamento_concentracao,
-            medicamento_forma_farmaceutica: item.medicamento_forma_farmaceutica,
-            dose: item.dose,
-            unidade_dose: item.unidade_dose,
-            posologia: item.posologia,
-            frequencia: item.frequencia,
-            duracao_dias: item.duracao_dias,
-            via_administracao: item.via_administracao as ViaAdministracao,
-            instrucoes_especiais: item.instrucoes_especiais,
-            uso_continuo: item.uso_continuo || false,
-            ordem: item.ordem || 0,
-          })),
-        created_at: presc.created_at,
-      }));
+      // Cabeçalho: campos extras no jsonb `data`; itens usam colunas simples.
+      const mapped: Prescricao[] = prescricoesData.map((presc: any) => {
+        const extra = (presc.data || {}) as Record<string, any>;
+        return {
+          id: presc.id,
+          patient_id: presc.patient_id,
+          clinic_id: presc.clinic_id,
+          appointment_id: presc.appointment_id,
+          profissional_id: presc.professional_id,
+          profissional_nome: professionalsMap[presc.professional_id] || 'Profissional',
+          data_prescricao: extra.data_prescricao || presc.created_at,
+          tipo_receita: (presc.tipo || extra.tipo_receita || 'simples') as TipoReceita,
+          status: (presc.status || 'rascunho') as StatusPrescricao,
+          assinada_em: presc.signed_at,
+          numero_receita: extra.numero_receita ?? null,
+          validade_dias: extra.validade_dias || 30,
+          observacoes: extra.observacoes ?? null,
+          itens: (itensData || [])
+            .filter((item: any) => item.prescricao_id === presc.id)
+            .map((item: any) => ({
+              id: item.id,
+              prescricao_id: item.prescricao_id,
+              medicamento_nome: item.medicamento,
+              medicamento_principio_ativo: null,
+              medicamento_concentracao: null,
+              medicamento_forma_farmaceutica: null,
+              dose: item.dosagem || '',
+              unidade_dose: null,
+              posologia: item.frequencia || '',
+              frequencia: item.frequencia,
+              duracao_dias: item.duracao ? parseInt(String(item.duracao), 10) || null : null,
+              via_administracao: (item.via || 'oral') as ViaAdministracao,
+              instrucoes_especiais: item.observacoes,
+              uso_continuo: false,
+              ordem: item.ordem || 0,
+            })),
+          created_at: presc.created_at,
+        };
+      });
 
       setPrescricoes(mapped);
     } catch (err) {
@@ -249,10 +253,15 @@ export function usePrescricoesData(patientId: string | null): UsePrescricoesData
         .insert({
           patient_id: patientId,
           clinic_id: clinic.id,
-          profissional_id: currentProfessionalId,
-          tipo_receita: data.tipo_receita,
-          observacoes: data.observacoes || null,
-          validade_dias: data.validade_dias || 30,
+          professional_id: currentProfessionalId,
+          tipo: data.tipo_receita,
+          status: 'rascunho',
+          data: {
+            tipo_receita: data.tipo_receita,
+            observacoes: data.observacoes || null,
+            validade_dias: data.validade_dias || 30,
+            data_prescricao: new Date().toISOString(),
+          },
         })
         .select('id')
         .single();
@@ -262,18 +271,12 @@ export function usePrescricoesData(patientId: string | null): UsePrescricoesData
       // Insert items
       const itensToInsert = data.itens.map((item, index) => ({
         prescricao_id: newPrescricao.id,
-        medicamento_nome: item.medicamento_nome,
-        medicamento_principio_ativo: item.medicamento_principio_ativo || null,
-        medicamento_concentracao: item.medicamento_concentracao || null,
-        medicamento_forma_farmaceutica: item.medicamento_forma_farmaceutica || null,
-        dose: item.dose,
-        unidade_dose: item.unidade_dose || null,
-        posologia: item.posologia,
-        frequencia: item.frequencia || null,
-        duracao_dias: item.duracao_dias || null,
-        via_administracao: item.via_administracao || 'oral',
-        instrucoes_especiais: item.instrucoes_especiais || null,
-        uso_continuo: item.uso_continuo || false,
+        medicamento: [item.medicamento_nome, item.medicamento_concentracao].filter(Boolean).join(' '),
+        dosagem: [item.dose, item.unidade_dose].filter(Boolean).join(' ') || null,
+        via: item.via_administracao || 'oral',
+        frequencia: item.posologia || item.frequencia || null,
+        duracao: item.duracao_dias ? String(item.duracao_dias) : null,
+        observacoes: item.instrucoes_especiais || null,
         ordem: index,
       }));
 
@@ -306,7 +309,7 @@ export function usePrescricoesData(patientId: string | null): UsePrescricoesData
         .from('patient_prescricoes')
         .update({
           status: 'assinada',
-          assinada_em: new Date().toISOString(),
+          signed_at: new Date().toISOString(),
         })
         .eq('id', prescricaoId);
 
@@ -331,18 +334,12 @@ export function usePrescricoesData(patientId: string | null): UsePrescricoesData
         .from('patient_prescricao_itens')
         .insert({
           prescricao_id: prescricaoId,
-          medicamento_nome: item.medicamento_nome,
-          medicamento_principio_ativo: item.medicamento_principio_ativo || null,
-          medicamento_concentracao: item.medicamento_concentracao || null,
-          medicamento_forma_farmaceutica: item.medicamento_forma_farmaceutica || null,
-          dose: item.dose,
-          unidade_dose: item.unidade_dose || null,
-          posologia: item.posologia,
-          frequencia: item.frequencia || null,
-          duracao_dias: item.duracao_dias || null,
-          via_administracao: item.via_administracao || 'oral',
-          instrucoes_especiais: item.instrucoes_especiais || null,
-          uso_continuo: item.uso_continuo || false,
+          medicamento: [item.medicamento_nome, item.medicamento_concentracao].filter(Boolean).join(' '),
+          dosagem: [item.dose, item.unidade_dose].filter(Boolean).join(' ') || null,
+          via: item.via_administracao || 'oral',
+          frequencia: item.posologia || item.frequencia || null,
+          duracao: item.duracao_dias ? String(item.duracao_dias) : null,
+          observacoes: item.instrucoes_especiais || null,
         });
 
       if (insertError) throw insertError;

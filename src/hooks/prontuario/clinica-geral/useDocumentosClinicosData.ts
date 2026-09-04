@@ -119,6 +119,16 @@ interface UseDocumentosClinicosDataResult {
   refetch: () => Promise<void>;
 }
 
+function mapModelosPessoais(rows: Array<Record<string, any>> | null): ModeloReceitaProfissional[] {
+  return (rows || []).map(m => ({
+    id: m.id,
+    professional_id: m.professional_id || '',
+    nome_modelo: m.nome,
+    conteudo_json: (m.itens || { medicamentos: [] }) as ConteudoReceituario,
+    created_at: m.created_at,
+  }));
+}
+
 export function useDocumentosClinicosData(patientId: string | null): UseDocumentosClinicosDataResult {
   const { clinic } = useClinicData();
   const [documentos, setDocumentos] = useState<DocumentoClinico[]>([]);
@@ -141,15 +151,26 @@ export function useDocumentosClinicosData(patientId: string | null): UseDocument
 
       const { data: prof } = await supabase
         .from('professionals')
-        .select('id, user_id, registration_number, signature_url')
+        .select('id, user_id, registration_number')
         .eq('clinic_id', clinic.id)
         .eq('user_id', userData.user.id)
         .maybeSingle();
 
       if (prof) {
         setCurrentProfessionalId(prof.id);
-        setCurrentProfessionalRegistration((prof as any).registration_number || null);
-        setCurrentProfessionalSignatureUrl((prof as any).signature_url || null);
+        setCurrentProfessionalRegistration(prof.registration_number || null);
+
+        // Assinatura salva vive em professional_signatures (não em professionals)
+        const { data: signature } = await supabase
+          .from('professional_signatures')
+          .select('signature_file_url')
+          .eq('clinic_id', clinic.id)
+          .eq('professional_id', prof.id)
+          .eq('is_active', true)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        setCurrentProfessionalSignatureUrl(signature?.signature_file_url || null);
         const { data: profile } = await supabase
           .from('profiles')
           .select('full_name')
@@ -160,10 +181,11 @@ export function useDocumentosClinicosData(patientId: string | null): UseDocument
         // Fetch personal templates
         const { data: modelos } = await supabase
           .from('modelos_receita_profissional')
-          .select('*')
+          .select('id, professional_id, nome, itens, created_at')
           .eq('professional_id', prof.id)
+          .eq('is_active', true)
           .order('created_at', { ascending: false });
-        setModelosPessoais((modelos || []) as any);
+        setModelosPessoais(mapModelosPessoais(modelos));
       }
     }
     fetchProfessional();
@@ -175,11 +197,11 @@ export function useDocumentosClinicosData(patientId: string | null): UseDocument
       if (!clinic?.id) return;
       const { data } = await supabase
         .from('modelos_documento')
-        .select('*')
+        .select('id, clinic_id, tipo, nome, cabecalho_personalizado, texto_padrao, rodape, is_active, is_default')
         .eq('clinic_id', clinic.id)
         .eq('is_active', true)
         .order('is_default', { ascending: false });
-      setModelosDocumento((data || []) as any);
+      setModelosDocumento((data || []).map(m => ({ ...m, specialty_id: null })) as ModeloDocumento[]);
     }
     fetchModelos();
   }, [clinic?.id]);
@@ -190,7 +212,7 @@ export function useDocumentosClinicosData(patientId: string | null): UseDocument
       if (!patientId || !clinic?.id) return;
       const { data } = await supabase
         .from('documentos_clinicos')
-        .select('conteudo_json')
+        .select('conteudo')
         .eq('clinic_id', clinic.id)
         .eq('tipo', 'receituario')
         .order('created_at', { ascending: false })
@@ -198,7 +220,7 @@ export function useDocumentosClinicosData(patientId: string | null): UseDocument
 
       const meds = new Set<string>();
       (data || []).forEach(d => {
-        const c = typeof d.conteudo_json === 'string' ? JSON.parse(d.conteudo_json) : d.conteudo_json;
+        const c = (typeof d.conteudo === 'string' ? JSON.parse(d.conteudo) : d.conteudo) as any;
         if (c?.medicamentos) {
           c.medicamentos.forEach((m: any) => { if (m.nome) meds.add(m.nome); });
         }
@@ -217,7 +239,7 @@ export function useDocumentosClinicosData(patientId: string | null): UseDocument
     try {
       const { data, error } = await supabase
         .from('documentos_clinicos')
-        .select('*')
+        .select('id, clinic_id, patient_id, professional_id, tipo, titulo, conteudo, status, created_at, updated_at')
         .eq('patient_id', patientId)
         .eq('clinic_id', clinic.id)
         .order('created_at', { ascending: false });
@@ -243,31 +265,36 @@ export function useDocumentosClinicosData(patientId: string | null): UseDocument
         }
         (profs || []).forEach(p => {
           if (p.id && p.user_id && userMap[p.user_id]) {
-            profInfo[p.id] = { nome: userMap[p.user_id], registro: (p as any).registration_number || undefined };
+            profInfo[p.id] = { nome: userMap[p.user_id], registro: p.registration_number || undefined };
           }
         });
       }
 
-      setDocumentos((data || []).map(d => ({
-        id: d.id,
-        clinic_id: d.clinic_id,
-        patient_id: d.patient_id,
-        professional_id: d.professional_id,
-        specialty_id: d.specialty_id,
-        tipo: d.tipo as TipoDocumentoClinico,
-        conteudo_json: (typeof d.conteudo_json === 'string' ? JSON.parse(d.conteudo_json) : d.conteudo_json) as ConteudoDocumento,
-        status: d.status as StatusDocumentoClinico,
-        pdf_url: d.pdf_url,
-        created_at: d.created_at,
-        updated_at: d.updated_at,
-        tipo_receita: (d as any).tipo_receita || 'simples',
-        numero_talonario: (d as any).numero_talonario || undefined,
-        modelo_id: (d as any).modelo_id || undefined,
-        bloqueado: (d as any).bloqueado || false,
-        qr_hash: (d as any).qr_hash || undefined,
-        profissional_nome: profInfo[d.professional_id]?.nome || undefined,
-        profissional_registro: profInfo[d.professional_id]?.registro || undefined,
-      })));
+      setDocumentos((data || []).map(d => {
+        const raw = (typeof d.conteudo === 'string' ? JSON.parse(d.conteudo) : d.conteudo) || {};
+        const meta = (raw._meta || {}) as Record<string, any>;
+        const { _meta, ...conteudo } = raw as Record<string, any>;
+        return {
+          id: d.id,
+          clinic_id: d.clinic_id,
+          patient_id: d.patient_id,
+          professional_id: d.professional_id || '',
+          specialty_id: meta.specialty_id ?? null,
+          tipo: d.tipo as TipoDocumentoClinico,
+          conteudo_json: conteudo as ConteudoDocumento,
+          status: (d.status || 'rascunho') as StatusDocumentoClinico,
+          pdf_url: meta.pdf_url ?? null,
+          created_at: d.created_at,
+          updated_at: d.updated_at,
+          tipo_receita: (meta.tipo_receita || 'simples') as TipoReceita,
+          numero_talonario: meta.numero_talonario || undefined,
+          modelo_id: meta.modelo_id || undefined,
+          bloqueado: meta.bloqueado ?? d.status === 'emitido',
+          qr_hash: meta.qr_hash || undefined,
+          profissional_nome: d.professional_id ? profInfo[d.professional_id]?.nome : undefined,
+          profissional_registro: d.professional_id ? profInfo[d.professional_id]?.registro : undefined,
+        };
+      }));
     } catch (err) {
       console.error('Error fetching documentos clínicos:', err);
     } finally {
@@ -285,12 +312,15 @@ export function useDocumentosClinicosData(patientId: string | null): UseDocument
     try {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user?.id) return;
+      if (!clinic?.id) return;
       await supabase.from('documentos_log').insert({
-        documento_id: documentoId,
-        acao,
-        usuario_id: userData.user.id,
-        user_agent: navigator.userAgent,
-      } as any);
+        clinic_id: clinic.id,
+        document_id: documentoId,
+        document_type: 'documento_clinico',
+        action: acao,
+        user_id: userData.user.id,
+        details: { user_agent: navigator.userAgent },
+      });
     } catch (err) {
       console.error('Log error (non-blocking):', err);
     }
@@ -310,29 +340,36 @@ export function useDocumentosClinicosData(patientId: string | null): UseDocument
     try {
       const qrHash = crypto.randomUUID();
       const status = options?.status || 'emitido';
-      const insertPayload: Record<string, unknown> = {
+      // Schema atual: conteúdo e metadados vivem no jsonb `conteudo`
+      const insertPayload = {
         clinic_id: clinic.id,
         patient_id: patientId,
         professional_id: currentProfessionalId,
-        specialty_id: specialtyId || null,
         tipo,
-        conteudo_json: conteudo,
+        titulo: TIPO_DOC_LABELS[tipo],
         status,
-        bloqueado: status === 'emitido',
-        qr_hash: qrHash,
-        tipo_receita: options?.tipo_receita || 'simples',
-        numero_talonario: options?.numero_talonario || null,
-        modelo_id: options?.modelo_id || null,
-        assinatura_url: currentProfessionalSignatureUrl || null,
+        conteudo: {
+          ...(conteudo as Record<string, unknown>),
+          _meta: {
+            specialty_id: specialtyId || null,
+            bloqueado: status === 'emitido',
+            qr_hash: qrHash,
+            tipo_receita: options?.tipo_receita || 'simples',
+            numero_talonario: options?.numero_talonario || null,
+            modelo_id: options?.modelo_id || null,
+            assinatura_url: currentProfessionalSignatureUrl || null,
+          },
+        } as any,
       };
 
       const { data, error } = await supabase
         .from('documentos_clinicos')
-        .insert(insertPayload as any)
+        .insert(insertPayload)
         .select('id')
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) throw new Error('Documento não retornado');
 
       await logDocumentAction(data.id, 'criado');
       if (status === 'emitido') {
@@ -356,13 +393,17 @@ export function useDocumentosClinicosData(patientId: string | null): UseDocument
       const { data: userData } = await supabase.auth.getUser();
       const { error } = await supabase
         .from('documentos_clinicos')
-        .update({
-          status: 'cancelado',
-          cancelado_em: new Date().toISOString(),
-          cancelado_por: userData?.user?.id || null,
-          motivo_cancelamento: motivo,
-        })
+        .update({ status: 'cancelado' })
         .eq('id', id);
+
+      await supabase.from('documentos_log').insert({
+        clinic_id: clinic?.id as string,
+        document_id: id,
+        document_type: 'documento_clinico',
+        action: 'cancelado',
+        user_id: userData?.user?.id || null,
+        details: { motivo_cancelamento: motivo },
+      });
 
       if (error) throw error;
       await logDocumentAction(id, 'cancelado');
@@ -375,30 +416,33 @@ export function useDocumentosClinicosData(patientId: string | null): UseDocument
     } finally {
       setSaving(false);
     }
-  }, [fetchDocumentos]);
+  }, [clinic?.id, fetchDocumentos]);
 
   const saveModeloPessoal = useCallback(async (nome: string, conteudo: ConteudoReceituario): Promise<boolean> => {
     if (!currentProfessionalId) return false;
     try {
+      if (!clinic?.id) return false;
       const { error } = await supabase.from('modelos_receita_profissional').insert({
+        clinic_id: clinic.id,
         professional_id: currentProfessionalId,
-        nome_modelo: nome,
-        conteudo_json: conteudo as any,
-      } as any);
+        nome: nome,
+        itens: conteudo as any,
+      });
       if (error) throw error;
       const { data: modelos } = await supabase
         .from('modelos_receita_profissional')
-        .select('*')
+        .select('id, professional_id, nome, itens, created_at')
         .eq('professional_id', currentProfessionalId)
+        .eq('is_active', true)
         .order('created_at', { ascending: false });
-      setModelosPessoais((modelos || []) as any);
+      setModelosPessoais(mapModelosPessoais(modelos));
       toast.success('Modelo pessoal salvo');
       return true;
     } catch (err: any) {
       toast.error(`Erro ao salvar modelo: ${err.message}`);
       return false;
     }
-  }, [currentProfessionalId]);
+  }, [clinic?.id, currentProfessionalId]);
 
   const deleteModeloPessoal = useCallback(async (id: string): Promise<boolean> => {
     try {

@@ -88,7 +88,7 @@ export function useTimelineEsteticaData(patientId: string | null) {
         .select(`
           id,
           map_type,
-          general_notes,
+          notes,
           created_at,
           appointment_id,
           professional_id,
@@ -239,7 +239,7 @@ export function useTimelineEsteticaData(patientId: string | null) {
         type: 'facial_map',
         title: 'Mapa Facial',
         subtitle: `${applicationCount} ponto(s) de aplicação`,
-        description: map.general_notes,
+        description: map.notes,
         date: map.created_at,
         professionalName: map.professionals?.full_name,
         appointmentId: map.appointment_id,

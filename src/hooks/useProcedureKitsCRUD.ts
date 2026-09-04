@@ -31,22 +31,30 @@ export function useProcedureKitsList() {
     queryFn: async () => {
       const clinicId = await getClinicId();
       
+      const { data: clinicProcedures } = await supabase
+        .from('procedures')
+        .select('id')
+        .eq('clinic_id', clinicId);
+      const clinicProcedureIds = (clinicProcedures || []).map((p: any) => p.id);
+      if (clinicProcedureIds.length === 0) return [];
+
       const { data, error } = await supabase
         .from('procedure_kits')
         .select(`
           *,
-          material_kits:kit_id (name, is_active),
+          product_kits:product_kit_id (name, is_active),
           procedures:procedure_id (name)
         `)
-        .eq('clinic_id', clinicId)
+        .in('procedure_id', clinicProcedureIds)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       
       return (data || []).map((item: any) => ({
         ...item,
-        kit_name: item.material_kits?.name,
-        kit_is_active: item.material_kits?.is_active,
+        kit_id: item.product_kit_id,
+        kit_name: item.product_kits?.name,
+        kit_is_active: item.product_kits?.is_active,
         procedure_name: item.procedures?.name,
       })) as (ProcedureKit & { kit_is_active?: boolean })[];
     },
@@ -63,7 +71,7 @@ export function useProcedureKitsByProcedure(procedureId: string | null) {
         .from('procedure_kits')
         .select(`
           *,
-          material_kits:kit_id (name, is_active)
+          product_kits:product_kit_id (name, is_active)
         `)
         .eq('procedure_id', procedureId)
         .order('created_at');
@@ -72,8 +80,9 @@ export function useProcedureKitsByProcedure(procedureId: string | null) {
       
       return (data || []).map((item: any) => ({
         ...item,
-        kit_name: item.material_kits?.name,
-        kit_is_active: item.material_kits?.is_active,
+        kit_id: item.product_kit_id,
+        kit_name: item.product_kits?.name,
+        kit_is_active: item.product_kits?.is_active,
       })) as (ProcedureKit & { kit_is_active?: boolean })[];
     },
     enabled: !!procedureId,
@@ -92,17 +101,16 @@ export function useKitUsageByKit(kitId: string | null) {
         .select(`
           id,
           quantity,
-          is_required,
           procedures:procedure_id (id, name)
         `)
-        .eq('kit_id', kitId);
+        .eq('product_kit_id', kitId);
       
       if (error) throw error;
       
       return (data || []).map((item: any) => ({
         id: item.id,
         quantity: item.quantity,
-        is_required: item.is_required,
+        is_required: true,
         procedure_id: item.procedures?.id,
         procedure_name: item.procedures?.name,
       }));
@@ -118,17 +126,24 @@ export function useKitsUsageCount() {
     queryFn: async () => {
       const clinicId = await getClinicId();
       
+      const { data: clinicProcedures } = await supabase
+        .from('procedures')
+        .select('id')
+        .eq('clinic_id', clinicId);
+      const clinicProcedureIds = (clinicProcedures || []).map((p: any) => p.id);
+      if (clinicProcedureIds.length === 0) return {} as Record<string, number>;
+
       const { data, error } = await supabase
         .from('procedure_kits')
-        .select('kit_id, procedure_id')
-        .eq('clinic_id', clinicId);
+        .select('product_kit_id, procedure_id')
+        .in('procedure_id', clinicProcedureIds);
       
       if (error) throw error;
       
-      // Agrupar por kit_id e contar
+      // Agrupar por kit e contar
       const usageMap: Record<string, number> = {};
       (data || []).forEach((item: any) => {
-        usageMap[item.kit_id] = (usageMap[item.kit_id] || 0) + 1;
+        usageMap[item.product_kit_id] = (usageMap[item.product_kit_id] || 0) + 1;
       });
       
       return usageMap;
@@ -150,11 +165,9 @@ export function useCreateProcedureKit() {
       const { data, error } = await supabase
         .from('procedure_kits')
         .insert({
-          clinic_id: clinicId,
           procedure_id: formData.procedure_id,
-          kit_id: formData.kit_id,
+          product_kit_id: formData.kit_id,
           quantity: formData.quantity,
-          is_required: formData.is_required,
         })
         .select()
         .single();
@@ -191,7 +204,6 @@ export function useUpdateProcedureKit() {
         .from('procedure_kits')
         .update({
           quantity: formData.quantity,
-          is_required: formData.is_required,
         })
         .eq('id', id)
         .select()

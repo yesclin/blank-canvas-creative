@@ -306,7 +306,7 @@ export function useAttendanceDetail(appointmentId: string | null) {
         supabase.from("clinical_evolutions").select("id, evolution_type, content, notes, status, signed_at, created_at").eq("appointment_id", appointmentId).order("created_at"),
         supabase.from("clinical_documents").select("id, document_type, title, status, signed_at, created_at").eq("appointment_id", appointmentId).order("created_at"),
         supabase.from("clinical_alerts").select("id, alert_type, severity, title, description, is_active, created_at").eq("appointment_id", appointmentId).eq("is_active", true).order("created_at"),
-        supabase.from("clinical_media").select("id, file_url, file_type, file_name, classification, description, created_at").eq("appointment_id", appointmentId).order("created_at"),
+        supabase.from("clinical_media").select("id, file_url, file_type, file_name, category, description, created_at").eq("appointment_id", appointmentId).order("created_at"),
         supabase.from("clinical_attendance_documents").select("id, status, is_locked, signed_at, generated_at, snapshot_json, hash_sha256, signature_metadata").eq("appointment_id", appointmentId).limit(1).maybeSingle(),
         // Specialty / extended blocks (degraded gracefully)
         safeQuery<any[]>(supabase.from("clinical_performed_procedures").select("id, procedure_name, region, technique, notes, status, performed_at").eq("appointment_id", appointmentId).order("performed_at")),
@@ -460,7 +460,7 @@ export function useAttendanceDetail(appointmentId: string | null) {
           file_url: r.file_url,
           file_type: r.file_type || "",
           file_name: r.file_name || "",
-          classification: r.classification,
+          classification: r.category ?? null,
           description: r.description,
           created_at: r.created_at,
         })),

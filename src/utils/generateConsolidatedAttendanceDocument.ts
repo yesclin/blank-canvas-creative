@@ -7,6 +7,27 @@ import { generateHash } from '@/utils/documentControl';
  *
  * This is the single source of truth for what happened in that session.
  */
+/** Endereço da clínica: schema atual usa campos address_* separados. */
+function formatClinicAddress(clinic: {
+  address_street?: string | null;
+  address_number?: string | null;
+  address_complement?: string | null;
+  address_neighborhood?: string | null;
+  address_city?: string | null;
+  address_state?: string | null;
+  address_zip?: string | null;
+} | null | undefined): string | null {
+  if (!clinic) return null;
+  const line1 = [clinic.address_street, clinic.address_number].filter(Boolean).join(', ');
+  const parts = [
+    [line1, clinic.address_complement].filter(Boolean).join(' - '),
+    clinic.address_neighborhood,
+    [clinic.address_city, clinic.address_state].filter(Boolean).join('/'),
+    clinic.address_zip,
+  ].filter((p) => p && String(p).trim().length > 0);
+  return parts.length ? parts.join(' - ') : null;
+}
+
 export async function generateConsolidatedAttendanceDocument(appointmentId: string) {
   // 1. Check if a document already exists (idempotent)
   const { data: existing } = await supabase
@@ -61,7 +82,7 @@ export async function generateConsolidatedAttendanceDocument(appointmentId: stri
     stockMovements,
     bodyMeasurements,
   ] = await Promise.all([
-    supabase.from('clinics').select('name, logo_url, phone, email, cnpj, address').eq('id', clinicId).maybeSingle(),
+    supabase.from('clinics').select('name, logo_url, phone, email, cnpj, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zip').eq('id', clinicId).maybeSingle(),
     supabase.from('anamnesis_records')
       .select('id, status, data, responses, signed_at, created_at, template_id, anamnesis_templates(name)')
       .eq('appointment_id', appointmentId).order('created_at'),
@@ -75,7 +96,7 @@ export async function generateConsolidatedAttendanceDocument(appointmentId: stri
       .select('id, alert_type, severity, title, description, is_active, created_at')
       .eq('appointment_id', appointmentId).order('created_at'),
     supabase.from('clinical_media')
-      .select('id, file_url, file_type, file_name, classification, description, created_at')
+      .select('id, file_url, file_type, file_name, category, description, created_at')
       .eq('appointment_id', appointmentId).order('created_at'),
     supabase.from('appointment_sessions')
       .select('total_paused_seconds, session_summary, session_notes, pause_events')
@@ -107,7 +128,7 @@ export async function generateConsolidatedAttendanceDocument(appointmentId: stri
       phone: clinic?.phone || null,
       email: clinic?.email || null,
       cnpj: clinic?.cnpj || null,
-      address: clinic?.address || null,
+      address: formatClinicAddress(clinic),
     },
 
     // ─ Appointment context ─
@@ -197,7 +218,7 @@ export async function generateConsolidatedAttendanceDocument(appointmentId: stri
       file_url: r.file_url,
       file_type: r.file_type,
       file_name: r.file_name,
-      classification: r.classification,
+      classification: r.category ?? null,
       description: r.description,
       created_at: r.created_at,
     })),

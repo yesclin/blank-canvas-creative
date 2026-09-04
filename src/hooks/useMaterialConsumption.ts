@@ -24,7 +24,8 @@ export interface MaterialConsumptionRecord {
   clinic_id: string;
   appointment_id: string;
   procedure_id?: string;
-  material_id: string;
+  product_id: string;
+  material_id?: string;
   kit_id?: string;
   professional_id?: string;
   patient_id?: string;
@@ -32,8 +33,8 @@ export interface MaterialConsumptionRecord {
   unit: string;
   unit_cost: number;
   total_cost: number;
-  consumption_type: 'automatic' | 'manual' | 'adjustment';
-  source: 'procedure' | 'kit' | 'extra';
+  consumption_type?: 'automatic' | 'manual' | 'adjustment';
+  source?: 'procedure' | 'kit' | 'extra';
   notes?: string;
   consumed_at: string;
   created_at: string;
@@ -47,14 +48,11 @@ export interface MaterialConsumptionRecord {
 export interface StockAlert {
   id: string;
   clinic_id: string;
-  material_id: string;
-  alert_type: 'low_stock' | 'out_of_stock' | 'insufficient';
+  product_id: string;
+  alert_type: string;
   current_quantity: number;
   min_quantity: number;
-  required_quantity?: number;
-  appointment_id?: string;
   is_resolved: boolean;
-  resolved_at?: string;
   created_at: string;
   // Joined
   material_name?: string;
@@ -213,37 +211,6 @@ export function useAppointmentMaterials(appointmentId: string | null) {
           }
         });
       });
-
-      // === LEGADO: procedure_materials (caso a tabela ainda exista) ===
-      try {
-        const { data: legacyMaterials } = await supabase
-          .from('procedure_materials')
-          .select(`
-            quantity,
-            unit,
-            is_required,
-            allow_manual_edit,
-            materials:material_id (id, name, unit_cost, is_active)
-          `)
-          .eq('procedure_id', procedureId);
-
-        (legacyMaterials || []).forEach((pm: any) => {
-          if (pm.materials?.is_active) {
-            items.push({
-              material_id: pm.materials.id,
-              material_name: pm.materials.name,
-              quantity: pm.quantity,
-              unit: pm.unit,
-              unit_cost: pm.materials.unit_cost || 0,
-              source: 'procedure',
-              is_required: pm.is_required,
-              allow_manual_edit: pm.allow_manual_edit,
-            });
-          }
-        });
-      } catch {
-        // tabela legada ausente — ignorar
-      }
 
       return items;
     },
@@ -420,13 +387,12 @@ export function useMaterialConsumptionHistory(appointmentId?: string) {
         .from('material_consumption')
         .select(`
           *,
-          materials:material_id (name),
-          procedures:procedure_id (name),
-          professionals:professional_id (name),
-          patients:patient_id (name)
+          products:product_id (name, unit, cost_price),
+          professionals:professional_id (full_name),
+          patients:patient_id (full_name)
         `)
         .eq('clinic_id', clinicId)
-        .order('consumed_at', { ascending: false });
+        .order('created_at', { ascending: false });
         
       if (appointmentId) {
         query = query.eq('appointment_id', appointmentId);
@@ -440,10 +406,13 @@ export function useMaterialConsumptionHistory(appointmentId?: string) {
       
       return (data || []).map((item: any) => ({
         ...item,
-        material_name: item.materials?.name,
-        procedure_name: item.procedures?.name,
-        professional_name: item.professionals?.name,
-        patient_name: item.patients?.name,
+        material_name: item.products?.name,
+        consumed_at: item.created_at,
+        unit: item.products?.unit ?? 'un',
+        unit_cost: Number(item.products?.cost_price) || 0,
+        total_cost: (Number(item.products?.cost_price) || 0) * (Number(item.quantity) || 0),
+        professional_name: item.professionals?.full_name,
+        patient_name: item.patients?.full_name,
       })) as MaterialConsumptionRecord[];
     },
   });
@@ -463,13 +432,13 @@ export function useStockAlerts(onlyUnresolved: boolean = true) {
         .from('stock_alerts')
         .select(`
           *,
-          materials:material_id (name)
+          products:product_id (name, current_stock, min_stock)
         `)
         .eq('clinic_id', clinicId)
         .order('created_at', { ascending: false });
         
       if (onlyUnresolved) {
-        query = query.eq('is_resolved', false);
+        query = query.eq('is_active', true);
       }
       
       const { data, error } = await query;
@@ -478,7 +447,10 @@ export function useStockAlerts(onlyUnresolved: boolean = true) {
       
       return (data || []).map((item: any) => ({
         ...item,
-        material_name: item.materials?.name,
+        material_name: item.products?.name,
+        current_quantity: Number(item.products?.current_stock) || 0,
+        min_quantity: Number(item.threshold ?? item.products?.min_stock) || 0,
+        is_resolved: item.is_active === false,
       })) as StockAlert[];
     },
   });
@@ -494,9 +466,8 @@ export function useResolveStockAlert() {
       const { error } = await supabase
         .from('stock_alerts')
         .update({
-          is_resolved: true,
-          resolved_at: new Date().toISOString(),
-          resolved_by: user?.id,
+          is_active: false,
+          updated_at: new Date().toISOString(),
         })
         .eq('id', alertId);
         

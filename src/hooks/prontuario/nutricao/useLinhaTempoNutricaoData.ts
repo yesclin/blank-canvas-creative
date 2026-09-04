@@ -73,7 +73,7 @@ export function useLinhaTempoNutricaoData(patientId: string | null) {
         // Evoluções nutricionais (tabela clinical_evolutions)
         supabase
           .from('clinical_evolutions')
-          .select('id, evolution_type, content, notes, next_steps, status, professional_id, created_at')
+          .select('id, evolution_type, content, notes, status, professional_id, created_at')
           .eq('patient_id', patientId)
           .eq('clinic_id', clinic.id)
           .eq('specialty_id', await resolveSpecialtyFilterId(clinic.id, 'nutricao'))
@@ -82,7 +82,7 @@ export function useLinhaTempoNutricaoData(patientId: string | null) {
         // Documentos
         supabase
           .from('patient_documentos')
-          .select('id, titulo, categoria, observacoes, profissional_id, created_at')
+          .select('id, titulo, tipo, conteudo, professional_id, created_at')
           .eq('patient_id', patientId)
           .eq('clinic_id', clinic.id)
           .order('created_at', { ascending: false }),
@@ -102,7 +102,7 @@ export function useLinhaTempoNutricaoData(patientId: string | null) {
       const allUserIds = new Set<string>();
 
       (evolucoesRes.data || []).forEach(e => e.professional_id && allProfessionalIds.add(e.professional_id));
-      (documentosRes.data || []).forEach(d => d.profissional_id && allProfessionalIds.add(d.profissional_id));
+      (documentosRes.data || []).forEach(d => d.professional_id && allProfessionalIds.add(d.professional_id));
       (alertasRes.data || []).forEach(a => a.created_by && allUserIds.add(a.created_by));
 
       // Buscar nomes dos profissionais
@@ -208,16 +208,17 @@ export function useLinhaTempoNutricaoData(patientId: string | null) {
 
       // Documentos
       (documentosRes.data || []).forEach(doc => {
-        const categoriaLabel = doc.categoria === 'exame' ? 'Exame Laboratorial' :
-                               doc.categoria === 'laudo' ? 'Laudo' :
-                               doc.categoria === 'relatorio' ? 'Relatório' : 'Documento';
+        const docConteudo = (doc.conteudo || {}) as Record<string, any>;
+        const categoriaLabel = doc.tipo === 'exame' ? 'Exame Laboratorial' :
+                               doc.tipo === 'laudo' ? 'Laudo' :
+                               doc.tipo === 'relatorio' ? 'Relatório' : 'Documento';
         timelineEvents.push({
           id: `documento-${doc.id}`,
           tipo: 'documento',
           titulo: doc.titulo || categoriaLabel,
-          resumo: doc.observacoes || undefined,
+          resumo: docConteudo.observacoes || undefined,
           detalhes: { categoria: categoriaLabel },
-          profissional_nome: doc.profissional_id ? profiles[doc.profissional_id] : undefined,
+          profissional_nome: doc.professional_id ? profiles[doc.professional_id] : undefined,
           created_at: doc.created_at,
         });
       });

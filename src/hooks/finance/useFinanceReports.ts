@@ -54,7 +54,7 @@ export function useFinanceReports(filters: ReportFilters = {}) {
       const { data: packages, error: pe } = await supabase
         .from("treatment_packages")
         .select(`id, patient_id, procedure_id, professional_id, total_amount, paid_amount,
-          total_sessions, completed_sessions, status, created_at,
+          total_sessions, used_sessions, status, created_at,
           patients(id, full_name),
           professionals(id, full_name),
           procedures(id, name)`)

@@ -71,9 +71,7 @@ export function useProcedureCostDetail(procedureId: string | null) {
         .select(`
           id,
           quantity,
-          unit,
-          is_required,
-          materials:material_id (name, unit_cost)
+          products:product_id (name, unit, cost_price)
         `)
         .eq('procedure_id', procedureId);
         
@@ -85,14 +83,12 @@ export function useProcedureCostDetail(procedureId: string | null) {
         .select(`
           id,
           quantity,
-          is_required,
-          material_kits:kit_id (
+          product_kits:product_kit_id (
             id,
             name,
-            material_kit_items (
+            product_kit_items (
               quantity,
-              unit,
-              materials:material_id (name, unit_cost)
+              products:product_id (name, unit, cost_price)
             )
           )
         `)
@@ -102,37 +98,37 @@ export function useProcedureCostDetail(procedureId: string | null) {
       
       // Calcular custos dos materiais
       const materialsList = (materials || []).map((m: any) => {
-        const unitCost = m.materials?.unit_cost || 0;
+        const unitCost = Number(m.products?.cost_price) || 0;
         return {
           id: m.id,
-          name: m.materials?.name || 'Material não encontrado',
+          name: m.products?.name || 'Material não encontrado',
           quantity: m.quantity,
-          unit: m.unit,
+          unit: m.products?.unit || 'un',
           unit_cost: unitCost,
           total: m.quantity * unitCost,
-          is_required: m.is_required,
+          is_required: false,
         };
       });
       
       // Calcular custos dos kits
       const kitsList = (kits || []).map((k: any) => {
-        const kitItems = k.material_kits?.material_kit_items || [];
+        const kitItems = k.product_kits?.product_kit_items || [];
         const kitCost = kitItems.reduce((sum: number, item: any) => {
-          return sum + (item.quantity * (item.materials?.unit_cost || 0));
+          return sum + (item.quantity * (Number(item.products?.cost_price) || 0));
         }, 0);
         
         return {
           id: k.id,
-          name: k.material_kits?.name || 'Kit não encontrado',
+          name: k.product_kits?.name || 'Kit não encontrado',
           quantity: k.quantity,
           kit_cost: kitCost,
           total: k.quantity * kitCost,
-          is_required: k.is_required,
+          is_required: false,
           items: kitItems.map((item: any) => ({
-            material_name: item.materials?.name || '',
+            material_name: item.products?.name || '',
             quantity: item.quantity,
-            unit: item.unit,
-            unit_cost: item.materials?.unit_cost || 0,
+            unit: item.products?.unit || 'un',
+            unit_cost: Number(item.products?.cost_price) || 0,
           })),
         };
       });
@@ -170,16 +166,19 @@ export function useProceduresWithCosts() {
         .order('name');
         
       if (procError) throw procError;
-      
-      // Buscar todos os materiais vinculados
+
+      const procedureIds = (procedures || []).map((p: any) => p.id);
+      if (procedureIds.length === 0) return [];
+
+      // Buscar todos os materiais vinculados (escopo pelos procedimentos da clínica)
       const { data: materials, error: matError } = await supabase
         .from('procedure_materials')
         .select(`
           procedure_id,
           quantity,
-          materials:material_id (unit_cost)
+          products:product_id (cost_price)
         `)
-        .eq('clinic_id', clinicId);
+        .in('procedure_id', procedureIds);
         
       if (matError) throw matError;
       
@@ -189,29 +188,29 @@ export function useProceduresWithCosts() {
         .select(`
           procedure_id,
           quantity,
-          material_kits:kit_id (
-            material_kit_items (
+          product_kits:product_kit_id (
+            product_kit_items (
               quantity,
-              materials:material_id (unit_cost)
+              products:product_id (cost_price)
             )
           )
         `)
-        .eq('clinic_id', clinicId);
+        .in('procedure_id', procedureIds);
         
       if (kitError) throw kitError;
       
       // Calcular custo por procedimento
       const materialCosts: Record<string, number> = {};
       (materials || []).forEach((m: any) => {
-        const cost = m.quantity * (m.materials?.unit_cost || 0);
+        const cost = m.quantity * (Number(m.products?.cost_price) || 0);
         materialCosts[m.procedure_id] = (materialCosts[m.procedure_id] || 0) + cost;
       });
       
       const kitCosts: Record<string, number> = {};
       (kits || []).forEach((k: any) => {
-        const kitItems = k.material_kits?.material_kit_items || [];
+        const kitItems = k.product_kits?.product_kit_items || [];
         const kitCost = kitItems.reduce((sum: number, item: any) => {
-          return sum + (item.quantity * (item.materials?.unit_cost || 0));
+          return sum + (item.quantity * (Number(item.products?.cost_price) || 0));
         }, 0);
         kitCosts[k.procedure_id] = (kitCosts[k.procedure_id] || 0) + (k.quantity * kitCost);
       });
@@ -249,11 +248,20 @@ export function useMaterialUsageCount() {
     queryFn: async () => {
       const clinicId = await getClinicId();
       
-      // Uso em procedimentos diretos
-      const { data: procMaterials, error: pmError } = await supabase
-        .from('procedure_materials')
-        .select('material_id, procedure_id')
+      // Procedimentos da clínica (procedure_materials não tem clinic_id)
+      const { data: clinicProcedures } = await supabase
+        .from('procedures')
+        .select('id')
         .eq('clinic_id', clinicId);
+      const clinicProcedureIds = (clinicProcedures || []).map((p: any) => p.id);
+
+      // Uso em procedimentos diretos
+      const { data: procMaterials, error: pmError } = clinicProcedureIds.length
+        ? await supabase
+            .from('procedure_materials')
+            .select('product_id, procedure_id')
+            .in('procedure_id', clinicProcedureIds)
+        : { data: [], error: null };
         
       if (pmError) throw pmError;
       
@@ -261,16 +269,16 @@ export function useMaterialUsageCount() {
       const { data: kitItems, error: kiError } = await supabase
         .from('material_kit_items')
         .select(`
-          material_id,
+          product_id,
           kit_id,
-          material_kits:kit_id (clinic_id)
+          product_kits:kit_id (clinic_id)
         `);
         
       if (kiError) throw kiError;
       
       // Filtrar por clinic_id
       const filteredKitItems = (kitItems || []).filter(
-        (item: any) => item.material_kits?.clinic_id === clinicId
+        (item: any) => item.product_kits?.clinic_id === clinicId
       );
       
       // Agregar contagens
@@ -282,29 +290,29 @@ export function useMaterialUsageCount() {
       }> = {};
       
       (procMaterials || []).forEach((pm: any) => {
-        if (!usageMap[pm.material_id]) {
-          usageMap[pm.material_id] = { 
+        if (!usageMap[pm.product_id]) {
+          usageMap[pm.product_id] = { 
             in_procedures: 0, 
             in_kits: 0,
             procedure_ids: [],
             kit_ids: [],
           };
         }
-        usageMap[pm.material_id].in_procedures++;
-        usageMap[pm.material_id].procedure_ids.push(pm.procedure_id);
+        usageMap[pm.product_id].in_procedures++;
+        usageMap[pm.product_id].procedure_ids.push(pm.procedure_id);
       });
       
       filteredKitItems.forEach((ki: any) => {
-        if (!usageMap[ki.material_id]) {
-          usageMap[ki.material_id] = { 
+        if (!usageMap[ki.product_id]) {
+          usageMap[ki.product_id] = { 
             in_procedures: 0, 
             in_kits: 0,
             procedure_ids: [],
             kit_ids: [],
           };
         }
-        usageMap[ki.material_id].in_kits++;
-        usageMap[ki.material_id].kit_ids.push(ki.kit_id);
+        usageMap[ki.product_id].in_kits++;
+        usageMap[ki.product_id].kit_ids.push(ki.kit_id);
       });
       
       return usageMap;

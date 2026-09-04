@@ -45,6 +45,27 @@ interface UseDiagnosticosDataResult {
   refetch: () => Promise<void>;
 }
 
+/** Rebaixa diagnósticos principais ativos para diferencial (tipo vive no jsonb `data`). */
+async function demotePrincipais(patientId: string, clinicId: string, exceptId?: string) {
+  const { data: principais } = await supabase
+    .from('patient_diagnosticos')
+    .select('id, data')
+    .eq('patient_id', patientId)
+    .eq('clinic_id', clinicId)
+    .eq('status', 'ativo');
+
+  const targets = (principais || []).filter(
+    (row: any) => (row.data || {}).tipo_diagnostico === 'principal' && row.id !== exceptId,
+  );
+
+  for (const row of targets) {
+    await supabase
+      .from('patient_diagnosticos')
+      .update({ data: { ...((row as any).data || {}), tipo_diagnostico: 'diferencial' } })
+      .eq('id', (row as any).id);
+  }
+}
+
 export function useDiagnosticosData(patientId: string | null): UseDiagnosticosDataResult {
   const { clinic } = useClinicData();
   const [diagnosticos, setDiagnosticos] = useState<Diagnostico[]>([]);
@@ -89,12 +110,12 @@ export function useDiagnosticosData(patientId: string | null): UseDiagnosticosDa
         .select('*')
         .eq('patient_id', patientId)
         .eq('clinic_id', clinic.id)
-        .order('data_diagnostico', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
 
       // Get professional names
-      const professionalIds = [...new Set((data || []).map(d => d.profissional_id).filter(Boolean))];
+      const professionalIds = [...new Set((data || []).map((d: any) => d.professional_id).filter(Boolean))];
       let professionalsMap: Record<string, string> = {};
 
       if (professionalIds.length > 0) {
@@ -125,23 +146,27 @@ export function useDiagnosticosData(patientId: string | null): UseDiagnosticosDa
         }
       }
 
-      const mapped: Diagnostico[] = (data || []).map(item => ({
-        id: item.id,
-        patient_id: item.patient_id,
-        clinic_id: item.clinic_id,
-        appointment_id: item.appointment_id,
-        profissional_id: item.profissional_id,
-        profissional_nome: professionalsMap[item.profissional_id] || 'Profissional',
-        codigo_cid10: item.codigo_cid10,
-        descricao_cid10: item.descricao_cid10,
-        descricao_personalizada: item.descricao_personalizada,
-        observacoes: item.observacoes,
-        tipo_diagnostico: item.tipo_diagnostico as TipoDiagnostico,
-        status: item.status as StatusDiagnostico,
-        data_diagnostico: item.data_diagnostico,
-        data_resolucao: item.data_resolucao,
-        created_at: item.created_at,
-      }));
+      // Campos estendidos vivem no jsonb `data`; colunas reais: codigo_cid, descricao, status.
+      const mapped: Diagnostico[] = (data || []).map((item: any) => {
+        const extra = (item.data || {}) as Record<string, any>;
+        return {
+          id: item.id,
+          patient_id: item.patient_id,
+          clinic_id: item.clinic_id,
+          appointment_id: item.appointment_id,
+          profissional_id: item.professional_id,
+          profissional_nome: professionalsMap[item.professional_id] || 'Profissional',
+          codigo_cid10: item.codigo_cid ?? null,
+          descricao_cid10: extra.descricao_cid10 ?? item.descricao ?? null,
+          descricao_personalizada: extra.descricao_personalizada ?? null,
+          observacoes: extra.observacoes ?? null,
+          tipo_diagnostico: (extra.tipo_diagnostico ?? 'diferencial') as TipoDiagnostico,
+          status: (item.status ?? 'ativo') as StatusDiagnostico,
+          data_diagnostico: extra.data_diagnostico ?? item.created_at,
+          data_resolucao: extra.data_resolucao ?? null,
+          created_at: item.created_at,
+        };
+      });
 
       setDiagnosticos(mapped);
     } catch (err) {
@@ -170,13 +195,7 @@ export function useDiagnosticosData(patientId: string | null): UseDiagnosticosDa
     try {
       // If setting as principal, demote existing principal to diferencial
       if (data.tipo_diagnostico === 'principal') {
-        await supabase
-          .from('patient_diagnosticos')
-          .update({ tipo_diagnostico: 'diferencial' })
-          .eq('patient_id', patientId)
-          .eq('clinic_id', clinic.id)
-          .eq('tipo_diagnostico', 'principal')
-          .eq('status', 'ativo');
+        await demotePrincipais(patientId, clinic.id);
       }
 
       const { error: insertError } = await supabase
@@ -184,12 +203,17 @@ export function useDiagnosticosData(patientId: string | null): UseDiagnosticosDa
         .insert({
           patient_id: patientId,
           clinic_id: clinic.id,
-          profissional_id: currentProfessionalId,
-          codigo_cid10: data.codigo_cid10 || null,
-          descricao_cid10: data.descricao_cid10 || null,
-          descricao_personalizada: data.descricao_personalizada || null,
-          observacoes: data.observacoes || null,
-          tipo_diagnostico: data.tipo_diagnostico,
+          professional_id: currentProfessionalId,
+          codigo_cid: data.codigo_cid10 || null,
+          descricao: data.descricao_cid10 || data.descricao_personalizada || null,
+          status: 'ativo',
+          data: {
+            descricao_cid10: data.descricao_cid10 || null,
+            descricao_personalizada: data.descricao_personalizada || null,
+            observacoes: data.observacoes || null,
+            tipo_diagnostico: data.tipo_diagnostico,
+            data_diagnostico: new Date().toISOString(),
+          },
         });
 
       if (insertError) throw insertError;
@@ -219,21 +243,26 @@ export function useDiagnosticosData(patientId: string | null): UseDiagnosticosDa
 
     try {
       // If promoting to principal, demote existing principal
-      if (data.tipo_diagnostico === 'principal') {
-        await supabase
-          .from('patient_diagnosticos')
-          .update({ tipo_diagnostico: 'diferencial' })
-          .eq('patient_id', patientId)
-          .eq('clinic_id', clinic?.id)
-          .eq('tipo_diagnostico', 'principal')
-          .eq('status', 'ativo')
-          .neq('id', id);
+      if (data.tipo_diagnostico === 'principal' && patientId && clinic?.id) {
+        await demotePrincipais(patientId, clinic.id, id);
       }
 
-      const updateData: Record<string, unknown> = { ...data };
+      // Ler registro atual para mesclar o jsonb `data`
+      const { data: current } = await supabase
+        .from('patient_diagnosticos')
+        .select('data')
+        .eq('id', id)
+        .maybeSingle();
+
+      const extra = { ...(((current as any)?.data || {}) as Record<string, unknown>) };
+      if (data.tipo_diagnostico !== undefined) extra.tipo_diagnostico = data.tipo_diagnostico;
+      if (data.observacoes !== undefined) extra.observacoes = data.observacoes;
       if (data.status === 'resolvido' || data.status === 'descartado') {
-        updateData.data_resolucao = new Date().toISOString();
+        extra.data_resolucao = new Date().toISOString();
       }
+
+      const updateData: Record<string, unknown> = { data: extra };
+      if (data.status !== undefined) updateData.status = data.status;
 
       const { error: updateError } = await supabase
         .from('patient_diagnosticos')

@@ -41,14 +41,12 @@ import { MODULE_CATEGORY_LABELS, ClinicalModuleCategory, ClinicalModuleKey, CORE
 interface Specialty {
   id: string;
   name: string;
-  area: string | null;
   description: string | null;
   is_active: boolean;
 }
 
 interface SpecialtyFormData {
   name: string;
-  area: string;
   description: string;
   is_active: boolean;
 }
@@ -88,7 +86,6 @@ export function SpecialtyFormDialog({
   
   const [formData, setFormData] = useState<SpecialtyFormData>({
     name: "",
-    area: "",
     description: "",
     is_active: true,
   });
@@ -102,7 +99,6 @@ export function SpecialtyFormDialog({
       if (specialty) {
         setFormData({
           name: specialty.name,
-          area: specialty.area || "",
           description: specialty.description || "",
           is_active: specialty.is_active,
         });
@@ -111,8 +107,7 @@ export function SpecialtyFormDialog({
       } else {
         setFormData({
           name: "",
-          area: "",
-          description: "",
+                description: "",
           is_active: true,
         });
         // For new specialty, default to core modules only
@@ -131,14 +126,14 @@ export function SpecialtyFormDialog({
     
     const { data: overrides } = await supabase
       .from("clinic_specialty_modules")
-      .select("module_id, is_enabled")
+      .select("module_key, is_enabled")
       .eq("clinic_id", clinic.id)
       .eq("specialty_id", specialtyId);
     
     // Start with core modules as default
     const states: Record<string, boolean> = {};
     allModules.forEach(m => {
-      const override = overrides?.find(o => o.module_id === m.id);
+      const override = overrides?.find(o => o.module_key === m.id);
       if (override) {
         states[m.id] = override.is_enabled;
       } else {
@@ -235,19 +230,7 @@ export function SpecialtyFormDialog({
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="specialty-area">Área (opcional)</Label>
-                <Input
-                  id="specialty-area"
-                  placeholder="Ex: Saúde Mental, Estética, Reabilitação..."
-                  value={formData.area}
-                  onChange={(e) => setFormData(prev => ({ ...prev, area: e.target.value }))}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Agrupe especialidades por área para melhor organização
-                </p>
-              </div>
-
+              
               <div className="space-y-2">
                 <Label htmlFor="specialty-description">Observação Interna (opcional)</Label>
                 <Textarea
