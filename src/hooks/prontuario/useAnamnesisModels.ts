@@ -51,7 +51,7 @@ export function useAnamnesisModels(specialtyId: string | null | undefined) {
     try {
       const { data, error } = await supabase
         .from('anamnesis_templates')
-        .select('*, procedures(name)')
+        .select('*')
         .eq('specialty_id', specialtyId)
         .eq('archived', false)
         .or(`clinic_id.eq.${clinic.id},clinic_id.is.null`)
@@ -81,7 +81,7 @@ export function useAnamnesisModels(specialtyId: string | null | undefined) {
 
       const parsed: AnamnesisModel[] = (data || []).map((d: any) => ({
         ...d,
-        procedure_name: d.procedures?.name || null,
+        procedure_name: null,
         current_version_number: d.current_version_id
           ? versionsMap[d.current_version_id] ?? null
           : null,

@@ -126,7 +126,7 @@ export function usePatientScaleReadings(patientId: string | null, scaleId?: stri
           scale:clinical_scales(*)
         `)
         .eq("patient_id", patientId)
-        .order("recorded_at", { ascending: false });
+        .order("created_at", { ascending: false });
       
       if (scaleId) {
         query = query.eq("scale_id", scaleId);

@@ -102,11 +102,11 @@ interface RawStockMovement {
   product_id: string;
   movement_type: string;
   quantity: number;
-  reason: string;
+  unit_cost: number | null;
   reference_type: string | null;
   reference_id: string | null;
   notes: string | null;
-  created_by: string | null;
+  performed_by: string | null;
   created_at: string;
   products?: {
     name: string;
@@ -419,8 +419,8 @@ export function useClinicalTimeline(patientId: string | null) {
           entity: 'stock_movements',
           entity_id: movement.id,
           patient_id: movement.appointments?.patient_id || patientId || '',
-          author_id: movement.created_by,
-          author_name: movement.created_by ? (profiles.get(movement.created_by) || 'Profissional') : 'Sistema',
+          author_id: movement.performed_by,
+          author_name: movement.performed_by ? (profiles.get(movement.performed_by) || 'Profissional') : 'Sistema',
           timestamp: movement.created_at,
           summary: `${productName}: ${movement.quantity} ${productUnit} consumido(s) - Uso em Procedimento`,
           metadata: { 
@@ -429,7 +429,7 @@ export function useClinicalTimeline(patientId: string | null) {
             quantity: movement.quantity,
             unit: productUnit,
             appointment_id: movement.reference_id,
-            reason: movement.reason,
+            reason: movement.notes,
           },
           target_tab: 'procedimentos',
           can_navigate: false,
@@ -540,8 +540,8 @@ export function useClinicalTimeline(patientId: string | null) {
           ? supabase
               .from('stock_movements')
               .select(`
-                id, product_id, movement_type, quantity, reason, 
-                reference_type, reference_id, notes, created_by, created_at,
+                id, product_id, movement_type, quantity, unit_cost,
+                reference_type, reference_id, notes, performed_by, created_at,
                 products(name, unit)
               `)
               .eq('clinic_id', clinic.id)
@@ -560,7 +560,7 @@ export function useClinicalTimeline(patientId: string | null) {
       (accessLogsRes.data || []).forEach(l => l.user_id && allUserIds.add(l.user_id));
       (appointmentsRes.data || []).forEach(a => a.created_by && allUserIds.add(a.created_by));
       (salesRes.data || []).forEach(s => s.created_by && allUserIds.add(s.created_by));
-      (stockMovementsRes.data || []).forEach((m: RawStockMovement) => m.created_by && allUserIds.add(m.created_by));
+      (stockMovementsRes.data || []).forEach((m: RawStockMovement) => m.performed_by && allUserIds.add(m.performed_by));
 
       // Fetch profiles
       const profiles = await fetchProfiles(Array.from(allUserIds));

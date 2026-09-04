@@ -193,18 +193,13 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
       console.log('overview patient', patientId);
       console.log('overview clinic', clinicId);
 
-      const [proceduresResult, legacyProceduresResult, appointmentProceduresResult, evolutionsResult] = await Promise.all([
+      const [proceduresResult, appointmentProceduresResult, evolutionsResult] = await Promise.all([
         safeOverviewQuery('clinical_performed_procedures', supabase
           .from('clinical_performed_procedures')
           .select('id, procedure_id, procedure_name, region, status, performed_at, created_at, procedures(name)')
           .eq('patient_id', patientId)
           .eq('clinic_id', clinicId)
           .order('performed_at', { ascending: false })),
-        safeOverviewQuery('patient_procedures', (supabase as any)
-          .from('patient_procedures')
-          .select('id, procedure_id, procedure_name, name, title, status, performed_at, procedure_date, created_at, procedures(name)')
-          .eq('patient_id', patientId)
-          .eq('clinic_id', clinicId)),
         safeOverviewQuery('appointments_with_procedure', supabase
           .from('appointments')
           .select('id, procedure_id, appointment_type, scheduled_date, start_time, started_at, finished_at, created_at, status, procedures(name)')
@@ -222,12 +217,6 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
 
       const procedimentos = uniqueById([
         ...((proceduresResult.data as any[]) || []).map((p) => ({ ...p, source: 'clinical_performed_procedures' })),
-        ...((legacyProceduresResult.data as any[]) || []).map((p) => ({
-          ...p,
-          procedure_name: getProcedureName(p),
-          performed_at: p.performed_at || p.procedure_date || p.created_at,
-          source: 'patient_procedures',
-        })),
         ...((appointmentProceduresResult.data as any[]) || []).map((appointment) => ({
           ...appointment,
           id: `appointment-${appointment.id}`,
@@ -409,7 +398,6 @@ export function useVisaoGeralEsteticaData({ patientId, clinicId }: UseVisaoGeral
         rawData: {
           procedures: {
             clinical_performed_procedures: proceduresResult.data || [],
-            patient_procedures: legacyProceduresResult.data || [],
             appointments: appointmentProceduresResult.data || [],
             clinical_evolutions: evolutionsResult.data || [],
           },

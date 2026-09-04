@@ -39,7 +39,7 @@ export function useAppointmentStatuses() {
         .from('appointment_statuses')
         .select('*')
         .eq('clinic_id', clinic.id)
-        .order('display_order', { ascending: true });
+        .order('sort_order', { ascending: true });
 
       if (error) throw error;
       setStatuses((data as AppointmentStatus[]) || []);
