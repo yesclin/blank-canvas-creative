@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { resolveProfessionalNames } from '@/lib/clinicalDirectory';
 import { useClinicData } from '@/hooks/useClinicData';
 import { toast } from 'sonner';
 import type { AnamneseData } from '@/components/prontuario/clinica-geral/AnamneseBlock';
@@ -58,17 +59,7 @@ export function useAnamneseData(patientId: string | null): UseAnamneseDataResult
 
       // Autoria: professional_id -> professionals.full_name
       const professionalIds = [...new Set(rows.map(r => r.professional_id).filter(Boolean))] as string[];
-      let professionalsMap: Record<string, string> = {};
-      if (professionalIds.length > 0) {
-        const { data: professionals } = await supabase
-          .from('professionals')
-          .select('id, full_name')
-          .in('id', professionalIds);
-        professionalsMap = (professionals || []).reduce((acc, p) => {
-          if (p.id && p.full_name) acc[p.id] = p.full_name;
-          return acc;
-        }, {} as Record<string, string>);
-      }
+      const professionalsMap = await resolveProfessionalNames(professionalIds);
 
       const total = rows.length;
       const mapped: AnamneseData[] = rows.map((item, index) => {

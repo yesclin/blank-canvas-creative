@@ -8,6 +8,8 @@ import {
   getTabExpectedUserId,
 } from "@/lib/authSessionIsolation";
 import { hardClearReactQueryCache } from "@/lib/queryClientDiagnostics";
+import { clearClinicalDirectoryCache } from "@/lib/clinicalDirectory";
+import { invalidateClinicSpecialtyAliases } from "@/lib/specialtyDisplay";
 
 export async function completeLocalLogout(queryClient: QueryClient, reason = "user-logout") {
   const previousUserId = getTabExpectedUserId();
@@ -26,6 +28,7 @@ export async function completeLocalLogout(queryClient: QueryClient, reason = "us
     clearAuthenticatedTab();
     clearSupabaseAuthStorage();
     try { hardClearReactQueryCache(queryClient, reason, { previousUserId }); } catch { /* ignore */ }
+    try { clearClinicalDirectoryCache(); invalidateClinicSpecialtyAliases(); } catch { /* ignore */ }
     emitIdentityChanged(previousUserId, null, reason);
   }
 }
