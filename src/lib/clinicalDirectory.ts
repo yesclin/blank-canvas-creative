@@ -129,7 +129,7 @@ async function loadProfessionalNames(ids: string[]): Promise<Record<string, stri
       .select("user_id, full_name")
       .in("user_id", missingUserIds);
 
-    const byUser = new Map((profiles ?? []).map((p) => [p.user_id, p.full_name]));
+    const byUser = new Map<string, string | null>((profiles ?? []).map((p) => [p.user_id as string, p.full_name]));
     for (const prof of professionals ?? []) {
       if (result[prof.id]) continue;
       const fallback = prof.user_id ? byUser.get(prof.user_id) : null;
@@ -145,9 +145,11 @@ async function loadProfessionalNames(ids: string[]): Promise<Record<string, stri
  * Só busca no servidor os ids ainda não conhecidos (ou já expirados).
  */
 export async function resolveProfessionalNames(
-  professionalIds: Array<string | null | undefined>,
+  professionalIds: readonly unknown[],
 ): Promise<Record<string, string>> {
-  const ids = Array.from(new Set(professionalIds.filter((id): id is string => Boolean(id))));
+  const ids = Array.from(
+    new Set(professionalIds.filter((id): id is string => typeof id === "string" && id.length > 0)),
+  );
   if (ids.length === 0) return {};
 
   const now = Date.now();
