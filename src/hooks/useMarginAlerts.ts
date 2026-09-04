@@ -142,6 +142,16 @@ export function useMarginAlerts(clinicId: string | null) {
         `)
         .in('procedure_id', procedureIds);
 
+      // Insumos canônicos (procedure_consumption_templates)
+      const { data: procedureTemplates } = await supabase
+        .from('procedure_consumption_templates')
+        .select(`
+          procedure_id,
+          default_quantity,
+          inventory_items:item_id (default_cost_price)
+        `)
+        .in('procedure_id', procedureIds);
+
       // Buscar kits vinculados
       const { data: procedureKits } = await supabase
         .from('procedure_kits')
@@ -177,6 +187,14 @@ export function useMarginAlerts(clinicId: string | null) {
           const current = estimatedCostByProcedure.get(pm.procedure_id) || 0;
           estimatedCostByProcedure.set(pm.procedure_id, current + cost);
         }
+      });
+
+      // Custo dos insumos canônicos
+      procedureTemplates?.forEach((t: any) => {
+        if (!t.procedure_id) return;
+        const cost = (Number(t.inventory_items?.default_cost_price) || 0) * (Number(t.default_quantity) || 0);
+        const current = estimatedCostByProcedure.get(t.procedure_id) || 0;
+        estimatedCostByProcedure.set(t.procedure_id, current + cost);
       });
 
       // Custo dos kits

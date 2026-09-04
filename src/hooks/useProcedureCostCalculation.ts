@@ -76,7 +76,21 @@ export function useProcedureCostDetail(procedureId: string | null) {
         .eq('procedure_id', procedureId);
         
       if (matError) throw matError;
-      
+
+      // Insumos canônicos (procedure_consumption_templates -> inventory_items)
+      const { data: templates, error: tplError } = await supabase
+        .from('procedure_consumption_templates')
+        .select(`
+          id,
+          default_quantity,
+          unit,
+          is_required,
+          inventory_items:item_id (name, unit_of_measure, default_cost_price)
+        `)
+        .eq('procedure_id', procedureId);
+
+      if (tplError) throw tplError;
+
       // Buscar kits do procedimento
       const { data: kits, error: kitError } = await supabase
         .from('procedure_kits')
@@ -97,6 +111,20 @@ export function useProcedureCostDetail(procedureId: string | null) {
       if (kitError) throw kitError;
       
       // Calcular custos dos materiais
+      const templatesList = (templates || []).map((t: any) => {
+        const unitCost = Number(t.inventory_items?.default_cost_price) || 0;
+        const qty = Number(t.default_quantity) || 0;
+        return {
+          id: t.id,
+          name: t.inventory_items?.name || 'Insumo não encontrado',
+          quantity: qty,
+          unit: t.unit || t.inventory_items?.unit_of_measure || 'un',
+          unit_cost: unitCost,
+          total: qty * unitCost,
+          is_required: !!t.is_required,
+        };
+      });
+
       const materialsList = (materials || []).map((m: any) => {
         const unitCost = Number(m.products?.cost_price) || 0;
         return {
@@ -139,7 +167,7 @@ export function useProcedureCostDetail(procedureId: string | null) {
       return {
         procedure_id: procedure.id,
         procedure_name: procedure.name,
-        materials: materialsList,
+        materials: [...templatesList, ...materialsList],
         kits: kitsList,
         material_cost: materialCost,
         kit_cost: kitCost,
@@ -181,7 +209,20 @@ export function useProceduresWithCosts() {
         .in('procedure_id', procedureIds);
         
       if (matError) throw matError;
-      
+
+      // Insumos canônicos por procedimento
+      const { data: templates, error: tplError } = await supabase
+        .from('procedure_consumption_templates')
+        .select(`
+          procedure_id,
+          default_quantity,
+          inventory_items:item_id (default_cost_price)
+        `)
+        .eq('clinic_id', clinicId)
+        .in('procedure_id', procedureIds);
+
+      if (tplError) throw tplError;
+
       // Buscar todos os kits vinculados
       const { data: kits, error: kitError } = await supabase
         .from('procedure_kits')
@@ -206,6 +247,11 @@ export function useProceduresWithCosts() {
         materialCosts[m.procedure_id] = (materialCosts[m.procedure_id] || 0) + cost;
       });
       
+      (templates || []).forEach((t: any) => {
+        const cost = (Number(t.default_quantity) || 0) * (Number(t.inventory_items?.default_cost_price) || 0);
+        materialCosts[t.procedure_id] = (materialCosts[t.procedure_id] || 0) + cost;
+      });
+
       const kitCosts: Record<string, number> = {};
       (kits || []).forEach((k: any) => {
         const kitItems = k.product_kits?.product_kit_items || [];
@@ -219,6 +265,9 @@ export function useProceduresWithCosts() {
       const materialCounts: Record<string, number> = {};
       (materials || []).forEach((m: any) => {
         materialCounts[m.procedure_id] = (materialCounts[m.procedure_id] || 0) + 1;
+      });
+      (templates || []).forEach((t: any) => {
+        materialCounts[t.procedure_id] = (materialCounts[t.procedure_id] || 0) + 1;
       });
       
       const kitCounts: Record<string, number> = {};
