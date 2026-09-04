@@ -58,9 +58,7 @@ async function resolveClinicId(userId: string): Promise<string | null> {
         const { clearSupportSessionIfMismatch } = await import("@/lib/supportSession");
         clearSupportSessionIfMismatch(userId);
       } else if (supportClinicId && supportAdminUserId === userId) {
-        const { data: isAdmin } = await withTimeout<any>(
-          supabase.rpc("is_platform_admin", { _user_id: userId })
-        );
+        const isAdmin = await checkPlatformAdmin(userId);
         if (isAdmin === true) return supportClinicId;
         const { clearSupportSessionIfMismatch } = await import("@/lib/supportSession");
         clearSupportSessionIfMismatch(null);

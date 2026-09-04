@@ -16,6 +16,7 @@ import Footer from "@/components/landing/Footer";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { checkPlatformAdmin } from "@/lib/platformAdmin";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -27,9 +28,9 @@ const Index = () => {
 
     const goTo = async (userId: string) => {
       try {
-        const { data } = await supabase.rpc("is_platform_admin", { _user_id: userId });
+        const isAdmin = await checkPlatformAdmin(userId);
         if (!mounted) return;
-        navigate(data === true ? "/super-admin" : "/app", { replace: true });
+        navigate(isAdmin === true ? "/super-admin" : "/app", { replace: true });
       } catch {
         if (mounted) navigate("/app", { replace: true });
       }

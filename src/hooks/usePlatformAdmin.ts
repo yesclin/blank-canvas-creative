@@ -13,6 +13,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { withTimeout } from '@/lib/asyncTimeout';
 import { useAuthIdentity } from '@/hooks/useAuthIdentity';
+import { checkPlatformAdmin } from '@/lib/platformAdmin';
 
 interface PlatformAdminState {
   isPlatformAdmin: boolean;
@@ -42,8 +43,8 @@ async function fetchPlatformAdmin(expectedUserId: string): Promise<PlatformAdmin
     }
     return { isPlatformAdmin: false, userId: null, email: null, totalAdmins: null };
   }
-  const [{ data: isAdmin }, { data: total }] = await Promise.all([
-    withTimeout<any>(supabase.rpc('is_platform_admin', { _user_id: user.id })),
+  const [isAdmin, { data: total }] = await Promise.all([
+    checkPlatformAdmin(user.id),
     withTimeout<any>(supabase.rpc('count_platform_admins')),
   ]);
   return {
