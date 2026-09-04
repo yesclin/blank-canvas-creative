@@ -31,6 +31,10 @@ export function PatientAutocomplete({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const abortRef = useRef<AbortController | null>(null);
+  const cacheRef = useRef<Map<string, SearchResult[]>>(new Map());
+  const { scope } = useActiveClinicScope();
+  const clinicId = scope.clinicId;
 
   // Resolve selected patient name from value
   useEffect(() => {
