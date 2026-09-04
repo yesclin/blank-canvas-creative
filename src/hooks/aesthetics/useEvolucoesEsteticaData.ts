@@ -368,10 +368,18 @@ export function useEvolucoesEsteticaData({ patientId, appointmentId }: UseEvoluc
     ? evolucoes.filter(e => e.appointment_id === appointmentId)
     : [];
 
+  // Revalida a lista após assinatura feita pelo UnifiedSignatureWizard
+  // (que atualiza clinical_evolutions.status diretamente).
+  const refreshEvolucoes = () => {
+    queryClient.invalidateQueries({ queryKey });
+    invalidateOverview();
+  };
+
   return {
     evolucoes,
     currentAppointmentEvolucoes,
     isLoading,
+    refreshEvolucoes,
     create: createMutation.mutateAsync,
     sign: signMutation.mutateAsync,
     update: updateMutation.mutateAsync,
