@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { resolveSpecialtyIdBySlug } from '@/lib/specialtyIdResolver';
 
 // Opções para tipo de dor
 export const TIPO_DOR_OPTIONS = [
@@ -189,7 +190,7 @@ export function useAvaliacaoDorData({
           clinic_id: clinicId,
           professional_id: professionalId,
           evolution_type: 'avaliacao_dor_fisio',
-          specialty: 'fisioterapia',
+          specialty_id: await resolveSpecialtyIdBySlug(clinicId, 'fisioterapia'),
           content,
           status: 'rascunho',
         })

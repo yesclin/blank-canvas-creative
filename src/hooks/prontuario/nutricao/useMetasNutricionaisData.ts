@@ -10,6 +10,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useClinicData } from '@/hooks/useClinicData';
 import { toast } from 'sonner';
+import { resolveSpecialtyIdBySlug } from '@/lib/specialtyIdResolver';
 
 export type StatusMeta = 'em_andamento' | 'alcancada' | 'nao_alcancada' | 'ajustada';
 export type TipoMeta = 'peso' | 'gordura_corporal' | 'massa_muscular' | 'circunferencia' | 'habito' | 'outro';
@@ -186,7 +187,7 @@ export function useMetasNutricionaisData(patientId: string | null, professionalI
           clinic_id: clinic.id,
           professional_id: professionalId,
           evolution_type: 'meta_nutricional',
-          specialty: 'nutricao',
+          specialty_id: await resolveSpecialtyIdBySlug(clinic.id, 'nutricao'),
           content,
           notes: formData.descricao,
           status: 'signed',

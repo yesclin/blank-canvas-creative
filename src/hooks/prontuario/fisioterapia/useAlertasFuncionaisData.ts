@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { resolveSpecialtyIdBySlug } from '@/lib/specialtyIdResolver';
 
 // Tipos de alerta
 export const TIPO_ALERTA_OPTIONS = [
@@ -169,7 +170,7 @@ export function useAlertasFuncionaisData({
             clinic_id: clinicId,
             professional_id: professionalId,
             evolution_type: 'alerta_funcional_fisio',
-            specialty: 'fisioterapia',
+            specialty_id: await resolveSpecialtyIdBySlug(clinicId, 'fisioterapia'),
             content,
             status: 'signed',
           })

@@ -11,6 +11,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useClinicData } from '@/hooks/useClinicData';
 import { toast } from 'sonner';
+import { resolveSpecialtyIdBySlug } from '@/lib/specialtyIdResolver';
 
 export interface AnamneseNutricional {
   id: string;
@@ -283,7 +284,7 @@ export function useAnamneseNutricionalData(patientId: string | null) {
         clinic_id: clinic.id,
         professional_id: professionalId,
         evolution_type: 'anamnese_nutricional',
-        specialty: 'nutricao',
+        specialty_id: await resolveSpecialtyIdBySlug(clinic.id, 'nutricao'),
         content: contentWithoutObs,
         notes: formData.observacoes,
         status: 'signed',

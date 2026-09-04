@@ -9,6 +9,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Json } from '@/integrations/supabase/types';
+import { resolveSpecialtyIdBySlug } from '@/lib/specialtyIdResolver';
 
 // Estrutura do conteúdo da anamnese estética
 export interface AnamneseEsteticaContent {
@@ -166,7 +167,7 @@ export function useAnamneseEsteticaData({
           professional_id: professionalId,
           appointment_id: appointmentId || null,
           evolution_type: 'anamnese_estetica',
-          specialty: 'estetica',
+          specialty_id: await resolveSpecialtyIdBySlug(clinicId, 'estetica'),
           content: content as unknown as Json,
           status: 'draft',
         })
@@ -224,7 +225,7 @@ export function useAnamneseEsteticaData({
             professional_id: professionalId,
             appointment_id: appointmentId || null,
             evolution_type: 'anamnese_estetica',
-            specialty: 'estetica',
+            specialty_id: await resolveSpecialtyIdBySlug(clinicId, 'estetica'),
             content: newContent as unknown as Json,
             status: 'draft',
           })

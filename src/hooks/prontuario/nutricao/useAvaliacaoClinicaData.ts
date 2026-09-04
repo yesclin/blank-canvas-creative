@@ -9,6 +9,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useClinicData } from '@/hooks/useClinicData';
+import { resolveSpecialtyIdBySlug, resolveSpecialtyFilterId } from '@/lib/specialtyIdResolver';
 
 export interface ExameLaboratorial {
   nome: string;
@@ -122,7 +123,7 @@ export function useAvaliacaoClinicaData(patientId: string | null) {
         .select('*')
         .eq('patient_id', patientId)
         .eq('clinic_id', clinic.id)
-        .eq('specialty', 'nutricao')
+        .eq('specialty_id', await resolveSpecialtyFilterId(clinic.id, 'nutricao'))
         .eq('evolution_type', 'exam')
         .order('created_at', { ascending: false });
 
@@ -188,7 +189,7 @@ export function useAvaliacaoClinicaData(patientId: string | null) {
           patient_id: patientId,
           clinic_id: clinic.id,
           professional_id: professionalId,
-          specialty: 'nutricao',
+          specialty_id: await resolveSpecialtyIdBySlug(clinic.id, 'nutricao'),
           evolution_type: 'exam',
           status: 'signed',
           content: JSON.parse(JSON.stringify(contentData)),

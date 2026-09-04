@@ -11,6 +11,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useClinicData } from '@/hooks/useClinicData';
 import { toast } from 'sonner';
+import { resolveSpecialtyIdBySlug, resolveSpecialtyFilterId } from '@/lib/specialtyIdResolver';
 
 export type NivelAdesao = 'excelente' | 'boa' | 'regular' | 'ruim';
 
@@ -131,7 +132,7 @@ export function useEvolucaoRetornoData(patientId: string | null, professionalId?
         `)
         .eq('patient_id', patientId)
         .eq('clinic_id', clinic.id)
-        .eq('specialty', 'nutricao')
+        .eq('specialty_id', await resolveSpecialtyFilterId(clinic.id, 'nutricao'))
         .eq('evolution_type', 'evolucao_retorno')
         .order('created_at', { ascending: false });
 
@@ -285,7 +286,7 @@ export function useEvolucaoRetornoData(patientId: string | null, professionalId?
           professional_id: professionalId,
           appointment_id: appointmentId || null,
           evolution_type: 'evolucao_retorno',
-          specialty: 'nutricao',
+          specialty_id: await resolveSpecialtyIdBySlug(clinic.id, 'nutricao'),
           content,
           notes: formData.observacoes,
           status: 'signed', // Sempre assinado para garantir imutabilidade

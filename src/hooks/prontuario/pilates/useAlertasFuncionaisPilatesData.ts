@@ -10,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Json } from '@/integrations/supabase/types';
+import { resolveSpecialtyIdBySlug } from '@/lib/specialtyIdResolver';
 
 // Tipos de alerta
 export const TIPO_ALERTA_OPTIONS = [
@@ -151,7 +152,7 @@ export function useAlertasFuncionaisPilatesData({
           clinic_id: clinicId,
           professional_id: professionalId,
           evolution_type: 'alerta_funcional_pilates',
-          specialty: 'pilates',
+          specialty_id: await resolveSpecialtyIdBySlug(clinicId, 'pilates'),
           content,
           status: 'rascunho',
         })

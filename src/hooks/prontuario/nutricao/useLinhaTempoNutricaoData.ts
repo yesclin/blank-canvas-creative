@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useClinicData } from '@/hooks/useClinicData';
+import { resolveSpecialtyFilterId } from '@/lib/specialtyIdResolver';
 
 export type TipoEventoNutricao = 
   | 'anamnese' 
@@ -75,7 +76,7 @@ export function useLinhaTempoNutricaoData(patientId: string | null) {
           .select('id, evolution_type, content, notes, next_steps, status, professional_id, created_at')
           .eq('patient_id', patientId)
           .eq('clinic_id', clinic.id)
-          .eq('specialty', 'nutricao')
+          .eq('specialty_id', await resolveSpecialtyFilterId(clinic.id, 'nutricao'))
           .order('created_at', { ascending: false }),
 
         // Documentos

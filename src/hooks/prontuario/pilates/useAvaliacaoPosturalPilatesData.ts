@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { resolveSpecialtyIdBySlug } from '@/lib/specialtyIdResolver';
 
 // Opções de alinhamento por região
 export const ALINHAMENTO_OPTIONS = [
@@ -230,7 +231,7 @@ export function useAvaliacaoPosturalPilatesData({
           clinic_id: clinicId,
           professional_id: professionalId,
           evolution_type: 'avaliacao_postural_pilates',
-          specialty: 'pilates',
+          specialty_id: await resolveSpecialtyIdBySlug(clinicId, 'pilates'),
           content,
           status: 'rascunho',
         })
