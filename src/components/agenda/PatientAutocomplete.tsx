@@ -144,7 +144,7 @@ export function PatientAutocomplete({
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       searchPatients(val);
-    }, 300);
+    }, 400);
   };
 
   const handleSelect = (patient: Patient) => {
