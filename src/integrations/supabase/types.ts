@@ -16369,6 +16369,20 @@ export type Database = {
       }
     }
     Functions: {
+      calculate_stock_predictions: {
+        Args: { p_clinic_id: string; p_days_ahead?: number }
+        Returns: {
+          current_stock: number
+          first_shortage_date: string
+          impacting_procedures: Json
+          min_stock: number
+          predicted_consumption: number
+          product_id: string
+          product_name: string
+          product_unit: string
+          projected_stock: number
+        }[]
+      }
       can_access_clinic_as_staff: {
         Args: { p_clinic_id: string }
         Returns: boolean

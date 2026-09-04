@@ -63,7 +63,7 @@ async function getClinicId(): Promise<string> {
     .from('profiles')
     .select('clinic_id')
     .eq('user_id', user.id)
-    .single();
+    .maybeSingle();
     
   if (!profile?.clinic_id) throw new Error('Clínica não encontrada');
   return profile.clinic_id;
@@ -166,7 +166,10 @@ export function useStockPredictions(daysOverride?: number) {
       return (data || []) as StockPrediction[];
     },
     enabled: settings?.enabled !== false,
-    refetchInterval: 5 * 60_000, // Refresh a cada 5 minutos
+    staleTime: 5 * 60_000,
+    retry: false, // evita retries repetidos em caso de erro de RPC/permissão
+    refetchOnWindowFocus: false,
+    refetchInterval: 10 * 60_000,
   });
 }
 
