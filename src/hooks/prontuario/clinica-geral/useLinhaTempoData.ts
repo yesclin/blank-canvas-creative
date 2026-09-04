@@ -48,7 +48,7 @@ export function useLinhaTempoData(patientId: string | null): UseLinhaTempoDataRe
         // Anamneses
         supabase
           .from('patient_anamneses')
-          .select('id, queixa_principal, historia_doenca_atual, created_by, created_at')
+          .select('id, data, professional_id, created_at')
           .eq('patient_id', patientId)
           .eq('clinic_id', clinic.id)
           .order('created_at', { ascending: false }),
@@ -97,7 +97,7 @@ export function useLinhaTempoData(patientId: string | null): UseLinhaTempoDataRe
       // Collect all professional IDs to fetch names
       const allProfessionalIds = new Set<string>();
       
-      (anamnesesRes.data || []).forEach(a => a.created_by && allProfessionalIds.add(a.created_by));
+      (anamnesesRes.data || []).forEach(a => a.professional_id && allProfessionalIds.add(a.professional_id));
       (evolucoesRes.data || []).forEach(e => e.profissional_id && allProfessionalIds.add(e.profissional_id));
       (examesFisicosRes.data || []).forEach(e => e.profissional_id && allProfessionalIds.add(e.profissional_id));
       (condutasRes.data || []).forEach(c => c.profissional_id && allProfessionalIds.add(c.profissional_id));
@@ -116,11 +116,6 @@ export function useLinhaTempoData(patientId: string | null): UseLinhaTempoDataRe
         const userIds = (professionalsData || [])
           .map(p => p.user_id)
           .filter(Boolean) as string[];
-
-        // For anamneses, created_by is user_id directly
-        (anamnesesRes.data || []).forEach(a => {
-          if (a.created_by) userIds.push(a.created_by);
-        });
 
         if (userIds.length > 0) {
           const { data: profilesData } = await supabase
@@ -153,16 +148,17 @@ export function useLinhaTempoData(patientId: string | null): UseLinhaTempoDataRe
 
       // Anamneses
       (anamnesesRes.data || []).forEach(anamnese => {
+        const payload = (anamnese.data || {}) as Record<string, any>;
         timelineEvents.push({
           id: `anamnese-${anamnese.id}`,
           tipo: 'anamnese',
           titulo: 'Anamnese',
-          resumo: anamnese.queixa_principal || anamnese.historia_doenca_atual || undefined,
+          resumo: payload.queixa_principal || payload.historia_doenca_atual || undefined,
           detalhes: {
-            queixa_principal: anamnese.queixa_principal,
-            historia_doenca_atual: anamnese.historia_doenca_atual,
+            queixa_principal: payload.queixa_principal,
+            historia_doenca_atual: payload.historia_doenca_atual,
           },
-          profissional_nome: anamnese.created_by ? profiles[anamnese.created_by] : undefined,
+          profissional_nome: anamnese.professional_id ? profiles[anamnese.professional_id] : undefined,
           created_at: anamnese.created_at,
         });
       });

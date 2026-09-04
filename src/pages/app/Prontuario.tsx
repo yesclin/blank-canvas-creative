@@ -517,7 +517,7 @@ export default function Prontuario() {
     saving: anamneseSaving,
     saveAnamnese,
     updateAnamnese,
-  } = useAnamneseData(getContextPatientIdForTab('anamnese'));
+  } = useAnamneseData(getSpecialtyPatientIdForTab('geral', 'anamnese'));
 
   // Anamnese Psicológica Data - specific for Psicologia specialty
   const {
