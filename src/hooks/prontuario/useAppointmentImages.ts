@@ -24,33 +24,50 @@ export interface AppointmentImage {
   updated_at: string;
 }
 
+/** Persistência real: tabela `clinical_media` (category = classificação, description = legenda). */
+function mapRow(row: any): AppointmentImage {
+  return {
+    id: row.id,
+    clinic_id: row.clinic_id,
+    appointment_id: row.appointment_id,
+    patient_id: row.patient_id,
+    field_id: null,
+    file_url: row.file_url,
+    file_name: row.file_name,
+    file_size_bytes: row.file_size ?? null,
+    caption: row.description ?? null,
+    classification: (row.category ?? 'evolucao') as ImageClassification,
+    taken_at: row.created_at,
+    uploaded_by: row.professional_id ?? null,
+    template_id: null,
+    template_version_id: null,
+    created_at: row.created_at,
+    updated_at: row.created_at,
+  };
+}
+
 export function useAppointmentImages(appointmentId: string | null, patientId: string | null) {
   const { clinic } = useClinicData();
   const [images, setImages] = useState<AppointmentImage[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  const fetchImages = useCallback(async (fieldId?: string) => {
+  const fetchImages = useCallback(async (_fieldId?: string) => {
     if (!clinic?.id || !appointmentId) {
       setImages([]);
       return;
     }
     setLoading(true);
     try {
-      let q = supabase
-        .from('clinical_appointment_images')
+      const { data, error } = await supabase
+        .from('clinical_media')
         .select('*')
         .eq('clinic_id', clinic.id)
         .eq('appointment_id', appointmentId)
-        .order('taken_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
-      if (fieldId) {
-        q = q.eq('field_id', fieldId);
-      }
-
-      const { data, error } = await q;
       if (error) throw error;
-      setImages((data || []) as AppointmentImage[]);
+      setImages((data || []).map(mapRow));
     } catch (err) {
       console.error('Error fetching images:', err);
     } finally {
@@ -77,9 +94,6 @@ export function useAppointmentImages(appointmentId: string | null, patientId: st
     const uploaded: AppointmentImage[] = [];
 
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      const userId = userData.user?.id;
-
       for (const file of files) {
         // Validate file type
         if (!file.type.startsWith('image/')) {
@@ -116,24 +130,20 @@ export function useAppointmentImages(appointmentId: string | null, patientId: st
 
         // Save metadata
         const { data: record, error: dbError } = await supabase
-          .from('clinical_appointment_images')
+          .from('clinical_media')
           .insert({
             clinic_id: clinic.id,
             appointment_id: appointmentId,
             patient_id: patientId,
-            field_id: options.fieldId || null,
             file_url: fileUrl,
             file_name: file.name,
-            file_size_bytes: file.size,
-            caption: options.caption || null,
-            classification: options.classification,
-            taken_at: new Date().toISOString(),
-            uploaded_by: userId || null,
-            template_id: options.templateId || null,
-            template_version_id: options.templateVersionId || null,
+            file_type: file.type || null,
+            file_size: file.size,
+            description: options.caption || null,
+            category: options.classification,
           })
           .select()
-          .single();
+          .maybeSingle();
 
         if (dbError) {
           console.error('DB error:', dbError);
@@ -141,7 +151,7 @@ export function useAppointmentImages(appointmentId: string | null, patientId: st
           continue;
         }
 
-        uploaded.push(record as AppointmentImage);
+        if (record) uploaded.push(mapRow(record));
       }
 
       if (uploaded.length > 0) {
@@ -161,9 +171,13 @@ export function useAppointmentImages(appointmentId: string | null, patientId: st
 
   const updateImage = async (id: string, updates: { caption?: string; classification?: ImageClassification }) => {
     try {
+      const payload: Record<string, unknown> = {};
+      if (updates.caption !== undefined) payload.description = updates.caption;
+      if (updates.classification !== undefined) payload.category = updates.classification;
+
       const { error } = await supabase
-        .from('clinical_appointment_images')
-        .update(updates)
+        .from('clinical_media')
+        .update(payload)
         .eq('id', id);
 
       if (error) throw error;
@@ -183,7 +197,7 @@ export function useAppointmentImages(appointmentId: string | null, patientId: st
       const img = images.find(i => i.id === id);
 
       const { error } = await supabase
-        .from('clinical_appointment_images')
+        .from('clinical_media')
         .delete()
         .eq('id', id);
 
