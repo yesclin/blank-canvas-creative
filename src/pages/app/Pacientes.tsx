@@ -14,7 +14,8 @@ import {
   useInsurances,
   useProfessionals,
   usePatientAppointments,
-  useLastAppointmentsMap,
+  usePatientsAttendanceStats,
+  isCompletedAppointment,
   type Patient,
   type PatientFormData,
 } from '@/hooks/usePatients';
@@ -40,7 +41,7 @@ export default function Pacientes() {
   const { data: professionals = [] } = useProfessionals();
   const createPatient = useCreatePatient();
   const updatePatient = useUpdatePatient();
-  const { data: lastAppointmentsMap = {} } = useLastAppointmentsMap();
+  const { data: attendanceStats = {} } = usePatientsAttendanceStats();
 
   // Fetch attended patient IDs for professional users
   const { data: attendedPatientIds = [] } = useQuery({
@@ -253,8 +254,8 @@ export default function Pacientes() {
         created_at: '',
         updated_at: '',
       } : undefined,
-      total_appointments: patientHistory.length,
-      last_appointment_date: patientHistory[0]?.scheduled_date || null,
+      total_appointments: attendanceStats[selectedPatient.id]?.total ?? 0,
+      last_appointment_date: attendanceStats[selectedPatient.id]?.lastDate || null,
     };
 
     const historyForProfile = patientHistory.map((apt: any) => ({
@@ -359,8 +360,8 @@ export default function Pacientes() {
               valid_until: p.patient_insurances[0].valid_until,
               plan_name: '',
             } : undefined,
-            total_appointments: 0,
-            last_appointment_date: lastAppointmentsMap[p.id] || null,
+            total_appointments: attendanceStats[p.id]?.total ?? 0,
+            last_appointment_date: attendanceStats[p.id]?.lastDate || null,
           })) as any}
           onViewPatient={handleViewPatient as any}
           onEditPatient={handleEditPatient as any}
