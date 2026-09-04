@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/asyncTimeout";
+import { checkPlatformAdmin } from "@/lib/platformAdmin";
 import { clearUnsafeAuthCache } from "@/lib/authSessionIsolation";
 import { useAuthIdentity } from "@/hooks/useAuthIdentity";
 import { useActiveClinicScope } from "@/hooks/useActiveClinicScope";

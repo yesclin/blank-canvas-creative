@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { checkPlatformAdmin } from '@/lib/platformAdmin';
 import { toast } from 'sonner';
 import { useAuthIdentity } from '@/hooks/useAuthIdentity';
 import type {
