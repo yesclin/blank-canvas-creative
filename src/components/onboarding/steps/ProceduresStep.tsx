@@ -48,7 +48,6 @@ interface ProceduresStepProps {
 interface ClinicSpecialty {
   id: string;
   name: string;
-  area: string | null;
   specialty_type: "padrao" | "personalizada";
   hasProcedures: boolean;
   procedureCount: number;
@@ -110,7 +109,7 @@ export function ProceduresStep({ clinicId, preferences, onNext, onBack }: Proced
         // Custom specialty created during onboarding
         const { data: primarySpec } = await supabase
           .from("specialties")
-          .select("id, name, area, specialty_type")
+          .select("id, name, specialty_type")
           .eq("id", preferences.primary_specialty_id)
           .eq("is_active", true)
           .maybeSingle();
@@ -129,7 +128,7 @@ export function ProceduresStep({ clinicId, preferences, onNext, onBack }: Proced
           // Check if it exists for the clinic
           const { data: curatedSpec } = await supabase
             .from("specialties")
-            .select("id, name, area, specialty_type")
+            .select("id, name, specialty_type")
             .eq("clinic_id", clinicId)
             .eq("name", preferences.primary_specialty_name)
             .eq("is_active", true)
@@ -147,7 +146,6 @@ export function ProceduresStep({ clinicId, preferences, onNext, onBack }: Proced
             validSpecialties.push({
               id: `pending-${preferences.primary_specialty_curated_id}`,
               name: preferences.primary_specialty_name,
-              area: "Padrão",
               specialty_type: "padrao",
               hasProcedures: false,
               procedureCount: 0,
@@ -159,7 +157,7 @@ export function ProceduresStep({ clinicId, preferences, onNext, onBack }: Proced
       // 2. Load custom specialties for this clinic (personalizadas only)
       const { data: customSpecs } = await supabase
         .from("specialties")
-        .select("id, name, area, specialty_type")
+        .select("id, name, specialty_type")
         .eq("clinic_id", clinicId)
         .eq("specialty_type", "personalizada")
         .eq("is_active", true)
@@ -484,9 +482,6 @@ export function ProceduresStep({ clinicId, preferences, onNext, onBack }: Proced
                                   </Badge>
                                 )}
                               </div>
-                              {specialty.area && (
-                                <span className="text-xs text-muted-foreground">{specialty.area}</span>
-                              )}
                             </div>
                           </div>
 
@@ -549,9 +544,6 @@ export function ProceduresStep({ clinicId, preferences, onNext, onBack }: Proced
                           <CheckCircle2 className="h-5 w-5 text-green-500" />
                           <div>
                             <span className="font-medium">{specialty.name}</span>
-                            {specialty.area && (
-                              <span className="text-xs text-muted-foreground ml-2">({specialty.area})</span>
-                            )}
                           </div>
                         </div>
                         <Badge variant="secondary">
