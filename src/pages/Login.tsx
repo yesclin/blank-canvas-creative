@@ -13,6 +13,7 @@ import { clearAuthQuarantine, clearAuthenticatedTab, clearSupabaseAuthStorage, h
 import { useQueryClient } from "@tanstack/react-query";
 import { hardClearReactQueryCache } from "@/lib/queryClientDiagnostics";
 import { withTimeout } from "@/lib/asyncTimeout";
+import { checkPlatformAdmin } from "@/lib/platformAdmin";
 import { useAuthIdentity } from "@/hooks/useAuthIdentity";
 import { prefetchEssentialClinicData } from "@/lib/postLoginPrefetch";
 
