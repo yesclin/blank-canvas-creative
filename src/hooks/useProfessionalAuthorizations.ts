@@ -170,7 +170,6 @@ export function useManageAuthorizedProcedures() {
         .insert({
           professional_id: professionalId,
           procedure_id: procedureId,
-          clinic_id: clinic?.id,
         })
         .select()
         .single();

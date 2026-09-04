@@ -70,7 +70,7 @@ export function useEnabledProntuarioTabs(
       if (!clinicId) return [];
       const { data, error } = await supabase
         .from("clinic_resources")
-        .select("id, clinic_id, resource_key, resource_type, specialty_id, specialty_slug, enabled, effective_at, expires_at, title")
+        .select("id, clinic_id, resource_key, resource_type, specialty_id, specialty_slug, enabled, effective_at, expires_at")
         .eq("clinic_id", clinicId);
 
       if (error) {

@@ -122,7 +122,7 @@ export function usePackagePayments(packageId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("finance_transactions")
-        .select("id, description, amount, paid_amount, status, due_date, payment_date, installment_number, total_installments")
+        .select("id, description, amount, paid_amount, status, due_date, paid_at, installment_number, installment_total")
         .eq("clinic_id", scope.clinicId!)
         .eq("treatment_package_id", packageId!)
         .order("due_date", { ascending: true });
@@ -198,7 +198,7 @@ export function useCreateTreatmentPackage() {
           amount: perInstallment,
           due_date: due.toISOString().slice(0, 10),
           installment_number: i + 1,
-          total_installments: installments,
+          installment_total: installments,
           category: "pacote",
           origin: "pacote",
         };

@@ -131,14 +131,14 @@ export function SpecialtyFormDialog({
     
     const { data: overrides } = await supabase
       .from("clinic_specialty_modules")
-      .select("module_id, is_enabled")
+      .select("module_key, is_enabled")
       .eq("clinic_id", clinic.id)
       .eq("specialty_id", specialtyId);
     
     // Start with core modules as default
     const states: Record<string, boolean> = {};
     allModules.forEach(m => {
-      const override = overrides?.find(o => o.module_id === m.id);
+      const override = overrides?.find(o => o.module_key === m.id);
       if (override) {
         states[m.id] = override.is_enabled;
       } else {

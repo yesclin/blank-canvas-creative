@@ -178,21 +178,22 @@ export function useAvaliacaoPosturalPilatesData({
 
       const { data, error } = await supabase
         .from('clinical_media')
-        .select('id, file_url, description, metadata, created_at')
+        .select('id, file_url, description, category, created_at')
         .eq('patient_id', patientId)
         .eq('clinic_id', clinicId)
-        .eq('media_type', 'image')
-        .contains('tags', ['avaliacao_postural'])
+        .eq('category', 'avaliacao_postural')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
       return (data || []).map(img => {
-        const meta = img.metadata as Record<string, unknown> | null;
+        const vistas: ImagemPostural['vista'][] = ['anterior', 'posterior', 'lateral_direita', 'lateral_esquerda'];
+        const descricao = (img.description || '').toLowerCase();
+        const vista = vistas.find((v) => descricao.includes(v.replace('_', ' ')) || descricao.includes(v)) || 'anterior';
         return {
           id: img.id,
           url: img.file_url,
-          vista: (meta?.vista as ImagemPostural['vista']) || 'anterior',
+          vista,
           descricao: img.description || undefined,
           created_at: img.created_at,
         } as ImagemPostural;
