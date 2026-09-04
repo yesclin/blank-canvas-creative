@@ -47,14 +47,11 @@ export interface MaterialConsumptionRecord {
 export interface StockAlert {
   id: string;
   clinic_id: string;
-  material_id: string;
-  alert_type: 'low_stock' | 'out_of_stock' | 'insufficient';
+  product_id: string;
+  alert_type: string;
   current_quantity: number;
   min_quantity: number;
-  required_quantity?: number;
-  appointment_id?: string;
   is_resolved: boolean;
-  resolved_at?: string;
   created_at: string;
   // Joined
   material_name?: string;
@@ -408,10 +405,12 @@ export function useMaterialConsumptionHistory(appointmentId?: string) {
       
       return (data || []).map((item: any) => ({
         ...item,
-        material_name: item.materials?.name,
-        procedure_name: item.procedures?.name,
-        professional_name: item.professionals?.name,
-        patient_name: item.patients?.name,
+        material_name: item.products?.name,
+        unit: item.products?.unit ?? 'un',
+        unit_cost: Number(item.products?.cost_price) || 0,
+        total_cost: (Number(item.products?.cost_price) || 0) * (Number(item.quantity) || 0),
+        professional_name: item.professionals?.full_name,
+        patient_name: item.patients?.full_name,
       })) as MaterialConsumptionRecord[];
     },
   });
@@ -431,13 +430,13 @@ export function useStockAlerts(onlyUnresolved: boolean = true) {
         .from('stock_alerts')
         .select(`
           *,
-          materials:material_id (name)
+          products:product_id (name, current_stock, min_stock)
         `)
         .eq('clinic_id', clinicId)
         .order('created_at', { ascending: false });
         
       if (onlyUnresolved) {
-        query = query.eq('is_resolved', false);
+        query = query.eq('is_active', true);
       }
       
       const { data, error } = await query;
@@ -446,7 +445,10 @@ export function useStockAlerts(onlyUnresolved: boolean = true) {
       
       return (data || []).map((item: any) => ({
         ...item,
-        material_name: item.materials?.name,
+        material_name: item.products?.name,
+        current_quantity: Number(item.products?.current_stock) || 0,
+        min_quantity: Number(item.threshold ?? item.products?.min_stock) || 0,
+        is_resolved: item.is_active === false,
       })) as StockAlert[];
     },
   });
@@ -462,9 +464,8 @@ export function useResolveStockAlert() {
       const { error } = await supabase
         .from('stock_alerts')
         .update({
-          is_resolved: true,
-          resolved_at: new Date().toISOString(),
-          resolved_by: user?.id,
+          is_active: false,
+          updated_at: new Date().toISOString(),
         })
         .eq('id', alertId);
         
