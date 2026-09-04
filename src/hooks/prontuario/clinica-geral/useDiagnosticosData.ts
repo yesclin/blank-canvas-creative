@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchClinicalIdentity, resolveProfessionalNames } from '@/lib/clinicalDirectory';
 import { useClinicData } from '@/hooks/useClinicData';
 import { toast } from 'sonner';
 
@@ -77,19 +78,9 @@ export function useDiagnosticosData(patientId: string | null): UseDiagnosticosDa
   // Fetch current professional
   useEffect(() => {
     const fetchCurrentProfessional = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !clinic?.id) return;
-
-      const { data: professional } = await supabase
-        .from('professionals')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('clinic_id', clinic.id)
-        .single();
-
-      if (professional) {
-        setCurrentProfessionalId(professional.id);
-      }
+      const identity = await fetchClinicalIdentity(clinic?.id);
+      if (!identity.userId) return;
+      if (identity.professionalId) setCurrentProfessionalId(identity.professionalId);
     };
 
     fetchCurrentProfessional();
@@ -118,33 +109,7 @@ export function useDiagnosticosData(patientId: string | null): UseDiagnosticosDa
       const professionalIds = [...new Set((data || []).map((d: any) => d.professional_id).filter(Boolean))];
       let professionalsMap: Record<string, string> = {};
 
-      if (professionalIds.length > 0) {
-        const { data: professionals } = await supabase
-          .from('professionals')
-          .select('id, user_id')
-          .in('id', professionalIds);
-
-        if (professionals) {
-          const userIds = professionals.map(p => p.user_id).filter(Boolean);
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('user_id, full_name')
-            .in('user_id', userIds);
-
-          if (profiles) {
-            const userToName = profiles.reduce((acc, p) => {
-              if (p.user_id && p.full_name) acc[p.user_id] = p.full_name;
-              return acc;
-            }, {} as Record<string, string>);
-
-            professionals.forEach(prof => {
-              if (prof.user_id && userToName[prof.user_id]) {
-                professionalsMap[prof.id] = userToName[prof.user_id];
-              }
-            });
-          }
-        }
-      }
+      professionalsMap = await resolveProfessionalNames(professionalIds);
 
       // Campos estendidos vivem no jsonb `data`; colunas reais: codigo_cid, descricao, status.
       const mapped: Diagnostico[] = (data || []).map((item: any) => {

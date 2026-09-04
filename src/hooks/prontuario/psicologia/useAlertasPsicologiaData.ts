@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchClinicalIdentity } from '@/lib/clinicalDirectory';
 import { useClinicData } from '@/hooks/useClinicData';
 import { toast } from 'sonner';
 import type { AlertaPsicologia, TipoAlertaPsicologia, SeveridadeAlerta } from '@/components/prontuario/psicologia/AlertasPsicologiaBlock';
@@ -45,30 +46,11 @@ export function useAlertasPsicologiaData(patientId: string | null): UseAlertasPs
   // Fetch current user's professional info
   useEffect(() => {
     const fetchCurrentProfessional = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !clinic?.id) return;
-
-      setCurrentUserId(user.id);
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('user_id', user.id)
-        .single();
-
-      const { data: professional } = await supabase
-        .from('professionals')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('clinic_id', clinic.id)
-        .single();
-
-      if (professional) {
-        setCurrentProfessionalId(professional.id);
-      }
-      if (profile) {
-        setCurrentProfessionalName(profile.full_name || null);
-      }
+      const identity = await fetchClinicalIdentity(clinic?.id);
+      if (!identity.userId) return;
+      setCurrentUserId(identity.userId);
+      if (identity.professionalId) setCurrentProfessionalId(identity.professionalId);
+      setCurrentProfessionalName(identity.profileName);
     };
 
     fetchCurrentProfessional();

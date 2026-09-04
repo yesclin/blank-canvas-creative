@@ -4,6 +4,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { usePlanLimitGate } from "@/hooks/usePlanLimitGate";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { invalidateClinicSpecialtyAliases } from "@/lib/specialtyDisplay";
 import { OFFICIAL_SPECIALTIES } from "@/constants/officialSpecialties";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -234,6 +235,7 @@ export function SpecialtiesSection() {
             { onConflict: "clinic_id,base_specialty_key" }
           );
         if (aliasError) throw aliasError;
+        invalidateClinicSpecialtyAliases(clinic.id);
       }
 
       // Auto-link all active professionals to the newly activated specialty

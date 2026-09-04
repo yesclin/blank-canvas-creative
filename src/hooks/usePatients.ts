@@ -595,7 +595,7 @@ export function useProfessionals() {
   const { clinic } = useClinicData();
 
   return useQuery({
-    queryKey: ["professionals", clinic?.id],
+    queryKey: ["professionals-dropdown", clinic?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("professionals")

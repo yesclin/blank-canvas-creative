@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchClinicalIdentity, resolveProfessionalNames } from '@/lib/clinicalDirectory';
 import { useClinicData } from '@/hooks/useClinicData';
 import { toast } from 'sonner';
 import type { Documento, CategoriaDocumento } from '@/components/prontuario/clinica-geral/DocumentosBlock';
@@ -42,28 +43,10 @@ export function useDocumentosData(patientId: string | null): UseDocumentosDataRe
   // Fetch current user's professional info
   useEffect(() => {
     const fetchCurrentProfessional = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !clinic?.id) return;
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('user_id', user.id)
-        .single();
-
-      const { data: professional } = await supabase
-        .from('professionals')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('clinic_id', clinic.id)
-        .single();
-
-      if (professional) {
-        setCurrentProfessionalId(professional.id);
-      }
-      if (profile) {
-        setCurrentProfessionalName(profile.full_name || null);
-      }
+      const identity = await fetchClinicalIdentity(clinic?.id);
+      if (!identity.userId) return;
+      if (identity.professionalId) setCurrentProfessionalId(identity.professionalId);
+      setCurrentProfessionalName(identity.profileName);
     };
 
     fetchCurrentProfessional();
@@ -94,35 +77,7 @@ export function useDocumentosData(patientId: string | null): UseDocumentosDataRe
       const professionalIds = [...new Set((data || []).map(d => d.profissional_id).filter(Boolean))];
       let professionalsMap: Record<string, string> = {};
 
-      if (professionalIds.length > 0) {
-        const { data: professionals } = await supabase
-          .from('professionals')
-          .select('id, user_id')
-          .in('id', professionalIds);
-
-        if (professionals) {
-          const userIds = professionals.map(p => p.user_id).filter(Boolean);
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('user_id, full_name')
-            .in('user_id', userIds);
-
-          if (profiles) {
-            const userToName = profiles.reduce((acc, p) => {
-              if (p.user_id && p.full_name) {
-                acc[p.user_id] = p.full_name;
-              }
-              return acc;
-            }, {} as Record<string, string>);
-
-            professionals.forEach(prof => {
-              if (prof.user_id && userToName[prof.user_id]) {
-                professionalsMap[prof.id] = userToName[prof.user_id];
-              }
-            });
-          }
-        }
-      }
+      professionalsMap = await resolveProfessionalNames(professionalIds);
 
       // Generate signed URLs for files
       const mapped: Documento[] = await Promise.all((data || []).map(async (item) => {
