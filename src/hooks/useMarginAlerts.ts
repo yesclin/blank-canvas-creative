@@ -125,7 +125,7 @@ export function useMarginAlerts(clinicId: string | null) {
       const appointmentIds = appointments.map(a => a.id);
       const { data: consumptionData } = await supabase
         .from('material_consumption')
-        .select('appointment_id, total_cost')
+        .select('appointment_id, quantity, products:product_id (cost_price)')
         .in('appointment_id', appointmentIds);
 
       // Buscar custos estimados dos procedimentos (materiais diretos)
@@ -136,8 +136,8 @@ export function useMarginAlerts(clinicId: string | null) {
         .select(`
           procedure_id,
           quantity,
-          materials:material_id (
-            unit_cost
+          products:product_id (
+            cost_price
           )
         `)
         .in('procedure_id', procedureIds);
@@ -147,11 +147,11 @@ export function useMarginAlerts(clinicId: string | null) {
         .from('procedure_kits')
         .select(`
           procedure_id,
-          material_kits:kit_id (
-            material_kit_items (
+          product_kits:product_kit_id (
+            product_kit_items (
               quantity,
-              materials:material_id (
-                unit_cost
+              products:product_id (
+                cost_price
               )
             )
           )
@@ -160,34 +160,36 @@ export function useMarginAlerts(clinicId: string | null) {
 
       // Criar mapas de consumo e custo estimado
       const consumptionByAppointment = new Map<string, number>();
-      consumptionData?.forEach(c => {
+      consumptionData?.forEach((c: any) => {
+        if (!c.appointment_id) return;
+        const cost = (Number(c.products?.cost_price) || 0) * (Number(c.quantity) || 0);
         const current = consumptionByAppointment.get(c.appointment_id) || 0;
-        consumptionByAppointment.set(c.appointment_id, current + (Number(c.total_cost) || 0));
+        consumptionByAppointment.set(c.appointment_id, current + cost);
       });
 
       const estimatedCostByProcedure = new Map<string, number>();
       
       // Custo de materiais diretos
-      procedureMaterials?.forEach(pm => {
-        if (pm.procedure_id && pm.materials) {
-          const material = pm.materials as unknown as { unit_cost: number | null };
-          const cost = (Number(material.unit_cost) || 0) * pm.quantity;
+      procedureMaterials?.forEach((pm: any) => {
+        if (pm.procedure_id && pm.products) {
+          const material = pm.products as unknown as { cost_price: number | null };
+          const cost = (Number(material.cost_price) || 0) * pm.quantity;
           const current = estimatedCostByProcedure.get(pm.procedure_id) || 0;
           estimatedCostByProcedure.set(pm.procedure_id, current + cost);
         }
       });
 
       // Custo dos kits
-      procedureKits?.forEach(pk => {
-        if (pk.procedure_id && pk.material_kits) {
-          const kit = pk.material_kits as unknown as {
-            material_kit_items: Array<{
+      procedureKits?.forEach((pk: any) => {
+        if (pk.procedure_id && pk.product_kits) {
+          const kit = pk.product_kits as unknown as {
+            product_kit_items: Array<{
               quantity: number;
-              materials: { unit_cost: number | null };
+              products: { cost_price: number | null };
             }>;
           };
-          const kitCost = kit.material_kit_items?.reduce((acc, item) => {
-            return acc + (Number(item.materials?.unit_cost) || 0) * item.quantity;
+          const kitCost = kit.product_kit_items?.reduce((acc, item) => {
+            return acc + (Number(item.products?.cost_price) || 0) * item.quantity;
           }, 0) || 0;
           const current = estimatedCostByProcedure.get(pk.procedure_id) || 0;
           estimatedCostByProcedure.set(pk.procedure_id, current + kitCost);
