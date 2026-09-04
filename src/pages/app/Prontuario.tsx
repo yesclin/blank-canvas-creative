@@ -467,6 +467,15 @@ export default function Prontuario() {
     return coreProntuarioContextReady && shouldLoadTab(...tabKeys) ? patientId : null;
   }, [coreProntuarioContextReady, patientId, shouldLoadTab]);
 
+  /**
+   * Gate por especialidade ativa: hooks/queries exclusivos de uma especialidade
+   * só recebem patientId quando essa especialidade está ativa. Evita, por exemplo,
+   * que a Estética consulte tabelas exclusivas de Psicologia.
+   */
+  const getSpecialtyPatientIdForTab = useCallback((specialtyKey: SpecialtyKey, ...tabKeys: string[]) => {
+    return activeSpecialtyKey === specialtyKey ? getContextPatientIdForTab(...tabKeys) : null;
+  }, [activeSpecialtyKey, getContextPatientIdForTab]);
+
   useEffect(() => {
     setLoadedTabs((prev) => {
       if (prev.has(activeTab)) return prev;
@@ -498,7 +507,7 @@ export default function Prontuario() {
     patient: psicologiaPatient,
     summary: psicologiaSummary,
     loading: psicologiaVisaoGeralLoading,
-  } = useVisaoGeralPsicologiaData(getContextPatientIdForTab('resumo'));
+  } = useVisaoGeralPsicologiaData(getSpecialtyPatientIdForTab('psicologia', 'resumo'));
 
   // Anamnese Data - specific for Clínica Geral specialty
   const {
@@ -518,7 +527,7 @@ export default function Prontuario() {
     saving: anamnesePsicoSaving,
     saveAnamnese: saveAnamnesePsico,
     updateAnamnese: updateAnamnesePsico,
-  } = useAnamnesePsicologiaData(getContextPatientIdForTab('anamnese', 'historico', 'timeline'));
+  } = useAnamnesePsicologiaData(getSpecialtyPatientIdForTab('psicologia', 'anamnese', 'historico', 'timeline'));
 
   // Evoluções Data - specific for Clínica Geral specialty
   const {
@@ -538,7 +547,7 @@ export default function Prontuario() {
     saving: sessoesPsicoSaving,
     saveSessao: saveSessaoPsico,
     signSessao: signSessaoPsico,
-  } = useSessoesPsicologiaData(getContextPatientIdForTab('evolucao', 'historico', 'timeline'), currentProfessionalId || undefined);
+  } = useSessoesPsicologiaData(getSpecialtyPatientIdForTab('psicologia', 'evolucao', 'historico', 'timeline'), currentProfessionalId || undefined);
 
   // Evoluções Nutricionais Data - specific for Nutrição specialty
   const {
@@ -547,7 +556,7 @@ export default function Prontuario() {
     saving: evolucoesNutricaoSaving,
     saveEvolucao: saveEvolucaoNutricao,
     signEvolucao: signEvolucaoNutricao,
-  } = useEvolucoesNutricaoData(getContextPatientIdForTab('evolucao'), currentProfessionalId || undefined);
+  } = useEvolucoesNutricaoData(getSpecialtyPatientIdForTab('nutricao', 'evolucao'), currentProfessionalId || undefined);
 
   // Avaliação Antropométrica Data - specific for Nutrição specialty
   const {
@@ -556,7 +565,7 @@ export default function Prontuario() {
     loading: avaliacoesNutricaoLoading,
     saving: avaliacoesNutricaoSaving,
     saveAvaliacao: saveAvaliacaoNutricao,
-  } = useAvaliacaoNutricionalData(getContextPatientIdForTab('avaliacao_clinica'), currentProfessionalId || undefined);
+  } = useAvaliacaoNutricionalData(getSpecialtyPatientIdForTab('nutricao', 'avaliacao_clinica'), currentProfessionalId || undefined);
 
   // Plano Alimentar Data - specific for Nutrição specialty
   const {
@@ -566,7 +575,7 @@ export default function Prontuario() {
     saving: planosAlimentaresSaving,
     savePlano: savePlanoAlimentar,
     deactivatePlano: deactivatePlanoAlimentar,
-  } = usePlanoAlimentarData(getContextPatientIdForTab('plano_alimentar'), currentProfessionalId || undefined);
+  } = usePlanoAlimentarData(getSpecialtyPatientIdForTab('nutricao', 'plano_alimentar'), currentProfessionalId || undefined);
 
   // Visão Geral Nutricional Data - specific for Nutrição specialty
   const {
@@ -574,7 +583,7 @@ export default function Prontuario() {
     summary: nutricaoSummary,
     alerts: nutricaoAlerts,
     loading: nutricaoVisaoGeralLoading,
-  } = useVisaoGeralNutricaoData(getContextPatientIdForTab('resumo'));
+  } = useVisaoGeralNutricaoData(getSpecialtyPatientIdForTab('nutricao', 'resumo'));
 
   // Anamnese Nutricional Data - specific for Nutrição specialty
   const {
@@ -583,7 +592,7 @@ export default function Prontuario() {
     loading: anamneseNutricaoLoading,
     saving: anamneseNutricaoSaving,
     saveAnamnese: saveAnamneseNutricao,
-  } = useAnamneseNutricionalData(getContextPatientIdForTab('anamnese'));
+  } = useAnamneseNutricionalData(getSpecialtyPatientIdForTab('nutricao', 'anamnese'));
 
   // Alertas Nutrição Data - specific for Nutrição specialty
   const {
@@ -594,13 +603,13 @@ export default function Prontuario() {
     saveAlerta: saveAlertaNutricao,
     deactivateAlerta: deactivateAlertaNutricao,
     reactivateAlerta: reactivateAlertaNutricao,
-  } = useAlertasNutricaoData(getContextPatientIdForTab('alertas'));
+  } = useAlertasNutricaoData(getSpecialtyPatientIdForTab('nutricao', 'alertas'));
 
   // Linha do Tempo Nutricional Data - specific for Nutrição specialty
   const {
     eventos: timelineEventosNutricao,
     loading: timelineNutricaoLoading,
-  } = useLinhaTempoNutricaoData(getContextPatientIdForTab('historico', 'timeline'));
+  } = useLinhaTempoNutricaoData(getSpecialtyPatientIdForTab('nutricao', 'historico', 'timeline'));
 
   // Plano Terapêutico Data - specific for Psicologia specialty
   const {
@@ -609,7 +618,7 @@ export default function Prontuario() {
     loading: planoTerapeuticoLoading,
     saving: planoTerapeuticoSaving,
     savePlano: savePlanoTerapeutico,
-  } = usePlanoTerapeuticoData(getContextPatientIdForTab('conduta', 'historico', 'timeline'));
+  } = usePlanoTerapeuticoData(getSpecialtyPatientIdForTab('psicologia', 'conduta', 'historico', 'timeline'));
 
   // Metas Terapêuticas Data - goal-based tracking for Psicologia
   const {
@@ -621,7 +630,7 @@ export default function Prontuario() {
     updateStatus: updateMetaStatus,
     updateScaleScore: updateMetaScaleScore,
     fetchGoalUpdates: fetchMetaUpdates,
-  } = useMetasTerapeuticasData(getContextPatientIdForTab('conduta'));
+  } = useMetasTerapeuticasData(getSpecialtyPatientIdForTab('psicologia', 'conduta'));
 
   // Compute latest PHQ-9 and GAD-7 scores from sessions
   const latestPHQ9Score = sessoesPsico.find(s => s.phq9_total != null)?.phq9_total ?? null;
@@ -634,7 +643,7 @@ export default function Prontuario() {
     saving: instrumentosPsicoSaving,
     saveInstrumento: saveInstrumentoPsico,
     deleteInstrumento: deleteInstrumentoPsico,
-  } = useInstrumentosPsicologicosData(getContextPatientIdForTab('instrumentos', 'historico', 'timeline'), currentProfessionalId || undefined);
+  } = useInstrumentosPsicologicosData(getSpecialtyPatientIdForTab('psicologia', 'instrumentos', 'historico', 'timeline'), currentProfessionalId || undefined);
 
   // Consent Terms Data - for Psicologia specialty
   const shouldLoadConsentData = shouldLoadTab('termos_consentimentos', 'historico', 'timeline');
@@ -663,7 +672,7 @@ export default function Prontuario() {
     saveAlerta: saveAlertaPsico,
     deactivateAlerta: deactivateAlertaPsico,
     reactivateAlerta: reactivateAlertaPsico,
-  } = useAlertasPsicologiaData(getContextPatientIdForTab('alertas'));
+  } = useAlertasPsicologiaData(getSpecialtyPatientIdForTab('psicologia', 'alertas'));
 
   // Exame Físico Data - specific for Clínica Geral specialty
   const {
@@ -741,7 +750,7 @@ export default function Prontuario() {
   
   // Visão Geral Fisioterapia Data
   const fisioVisaoGeral = useVisaoGeralFisioterapiaData({ 
-    patientId: getContextPatientIdForTab('resumo'), 
+    patientId: getSpecialtyPatientIdForTab('fisioterapia', 'resumo'), 
     clinicId: clinicIdForFisio || null 
   });
 
