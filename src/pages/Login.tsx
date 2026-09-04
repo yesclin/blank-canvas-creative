@@ -13,6 +13,7 @@ import { clearAuthQuarantine, clearAuthenticatedTab, clearSupabaseAuthStorage, h
 import { useQueryClient } from "@tanstack/react-query";
 import { hardClearReactQueryCache } from "@/lib/queryClientDiagnostics";
 import { withTimeout } from "@/lib/asyncTimeout";
+import { checkPlatformAdmin } from "@/lib/platformAdmin";
 import { useAuthIdentity } from "@/hooks/useAuthIdentity";
 import { prefetchEssentialClinicData } from "@/lib/postLoginPrefetch";
 
@@ -107,11 +108,11 @@ async function loadPostLoginContext(expectedUserId: string): Promise<PostLoginCo
     throw new Error("auth.uid() retornou outro usuário. Login bloqueado por segurança.");
   }
 
-  const { data: isPlatformAdmin } = await withTimeout<QueryResult<boolean>>(
-    supabase.rpc("is_platform_admin", { _user_id: expectedUserId }) as PromiseLike<QueryResult<boolean>>,
+  const isPlatformAdmin = await withTimeout<boolean>(
+    checkPlatformAdmin(expectedUserId),
     2500,
     "Tempo esgotado ao verificar painel administrativo.",
-  ).catch(() => ({ data: false, error: null }));
+  ).catch(() => false);
   if (isPlatformAdmin === true) {
     return {
       user: userData.user,

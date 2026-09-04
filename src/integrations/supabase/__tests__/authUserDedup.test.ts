@@ -75,3 +75,32 @@ describe("dedup de auth.getUser", () => {
     expect(networkCalls).toBe(3);
   });
 });
+
+describe("cache chaveado pelo access_token", () => {
+  it("token diferente força nova validação no servidor", async () => {
+    const { supabase, CURRENT_AUTH_STORAGE_KEY } = await loadClient();
+    window.sessionStorage.setItem(
+      CURRENT_AUTH_STORAGE_KEY,
+      JSON.stringify({ access_token: "jwt-1", user: { id: "user-1" } }),
+    );
+    await supabase.auth.getUser();
+    await supabase.auth.getUser();
+    expect(networkCalls).toBe(1);
+
+    window.sessionStorage.setItem(
+      CURRENT_AUTH_STORAGE_KEY,
+      JSON.stringify({ access_token: "jwt-2", user: { id: "user-1" } }),
+    );
+    await supabase.auth.getUser();
+    expect(networkCalls).toBe(2);
+    window.sessionStorage.removeItem(CURRENT_AUTH_STORAGE_KEY);
+  });
+
+  it("TOKEN_REFRESHED sem troca de token não gera nova requisição", async () => {
+    const { supabase } = await loadClient();
+    await supabase.auth.getUser();
+    listeners.forEach((cb) => cb("TOKEN_REFRESHED", null));
+    await supabase.auth.getUser();
+    expect(networkCalls).toBe(1);
+  });
+});

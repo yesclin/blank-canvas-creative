@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/asyncTimeout";
+import { checkPlatformAdmin } from "@/lib/platformAdmin";
 import { clearUnsafeAuthCache } from "@/lib/authSessionIsolation";
 import { useAuthIdentity } from "@/hooks/useAuthIdentity";
 import { useActiveClinicScope } from "@/hooks/useActiveClinicScope";
@@ -58,9 +59,7 @@ async function resolveClinicId(userId: string): Promise<string | null> {
         const { clearSupportSessionIfMismatch } = await import("@/lib/supportSession");
         clearSupportSessionIfMismatch(userId);
       } else if (supportClinicId && supportAdminUserId === userId) {
-        const { data: isAdmin } = await withTimeout<any>(
-          supabase.rpc("is_platform_admin", { _user_id: userId })
-        );
+        const isAdmin = await checkPlatformAdmin(userId);
         if (isAdmin === true) return supportClinicId;
         const { clearSupportSessionIfMismatch } = await import("@/lib/supportSession");
         clearSupportSessionIfMismatch(null);

@@ -17,6 +17,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/asyncTimeout";
 import { useAuthIdentity } from "@/hooks/useAuthIdentity";
+import { checkPlatformAdmin } from "@/lib/platformAdmin";
 
 export type ClinicRole = "owner" | "admin" | "profissional" | "recepcionista";
 
@@ -51,9 +52,7 @@ async function fetchScope(userId: string): Promise<ActiveClinicScope> {
       const supportClinicId = window.sessionStorage.getItem("yesclin_support_clinic_id");
       const supportAdminUserId = window.sessionStorage.getItem("yesclin_support_admin_user_id");
       if (supportClinicId && supportAdminUserId === userId) {
-        const { data: isAdmin } = await withTimeout<any>(
-          supabase.rpc("is_platform_admin", { _user_id: userId }),
-        );
+        const isAdmin = await checkPlatformAdmin(userId);
         if (isAdmin === true) {
           resolvedClinicId = supportClinicId;
           isSupportMode = true;

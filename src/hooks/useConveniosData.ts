@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { checkPlatformAdmin } from '@/lib/platformAdmin';
 import { toast } from 'sonner';
 import { useAuthIdentity } from '@/hooks/useAuthIdentity';
 import type {
@@ -97,7 +98,7 @@ export function useConveniosClinicId() {
         const supportClinicId = typeof window !== 'undefined' ? window.sessionStorage.getItem('yesclin_support_clinic_id') : null;
         const supportAdminUserId = typeof window !== 'undefined' ? window.sessionStorage.getItem('yesclin_support_admin_user_id') : null;
         if (supportClinicId && supportAdminUserId === userId) {
-          const { data: isAdmin } = await supabase.rpc('is_platform_admin', { _user_id: userId });
+          const isAdmin = await checkPlatformAdmin(userId);
           if (isAdmin === true) return supportClinicId;
         }
       } catch {

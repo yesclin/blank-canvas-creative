@@ -398,13 +398,32 @@ const _supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
 // chamadores por uma janela curta e invalidado em qualquer evento de auth.
 // Nenhuma regra de autenticação/segurança é relaxada.
 // ---------------------------------------------------------------------------
-const AUTH_USER_CACHE_TTL_MS = 30_000;
+// O cache é chaveado pelo access_token vigente: enquanto o JWT for
+// exatamente o mesmo, a identidade já validada no servidor para aquele token
+// não muda. Qualquer troca/renovação de token gera nova chave e nova
+// validação no servidor. Há também um teto absoluto de tempo.
+const AUTH_USER_CACHE_MAX_AGE_MS = 10 * 60_000;
 
 type GetUserResult = Awaited<ReturnType<typeof _supabase.auth.getUser>>;
 
 const rawGetUser = _supabase.auth.getUser.bind(_supabase.auth);
-let authUserCache: { result: GetUserResult; at: number } | null = null;
-let authUserInFlight: Promise<GetUserResult> | null = null;
+let authUserCache: { result: GetUserResult; at: number; token: string | null } | null = null;
+let authUserInFlight: { promise: Promise<GetUserResult>; token: string | null } | null = null;
+
+/** Lê o access_token corrente APENAS como chave de cache (nunca como verdade de identidade). */
+function currentAccessTokenKey(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw =
+      window.sessionStorage.getItem(CURRENT_AUTH_STORAGE_KEY) ||
+      window.localStorage.getItem(CURRENT_AUTH_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return typeof parsed?.access_token === 'string' ? parsed.access_token : null;
+  } catch {
+    return null;
+  }
+}
 
 export function invalidateAuthUserCache() {
   authUserCache = null;
@@ -415,17 +434,22 @@ _supabase.auth.getUser = ((jwt?: string) => {
   // Validação de um token específico nunca usa cache.
   if (jwt) return rawGetUser(jwt);
 
+  const token = currentAccessTokenKey();
   const cached = authUserCache;
-  if (cached && Date.now() - cached.at < AUTH_USER_CACHE_TTL_MS) {
+  if (
+    cached &&
+    cached.token === token &&
+    Date.now() - cached.at < AUTH_USER_CACHE_MAX_AGE_MS
+  ) {
     return Promise.resolve(cached.result);
   }
-  if (authUserInFlight) return authUserInFlight;
+  if (authUserInFlight && authUserInFlight.token === token) return authUserInFlight.promise;
 
-  authUserInFlight = rawGetUser()
+  const promise = rawGetUser()
     .then((result) => {
       // Só memoriza respostas válidas: erro/timeout deve poder ser re-tentado.
       if (!result?.error && result?.data?.user?.id) {
-        authUserCache = { result, at: Date.now() };
+        authUserCache = { result, at: Date.now(), token };
       } else {
         authUserCache = null;
       }
@@ -438,17 +462,24 @@ _supabase.auth.getUser = ((jwt?: string) => {
       throw error;
     });
 
-  return authUserInFlight;
+  authUserInFlight = { promise, token };
+  return promise;
 }) as typeof _supabase.auth.getUser;
 
-// Qualquer mudança de auth invalida imediatamente o usuário memorizado.
-_supabase.auth.onAuthStateChange(() => {
-  invalidateAuthUserCache();
+// Eventos que realmente alteram a identidade invalidam o usuário memorizado.
+// `INITIAL_SESSION` e `TOKEN_REFRESHED` não precisam derrubar o cache: a chave
+// por access_token já força revalidação quando o JWT muda.
+_supabase.auth.onAuthStateChange((event) => {
+  if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+    invalidateAuthUserCache();
+  }
 });
 
 if (typeof window !== 'undefined') {
   window.addEventListener('yesclin:identity-changed', invalidateAuthUserCache);
+  window.addEventListener('yc:signout', invalidateAuthUserCache);
 }
+
 
 // Export as any to bypass empty Database type definitions until types are regenerated
 export const supabase: any = _supabase;
