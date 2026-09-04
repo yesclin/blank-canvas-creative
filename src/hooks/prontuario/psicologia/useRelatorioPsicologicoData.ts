@@ -298,7 +298,7 @@ export function useRelatorioPsicologicoData(): UseRelatorioPsicologicoDataResult
           .select('*')
           .eq('patient_id', patientId)
           .eq('clinic_id', clinic.id)
-          .eq('is_current', true)
+          .order('created_at', { ascending: false })
           .limit(1);
 
         const plano = planos?.[0] || null;
