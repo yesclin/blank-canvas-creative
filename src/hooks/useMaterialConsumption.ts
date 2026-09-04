@@ -214,37 +214,6 @@ export function useAppointmentMaterials(appointmentId: string | null) {
         });
       });
 
-      // === LEGADO: procedure_materials (caso a tabela ainda exista) ===
-      try {
-        const { data: legacyMaterials } = await supabase
-          .from('procedure_materials')
-          .select(`
-            quantity,
-            unit,
-            is_required,
-            allow_manual_edit,
-            materials:material_id (id, name, unit_cost, is_active)
-          `)
-          .eq('procedure_id', procedureId);
-
-        (legacyMaterials || []).forEach((pm: any) => {
-          if (pm.materials?.is_active) {
-            items.push({
-              material_id: pm.materials.id,
-              material_name: pm.materials.name,
-              quantity: pm.quantity,
-              unit: pm.unit,
-              unit_cost: pm.materials.unit_cost || 0,
-              source: 'procedure',
-              is_required: pm.is_required,
-              allow_manual_edit: pm.allow_manual_edit,
-            });
-          }
-        });
-      } catch {
-        // tabela legada ausente — ignorar
-      }
-
       return items;
     },
     enabled: !!appointmentId,
@@ -420,13 +389,12 @@ export function useMaterialConsumptionHistory(appointmentId?: string) {
         .from('material_consumption')
         .select(`
           *,
-          materials:material_id (name),
-          procedures:procedure_id (name),
-          professionals:professional_id (name),
-          patients:patient_id (name)
+          products:product_id (name, unit, cost_price),
+          professionals:professional_id (full_name),
+          patients:patient_id (full_name)
         `)
         .eq('clinic_id', clinicId)
-        .order('consumed_at', { ascending: false });
+        .order('created_at', { ascending: false });
         
       if (appointmentId) {
         query = query.eq('appointment_id', appointmentId);

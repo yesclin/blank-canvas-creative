@@ -54,17 +54,13 @@ export function useAppointmentCostDetails(appointmentId: string | null) {
         .from('material_consumption')
         .select(`
           id,
-          material_id,
+          product_id,
           quantity,
-          unit,
-          unit_cost,
-          total_cost,
-          consumed_at,
-          source,
-          products:material_id (name)
+          created_at,
+          products:product_id (name, unit, cost_price)
         `)
         .eq('appointment_id', appointmentId)
-        .order('consumed_at');
+        .order('created_at');
 
       if (materialsError) {
         console.error('Error fetching consumed materials:', materialsError);
@@ -78,7 +74,6 @@ export function useAppointmentCostDetails(appointmentId: string | null) {
           product_id,
           quantity,
           unit_cost,
-          total_cost,
           created_at,
           products:product_id (name, unit)
         `)
@@ -94,17 +89,21 @@ export function useAppointmentCostDetails(appointmentId: string | null) {
       let materials: ConsumedProduct[] = [];
 
       if (consumedMaterials && consumedMaterials.length > 0) {
-        materials = consumedMaterials.map((cm: any) => ({
-          id: cm.id,
-          material_id: cm.material_id,
-          material_name: cm.products?.name || 'Produto desconhecido',
-          quantity: Number(cm.quantity) || 0,
-          unit: cm.unit || 'unidade',
-          unit_cost: Number(cm.unit_cost) || 0,
-          total_cost: Number(cm.total_cost) || 0,
-          consumed_at: cm.consumed_at,
-          source: cm.source || 'procedure',
-        }));
+        materials = consumedMaterials.map((cm: any) => {
+          const unitCost = Number(cm.products?.cost_price) || 0;
+          const quantity = Number(cm.quantity) || 0;
+          return {
+            id: cm.id,
+            material_id: cm.product_id,
+            material_name: cm.products?.name || 'Produto desconhecido',
+            quantity,
+            unit: cm.products?.unit || 'unidade',
+            unit_cost: unitCost,
+            total_cost: unitCost * quantity,
+            consumed_at: cm.created_at,
+            source: 'procedure',
+          };
+        });
       } else if (stockMovements && stockMovements.length > 0) {
         // Fallback to stock_movements if material_consumption is empty
         materials = stockMovements.map((sm: any) => ({
@@ -114,7 +113,7 @@ export function useAppointmentCostDetails(appointmentId: string | null) {
           quantity: Number(sm.quantity) || 0,
           unit: sm.products?.unit || 'unidade',
           unit_cost: Number(sm.unit_cost) || 0,
-          total_cost: Number(sm.total_cost) || 0,
+          total_cost: (Number(sm.unit_cost) || 0) * (Number(sm.quantity) || 0),
           consumed_at: sm.created_at,
           source: 'procedure',
         }));
