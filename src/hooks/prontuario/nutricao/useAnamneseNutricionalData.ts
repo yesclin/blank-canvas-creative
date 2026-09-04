@@ -230,15 +230,15 @@ export function useAnamneseNutricionalData(patientId: string | null) {
       if (creatorIds.length > 0) {
         const { data: professionals } = await supabase
           .from('professionals')
-          .select('id, profiles:profiles!professionals_user_id_fkey(full_name)')
+          .select('id, full_name')
           .in('id', creatorIds);
 
         if (professionals) {
           creatorsMap = professionals.reduce((acc, p) => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const prof = p as any;
-            if (prof.id && prof.profiles?.[0]?.full_name) {
-              acc[prof.id] = prof.profiles[0].full_name;
+            if (prof.id && prof.full_name) {
+              acc[prof.id] = prof.full_name;
             }
             return acc;
           }, {} as Record<string, string>);
