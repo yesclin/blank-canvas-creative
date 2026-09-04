@@ -78,53 +78,58 @@ for (const file of files) {
     const rest = src.slice(m.index + m[0].length, m.index + m[0].length + 2500);
     const chain = rest.split(/\.from\(/)[0];
 
-    // select("...")
-    const selRe = /\.select\(\s*(["'`])([\s\S]*?)\1/g;
+    // select("...") — parser recursivo de embeds
+    const selRe = /\.select\(\s*(["\'`])([\s\S]*?)\1/g;
     let sm;
-    while ((sm = selRe.exec(chain))) {
-      const body = sm[2];
-      const chainLine = lineNo + chain.slice(0, sm.index).split("\n").length - 1;
-      // embeds: nome( ... )
-      const embedRe = /(\w+)\s*(?::\s*(\w+)(?:!\w+)?)?\s*\(/g;
-      let em;
-      const embedNames = new Set();
-      while ((em = embedRe.exec(body))) {
-        const rel = em[2] || em[1];
-        embedNames.add(em[1]);
-        embedNames.add(rel);
-        // sintaxe de dica de FK: alias:coluna_fk(...) ou tabela!coluna_fk(...)
-        if (rel === "inner" || info.cols.has(rel)) continue;
-        if (!info.rels.has(rel) && !schema[rel]) {
-          issues.push({ file, line: chainLine, kind: "EMBED", detail: `${table} -> ${rel}` });
-        } else if (!info.rels.has(rel)) {
-          const back = schema[rel]?.rels.has(table);
-          if (!back) issues.push({ file, line: chainLine, kind: "EMBED-FK", detail: `${table} -> ${rel}` });
-        }
-      }
-      // colunas de topo (fora de parênteses de embed)
-      let d = 0;
-      let buf = "";
-      const tops = [];
+    const splitTop = (body) => {
+      const out = [];
+      let d = 0, buf = "";
       for (const ch of body) {
         if (ch === "(") d++;
-        else if (ch === ")") d--;
-        else if (ch === "," && d === 0) {
-          tops.push(buf);
-          buf = "";
-          continue;
-        }
-        if (d === 0 && ch !== "(" && ch !== ")") buf += ch;
+        if (ch === ")") d--;
+        if (ch === "," && d === 0) { out.push(buf); buf = ""; continue; }
+        buf += ch;
       }
-      tops.push(buf);
-      for (let colRaw of tops) {
-        let col = colRaw.trim().split(":").pop().trim().replace(/!.*$/, "");
-        if (!col || IGNORE_COLS.has(col) || col.includes("$") || col.includes("{")) continue;
-        if (!/^\w+$/.test(col)) continue;
-        if (embedNames.has(col)) continue;
-        if (!info.cols.has(col)) {
-          issues.push({ file, line: chainLine, kind: "COLUNA-SELECT", detail: `${table}.${col}` });
+      if (buf.trim()) out.push(buf);
+      return out;
+    };
+    const checkSelect = (tableName, body, chainLine) => {
+      const tinfo = schema[tableName];
+      if (!tinfo) return;
+      for (const tokenRaw of splitTop(body)) {
+        const token = tokenRaw.trim();
+        if (!token) continue;
+        const open = token.indexOf("(");
+        if (open > -1) {
+          // embed
+          const head = token.slice(0, open).trim();
+          const inner = token.slice(open + 1, token.lastIndexOf(")"));
+          let target = head.includes(":") ? head.split(":")[1] : head;
+          target = target.split("!")[0].trim();
+          const hint = head.includes("!") ? head.split("!")[1].trim() : null;
+          // dica de FK por coluna (alias:coluna_fk(...)) é válida
+          if (tinfo.cols.has(target)) { continue; }
+          if (!schema[target]) {
+            issues.push({ file, line: chainLine, kind: "EMBED", detail: `${tableName} -> ${target}` });
+            continue;
+          }
+          const ok = tinfo.rels.has(target) || schema[target].rels.has(tableName)
+            || (hint && (tinfo.cols.has(hint) || schema[target].cols.has(hint) || hint === "inner" || hint === "left"));
+          if (!ok) issues.push({ file, line: chainLine, kind: "EMBED-FK", detail: `${tableName} -> ${target}` });
+          checkSelect(target, inner, chainLine);
+        } else {
+          let col = token.includes(":") ? token.split(":").pop().trim() : token;
+          col = col.split("!")[0].trim();
+          if (!col || IGNORE_COLS.has(col) || !/^\w+$/.test(col)) continue;
+          if (!tinfo.cols.has(col)) {
+            issues.push({ file, line: chainLine, kind: "COLUNA-SELECT", detail: `${tableName}.${col}` });
+          }
         }
       }
+    };
+    while ((sm = selRe.exec(chain))) {
+      const chainLine = lineNo + chain.slice(0, sm.index).split("\n").length - 1;
+      checkSelect(table, sm[2], chainLine);
     }
     // filtros/ordenação
     const fRe = /\.(eq|neq|gt|gte|lt|lte|like|ilike|is|in|order|contains|overlaps)\(\s*["'`]([\w.]+)["'`]/g;
