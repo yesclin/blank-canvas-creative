@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { STALE_STRUCTURE, GC_DEFAULT } from "@/lib/queryFreshness";
 import { useClinicData } from './useClinicData';
 import { useQuery } from '@tanstack/react-query';
 
@@ -144,6 +145,10 @@ export function useProfessionalValidSpecialties(professionalId: string | null | 
       return validSpecialties || [];
     },
     enabled: !!professionalId && !!clinic?.id,
+    staleTime: STALE_STRUCTURE,
+    gcTime: GC_DEFAULT,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 }
 

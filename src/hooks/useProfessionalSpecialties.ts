@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { STALE_STRUCTURE, GC_DEFAULT } from "@/lib/queryFreshness";
 import { useClinicData } from "./useClinicData";
 import { toast } from "sonner";
 import { useClinicContext } from "@/hooks/useClinicContext";
@@ -68,6 +69,10 @@ export function useProfessionalSpecialties(professionalId: string | null) {
         .filter(item => item.specialty?.is_active !== false) as ProfessionalSpecialty[];
     },
     enabled: !!professionalId,
+    staleTime: STALE_STRUCTURE,
+    gcTime: GC_DEFAULT,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -104,6 +109,10 @@ export function useProfessionalsBySpecialty(specialtyId: string | null) {
         .filter(p => p && p.is_active);
     },
     enabled: !!clinic?.id && !!specialtyId,
+    staleTime: STALE_STRUCTURE,
+    gcTime: GC_DEFAULT,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 }
 
