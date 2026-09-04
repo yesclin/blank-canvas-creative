@@ -47,7 +47,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { useProceduresList } from "@/hooks/useProceduresCRUD";
-import { useMaterialsList } from "@/hooks/useMaterialsCRUD";
+import { useInventoryItems } from "@/hooks/useInventoryItems";
 import {
   useProcedureMaterialsList,
   useCreateProcedureMaterial,
@@ -82,7 +82,7 @@ export function ProcedureMaterialsTab() {
   const { data: procedureKits = [], isLoading: loadingKits } = useProcedureKitsList();
   const { data: proceduresWithCosts = [], isLoading: loadingCosts } = useProceduresWithCosts();
   const { data: procedures = [] } = useProceduresList();
-  const { data: materials = [] } = useMaterialsList();
+  const { data: inventoryItems = [] } = useInventoryItems({ isConsumable: true });
   const { data: kits = [] } = useMaterialKitsList();
   
   const createMaterialMutation = useCreateProcedureMaterial();
@@ -148,7 +148,7 @@ export function ProcedureMaterialsTab() {
 
   const handleDeleteMaterial = async () => {
     if (!deleteMaterial) return;
-    await deleteMaterialMutation.mutateAsync(deleteMaterial.id);
+    await deleteMaterialMutation.mutateAsync(deleteMaterial);
     setDeleteMaterial(null);
   };
 
@@ -437,9 +437,10 @@ export function ProcedureMaterialsTab() {
                   <SelectValue placeholder="Selecione o item" />
                 </SelectTrigger>
                 <SelectContent>
-                  {materials.filter((m) => m.is_active).map((mat) => (
-                    <SelectItem key={mat.id} value={mat.id}>
-                      {mat.name} {mat.unit_cost ? `(${formatCurrency(mat.unit_cost)})` : ""}
+                  {inventoryItems.map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.name}
+                      {item.default_cost_price ? ` (${formatCurrency(Number(item.default_cost_price))})` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -92,6 +92,8 @@ export interface ProcedureMaterial {
   material_category?: MaterialCategory;
   material_unit_cost?: number;
   procedure_name?: string;
+  /** true quando o vínculo vem do modelo legado procedure_materials */
+  is_legacy?: boolean;
 }
 
 export interface ProcedureMaterialFormData {
