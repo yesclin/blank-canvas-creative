@@ -117,7 +117,7 @@ export function useExpiringBatches(days = 30) {
       if (error) throw error;
       return data as InventoryBatch[];
     },
-    refetchInterval: 60000,
+    refetchInterval: 5 * 60_000,
   });
 }
 
@@ -136,6 +136,6 @@ export function useExpiredBatches() {
       if (error) throw error;
       return data as InventoryBatch[];
     },
-    refetchInterval: 60000,
+    refetchInterval: 5 * 60_000,
   });
 }

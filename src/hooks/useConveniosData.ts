@@ -908,7 +908,7 @@ export function useConveniosStats() {
         totalApprovedValue: approvedGuides.reduce((sum: number, g: any) => sum + (Number(g.total_approved) || Number(g.total_amount) || 0), 0),
       } as ConveniosStats;
     },
-    refetchInterval: 30000,
+    refetchInterval: 5 * 60_000,
     ...stableClinicQuery(clinicId),
   });
 }

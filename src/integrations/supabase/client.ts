@@ -385,5 +385,70 @@ const _supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   }
 });
 
+// ---------------------------------------------------------------------------
+// PERFORMANCE: deduplicação de supabase.auth.getUser()
+//
+// getUser() faz SEMPRE uma chamada de rede a /auth/v1/user. O app tem ~170
+// pontos que chamam getUser() para descobrir o auth.uid() atual, o que gerava
+// centenas de requisições idênticas por navegação e travava a fila do browser
+// (Stalled de vários segundos por limite de conexões simultâneas).
+//
+// Aqui centralizamos: a validação continua sendo feita no servidor (nada é
+// lido de localStorage como verdade), mas o resultado é compartilhado entre
+// chamadores por uma janela curta e invalidado em qualquer evento de auth.
+// Nenhuma regra de autenticação/segurança é relaxada.
+// ---------------------------------------------------------------------------
+const AUTH_USER_CACHE_TTL_MS = 30_000;
+
+type GetUserResult = Awaited<ReturnType<typeof _supabase.auth.getUser>>;
+
+const rawGetUser = _supabase.auth.getUser.bind(_supabase.auth);
+let authUserCache: { result: GetUserResult; at: number } | null = null;
+let authUserInFlight: Promise<GetUserResult> | null = null;
+
+export function invalidateAuthUserCache() {
+  authUserCache = null;
+  authUserInFlight = null;
+}
+
+_supabase.auth.getUser = ((jwt?: string) => {
+  // Validação de um token específico nunca usa cache.
+  if (jwt) return rawGetUser(jwt);
+
+  const cached = authUserCache;
+  if (cached && Date.now() - cached.at < AUTH_USER_CACHE_TTL_MS) {
+    return Promise.resolve(cached.result);
+  }
+  if (authUserInFlight) return authUserInFlight;
+
+  authUserInFlight = rawGetUser()
+    .then((result) => {
+      // Só memoriza respostas válidas: erro/timeout deve poder ser re-tentado.
+      if (!result?.error && result?.data?.user?.id) {
+        authUserCache = { result, at: Date.now() };
+      } else {
+        authUserCache = null;
+      }
+      authUserInFlight = null;
+      return result;
+    })
+    .catch((error) => {
+      authUserInFlight = null;
+      authUserCache = null;
+      throw error;
+    });
+
+  return authUserInFlight;
+}) as typeof _supabase.auth.getUser;
+
+// Qualquer mudança de auth invalida imediatamente o usuário memorizado.
+_supabase.auth.onAuthStateChange(() => {
+  invalidateAuthUserCache();
+});
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('yesclin:identity-changed', invalidateAuthUserCache);
+}
+
 // Export as any to bypass empty Database type definitions until types are regenerated
 export const supabase: any = _supabase;
