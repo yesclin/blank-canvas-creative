@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveClinicScope } from "@/hooks/useActiveClinicScope";
 import type { Patient } from "@/types/agenda";
 
 interface PatientAutocompleteProps {
@@ -30,6 +31,10 @@ export function PatientAutocomplete({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const abortRef = useRef<AbortController | null>(null);
+  const cacheRef = useRef<Map<string, SearchResult[]>>(new Map());
+  const { scope } = useActiveClinicScope();
+  const clinicId = scope.clinicId;
 
   // Resolve selected patient name from value
   useEffect(() => {
@@ -55,12 +60,35 @@ export function PatientAutocomplete({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  // Cancela debounce e requisição pendente ao desmontar
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      abortRef.current?.abort();
+    };
+  }, []);
+
   const searchPatients = useCallback(async (term: string) => {
-    if (term.length < 2) {
+    const normalized = term.trim().toLowerCase();
+    if (normalized.length < 2 || !clinicId) {
       setResults([]);
       setIsOpen(false);
       return;
     }
+
+    // Cache local: evita repetir a mesma busca (backspace, reabertura do dropdown)
+    const cached = cacheRef.current.get(normalized);
+    if (cached) {
+      setResults(cached);
+      setIsSearching(false);
+      setIsOpen(true);
+      return;
+    }
+
+    // Cancela a busca anterior ainda em voo (chamadas duplicadas)
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     setIsSearching(true);
 
@@ -72,9 +100,11 @@ export function PatientAutocomplete({
       let query = supabase
         .from("patients")
         .select("id, clinic_id, full_name, email, phone, cpf, birth_date, gender, has_clinical_alert, clinical_alert_text, is_active")
+        .eq("clinic_id", clinicId)
         .eq("is_active", true)
         .order("full_name")
-        .limit(10);
+        .limit(10)
+        .abortSignal(controller.signal);
 
       if (isNumeric) {
         // Search by CPF or phone (numeric)
@@ -86,20 +116,27 @@ export function PatientAutocomplete({
 
       const { data, error } = await query;
 
+      if (controller.signal.aborted) return;
+
       if (error) {
         console.error("Patient search error:", error);
         setResults([]);
       } else {
-        setResults((data || []) as SearchResult[]);
+        const rows = (data || []) as SearchResult[];
+        cacheRef.current.set(normalized, rows);
+        setResults(rows);
       }
     } catch (err) {
+      if (controller.signal.aborted) return;
       console.error("Patient search error:", err);
       setResults([]);
     } finally {
-      setIsSearching(false);
-      setIsOpen(true);
+      if (!controller.signal.aborted) {
+        setIsSearching(false);
+        setIsOpen(true);
+      }
     }
-  }, []);
+  }, [clinicId]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -115,7 +152,7 @@ export function PatientAutocomplete({
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       searchPatients(val);
-    }, 300);
+    }, 400);
   };
 
   const handleSelect = (patient: Patient) => {
