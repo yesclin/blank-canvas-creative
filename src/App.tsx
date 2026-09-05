@@ -120,6 +120,7 @@ const SuperAdminSupport = lazyWithTimeout(() => import("./pages/super-admin/Supe
 const SuperAdminUsage = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminUsage"), "SuperAdminUsage");
 const SuperAdminFinance = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminFinance"), "SuperAdminFinance");
 const SuperAdminSettings = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminSettings"), "SuperAdminSettings");
+const SuperAdminMfa = lazyWithTimeout(() => import("./pages/super-admin/SuperAdminMfa"), "SuperAdminMfa");
 const Suporte = lazyWithTimeout(() => import("./pages/app/Suporte"), "Suporte");
 const Assinatura = lazyWithTimeout(() => import("./pages/app/Assinatura"), "Assinatura");
 
@@ -491,6 +492,7 @@ function AppRouter() {
                       <Route path="integracoes" element={moduleRoute(<SuperAdminIntegrations />, "Super Admin Integrações")} />
                       <Route path="uso" element={moduleRoute(<SuperAdminUsage />, "Super Admin Uso")} />
                       <Route path="financeiro" element={moduleRoute(<SuperAdminFinance />, "Super Admin Financeiro")} />
+                      <Route path="seguranca-conta" element={moduleRoute(<SuperAdminMfa />, "Super Admin Segurança da conta")} />
                       <Route path="configuracoes" element={moduleRoute(<SuperAdminSettings />, "Super Admin Configurações")} />
                     </Route>
                     <Route
