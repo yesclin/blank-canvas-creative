@@ -51,7 +51,7 @@ export default function SuperAdminMfa() {
       toast.error('Não foi possível carregar seus autenticadores');
       setFactors([]);
     } else {
-      setFactors(((data?.totp ?? []) as unknown as Factor[]) ?? []);
+      setFactors((data?.totp ?? []) as unknown as Factor[]);
     }
     setLoading(false);
   }, []);
