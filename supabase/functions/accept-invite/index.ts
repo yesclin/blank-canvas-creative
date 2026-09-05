@@ -14,16 +14,6 @@ import { getEmailService } from "../_shared/email-service.ts";
 import { generateWelcomeEmail } from "../_shared/email-templates.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
-function getCorsHeaders(req: Request): Record<string, string> {
-  const origin = req.headers.get("origin") || "";
-  const allowOrigin = isAllowedOrigin(origin) ? origin : "*";
-  return {
-    "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Vary": "Origin",
-  };
-}
 
 interface AcceptInviteRequest {
   token: string;

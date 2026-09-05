@@ -11,7 +11,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getEmailService, sanitizeEmail, isValidEmail } from "../_shared/email-service.ts";
 import { generatePasswordResetEmail } from "../_shared/email-templates.ts";
-import { getCorsHeaders } from "../_shared/cors.ts";
+import { getCorsHeaders, isAllowedOrigin } from "../_shared/cors.ts";
 
 interface PasswordResetRequest {
   email: string;
