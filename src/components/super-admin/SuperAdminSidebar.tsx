@@ -13,6 +13,7 @@ import {
   Settings,
   ShieldCheck,
   ToggleRight,
+  KeyRound,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -41,6 +42,7 @@ const items = [
   { title: 'Integrações', url: '/super-admin/integracoes', icon: Plug },
   { title: 'Uso da Plataforma', url: '/super-admin/uso', icon: Activity },
   { title: 'Financeiro SaaS', url: '/super-admin/financeiro', icon: Wallet },
+  { title: 'Segurança da conta', url: '/super-admin/seguranca-conta', icon: KeyRound },
   { title: 'Configurações', url: '/super-admin/configuracoes', icon: Settings },
 ];
 
