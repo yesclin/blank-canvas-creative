@@ -71,7 +71,7 @@ export default function SuperAdminMfa() {
     });
     setEnrolling(false);
     if (error || !data) {
-      toast.error(error?.message ?? 'Não foi possível iniciar o cadastro');
+      toast.error(error ? error.message : 'Não foi possível iniciar o cadastro');
       return;
     }
     setCode('');
