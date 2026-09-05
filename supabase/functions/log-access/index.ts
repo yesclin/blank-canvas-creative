@@ -1,21 +1,5 @@
+import { getCorsHeaders } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const ALLOWED_ORIGINS = [
-  "https://id-preview--e2305a67-dd71-4dc6-bb28-50ab8384c9ab.lovable.app",
-  "https://yesclin.com",
-  "https://www.yesclin.com",
-];
-
-function getCorsHeaders(req: Request): Record<string, string> {
-  const origin = req.headers.get("origin") || "";
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-  
-  return {
-    "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-  };
-}
 
 interface AccessLogPayload {
   action: string;

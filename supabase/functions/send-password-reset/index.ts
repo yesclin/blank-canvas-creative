@@ -11,34 +11,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getEmailService, sanitizeEmail, isValidEmail } from "../_shared/email-service.ts";
 import { generatePasswordResetEmail } from "../_shared/email-templates.ts";
-
-// Allowed origins for CORS - restrict to known domains
-const ALLOWED_ORIGINS = [
-  "https://yesclin.com.br",
-  "https://www.yesclin.com.br",
-  "https://yescin.lovable.app",
-];
-
-function isAllowedOrigin(origin: string): boolean {
-  if (ALLOWED_ORIGINS.includes(origin)) return true;
-  // Preview/sandbox domains do Lovable e desenvolvimento local
-  return /^https:\/\/[a-z0-9-]+\.lovable\.app$/i.test(origin)
-    || /^https:\/\/[a-z0-9-]+\.lovableproject\.com$/i.test(origin)
-    || /^http:\/\/localhost(:\d+)?$/i.test(origin);
-}
-
-function getCorsHeaders(req: Request): Record<string, string> {
-  const origin = req.headers.get("origin") || "";
-  const allowedOrigin = isAllowedOrigin(origin) ? origin : ALLOWED_ORIGINS[0];
-
-  return {
-    "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Vary": "Origin",
-  };
-}
-
+import { getCorsHeaders, isAllowedOrigin } from "../_shared/cors.ts";
 
 interface PasswordResetRequest {
   email: string;

@@ -1,3 +1,10 @@
+import {
+  ALLOWED_EXACT_ORIGINS,
+  ALLOWED_ORIGIN_PATTERNS,
+  ALLOWED_REQUEST_HEADERS,
+  getCorsHeaders,
+  isAllowedOrigin,
+} from "../_shared/cors.ts";
 /**
  * YESCLIN Send Invite Edge Function
  * 
@@ -16,49 +23,16 @@ import { generateInviteEmail, getRoleLabel } from "../_shared/email-templates.ts
 // We accept exact matches AND any Lovable-managed preview/sandbox/published
 // host. This prevents the front-end from being blocked when the project is
 // renamed, re-previewed under a new id, or accessed from a custom domain.
-export const ALLOWED_EXACT_ORIGINS = [
-  "https://yesclin.com.br",
-  "https://www.yesclin.com.br",
-  "https://yesclin.com",
-  "https://www.yesclin.com",
-  "http://localhost:3000",
-  "http://localhost:5173",
-  "http://localhost:8080",
-];
-
-export const ALLOWED_ORIGIN_PATTERNS: RegExp[] = [
-  /^https:\/\/[a-z0-9-]+\.lovable\.app$/i,
-  /^https:\/\/[a-z0-9-]+\.lovableproject\.com$/i,
-  /^https:\/\/[a-z0-9-]+\.lovable\.dev$/i,
-  /^https:\/\/[a-z0-9.-]+\.yesclin\.com$/i,
-];
-
-export const ALLOWED_REQUEST_HEADERS =
-  "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version";
+export {
+  ALLOWED_EXACT_ORIGINS,
+  ALLOWED_ORIGIN_PATTERNS,
+  ALLOWED_REQUEST_HEADERS,
+  isAllowedOrigin,
+  getCorsHeaders,
+} from "../_shared/cors.ts";
 
 export const ALLOWED_METHODS = "POST, OPTIONS";
 
-export function isAllowedOrigin(origin: string): boolean {
-  if (!origin) return false;
-  if (ALLOWED_EXACT_ORIGINS.includes(origin)) return true;
-  return ALLOWED_ORIGIN_PATTERNS.some((re) => re.test(origin));
-}
-
-export function getCorsHeaders(req: Request): Record<string, string> {
-  const origin = req.headers.get("origin") || "";
-  // Echo back the caller's origin when it's allowed; otherwise fall back to
-  // the canonical production origin so the browser still sees a valid header
-  // (the request will simply fail the same-origin check, which is fine).
-  const allowedOrigin = isAllowedOrigin(origin) ? origin : ALLOWED_EXACT_ORIGINS[0];
-
-  return {
-    "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers": ALLOWED_REQUEST_HEADERS,
-    "Access-Control-Allow-Methods": ALLOWED_METHODS,
-    "Access-Control-Max-Age": "86400",
-    "Vary": "Origin",
-  };
-}
 
 /**
  * Builds the diagnostics payload describing the current CORS configuration
