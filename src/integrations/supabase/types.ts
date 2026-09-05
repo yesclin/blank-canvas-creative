@@ -8601,6 +8601,75 @@ export type Database = {
           },
         ]
       }
+      mfa_policy: {
+        Row: {
+          created_at: string
+          enforcement_start_at: string
+          grace_days: number
+          id: boolean
+          is_enabled: boolean
+          required_roles: string[]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enforcement_start_at?: string
+          grace_days?: number
+          id?: boolean
+          is_enabled?: boolean
+          required_roles?: string[]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enforcement_start_at?: string
+          grace_days?: number
+          id?: boolean
+          is_enabled?: boolean
+          required_roles?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      mfa_reset_audit: {
+        Row: {
+          action: string
+          actor_email: string | null
+          actor_user_id: string | null
+          created_at: string
+          factors_removed: number
+          id: string
+          metadata: Json
+          reason: string
+          target_email: string | null
+          target_user_id: string
+        }
+        Insert: {
+          action?: string
+          actor_email?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          factors_removed?: number
+          id?: string
+          metadata?: Json
+          reason: string
+          target_email?: string | null
+          target_user_id: string
+        }
+        Update: {
+          action?: string
+          actor_email?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          factors_removed?: number
+          id?: string
+          metadata?: Json
+          reason?: string
+          target_email?: string | null
+          target_user_id?: string
+        }
+        Relationships: []
+      }
       modelos_documento: {
         Row: {
           cabecalho_personalizado: string | null
@@ -16481,6 +16550,7 @@ export type Database = {
         Args: { p_clinic_id: string; p_payload: Json; p_user_id: string }
         Returns: Json
       }
+      current_auth_aal: { Args: never; Returns: string }
       current_professional_id_for_clinic: {
         Args: { p_clinic_id: string }
         Returns: string
@@ -16502,6 +16572,7 @@ export type Database = {
         Args: { _clinic_id: string; _resource: string }
         Returns: undefined
       }
+      enforce_privileged_mfa: { Args: never; Returns: undefined }
       ensure_public_booking_default_schedule: {
         Args: { _clinic_id: string }
         Returns: undefined
@@ -16724,6 +16795,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_verified_mfa_factor: { Args: { _user_id: string }; Returns: boolean }
       is_clinic_admin: {
         Args: { _clinic_id: string; _user_id: string }
         Returns: boolean
@@ -16754,6 +16826,14 @@ export type Database = {
         Returns: string
       }
       mark_commission_paid: { Args: { _id: string }; Returns: undefined }
+      mfa_action_allowed: {
+        Args: { _aal: string; _user_id: string }
+        Returns: boolean
+      }
+      mfa_enforced_now: { Args: never; Returns: boolean }
+      mfa_grace_ends_at: { Args: never; Returns: string }
+      mfa_required_for_user: { Args: { _user_id: string }; Returns: boolean }
+      my_mfa_status: { Args: never; Returns: Json }
       notify_clinic_users: {
         Args: {
           _clinic_id: string
