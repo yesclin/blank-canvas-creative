@@ -152,7 +152,7 @@ export default function AceitarConvite() {
       toast.success("Conta criada com sucesso!");
     } catch (err: any) {
       console.error("Error accepting invitation:", err);
-      toast.error(err.message || "Erro ao aceitar convite");
+      toast.error(translateError(err, "Erro ao aceitar convite"));
     } finally {
       setIsSubmitting(false);
     }
