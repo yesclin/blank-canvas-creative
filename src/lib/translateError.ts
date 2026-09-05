@@ -41,6 +41,8 @@ const EXACT_MAP: Record<string, string> = {
 };
 
 const PARTIAL_MAP: Array<[RegExp, string]> = [
+  [/weak_password|known to be weak|easy to guess|compromised|pwned|leaked password/i, "Essa senha aparece em vazamentos públicos ou é muito comum. Escolha outra senha, com no mínimo 8 caracteres, letras e números."],
+  [/password should be at least|password.*too short|minimum.*characters/i, "A senha deve ter no mínimo 8 caracteres."],
   [/failed to fetch/i, "Não foi possível conectar ao servidor. Verifique sua internet."],
   [/network\s*error|networkerror/i, "Erro de conexão com a internet."],
   [/timeout|timed out/i, "A operação demorou mais que o esperado. Tente novamente."],
