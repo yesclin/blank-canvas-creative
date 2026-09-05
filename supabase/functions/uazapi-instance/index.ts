@@ -1,9 +1,6 @@
+import { getCorsHeaders } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 const UAZAPI_BASE_URL = (Deno.env.get("UAZAPI_BASE_URL") || "").replace(/\/$/, "");
 const UAZAPI_ADMIN_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
@@ -24,11 +21,12 @@ interface RequestBody {
   payload?: Record<string, unknown>;
 }
 
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+function makeJsonResponse(corsHeaders: Record<string, string>) {
+  return (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
 }
 
 function maskedToken(token: string | null | undefined) {
@@ -75,6 +73,9 @@ function mapStatus(s: string | undefined | null): string {
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req, { methods: "POST, OPTIONS" });
+  const jsonResponse = makeJsonResponse(corsHeaders);
+
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
