@@ -16493,6 +16493,10 @@ export type Database = {
         Args: { _clinic_id: string; _specialty_slug: string }
         Returns: Json
       }
+      deactivate_specialty_internal: {
+        Args: { _clinic_id: string; _specialty_slug: string }
+        Returns: Json
+      }
       default_public_booking_week_schedule: { Args: never; Returns: Json }
       enforce_plan_limit: {
         Args: { _clinic_id: string; _resource: string }
@@ -16700,23 +16704,14 @@ export type Database = {
         }[]
       }
       get_teleconsulta_by_token: { Args: { p_token: string }; Returns: Json }
-      get_user_all_permissions:
-        | {
-            Args: { _user_id: string }
-            Returns: {
-              actions: Database["public"]["Enums"]["app_action"][]
-              module: Database["public"]["Enums"]["app_module"]
-              restrictions: Json
-            }[]
-          }
-        | {
-            Args: { _clinic_id?: string; _user_id: string }
-            Returns: {
-              actions: Database["public"]["Enums"]["app_action"][]
-              module: Database["public"]["Enums"]["app_module"]
-              restrictions: Json
-            }[]
-          }
+      get_user_all_permissions: {
+        Args: { _clinic_id?: string; _user_id: string }
+        Returns: {
+          actions: Database["public"]["Enums"]["app_action"][]
+          module: Database["public"]["Enums"]["app_module"]
+          restrictions: Json
+        }[]
+      }
       get_user_clinic_id_for_rls: { Args: never; Returns: string }
       has_finance_permission: {
         Args: { _clinic_id: string; _permission: string; _user_id: string }
@@ -16808,6 +16803,10 @@ export type Database = {
       }
       provision_specialty: {
         Args: { _clinic_id: string; _specialty_slug: string }
+        Returns: Json
+      }
+      provision_specialty_internal: {
+        Args: { _clinic_id: string; _specialty_slug: string }
         Returns: undefined
       }
       refund_commission: {
@@ -16835,10 +16834,12 @@ export type Database = {
         Returns: undefined
       }
       request_subscription: { Args: { _cycle: string }; Returns: Json }
-      reset_anamnesis_templates: {
-        Args: { p_clinic_id: string; p_user_id: string }
-        Returns: undefined
-      }
+      reset_anamnesis_templates:
+        | { Args: { p_clinic_id: string }; Returns: undefined }
+        | {
+            Args: { p_clinic_id: string; p_user_id: string }
+            Returns: undefined
+          }
       resolve_clinic_resource_specialty_id: {
         Args: {
           p_clinic_id: string

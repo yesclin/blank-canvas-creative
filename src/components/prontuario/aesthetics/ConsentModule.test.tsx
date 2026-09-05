@@ -94,6 +94,18 @@ vi.mock('./SignatureCanvas', () => {
 
 const createConsentMock = vi.fn();
 
+// Clinic data comes from the shared auth identity provider, which is not
+// mounted in this unit test — stub it with a minimal clinic.
+vi.mock('@/hooks/useClinicData', () => ({
+  useClinicData: () => ({
+    clinic: { id: 'clinic-1', name: 'Clínica Teste' },
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+}));
+
+
 vi.mock('@/hooks/aesthetics', async () => {
   const actual = await vi.importActual<typeof import('@/hooks/aesthetics')>(
     '@/hooks/aesthetics'
