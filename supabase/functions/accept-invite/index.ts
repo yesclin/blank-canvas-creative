@@ -12,35 +12,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getEmailService } from "../_shared/email-service.ts";
 import { generateWelcomeEmail } from "../_shared/email-templates.ts";
-
-// Allowed origins for CORS
-const ALLOWED_ORIGIN_EXACT = new Set([
-  "https://yesclin.com.br",
-  "https://www.yesclin.com.br",
-  "https://yesclin.com",
-  "https://www.yesclin.com",
-  "https://yescin.lovable.app",
-  "http://localhost:8080",
-  "http://localhost:5173",
-  "http://localhost:3000",
-]);
-
-const ALLOWED_ORIGIN_SUFFIX = [
-  ".lovable.app",
-  ".lovableproject.com",
-  ".lovable.dev",
-];
-
-function isAllowedOrigin(origin: string): boolean {
-  if (!origin) return false;
-  if (ALLOWED_ORIGIN_EXACT.has(origin)) return true;
-  try {
-    const host = new URL(origin).hostname;
-    return ALLOWED_ORIGIN_SUFFIX.some((s) => host.endsWith(s));
-  } catch {
-    return false;
-  }
-}
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") || "";
