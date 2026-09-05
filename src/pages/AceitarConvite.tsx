@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { Loader2, CheckCircle2, XCircle, Mail, Building2, UserCircle, Lock, Eye, EyeOff, ShieldCheck, AlertTriangle, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { rememberAuthenticatedUser } from "@/lib/authSessionIsolation";
+import { translateError } from "@/lib/translateError";
 
 interface InvitationInfo {
   id: string;
